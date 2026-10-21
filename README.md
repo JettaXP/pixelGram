@@ -13,6 +13,12 @@ Channel: [@pixelgramclient](https://t.me/pixelgramclient)
 - Avatar shapes: all official Material 3 shapes (`MaterialShapes`) and a custom corner radius
 - Message bubble corner and tail radius in a separate settings section
 - Chat folders in a Material 3 navigation rail or as tabs, optional hidden "All chats"
+
+## Install
+
+- **Arch Linux and derivatives:** `sudo pacman -U pixelgram-*.pkg.tar.zst`
+- **Windows:** run the `.msi` installer or unpack the portable `.zip`
+- **Any Linux:** unpack `pixelGram-linux-x86_64.tar.gz` and run `pixelGram/bin/pixelGram`
 - Sign in by phone, code, two-step password or QR code
 
 ## Building
@@ -21,7 +27,7 @@ Requirements: JDK 21.
 
 ```bash
 ./gradlew run                    # run from sources
-./gradlew packageDeb             # Linux .deb
+./gradlew createDistributable    # Linux app folder (Arch package: packaging/arch)
 ./gradlew packageMsi             # Windows .msi
 ./gradlew createDistributable    # portable folder in build/compose/binaries
 ```

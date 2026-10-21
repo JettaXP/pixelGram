@@ -1,0 +1,25 @@
+# Maintainer: jettax
+# Packages the prebuilt Compose distributable from build/compose/binaries,
+# copied next to this file as ./app with LICENSE by CI (see .github/workflows/build.yml).
+pkgname=pixelgram
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Telegram client with Material 3 Expressive"
+arch=('x86_64')
+url="https://t.me/pixelgramclient"
+license=('GPL-3.0-only')
+depends=('openssl' 'zlib' 'fontconfig' 'libxext' 'libxrender' 'libxtst' 'libxi' 'alsa-lib')
+options=('!strip' '!debug')
+
+package() {
+    install -d "$pkgdir/opt/pixelgram"
+    cp -a "$startdir/app/pixelGram/." "$pkgdir/opt/pixelgram/"
+
+    install -d "$pkgdir/usr/bin"
+    ln -s /opt/pixelgram/bin/pixelGram "$pkgdir/usr/bin/pixelgram"
+
+    install -Dm644 "$startdir/com.pixelgram.desktop.desktop" \
+        "$pkgdir/usr/share/applications/com.pixelgram.desktop.desktop"
+    install -Dm644 "$startdir/LICENSE" \
+        "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

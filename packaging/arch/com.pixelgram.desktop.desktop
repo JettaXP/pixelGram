@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=pixelGram
+GenericName=Telegram Client
+Comment=Telegram client with Material 3 Expressive
+Exec=pixelgram
+Terminal=false
+Categories=Network;InstantMessaging;Chat;
+Keywords=telegram;messenger;chat;
+StartupWMClass=com-pixelgram-desktop-MainKt
