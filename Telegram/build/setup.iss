@@ -1,9 +1,9 @@
-#define MyAppShortName "AyuGram"
-#define MyAppName "AyuGram Desktop"
-#define MyAppPublisher "Radolyn Labs"
-#define MyAppURL "https://github.com/AyuGram"
-#define MyAppExeName "AyuGram.exe"
-#define MyAppId "53F49750-6209-4FBF-9CA8-7A333C87D666"
+#define MyAppShortName "pixelGram"
+#define MyAppName "pixelGram Desktop"
+#define MyAppPublisher "jettax"
+#define MyAppURL "https://t.me/pixelgramclient"
+#define MyAppExeName "pixelGram.exe"
+#define MyAppId "2E4E866B-6267-4C9C-8209-97D2256C270A"
 #define CurrentYear GetDateTimeString('yyyy','','')
 
 [Setup]
