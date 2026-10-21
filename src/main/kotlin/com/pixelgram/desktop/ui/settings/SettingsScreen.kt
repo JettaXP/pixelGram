@@ -21,7 +21,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.Info
@@ -67,51 +69,67 @@ import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.net.URI
 
-private enum class Section(val title: String, val icon: ImageVector) {
-    Appearance("Appearance", Icons.Outlined.Palette),
-    Avatars("Avatars", Icons.Outlined.Face),
-    Bubbles("Message bubbles", Icons.Outlined.ChatBubbleOutline),
-    Account("Account", Icons.Outlined.AccountCircle),
-    About("About", Icons.Outlined.Info),
+// Telegram settings on the main list; pixelGram's own settings live in
+// the "pixelGram Preferences" sub-list, like AyuGram Preferences.
+private enum class Section(val title: String, val icon: ImageVector, val pixel: Boolean) {
+    Account("Account", Icons.Outlined.AccountCircle, pixel = false),
+    About("About", Icons.Outlined.Info, pixel = false),
+    Appearance("Appearance", Icons.Outlined.Palette, pixel = true),
+    Avatars("Avatars", Icons.Outlined.Face, pixel = true),
+    Bubbles("Message bubbles", Icons.Outlined.ChatBubbleOutline, pixel = true),
 }
+
+private const val PixelPreferencesTitle = "pixelGram Preferences"
 
 @Composable
 fun SettingsScreen(telegram: Telegram, settings: AppSettings, onBack: () -> Unit) {
     var section by remember {
         val initial = System.getProperty("pixelgram.section")
-        mutableStateOf(Section.entries.firstOrNull { it.name == initial } ?: Section.Appearance)
+        mutableStateOf(Section.entries.firstOrNull { it.name == initial } ?: Section.Account)
     }
+    var inPreferences by remember { mutableStateOf(section.pixel) }
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
         Row {
             Column(
                 Modifier
-                    .width(280.dp)
+                    .width(300.dp)
                     .fillMaxHeight()
                     .padding(12.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        if (inPreferences) {
+                            inPreferences = false
+                            section = Section.Account
+                        } else {
+                            onBack()
+                        }
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                    Text("Settings", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        if (inPreferences) PixelPreferencesTitle else "Settings",
+                        style = MaterialTheme.typography.titleLarge,
+                    )
                 }
                 Spacer(Modifier.height(8.dp))
-                Section.entries.forEach { item ->
-                    val selected = item == section
-                    ListItem(
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.extraLarge)
-                            .clickable { section = item },
-                        colors = ListItemDefaults.colors(
-                            containerColor = if (selected) {
-                                MaterialTheme.colorScheme.secondaryContainer
-                            } else {
-                                Color.Transparent
-                            },
-                        ),
-                        leadingContent = { Icon(item.icon, contentDescription = null) },
-                        headlineContent = { Text(item.title) },
-                    )
+                if (inPreferences) {
+                    Section.entries.filter { it.pixel }.forEach { item ->
+                        NavItem(item.title, item.icon, item == section) { section = item }
+                    }
+                } else {
+                    NavItem("Account", Icons.Outlined.AccountCircle, section == Section.Account) {
+                        section = Section.Account
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    PreferencesEntry {
+                        inPreferences = true
+                        section = Section.Appearance
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    NavItem("About", Icons.Outlined.Info, section == Section.About) {
+                        section = Section.About
+                    }
                 }
             }
             Surface(
@@ -128,6 +146,13 @@ fun SettingsScreen(telegram: Telegram, settings: AppSettings, onBack: () -> Unit
                         .padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    if (section.pixel) {
+                        Text(
+                            PixelPreferencesTitle,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                     Text(section.title, style = MaterialTheme.typography.headlineSmall)
                     Spacer(Modifier.height(8.dp))
                     when (section) {
@@ -141,6 +166,47 @@ fun SettingsScreen(telegram: Telegram, settings: AppSettings, onBack: () -> Unit
             }
         }
     }
+}
+
+@Composable
+private fun NavItem(title: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
+    ListItem(
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.extraLarge)
+            .clickable(onClick = onClick),
+        colors = ListItemDefaults.colors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.secondaryContainer
+            } else {
+                Color.Transparent
+            },
+        ),
+        leadingContent = { Icon(icon, contentDescription = null) },
+        headlineContent = { Text(title) },
+    )
+}
+
+// Highlighted entry that opens the pixelGram Preferences sub-list.
+@Composable
+private fun PreferencesEntry(onClick: () -> Unit) {
+    ListItem(
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.extraLarge)
+            .clickable(onClick = onClick),
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            headlineColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            supportingColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            leadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            trailingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        ),
+        leadingContent = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null) },
+        headlineContent = { Text(PixelPreferencesTitle) },
+        supportingContent = { Text("Appearance, avatars, bubbles") },
+        trailingContent = {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+        },
+    )
 }
 
 @Composable
