@@ -140,16 +140,13 @@ fun MainScreen(
                 ChatList(
                     listKey = selectedKey,
                     title = if (selectedKey == ChatListKey.Archive) "Archived chats" else "pixelGram",
-                    chats = telegram.chatList(selectedKey),
+                    chatsFor = telegram::chatList,
+                    order = { key -> if (key == ChatListKey.Archive) -1 else tabs.indexOfFirst { it.key == key } },
                     selectedChatId = openChatId,
                     telegram = telegram,
                     settings = settings,
                     onOpen = onOpenChat,
-                    archivedCount = if (selectedKey == ChatListKey.Main) {
-                        telegram.chatList(ChatListKey.Archive).size
-                    } else {
-                        0
-                    },
+                    archivedCount = telegram.chatList(ChatListKey.Archive).size,
                     onOpenArchive = { selectedKey = ChatListKey.Archive },
                     onMenu = if (settings.materialFolders.value) null else toggleMenu,
                     onBack = if (selectedKey == ChatListKey.Archive) {
@@ -169,7 +166,7 @@ fun MainScreen(
             ) {
                 val chat = openChatId?.let { telegram.chats[it] }
                 if (chat != null) {
-                    ChatView(chat, telegram, settings)
+                    ChatView(chat, telegram, settings, onOpenChat)
                 } else {
                     Box(contentAlignment = Alignment.Center) {
                         Text(

@@ -84,6 +84,7 @@ class ChatState(val id: Long) {
     var lastMessage by mutableStateOf<TdApi.Message?>(null)
     var unreadCount by mutableStateOf(0)
     var isGroup by mutableStateOf(false)
+    var privateUserId = 0L
     val positions = mutableStateMapOf<ChatListKey, Long>()
     val pinned = mutableStateMapOf<ChatListKey, Boolean>()
 }
@@ -390,8 +391,31 @@ class Telegram(
 
     fun myFullInfo(onResult: (TdApi.UserFullInfo?) -> Unit) {
         if (myUserId == 0L) return onResult(null)
-        send(TdApi.GetUserFullInfo().apply { userId = myUserId }) { result ->
+        userFullInfo(myUserId, onResult)
+    }
+
+    fun userFullInfo(userId: Long, onResult: (TdApi.UserFullInfo?) -> Unit) {
+        send(TdApi.GetUserFullInfo().apply { this.userId = userId }) { result ->
             onResult(result as? TdApi.UserFullInfo)
+        }
+    }
+
+    // Makes sure the chat is known, e.g. a channel linked from a profile.
+    fun loadChat(chatId: Long) {
+        if (chatId != 0L && chatId !in chats) send(TdApi.GetChat().apply { this.chatId = chatId })
+    }
+
+    // Your channels that can be shown on your profile.
+    fun suitablePersonalChats(onResult: (List<Long>) -> Unit) {
+        send(TdApi.GetSuitablePersonalChats()) { result ->
+            onResult((result as? TdApi.Chats)?.chatIds?.toList().orEmpty())
+        }
+    }
+
+    // 0 removes the personal channel.
+    fun setPersonalChat(chatId: Long, onResult: (error: String?) -> Unit) {
+        send(TdApi.SetPersonalChat().apply { this.chatId = chatId }) { result ->
+            onResult((result as? TdApi.Error)?.let { friendlyError(it.message) })
         }
     }
 
@@ -523,6 +547,7 @@ class Telegram(
             lastMessage = chat.lastMessage
             unreadCount = chat.unreadCount
             isGroup = chat.type is TdApi.ChatTypeBasicGroup || chat.type is TdApi.ChatTypeSupergroup
+            privateUserId = (chat.type as? TdApi.ChatTypePrivate)?.userId ?: 0L
         }
         chat.positions?.forEach { applyPosition(state, it) }
         chats[chat.id] = state

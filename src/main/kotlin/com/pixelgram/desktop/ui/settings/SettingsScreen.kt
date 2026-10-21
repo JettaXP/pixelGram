@@ -93,9 +93,11 @@ import com.pixelgram.desktop.telegram.fullName
 import com.pixelgram.desktop.ui.AvatarShape
 import com.pixelgram.desktop.ui.auth.QrCode
 import com.pixelgram.desktop.ui.components.Avatar
+import com.pixelgram.desktop.ui.components.AvatarImage
 import com.pixelgram.desktop.ui.components.InfoGroup
 import com.pixelgram.desktop.ui.components.InfoRow
 import com.pixelgram.desktop.ui.components.ShapePreview
+import com.pixelgram.desktop.ui.toShape
 import com.pixelgram.desktop.ui.main.CapsuleFolders
 import com.pixelgram.desktop.ui.main.FolderTab
 import com.pixelgram.desktop.ui.main.MessageBubble
@@ -335,7 +337,18 @@ private fun ProfileCard(telegram: Telegram, settings: AppSettings, onClick: () -
         AlertDialog(
             onDismissRequest = { showQr = false },
             title = { Text("@$username") },
-            text = { QrCode("https://t.me/$username", Modifier.size(240.dp)) },
+            text = {
+                QrCode("https://t.me/$username", Modifier.size(260.dp)) {
+                    AvatarImage(
+                        me.fullName(),
+                        me.profilePhoto?.small,
+                        telegram,
+                        AvatarShape.Cookie12Sided.toShape(0),
+                        size = 52.dp,
+                        full = me.profilePhoto?.big,
+                    )
+                }
+            },
             confirmButton = { TextButton(onClick = { showQr = false }) { Text("Close") } },
         )
     }
@@ -547,35 +560,34 @@ private fun AppearanceSection(settings: AppSettings) {
     }
 
     Header("Chat folders")
-    SegmentedGroup {
+    Text("Position", style = MaterialTheme.typography.bodyLarge)
+    ConnectedChoice(
+        options = listOf(true to "Left", false to "Top"),
+        selected = settings.materialFolders.value,
+        onSelect = { settings.materialFolders.value = it },
+    )
+    Description("Left is a Material 3 navigation rail, top is a bar above the chat list.")
+    Text("Style on top", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+    ConnectedChoice(
+        options = listOf(false to "Tabs", true to "Capsule (experimental)"),
+        selected = settings.capsuleFolders.value,
+        onSelect = {
+            settings.capsuleFolders.value = it
+            if (it) settings.materialFolders.value = false
+        },
+    )
+    Spacer(Modifier.height(8.dp))
     SwitchRow(
         index = 0,
-        count = 2,
-        title = "Material 3 navigation rail",
-        subtitle = "Show folders in a side rail. When off, folders are tabs above the chat list.",
-        checked = settings.materialFolders.value,
-        onChange = { settings.materialFolders.value = it },
-    )
-    SwitchRow(
-        index = 1,
-        count = 2,
+        count = 1,
         title = "Hide \"All chats\"",
         subtitle = "Only works when you have at least one folder.",
         checked = settings.hideAllChats.value,
         onChange = { settings.hideAllChats.value = it },
     )
-    }
 
-    Header("Capsule folder bar (experimental)")
-    SwitchRow(
-        index = 0,
-        count = 1,
-        title = "Folders in one capsule",
-        subtitle = "Replaces the tabs above the chat list when the navigation rail is off. " +
-            "The selected folder shows its name, the others only their icon.",
-        checked = settings.capsuleFolders.value,
-        onChange = { settings.capsuleFolders.value = it },
-    )
+    Header("Capsule (experimental)")
+    Description("The selected folder shows its name, the others only their icon. Try it here:")
     CapsuleFolders(
         tabs = CapsulePreviewTabs,
         selected = CapsulePreviewTabs[capsulePreview].key,
@@ -607,20 +619,27 @@ private fun AppearanceSection(settings: AppSettings) {
 }
 
 @Composable
-private fun ThemeModeButtons(settings: AppSettings) {
+private fun ThemeModeButtons(settings: AppSettings) = ConnectedChoice(
+    options = ThemeMode.entries.map { it to it.name },
+    selected = settings.themeMode.value,
+    onSelect = { settings.themeMode.value = it },
+)
+
+// Material 3 Expressive connected button group with one choice.
+@Composable
+private fun <T> ConnectedChoice(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
-        val modes = ThemeMode.entries
-        modes.forEachIndexed { index, mode ->
+        options.forEachIndexed { index, (value, label) ->
             ToggleButton(
-                checked = settings.themeMode.value == mode,
-                onCheckedChange = { settings.themeMode.value = mode },
+                checked = selected == value,
+                onCheckedChange = { onSelect(value) },
                 shapes = when (index) {
                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                    modes.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
                     else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                 },
             ) {
-                Text(mode.name)
+                Text(label)
             }
         }
     }

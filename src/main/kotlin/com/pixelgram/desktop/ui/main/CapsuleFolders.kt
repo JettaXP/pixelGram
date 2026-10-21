@@ -1,10 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Campaign
@@ -42,16 +41,30 @@ import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.ToggleButtonShapes
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.ChatListKey
+import kotlin.math.roundToInt
 
 // Experimental: folders in one Material 3 Expressive floating toolbar. Only
 // the selected folder shows its name, the others shrink to their icon.
@@ -67,8 +80,22 @@ internal fun CapsuleFolders(
     // WHY: the toolbar is at least ContainerSize tall, the same inset on
     // every side keeps the selected pill concentric with the capsule.
     val inset = ((FloatingToolbarDefaults.ContainerSize - height) / 2).coerceAtLeast(6.dp)
-    val enter = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
-    val exit = MaterialTheme.motionScheme.fastSpatialSpec<IntSize>()
+    // WHY: a bouncy spring makes the whole bar overshoot its final width;
+    // labels and the indicator share one non-bouncy spec so they stay in sync.
+    val spec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val colors = MaterialTheme.colorScheme
+
+    val bounds = remember { mutableStateMapOf<ChatListKey, Pair<Float, Float>>() }
+    var previous by remember { mutableStateOf(selected) }
+    val travel = remember { Animatable(1f) }
+    LaunchedEffect(selected) {
+        if (travel.value < 1f || previous != selected) {
+            travel.snapTo(0f)
+            travel.animateTo(1f, spec)
+        }
+        previous = selected
+    }
+
     Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
         HorizontalFloatingToolbar(
             expanded = true,
@@ -76,27 +103,64 @@ internal fun CapsuleFolders(
             contentPadding = PaddingValues(inset),
             expandedShadowElevation = 0.dp,
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(settings.capsuleSpacing.value.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-            ) {
-                tabs.forEach { tab ->
-                    val isSelected = tab.key == selected
-                    ToggleButton(
-                        checked = isSelected,
-                        onCheckedChange = { onSelect(tab.key) },
-                        shapes = ToggleButtonShapes(CircleShape, CircleShape, CircleShape),
-                        contentPadding = PaddingValues(horizontal = (height - IconSize) / 2),
-                        modifier = Modifier.height(height).widthIn(min = height),
-                    ) {
-                        Icon(folderIcon(tab.icon, isSelected), contentDescription = tab.title)
-                        AnimatedVisibility(
-                            visible = isSelected,
-                            enter = fadeIn() + expandHorizontally(enter),
-                            exit = fadeOut() + shrinkHorizontally(exit),
+            Box(Modifier.horizontalScroll(rememberScrollState())) {
+                // One indicator slides between folders instead of each button
+                // fading its own background.
+                Box(
+                    Modifier
+                        .layout { measurable, _ ->
+                            val from = bounds[previous]
+                            val to = bounds[selected] ?: from
+                            val t = travel.value
+                            val left = lerp(from?.first ?: to?.first ?: 0f, to?.first ?: 0f, t)
+                            val width = lerp(from?.second ?: to?.second ?: 0f, to?.second ?: 0f, t)
+                            val placeable = measurable.measure(
+                                Constraints.fixed(width.roundToInt(), height.roundToPx())
+                            )
+                            layout(0, 0) { placeable.place(left.roundToInt(), 0) }
+                        }
+                        .clip(CircleShape)
+                        .background(colors.primary),
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(settings.capsuleSpacing.value.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    tabs.forEach { tab ->
+                        val isSelected = tab.key == selected
+                        val progress by animateFloatAsState(if (isSelected) 1f else 0f, spec)
+                        val content = lerp(colors.onSurfaceVariant, colors.onPrimary, progress)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .onPlaced { bounds[tab.key] = it.positionInParent().x to it.size.width.toFloat() }
+                                .height(height)
+                                .widthIn(min = height)
+                                .clip(CircleShape)
+                                .selectable(selected = isSelected, role = Role.Tab) { onSelect(tab.key) }
+                                .padding(horizontal = (height - IconSize) / 2),
                         ) {
-                            Text(tab.title, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
+                            Icon(folderIcon(tab.icon, isSelected), contentDescription = tab.title, tint = content)
+                            if (progress > 0f) {
+                                Text(
+                                    tab.title,
+                                    color = content,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    modifier = Modifier
+                                        .clipToBounds()
+                                        .layout { measurable, constraints ->
+                                            val placeable = measurable.measure(
+                                                constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity)
+                                            )
+                                            val gap = LabelGap.roundToPx()
+                                            val width = ((placeable.width + gap) * progress).roundToInt()
+                                            layout(width, placeable.height) { placeable.place(gap, 0) }
+                                        }
+                                        .graphicsLayer { alpha = progress },
+                                )
+                            }
                         }
                     }
                 }
@@ -105,6 +169,7 @@ internal fun CapsuleFolders(
     }
 }
 
+private val LabelGap = 8.dp
 private val IconSize = 24.dp
 
 // Telegram folder icon names (chatFolderIcon) mapped to Material icons.

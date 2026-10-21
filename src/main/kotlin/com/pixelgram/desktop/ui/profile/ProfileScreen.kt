@@ -5,7 +5,14 @@ import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.Modifier
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,10 +31,25 @@ import com.pixelgram.desktop.ui.components.PageScaffold
 import it.tdlight.jni.TdApi
 
 @Composable
-fun ProfileScreen(telegram: Telegram, settings: AppSettings, onBack: () -> Unit) {
+fun ProfileScreen(
+    telegram: Telegram,
+    settings: AppSettings,
+    onOpenChat: (Long) -> Unit,
+    onBack: () -> Unit,
+) {
     val me = telegram.me
     var fullInfo by remember { mutableStateOf<TdApi.UserFullInfo?>(null) }
-    LaunchedEffect(me?.id) { telegram.myFullInfo { fullInfo = it } }
+    var refresh by remember { mutableIntStateOf(0) }
+    var picking by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(me?.id, refresh) { telegram.myFullInfo { fullInfo = it } }
+    val setChannel = { chatId: Long ->
+        picking = false
+        telegram.setPersonalChat(chatId) {
+            error = it
+            refresh++
+        }
+    }
 
     PageScaffold("My Profile", onBack) {
         if (me == null) {
@@ -50,5 +72,22 @@ fun ProfileScreen(telegram: Telegram, settings: AppSettings, onBack: () -> Unit)
             add(InfoRow(Icons.Outlined.Numbers, "ID", me.id.toString()))
         }
         InfoGroup(rows)
+
+        val channelId = fullInfo?.personalChatId ?: 0L
+        if (channelId != 0L) {
+            PersonalChannelCard(channelId, telegram, settings, onOpenChat, Modifier.fillMaxWidth())
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { picking = true }) {
+                Text(if (channelId != 0L) "Change personal channel" else "Add personal channel")
+            }
+            if (channelId != 0L) {
+                TextButton(onClick = { setChannel(0L) }) { Text("Remove") }
+            }
+        }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    }
+    if (picking) {
+        PersonalChannelPicker(telegram, settings, onPicked = setChannel, onDismiss = { picking = false })
     }
 }

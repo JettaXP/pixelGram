@@ -28,6 +28,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,9 +48,10 @@ import com.pixelgram.desktop.telegram.ChatState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.ui.components.ChatAvatar
+import com.pixelgram.desktop.ui.profile.PersonalChannelCard
 
 @Composable
-fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings) {
+fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenChat: (Long) -> Unit) {
     DisposableEffect(chat.id) {
         telegram.openChat(chat.id)
         onDispose { telegram.closeChat(chat.id) }
@@ -77,6 +79,21 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings) {
         ) {
             ChatAvatar(chat, telegram, settings, size = 40.dp)
             Text(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
+        }
+        var personalChannel by remember(chat.id) { mutableLongStateOf(0L) }
+        LaunchedEffect(chat.id) {
+            if (chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id)) {
+                telegram.userFullInfo(chat.privateUserId) { personalChannel = it?.personalChatId ?: 0L }
+            }
+        }
+        if (personalChannel != 0L) {
+            PersonalChannelCard(
+                personalChannel,
+                telegram,
+                settings,
+                onOpenChat,
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            )
         }
         LazyColumn(
             state = listState,

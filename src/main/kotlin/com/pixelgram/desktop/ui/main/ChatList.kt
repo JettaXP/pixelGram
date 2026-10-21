@@ -1,5 +1,11 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.ChatListKey
@@ -46,7 +53,9 @@ import java.time.format.DateTimeFormatter
 fun ChatList(
     listKey: ChatListKey,
     title: String,
-    chats: List<ChatState>,
+    chatsFor: (ChatListKey) -> List<ChatState>,
+    // Position of a list among the folders, to slide in the right direction.
+    order: (ChatListKey) -> Int,
     selectedChatId: Long?,
     telegram: Telegram,
     settings: AppSettings,
@@ -78,49 +87,60 @@ fun ChatList(
             )
         }
         // Material 3 Expressive segmented groups: archive, pinned chats, the rest.
-        val (pinned, rest) = chats.partition { it.pinned[listKey] == true }
-        LazyColumn(
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
-        ) {
-            if (archivedCount > 0) {
-                item(key = "archive") {
-                    SegmentedListItem(
-                        onClick = onOpenArchive,
-                        shapes = ListItemDefaults.segmentedShapes(0, 1),
-                        leadingContent = {
-                            Box(
-                                Modifier
-                                    .size(48.dp)
-                                    .clip(settings.avatarShape.value.toShape(settings.avatarCorner.value))
-                                    .background(MaterialTheme.colorScheme.secondaryContainer),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    Icons.Outlined.Archive,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                )
-                            }
-                        },
-                        supportingContent = { Text("$archivedCount chats") },
-                    ) {
-                        Text("Archived chats")
+        val forward = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+        val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+        AnimatedContent(
+            targetState = listKey,
+            transitionSpec = {
+                val direction = if (order(targetState) >= order(initialState)) 1 else -1
+                (slideInHorizontally(forward) { it / 4 * direction } + fadeIn(fade)) togetherWith
+                    (slideOutHorizontally(forward) { -it / 4 * direction } + fadeOut(fade))
+            },
+        ) { key ->
+            val (pinned, rest) = chatsFor(key).partition { it.pinned[key] == true }
+            LazyColumn(
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            ) {
+                if (archivedCount > 0 && key == ChatListKey.Main) {
+                    item(key = "archive") {
+                        SegmentedListItem(
+                            onClick = onOpenArchive,
+                            shapes = ListItemDefaults.segmentedShapes(0, 1),
+                            leadingContent = {
+                                Box(
+                                    Modifier
+                                        .size(48.dp)
+                                        .clip(settings.avatarShape.value.toShape(settings.avatarCorner.value))
+                                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Archive,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    )
+                                }
+                            },
+                            supportingContent = { Text("$archivedCount chats") },
+                        ) {
+                            Text("Archived chats")
+                        }
+                    }
+                    item(key = "archive-gap") { Spacer(Modifier.height(GroupGap)) }
+                }
+                itemsIndexed(pinned, key = { _, chat -> chat.id }) { index, chat ->
+                    ChatRow(chat, index, pinned.size, chat.id == selectedChatId, telegram, settings) {
+                        onOpen(chat.id)
                     }
                 }
-                item(key = "archive-gap") { Spacer(Modifier.height(GroupGap)) }
-            }
-            itemsIndexed(pinned, key = { _, chat -> chat.id }) { index, chat ->
-                ChatRow(chat, index, pinned.size, chat.id == selectedChatId, telegram, settings) {
-                    onOpen(chat.id)
+                if (pinned.isNotEmpty() && rest.isNotEmpty()) {
+                    item(key = "pinned-gap") { Spacer(Modifier.height(GroupGap)) }
                 }
-            }
-            if (pinned.isNotEmpty() && rest.isNotEmpty()) {
-                item(key = "pinned-gap") { Spacer(Modifier.height(GroupGap)) }
-            }
-            itemsIndexed(rest, key = { _, chat -> chat.id }) { index, chat ->
-                ChatRow(chat, index, rest.size, chat.id == selectedChatId, telegram, settings) {
-                    onOpen(chat.id)
+                itemsIndexed(rest, key = { _, chat -> chat.id }) { index, chat ->
+                    ChatRow(chat, index, rest.size, chat.id == selectedChatId, telegram, settings) {
+                        onOpen(chat.id)
+                    }
                 }
             }
         }
