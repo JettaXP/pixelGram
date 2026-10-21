@@ -48,10 +48,11 @@ dependencies {
 
 // API credentials are compiled in from the environment or gradle.properties.
 val generateBuildConfig by tasks.registering {
-    val apiId = providers.environmentVariable("TELEGRAM_API_ID")
+    // Empty environment variables (unset CI secrets) fall back to gradle.properties.
+    val apiId = providers.environmentVariable("TELEGRAM_API_ID").filter { it.isNotBlank() }
         .orElse(providers.gradleProperty("pixelgram.apiId"))
         .orElse("")
-    val apiHash = providers.environmentVariable("TELEGRAM_API_HASH")
+    val apiHash = providers.environmentVariable("TELEGRAM_API_HASH").filter { it.isNotBlank() }
         .orElse(providers.gradleProperty("pixelgram.apiHash"))
         .orElse("")
     val appVersion = project.version.toString()
