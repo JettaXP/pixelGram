@@ -352,6 +352,9 @@ public:
 	[[nodiscard]] bool crashReporting() const { return _crashReporting.current(); }
 	[[nodiscard]] int avatarCorners() const { return _avatarCorners.current(); }
 	[[nodiscard]] bool singleCornerRadius() const { return _singleCornerRadius.current(); }
+	// pixelGram
+	[[nodiscard]] int avatarShape() const { return _avatarShape.current(); }
+	[[nodiscard]] bool materialFolders() const { return _materialFolders.current(); }
 	[[nodiscard]] bool streamerMode() const { return _streamerMode.current(); }
 
 	void setSaveDeletedMessages(bool val);
@@ -439,6 +442,9 @@ public:
 	void setCrashReporting(bool val);
 	void setAvatarCorners(int val);
 	void setSingleCornerRadius(bool val);
+	// pixelGram
+	void setAvatarShape(int val);
+	void setMaterialFolders(bool val);
 	void setStreamerMode(bool val);
 
 	[[nodiscard]] rpl::producer<bool> useGlobalGhostModeValue() const { return _useGlobalGhostMode.value(); }
@@ -613,6 +619,10 @@ public:
 	[[nodiscard]] rpl::producer<int> avatarCornersChanges() const { return _avatarCorners.changes(); }
 	[[nodiscard]] rpl::producer<bool> singleCornerRadiusValue() const { return _singleCornerRadius.value(); }
 	[[nodiscard]] rpl::producer<bool> singleCornerRadiusChanges() const { return _singleCornerRadius.changes(); }
+	// pixelGram
+	[[nodiscard]] rpl::producer<int> avatarShapeValue() const { return _avatarShape.value(); }
+	[[nodiscard]] rpl::producer<bool> materialFoldersValue() const { return _materialFolders.value(); }
+	[[nodiscard]] rpl::producer<bool> materialFoldersChanges() const { return _materialFolders.changes(); }
 	[[nodiscard]] rpl::producer<bool> streamerModeValue() const { return _streamerMode.value(); }
 	[[nodiscard]] rpl::producer<bool> streamerModeChanges() const { return _streamerMode.changes(); }
 
@@ -710,6 +720,9 @@ private:
 	rpl::variable<bool> _crashReporting = true;
 	rpl::variable<int> _avatarCorners = 23;
 	rpl::variable<bool> _singleCornerRadius = false;
+	// pixelGram
+	rpl::variable<int> _avatarShape = 0;
+	rpl::variable<bool> _materialFolders = false;
 	rpl::variable<bool> _streamerMode = false;
 
 	rpl::variable<bool> _useGlobalGhostMode = true;

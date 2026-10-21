@@ -30,7 +30,7 @@ AvatarCornersPreview::AvatarCornersPreview(
 	Ui::EmptyUserpic::UserpicColor(
 		Data::DecideColorIndex(
 			peerFromChannel(ChannelId(2331068091)))),
-	u"AyuGram Releases"_q) {
+	u"pixelGram"_q) {
 	const auto &row = st::defaultDialogRow;
 	setFixedHeight(row.height);
 	setCursor(Qt::PointingHandCursor);
@@ -63,18 +63,14 @@ void AvatarCornersPreview::paintEvent(QPaintEvent *e) {
 		_emptyUserpic.paintCircle(p, userpicX, userpicY, width(), photoSize);
 	}
 
-	const auto nameText = u"AyuGram Releases"_q;
+	const auto nameText = u"pixelGram"_q;
 	p.setPen(st::dialogsNameFg);
 	p.setFont(st::semiboldFont);
 	p.drawText(row.nameLeft + xShift, row.nameTop + st::semiboldFont->ascent, nameText);
 
-	const auto nameWidth = st::semiboldFont->width(nameText);
-	const auto &badge = st::dialogsExteraOfficialIcon.icon;
-	badge.paint(p, row.nameLeft + xShift + nameWidth, row.nameTop, width());
-
 	p.setPen(st::dialogsTextFg);
 	p.setFont(st::dialogsTextFont);
-	p.drawText(row.textLeft + xShift, row.textTop + st::dialogsTextFont->ascent, u"Better late than never"_q);
+	p.drawText(row.textLeft + xShift, row.textTop + st::dialogsTextFont->ascent, u"Make Telegram yours"_q);
 }
 
 void AvatarCornersPreview::mousePressEvent(QMouseEvent *e) {
@@ -96,14 +92,14 @@ void AvatarCornersPreview::mouseReleaseEvent(QMouseEvent *e) {
 	}
 	if (e->button() == Qt::LeftButton && rect().contains(e->pos())) {
 		_controller->showPeerByLink(Window::PeerByLinkInfo{
-			.usernameOrId = u"telegram"_q,
+			.usernameOrId = u"pixelgramclient"_q,
 		});
 	}
 }
 
 void AvatarCornersPreview::resolveChannel() {
 	const auto session = &_controller->session();
-	_peer = session->data().peerByUsername(u"telegram"_q);
+	_peer = session->data().peerByUsername(u"pixelgramclient"_q);
 	if (_peer) {
 		_peer->loadUserpic();
 		subscribeToUpdates();
@@ -112,7 +108,7 @@ void AvatarCornersPreview::resolveChannel() {
 	const auto weak = base::make_weak(this);
 	session->api().request(MTPcontacts_ResolveUsername(
 		MTP_flags(0),
-		MTP_string(u"telegram"_q),
+		MTP_string(u"pixelgramclient"_q),
 		MTP_string()
 	)).done([=](const MTPcontacts_ResolvedPeer &result) {
 		if (const auto strong = weak.get()) {

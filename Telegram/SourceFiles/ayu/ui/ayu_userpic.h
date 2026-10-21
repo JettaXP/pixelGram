@@ -19,7 +19,10 @@ namespace AyuUserpic {
 [[nodiscard]] double ComputeRadiusF(double size);
 [[nodiscard]] bool IsCircle();
 
-[[nodiscard]] uint8 PackedState();
+[[nodiscard]] uint16 PackedState();
+
+// pixelGram: rounds by the AyuGram radius or clips to the MD3 shape.
+[[nodiscard]] QImage RoundImage(QImage &&image);
 
 void PaintShape(QPainter &p, int x, int y, int size);
 void PaintShape(QPainter &p, const QRectF &rect);

@@ -53,6 +53,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ayu_settings.h"
 
+// pixelGram includes
+#include "pixel/ui/pixel_rail.h"
+#include "styles/style_pixel_ui.h"
+
 
 namespace Window {
 namespace {
@@ -550,6 +554,14 @@ Ui::ChatsFiltersTabsMode FiltersMenu::tabsMode() const {
 
 const style::SideBarButton &FiltersMenu::buttonStyle() const {
 	using Mode = Ui::ChatsFiltersTabsMode;
+	if (AyuSettings::getInstance().materialFolders()) {
+		switch (tabsMode()) {
+		case Mode::TextOnly: return st::pixelRailButtonTextOnly;
+		case Mode::TextAndIcons: return st::pixelRailButton;
+		case Mode::IconsOnly: return st::pixelRailButtonIconsOnly;
+		}
+		return st::pixelRailButton;
+	}
 	switch (tabsMode()) {
 	case Mode::TextOnly: return st::windowFiltersButtonTextOnly;
 	case Mode::TextAndIcons: return st::windowFiltersButton;
@@ -612,6 +624,16 @@ base::unique_qptr<Ui::SideBarButton> FiltersMenu::prepareButton(
 		? icon
 		: Ui::FilterIcon::All);
 	raw->setIconOverride(icons.normal, icons.active);
+	if (AyuSettings::getInstance().materialFolders()) {
+		using Mode = Ui::ChatsFiltersTabsMode;
+		PixelUi::InstallRailIndicator(raw, [=] {
+			return (id >= 0) && (_activeFilterId == id);
+		}, (mode == Mode::TextOnly)
+			? PixelUi::RailMode::TextOnly
+			: (mode == Mode::IconsOnly)
+			? PixelUi::RailMode::IconsOnly
+			: PixelUi::RailMode::TextAndIcons);
+	}
 	if (id >= 0) {
 		if (locked) {
 			// Surface a locked folder's premium-gated status and what pressing

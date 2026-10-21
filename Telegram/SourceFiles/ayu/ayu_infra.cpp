@@ -17,6 +17,9 @@
 #include "ui/chat/chat_style_radius.h"
 #include "utils/rc_manager.h"
 
+// pixelGram includes
+#include "pixel/ui/pixel_shapes.h"
+
 #ifdef Q_OS_WIN
 #include "ayu/utils/windows_utils.h"
 #endif
@@ -41,6 +44,8 @@ void initUiSettings() {
 	AyuUiSettings::setWideMultiplier(settings.wideMultiplier());
 	AyuUiSettings::setMaterialSwitches(settings.materialSwitches());
 	AyuUiSettings::setAvatarCorners(settings.avatarCorners());
+	PixelShapes::SetAvatarShape(
+		PixelShapes::AvatarShapeFromInt(settings.avatarShape()));
 	Ui::SetAppliedBubbleRadius(settings.messageBubbleRadius());
 }
 

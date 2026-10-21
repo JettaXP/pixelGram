@@ -135,6 +135,16 @@ set(ayugram_files
         ayu/ui/toasts.h
         ayu/ui/ayu_userpic.cpp
         ayu/ui/ayu_userpic.h
+        pixel/ui/pixel_shapes.cpp
+        pixel/ui/pixel_shapes.h
+        pixel/ui/pixel_rail.cpp
+        pixel/ui/pixel_rail.h
+        pixel/ui/pixel_shape_picker.cpp
+        pixel/ui/pixel_shape_picker.h
+        pixel/ui/settings/settings_pixel_avatars.cpp
+        pixel/ui/settings/settings_pixel_avatars.h
+        pixel/ui/settings/settings_pixel_bubbles.cpp
+        pixel/ui/settings/settings_pixel_bubbles.h
         ayu/ui/utils/ayu_profile_values.cpp
         ayu/ui/utils/ayu_profile_values.h
         ayu/ui/utils/color_cut_quantizer.cpp

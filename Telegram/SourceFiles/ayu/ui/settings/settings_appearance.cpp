@@ -81,110 +81,6 @@ void BuildAppIcon(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 #endif
 }
 
-void BuildAvatarCorners(SectionBuilder &builder, AyuSectionBuilder &ayu) {
-	auto *settings = &AyuSettings::getInstance();
-	const auto controller = builder.controller();
-
-	const auto mapRadius = [](int val)
-	{
-		if (val == 0) {
-			return tr::ayu_AvatarCornersSquare(tr::now).toUpper();
-		} else if (val == AyuUiSettings::kMaxAvatarCorners) {
-			return tr::ayu_AvatarCornersCircle(tr::now).toUpper();
-		}
-		return QString::number(val);
-	};
-
-	builder.add([=](const WidgetContext &ctx) -> SectionBuilder::WidgetToAdd {
-		const auto container = ctx.container;
-		auto title = object_ptr<Ui::FlatLabel>(
-			container,
-			tr::ayu_AvatarCorners(),
-			st::defaultSubsectionTitle);
-		const auto titleRaw = title.data();
-
-		const auto badge = Ui::CreateChild<Ui::PaddingWrap<Ui::FlatLabel>>(
-			container,
-			object_ptr<Ui::FlatLabel>(
-				container,
-				settings->avatarCornersValue() | rpl::map(mapRadius),
-				st::settingsPremiumNewBadge),
-			st::ayuBetaBadgePadding);
-		badge->show();
-		badge->setAttribute(Qt::WA_TransparentForMouseEvents);
-		badge->paintRequest() | rpl::on_next([=] {
-			auto p = QPainter(badge);
-			auto hq = PainterHighQualityEnabler(p);
-			p.setPen(Qt::NoPen);
-			p.setBrush(st::windowBgActive);
-			const auto r = st::ayuBetaBadgePadding.left();
-			p.drawRoundedRect(badge->rect(), r, r);
-		}, badge->lifetime());
-
-		titleRaw->geometryValue() | rpl::on_next([=](QRect geometry) {
-			badge->moveToLeft(
-				geometry.x()
-					+ titleRaw->textMaxWidth()
-					+ st::settingsPremiumNewBadgePosition.x(),
-				geometry.y()
-					+ (geometry.height() - badge->height()) / 2);
-		}, badge->lifetime());
-
-		return {
-			.widget = std::move(title),
-			.margin = st::defaultSubsectionTitlePadding,
-		};
-	}, [] {
-		return SearchEntry{
-			.id = u"ayu/avatarCorners"_q,
-			.title = tr::ayu_AvatarCorners(tr::now),
-		};
-	});
-
-	auto *previewRaw = static_cast<AvatarCornersPreview*>(nullptr);
-	builder.add([&](const Builder::WidgetContext &ctx) -> SectionBuilder::WidgetToAdd {
-		auto preview = object_ptr<AvatarCornersPreview>(
-			ctx.container,
-			controller);
-		previewRaw = preview.data();
-		const auto vMargin = st::settingsButtonNoIcon.padding
-			- st::defaultDialogRow.padding;
-		return {
-			.widget = std::move(preview),
-			.margin = QMargins(0, vMargin.top(), 0, vMargin.bottom()),
-		};
-	});
-
-	ayu.addSlider({
-		.id = u"ayu/avatarCornersSlider"_q,
-		.title = rpl::single(QString()),
-		.showTitle = false,
-		.steps = AyuUiSettings::kMaxAvatarCorners + 1,
-		.current = settings->avatarCorners(),
-		.onChanged = [=](int val) {
-			AyuSettings::getInstance().setAvatarCorners(val);
-			if (previewRaw) {
-				previewRaw->update();
-			}
-		},
-		.onFinalChanged = [=](int val) {
-			AyuSettings::getInstance().setAvatarCorners(val);
-			ShowRestartPrompt(controller);
-		},
-	});
-
-	ayu.addSettingToggle({
-		.id = u"ayu/singleCornerRadius"_q,
-		.title = tr::ayu_SingleCornerRadius(),
-		.getter = &AyuSettings::singleCornerRadius,
-		.setter = &AyuSettings::setSingleCornerRadius,
-	});
-
-	builder.addSkip();
-	builder.addDividerText(tr::ayu_SingleCornerRadiusDescription());
-	builder.addSkip();
-}
-
 void BuildAppearance(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 	auto *settings = &AyuSettings::getInstance();
 
@@ -248,6 +144,19 @@ void BuildChatFolders(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 		.title = tr::ayu_HideAllChats(),
 		.getter = &AyuSettings::hideAllChatsFolder,
 		.setter = &AyuSettings::setHideAllChatsFolder,
+	});
+
+	// pixelGram
+	const auto controller = builder.controller();
+	ayu.addToggle({
+		.id = u"pixel/materialFolders"_q,
+		.title = tr::pixel_MaterialFolders(),
+		.getter = [] { return AyuSettings::getInstance().materialFolders(); },
+		.setter = [=](bool value) {
+			AyuSettings::getInstance().setMaterialFolders(value);
+			ShowRestartPrompt(controller);
+		},
+		.keywords = { u"md3"_q, u"material"_q, u"rail"_q },
 	});
 
 	ayu.addSectionDivider();
@@ -384,7 +293,6 @@ const auto kMeta = BuildHelper({
 
 	builder.addSkip();
 	BuildAppIcon(builder, ayu);
-	BuildAvatarCorners(builder, ayu);
 	BuildAppearance(builder, ayu);
 	BuildChatFolders(builder, ayu);
 	BuildTrayElements(builder, ayu);

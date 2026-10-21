@@ -58,6 +58,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ui/ayu_userpic.h"
 
+// pixelGram includes
+#include "pixel/ui/pixel_shapes.h"
+
 
 namespace {
 
@@ -488,12 +491,14 @@ QImage PeerData::GenerateUserpicImage(
 		Ui::PeerUserpicView &view,
 		int size,
 		std::optional<int> radius) {
+	auto pixelShape = false;
 	if (!radius) {
 		const auto shape = peer->isForum()
 			? Ui::PeerUserpicShape::Forum
 			: Ui::PeerUserpicShape::Circle;
 		if (AyuUserpic::ShouldOverrideShape(shape)) {
 			radius = AyuUserpic::ComputeRadius(size);
+			pixelShape = PixelShapes::HasCustomPath();
 		}
 	}
 	if (const auto userpic = peer->userpicCloudImage(view)) {
@@ -501,6 +506,9 @@ QImage PeerData::GenerateUserpicImage(
 			{ size, size },
 			Qt::IgnoreAspectRatio,
 			Qt::SmoothTransformation);
+		if (pixelShape) {
+			return PixelShapes::Apply(std::move(image));
+		}
 		const auto round = [&](int radius) {
 			return Images::Round(
 				std::move(image),
@@ -522,7 +530,9 @@ QImage PeerData::GenerateUserpicImage(
 	result.fill(Qt::transparent);
 
 	Painter p(&result);
-	if (radius == 0) {
+	if (pixelShape) {
+		peer->ensureEmptyUserpic()->paintCircle(p, 0, 0, size, size);
+	} else if (radius == 0) {
 		peer->ensureEmptyUserpic()->paintSquare(p, 0, 0, size, size);
 	} else if (radius) {
 		const auto r = *radius;

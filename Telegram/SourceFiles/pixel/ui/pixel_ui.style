@@ -1,0 +1,31 @@
+// This is the source code of pixelGram for Desktop.
+// Based on AyuGram Desktop and Telegram Desktop, licensed under GPLv3.
+
+using "ui/basic.style";
+using "ui/widgets/widgets.style";
+using "window/window.style";
+
+// Material 3 navigation rail for the folders side bar.
+// Buttons are transparent, the rail indicator paints the background.
+pixelRailButton: SideBarButton(windowFiltersButton) {
+	textBg: transparent;
+	textBgActive: transparent;
+}
+pixelRailButtonTextOnly: SideBarButton(windowFiltersButtonTextOnly) {
+	textBg: transparent;
+	textBgActive: transparent;
+}
+pixelRailButtonIconsOnly: SideBarButton(windowFiltersButtonIconsOnly) {
+	textBg: transparent;
+	textBgActive: transparent;
+}
+pixelRailPillSize: size(56px, 32px);
+pixelRailPillCenterTop: 20px;
+pixelRailTextPillMargin: margins(6px, 6px, 6px, 6px);
+pixelRailTextPillRadius: 16px;
+
+// Avatar shape picker.
+pixelShapePickerCell: 52px;
+pixelShapePickerShape: 34px;
+pixelShapePickerRadius: 14px;
+pixelShapePickerPadding: margins(16px, 4px, 16px, 8px);

@@ -90,6 +90,16 @@ void AboutBox(not_null<Ui::GenericBox*> box, Window::SessionController* controll
 	addText(Text());
 
 	box->addButton(tr::lng_close(), [=] { box->closeBox(); });
+	box->addLeftButton(
+		rpl::single(u"@pixelgramclient"_q),
+		[box, controller] {
+			box->closeBox();
+			if (controller) {
+				controller->showPeerByLink(Window::PeerByLinkInfo{
+					.usernameOrId = u"pixelgramclient"_q,
+				});
+			}
+		});
 
 	box->setWidth(st::aboutWidth);
 }

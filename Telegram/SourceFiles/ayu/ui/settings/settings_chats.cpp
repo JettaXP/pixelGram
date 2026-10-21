@@ -192,13 +192,6 @@ void BuildMarks(
 		| rpl::map([](bool v) { return !v; }));
 
 	ayu.addSettingToggle({
-		.id = u"ayu/removeMessageTail"_q,
-		.title = tr::ayu_RemoveMessageTail(),
-		.getter = &AyuSettings::removeMessageTail,
-		.setter = &AyuSettings::setRemoveMessageTail,
-	});
-
-	ayu.addSettingToggle({
 		.id = u"ayu/hideFastShare"_q,
 		.altIds = { u"ayu/hideShareButton"_q },
 		.title = tr::ayu_HideShareButton(),
@@ -241,31 +234,6 @@ void BuildWideMessagesMultiplier(
 	};
 
 	const auto controller = builder.controller();
-	ayu.addSlider({
-		.id = u"ayu/messageBubbleRadius"_q,
-		.title = tr::ayu_MessageBubbleRadius(),
-		.steps = 17,
-		.current = settings->messageBubbleRadius(),
-		.indexToValue = [](int index) { return index; },
-		.onChanged = [=](int index) {
-			if (previewState->widget) {
-				previewState->widget->setBubbleRadius(index);
-			}
-		},
-		.onFinalChanged = [=](int index) {
-			if (previewState->widget) {
-				previewState->widget->setBubbleRadius(index);
-			}
-			AyuSettings::getInstance().setMessageBubbleRadius(index);
-			ShowRestartPrompt(controller);
-		},
-		.formatLabel = [](int index) {
-			return QString::number(index);
-		},
-	});
-
-	ayu.addSectionDivider();
-
 	ayu.addSlider({
 		.id = u"ayu/wideMultiplier"_q,
 		.title = tr::ayu_SettingsWideMultiplier(),

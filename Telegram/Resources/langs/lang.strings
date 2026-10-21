@@ -9191,3 +9191,32 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_AboutText1" = "ToS breaking Telegram client based on {api_link}.";
 "ayu_UpdateAyuGram" = "Update pixelGram";
 "ayu_UtilityRestartRequired" = "The app will close in 5 seconds.";
+
+// pixelGram keys
+"pixel_CategoryAvatars" = "Avatars";
+"pixel_CategoryBubbles" = "Message Bubbles";
+"pixel_AvatarShapeHeader" = "Avatar Shape";
+"pixel_AvatarShapeDescription" = "Material 3 shapes for avatars. Some places update only after a restart.";
+"pixel_AvatarCornersDescription" = "Corner radius applies to the \"Custom\" shape.";
+"pixel_BubbleRadiusHeader" = "Bubble Corners";
+"pixel_BubbleRadiusDescription" = "Corner radius of message bubbles.";
+"pixel_MaterialFolders" = "Material 3 Folders";
+"pixel_ShapeCustom" = "Custom";
+"pixel_ShapeCircle" = "Circle";
+"pixel_ShapeSquare" = "Square";
+"pixel_ShapePill" = "Pill";
+"pixel_ShapeCookie4" = "4-sided cookie";
+"pixel_ShapeCookie6" = "6-sided cookie";
+"pixel_ShapeCookie7" = "7-sided cookie";
+"pixel_ShapeCookie9" = "9-sided cookie";
+"pixel_ShapeCookie12" = "12-sided cookie";
+"pixel_ShapeClover4" = "4-leaf clover";
+"pixel_ShapeClover8" = "8-leaf clover";
+"pixel_ShapeSunny" = "Sunny";
+"pixel_ShapeVerySunny" = "Very sunny";
+"pixel_ShapeSoftBurst" = "Soft burst";
+"pixel_ShapeDiamond" = "Diamond";
+"pixel_ShapePentagon" = "Pentagon";
+"pixel_ShapeArch" = "Arch";
+"pixel_ShapePixelCircle" = "Pixel circle";
+"pixel_ShapeHeart" = "Heart";

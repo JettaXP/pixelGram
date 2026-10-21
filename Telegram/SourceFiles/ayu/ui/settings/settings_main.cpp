@@ -30,6 +30,10 @@
 #include "window/window_session_controller.h"
 #include "window/window_session_controller_link_info.h"
 
+// pixelGram includes
+#include "pixel/ui/settings/settings_pixel_avatars.h"
+#include "pixel/ui/settings/settings_pixel_bubbles.h"
+
 #include <QDesktopServices>
 
 namespace Settings {
@@ -70,7 +74,7 @@ void BuildVersionInfo(SectionBuilder &builder) {
 			.widget = object_ptr<Ui::FlatLabel>(
 				ctx.container,
 				rpl::single(
-					QString("AyuGram Desktop v")
+					QString("pixelGram Desktop v")
 					+ QString::fromLatin1(AppVersionStr)),
 				st::boxTitle),
 			.align = style::al_top,
@@ -121,6 +125,16 @@ void BuildCategories(SectionBuilder &builder) {
 		.icon = { &st::menuIconPalette },
 	});
 	builder.addSectionButton({
+		.title = tr::pixel_CategoryAvatars(),
+		.targetSection = PixelAvatars::Id(),
+		.icon = { &st::menuIconProfile },
+	});
+	builder.addSectionButton({
+		.title = tr::pixel_CategoryBubbles(),
+		.targetSection = PixelBubbles::Id(),
+		.icon = { &st::menuIconReply },
+	});
+	builder.addSectionButton({
 		.title = tr::ayu_CategoryChats(),
 		.targetSection = AyuChats::Id(),
 		.icon = { &st::menuIconChatBubble },
@@ -130,6 +144,29 @@ void BuildCategories(SectionBuilder &builder) {
 		.targetSection = AyuOther::Id(),
 		.icon = { &st::menuIconFave },
 	});
+}
+
+void BuildLinks(SectionBuilder &builder) {
+	builder.addSkip();
+	builder.addDivider();
+	builder.addSkip();
+
+	builder.addSubsectionTitle(tr::ayu_LinksHeader());
+
+	const auto controller = builder.controller();
+	builder.addButton({
+		.id = u"pixel/channel"_q,
+		.title = tr::ayu_LinksChannel(),
+		.icon = { &st::menuIconChannel },
+		.label = rpl::single(u"@pixelgramclient"_q),
+		.onClick = [=] {
+			controller->showPeerByLink(Window::PeerByLinkInfo{
+				.usernameOrId = u"pixelgramclient"_q,
+			});
+		},
+	});
+
+	builder.addSkip();
 }
 
 const auto kMeta = BuildHelper({
@@ -142,6 +179,7 @@ const auto kMeta = BuildHelper({
 	builder.addSkip();
 	BuildVersionInfo(builder);
 	BuildCategories(builder);
+	BuildLinks(builder);
 });
 
 } // namespace

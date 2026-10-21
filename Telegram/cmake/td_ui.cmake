@@ -87,6 +87,7 @@ set(style_files
     media/view/media_view.style
     overview/overview.style
     window/window.style
+    pixel/ui/pixel_ui.style
     window/window_main_menu.style
     editor/editor.style
     statistics/statistics.style
