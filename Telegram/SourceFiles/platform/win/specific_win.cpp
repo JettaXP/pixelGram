@@ -249,7 +249,7 @@ QString psAppDataPath() {
 #ifdef OS_WIN_STORE
 		return appData.absolutePath() + u"/Telegram Desktop UWP/"_q;
 #else // OS_WIN_STORE
-		return appData.absolutePath() + '/' + AppName.utf16() + '/';
+		return appData.absolutePath() + '/' + AppDataFolder.utf16() + '/';
 #endif // OS_WIN_STORE
 	}
 	return QString();

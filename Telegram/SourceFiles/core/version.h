@@ -18,9 +18,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #endif // TDESKTOP_ALLOW_CLOSED_ALPHA
 
 // used in Updater.cpp and Setup.iss for Windows
-constexpr auto AppId = "{53F49750-6209-4FBF-9CA8-7A333C87D666}"_cs;
-constexpr auto AppNameOld = "AyuGram for Windows"_cs;
-constexpr auto AppName = "AyuGram Desktop"_cs;
+constexpr auto AppId = "{2E4E866B-6267-4C9C-8209-97D2256C270A}"_cs;
+constexpr auto AppNameOld = "pixelGram for Windows"_cs;
+constexpr auto AppName = "pixelGram Desktop"_cs;
+constexpr auto AppDataFolder = "pixelgram"_cs;
 constexpr auto AppFile = "AyuGram"_cs;
 constexpr auto AppVersion = 7002009;
 constexpr auto AppVersionStr = "7.2.9";

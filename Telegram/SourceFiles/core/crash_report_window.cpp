@@ -495,9 +495,9 @@ LastCrashedWindow::LastCrashedWindow(
 	});
 	_saveReport.setText(u"SAVE TO FILE"_q);
 	connect(&_saveReport, &QPushButton::clicked, [=] { saveReport(); });
-	_getApp.setText(u"GET THE LATEST VERSION OF AYUGRAM DESKTOP"_q);
+	_getApp.setText(u"GET THE LATEST VERSION OF PIXELGRAM DESKTOP"_q);
 	connect(&_getApp, &QPushButton::clicked, [=] {
-		QDesktopServices::openUrl(u"https://github.com/AyuGram/AyuGramDesktop"_q);
+		QDesktopServices::openUrl(u"https://t.me/pixelgramclient"_q);
 	});
 
 	_send.setText(u"SEND CRASH REPORT"_q);
