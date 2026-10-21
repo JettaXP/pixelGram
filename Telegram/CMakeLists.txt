@@ -145,6 +145,8 @@ set(ayugram_files
         pixel/ui/settings/settings_pixel_avatars.h
         pixel/ui/settings/settings_pixel_bubbles.cpp
         pixel/ui/settings/settings_pixel_bubbles.h
+        pixel/features/matugen_theme.cpp
+        pixel/features/matugen_theme.h
         ayu/ui/utils/ayu_profile_values.cpp
         ayu/ui/utils/ayu_profile_values.h
         ayu/ui/utils/color_cut_quantizer.cpp
@@ -2390,6 +2392,7 @@ endif()
 nice_target_sources(Telegram ${res_loc}
 PRIVATE
     qrc/ayu/ayu.qrc
+    qrc/pixel/pixel.qrc
 
     qrc/emoji_1.qrc
     qrc/emoji_2.qrc

@@ -31,6 +31,12 @@
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_session_controller.h"
 
+// pixelGram includes
+#include "pixel/features/matugen_theme.h"
+
+#include <QtGui/QClipboard>
+#include <QtGui/QGuiApplication>
+
 namespace Settings {
 
 using namespace Builder;
@@ -126,6 +132,38 @@ void BuildAppearance(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 	});
 
 	ayu.addSectionDivider();
+}
+
+void BuildMatugen(SectionBuilder &builder, AyuSectionBuilder &ayu) {
+	if (!PixelMatugen::Supported()) {
+		return;
+	}
+	const auto controller = builder.controller();
+	builder.addSubsectionTitle(tr::pixel_MatugenHeader());
+
+	ayu.addToggle({
+		.id = u"pixel/matugenTheme"_q,
+		.title = tr::pixel_MatugenTheme(),
+		.getter = [] { return AyuSettings::getInstance().matugenTheme(); },
+		.setter = [](bool value) {
+			AyuSettings::getInstance().setMatugenTheme(value);
+		},
+		.keywords = { u"matugen"_q, u"material you"_q, u"wallpaper"_q },
+	});
+	builder.addButton({
+		.id = u"pixel/matugenConfig"_q,
+		.title = tr::pixel_MatugenCopyConfig(),
+		.st = &st::settingsButtonNoIcon,
+		.onClick = [=] {
+			QGuiApplication::clipboard()->setText(
+				PixelMatugen::ConfigSnippet());
+			controller->showToast(tr::pixel_MatugenCopied(tr::now));
+		},
+	});
+
+	builder.addSkip();
+	builder.addDividerText(tr::pixel_MatugenDescription());
+	builder.addSkip();
 }
 
 void BuildChatFolders(SectionBuilder &builder, AyuSectionBuilder &ayu) {
@@ -294,6 +332,7 @@ const auto kMeta = BuildHelper({
 	builder.addSkip();
 	BuildAppIcon(builder, ayu);
 	BuildAppearance(builder, ayu);
+	BuildMatugen(builder, ayu);
 	BuildChatFolders(builder, ayu);
 	BuildTrayElements(builder, ayu);
 	BuildDrawerElements(builder, ayu);

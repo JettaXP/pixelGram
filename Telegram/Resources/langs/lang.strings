@@ -9237,3 +9237,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "pixel_ShapePixelTriangle" = "Pixel triangle";
 "pixel_ShapeBun" = "Bun";
 "pixel_ShapeHeart" = "Heart";
+"pixel_MatugenHeader" = "Material You";
+"pixel_MatugenTheme" = "Dynamic theme from matugen";
+"pixel_MatugenCopyConfig" = "Copy matugen config";
+"pixel_MatugenCopied" = "Config copied. Add it to ~/.config/matugen/config.toml.";
+"pixel_MatugenDescription" = "Add the copied lines to your matugen config. Every time matugen generates colors from your wallpaper, pixelGram applies them as the theme.";

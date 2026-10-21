@@ -113,6 +113,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/ayu_settings.h"
 #include "ayu/features/streamer_mode/streamer_mode.h"
 
+// pixelGram includes
+#include "pixel/features/matugen_theme.h"
+
 
 namespace Core {
 namespace {
@@ -395,6 +398,7 @@ void Application::run() {
 
 	_windows.emplace(nullptr, std::make_unique<Window::Controller>());
 	setLastActiveWindow(_windows.front().second.get());
+	PixelMatugen::Refresh();
 	_windowInSettings = _lastActivePrimaryWindow = _lastActiveWindow;
 
 	_domain->activeChanges(

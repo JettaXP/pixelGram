@@ -355,6 +355,7 @@ public:
 	// pixelGram
 	[[nodiscard]] int avatarShape() const { return _avatarShape.current(); }
 	[[nodiscard]] bool materialFolders() const { return _materialFolders.current(); }
+	[[nodiscard]] bool matugenTheme() const { return _matugenTheme.current(); }
 	[[nodiscard]] bool streamerMode() const { return _streamerMode.current(); }
 
 	void setSaveDeletedMessages(bool val);
@@ -445,6 +446,7 @@ public:
 	// pixelGram
 	void setAvatarShape(int val);
 	void setMaterialFolders(bool val);
+	void setMatugenTheme(bool val);
 	void setStreamerMode(bool val);
 
 	[[nodiscard]] rpl::producer<bool> useGlobalGhostModeValue() const { return _useGlobalGhostMode.value(); }
@@ -723,6 +725,7 @@ private:
 	// pixelGram
 	rpl::variable<int> _avatarShape = 0;
 	rpl::variable<bool> _materialFolders = false;
+	rpl::variable<bool> _matugenTheme = false;
 	rpl::variable<bool> _streamerMode = false;
 
 	rpl::variable<bool> _useGlobalGhostMode = true;

@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/pixel">
+        <file alias="matugen/pixelgram.tdesktop-palette">../../matugen/pixelgram.tdesktop-palette</file>
+    </qresource>
+</RCC>

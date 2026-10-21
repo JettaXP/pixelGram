@@ -22,6 +22,7 @@
 #include "window/window_controller.h"
 
 // pixelGram includes
+#include "pixel/features/matugen_theme.h"
 #include "pixel/ui/pixel_shapes.h"
 
 #include <fstream>
@@ -1080,6 +1081,13 @@ void AyuSettings::setMaterialFolders(bool val) {
 	save();
 }
 
+void AyuSettings::setMatugenTheme(bool val) {
+	if (_matugenTheme.current() == val) return;
+	_matugenTheme = val;
+	save();
+	PixelMatugen::Refresh();
+}
+
 void AyuSettings::setStreamerMode(bool val) {
 	if (_streamerMode.current() == val) return;
 	_streamerMode = val;
@@ -1184,6 +1192,7 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"singleCornerRadius", s._singleCornerRadius.current()},
 		{"pixelAvatarShape", s._avatarShape.current()},
 		{"pixelMaterialFolders", s._materialFolders.current()},
+		{"pixelMatugenTheme", s._matugenTheme.current()},
 		{"streamerMode", s._streamerMode.current()},
 		{"messageShotSettings", s._messageShotSettings}
 	};
@@ -1291,6 +1300,7 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 	s._avatarShape = int(PixelShapes::AvatarShapeFromInt(
 		j.value("pixelAvatarShape", defaults._avatarShape.current())));
 	s._materialFolders = j.value("pixelMaterialFolders", defaults._materialFolders.current());
+	s._matugenTheme = j.value("pixelMatugenTheme", defaults._matugenTheme.current());
 	s._streamerMode = j.value("streamerMode", defaults._streamerMode.current());
 
 	if (j.contains("messageShotSettings") && j["messageShotSettings"].is_object()) {
