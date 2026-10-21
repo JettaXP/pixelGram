@@ -90,7 +90,7 @@ class ChatState(val id: Long) {
 
 const val SavedMessagesTitle = "Saved Messages"
 
-data class FolderInfo(val id: Int, val title: String)
+data class FolderInfo(val id: Int, val title: String, val icon: String)
 
 // Immutable snapshot of a message for the UI; TdApi objects are mutable.
 data class UiMessage(
@@ -421,7 +421,7 @@ class Telegram(
             is TdApi.UpdateChatFolders -> {
                 folders.clear()
                 update.chatFolders?.forEach { info ->
-                    folders.add(FolderInfo(info.id, info.name?.text?.text ?: ""))
+                    folders.add(FolderInfo(info.id, info.name?.text?.text ?: "", info.icon?.name ?: ""))
                 }
             }
             is TdApi.UpdateNewMessage -> messages[update.message.chatId]?.let { list ->

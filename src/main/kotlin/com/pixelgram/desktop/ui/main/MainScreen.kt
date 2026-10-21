@@ -67,7 +67,7 @@ import com.pixelgram.desktop.telegram.ChatListKey
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.fullName
 
-private data class FolderTab(val key: ChatListKey, val title: String)
+internal data class FolderTab(val key: ChatListKey, val title: String, val icon: String = "")
 
 @Composable
 fun MainScreen(
@@ -79,9 +79,9 @@ fun MainScreen(
 ) {
     val tabs = buildList {
         if (!settings.hideAllChats.value || telegram.folders.isEmpty()) {
-            add(FolderTab(ChatListKey.Main, "All chats"))
+            add(FolderTab(ChatListKey.Main, "All chats", "All"))
         }
-        telegram.folders.forEach { add(FolderTab(ChatListKey.Folder(it.id), it.title)) }
+        telegram.folders.forEach { add(FolderTab(ChatListKey.Folder(it.id), it.title, it.icon)) }
     }
     var selectedKey by remember { mutableStateOf<ChatListKey>(ChatListKey.Main) }
     if (selectedKey != ChatListKey.Archive && tabs.none { it.key == selectedKey } && tabs.isNotEmpty()) {
@@ -127,7 +127,11 @@ fun MainScreen(
                     .padding(vertical = 8.dp),
             ) {
                 if (!settings.materialFolders.value && selectedKey != ChatListKey.Archive) {
-                    FoldersTabs(tabs, selectedKey, onSelect = { selectedKey = it })
+                    if (settings.capsuleFolders.value) {
+                        CapsuleFolders(tabs, selectedKey, settings, onSelect = { selectedKey = it })
+                    } else {
+                        FoldersTabs(tabs, selectedKey, onSelect = { selectedKey = it })
+                    }
                 }
                 ChatList(
                     listKey = selectedKey,
@@ -231,8 +235,7 @@ private fun PixelRail(
                             imageVector = when {
                                 isAll && isSelected -> Icons.Filled.Forum
                                 isAll -> Icons.Outlined.Forum
-                                isSelected -> Icons.Filled.Folder
-                                else -> Icons.Outlined.Folder
+                                else -> folderIcon(tab.icon, isSelected)
                             },
                             contentDescription = tab.title,
                         )

@@ -71,6 +71,7 @@ import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -84,6 +85,7 @@ import com.pixelgram.desktop.BuildConfig
 import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.ThemeMode
+import com.pixelgram.desktop.telegram.ChatListKey
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.telegram.fullName
@@ -93,6 +95,8 @@ import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.ui.components.InfoGroup
 import com.pixelgram.desktop.ui.components.InfoRow
 import com.pixelgram.desktop.ui.components.ShapePreview
+import com.pixelgram.desktop.ui.main.CapsuleFolders
+import com.pixelgram.desktop.ui.main.FolderTab
 import com.pixelgram.desktop.ui.main.MessageBubble
 import com.pixelgram.desktop.ui.main.formatChatDate
 import com.pixelgram.desktop.ui.storage.MemoryContent
@@ -459,8 +463,16 @@ private fun SwitchRow(
     }
 }
 
+private val CapsulePreviewTabs = listOf(
+    FolderTab(ChatListKey.Main, "All chats", "All"),
+    FolderTab(ChatListKey.Folder(1), "Personal", "Private"),
+    FolderTab(ChatListKey.Folder(2), "Work", "Work"),
+    FolderTab(ChatListKey.Folder(3), "Channels", "Channels"),
+)
+
 @Composable
 private fun AppearanceSection(settings: AppSettings) {
+    var capsulePreview by remember { mutableIntStateOf(0) }
     Header("Theme")
     ThemeModeButtons(settings)
 
@@ -541,6 +553,45 @@ private fun AppearanceSection(settings: AppSettings) {
         checked = settings.hideAllChats.value,
         onChange = { settings.hideAllChats.value = it },
     )
+    }
+
+    Header("Capsule folder bar (experimental)")
+    SwitchRow(
+        index = 0,
+        count = 1,
+        title = "Folders in one capsule",
+        subtitle = "Replaces the tabs above the chat list when the navigation rail is off. " +
+            "The selected folder shows its name, the others only their icon.",
+        checked = settings.capsuleFolders.value,
+        onChange = { settings.capsuleFolders.value = it },
+    )
+    CapsuleFolders(
+        tabs = CapsulePreviewTabs,
+        selected = CapsulePreviewTabs[capsulePreview].key,
+        settings = settings,
+        onSelect = { key -> capsulePreview = CapsulePreviewTabs.indexOfFirst { it.key == key } },
+    )
+    Text("Spacing", style = MaterialTheme.typography.bodyLarge)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Slider(
+            value = settings.capsuleSpacing.value.toFloat(),
+            onValueChange = { settings.capsuleSpacing.value = it.toInt() },
+            valueRange = 0f..16f,
+            steps = 15,
+            modifier = Modifier.weight(1f),
+        )
+        Text("${settings.capsuleSpacing.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+    }
+    Text("Height", style = MaterialTheme.typography.bodyLarge)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Slider(
+            value = settings.capsuleHeight.value.toFloat(),
+            onValueChange = { settings.capsuleHeight.value = it.toInt() },
+            valueRange = 32f..64f,
+            steps = 31,
+            modifier = Modifier.weight(1f),
+        )
+        Text("${settings.capsuleHeight.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
     }
 }
 

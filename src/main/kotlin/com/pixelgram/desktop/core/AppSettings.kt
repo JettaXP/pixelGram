@@ -48,6 +48,9 @@ class AppSettings private constructor(private val props: Properties) {
     // Folders.
     val materialFolders = bool("materialFolders", true)
     val hideAllChats = bool("hideAllChats", false)
+    val capsuleFolders = bool("capsuleFolders", false)
+    val capsuleSpacing = int("capsuleSpacing", 4)
+    val capsuleHeight = int("capsuleHeight", 40)
 
     // Avatars.
     val avatarShape = enum("avatarShape", AvatarShape.Circle)
@@ -64,6 +67,7 @@ class AppSettings private constructor(private val props: Properties) {
     private val all: List<Setting<*>> = listOf(
         themeMode, seedColor, matugen,
         materialFolders, hideAllChats,
+        capsuleFolders, capsuleSpacing, capsuleHeight,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius,
         apiId, apiHash,
