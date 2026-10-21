@@ -7,7 +7,7 @@ Planned features, not started yet.
 - Closing the window hides pixelGram to the system tray instead of quitting.
 - Tray menu:
   - **Open pixelGram** — shows the window again;
-  - **Disable notifications** — a toggle that mutes notification sounds and pop-ups;
+  - **Disable notifications** — a button that mutes notification sounds and pop-ups;
   - **Quit pixelGram** — closes the app completely.
 
 ## Notifications
