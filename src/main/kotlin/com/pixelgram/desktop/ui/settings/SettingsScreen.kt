@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -387,10 +388,15 @@ private fun NavItem(
 
 // Official Material 3 switch with check / close icons on the thumb.
 @Composable
-fun PixelSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?) {
+fun PixelSwitch(
+    checked: Boolean,
+    onCheckedChange: ((Boolean) -> Unit)?,
+    interactionSource: MutableInteractionSource? = null,
+) {
     Switch(
         checked = checked,
         onCheckedChange = onCheckedChange,
+        interactionSource = interactionSource,
         thumbContent = {
             Icon(
                 imageVector = if (checked) Icons.Filled.Check else Icons.Filled.Close,
@@ -452,12 +458,17 @@ private fun SwitchRow(
     checked: Boolean,
     onChange: (Boolean) -> Unit,
 ) {
+    // The row's presses also reach the switch, so its thumb grows while held.
+    val interaction = remember { MutableInteractionSource() }
     SegmentedListItem(
         checked = checked,
         onCheckedChange = onChange,
         shapes = ListItemDefaults.segmentedShapes(index, count),
         supportingContent = subtitle?.let { { Text(it) } },
-        trailingContent = { PixelSwitch(checked = checked, onCheckedChange = null) },
+        trailingContent = {
+            PixelSwitch(checked = checked, onCheckedChange = null, interactionSource = interaction)
+        },
+        interactionSource = interaction,
     ) {
         Text(title)
     }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -63,13 +64,16 @@ internal fun CapsuleFolders(
 ) {
     if (tabs.size < 2) return
     val height = settings.capsuleHeight.value.dp
+    // WHY: the toolbar is at least ContainerSize tall, the same inset on
+    // every side keeps the selected pill concentric with the capsule.
+    val inset = ((FloatingToolbarDefaults.ContainerSize - height) / 2).coerceAtLeast(6.dp)
     val enter = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
     val exit = MaterialTheme.motionScheme.fastSpatialSpec<IntSize>()
     Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
         HorizontalFloatingToolbar(
             expanded = true,
             colors = FloatingToolbarDefaults.standardFloatingToolbarColors(),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+            contentPadding = PaddingValues(inset),
             expandedShadowElevation = 0.dp,
         ) {
             Row(
@@ -83,8 +87,8 @@ internal fun CapsuleFolders(
                         checked = isSelected,
                         onCheckedChange = { onSelect(tab.key) },
                         shapes = ToggleButtonShapes(CircleShape, CircleShape, CircleShape),
-                        contentPadding = PaddingValues(horizontal = 12.dp),
-                        modifier = Modifier.height(height),
+                        contentPadding = PaddingValues(horizontal = (height - IconSize) / 2),
+                        modifier = Modifier.height(height).widthIn(min = height),
                     ) {
                         Icon(folderIcon(tab.icon, isSelected), contentDescription = tab.title)
                         AnimatedVisibility(
@@ -100,6 +104,8 @@ internal fun CapsuleFolders(
         }
     }
 }
+
+private val IconSize = 24.dp
 
 // Telegram folder icon names (chatFolderIcon) mapped to Material icons.
 internal fun folderIcon(name: String, filled: Boolean): ImageVector = when (name) {
