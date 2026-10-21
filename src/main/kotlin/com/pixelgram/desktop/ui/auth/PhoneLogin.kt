@@ -38,35 +38,47 @@ import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.telegram.CodeInfo
 import com.pixelgram.desktop.telegram.Country
 import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.ui.theme.emojiText
 import it.tdlight.jni.TdApi
-import kotlinx.coroutines.delay
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 private const val MinNationalDigits = 5
+private const val MaxCodeDigits = 4
 
 @Composable
 fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
     val countries = telegram.countries
-    var country by remember { mutableStateOf<Country?>(null) }
+    var picked by remember { mutableStateOf<Country?>(null) }
+    var code by remember { mutableStateOf("") }
     var number by remember { mutableStateOf("") }
     var picking by remember { mutableStateOf(false) }
 
     // Default country from the system locale, once the list arrives.
     LaunchedEffect(countries) {
-        if (country == null && countries.isNotEmpty()) {
+        if (code.isEmpty() && countries.isNotEmpty()) {
             val region = Locale.getDefault().country
-            country = countries.firstOrNull { it.code == region } ?: countries.first()
+            val initial = countries.firstOrNull { it.code == region } ?: countries.first()
+            picked = initial
+            code = initial.callingCode
         }
     }
 
-    val callingCode = country?.callingCode ?: ""
     val digits = number.filter(Char::isDigit)
-    val info = remember(callingCode, digits) {
-        if (callingCode.isEmpty()) null else telegram.phoneInfo(callingCode + digits)
+    val info = remember(code, digits) {
+        if (code.isEmpty()) null else telegram.phoneInfo(code + digits)
     }
+    // Like Telegram: the typed code picks the country; codes shared by several
+    // countries (+1, +7) are told apart by the number.
+    val country = when {
+        picked?.callingCode == code -> picked
+        else -> countries.firstOrNull { it.callingCode == code && it.code == info?.country?.countryCode }
+            ?: countries.firstOrNull { it.callingCode == code }
+    }
+    val callingCode = if (country != null) code else ""
     val pattern = info?.formattedPhoneNumber.orEmpty()
     val missing = pattern.count { it == '-' }
-    val complete = digits.length >= MinNationalDigits && missing == 0
+    val complete = country != null && digits.length >= MinNationalDigits && missing == 0
     val busy = telegram.authBusy
     val submit = { if (complete && !busy) telegram.sendPhone("+$callingCode$digits") }
 
@@ -81,7 +93,11 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                country?.let { "${it.flag}  ${it.name}" } ?: "Loading countries…",
+                emojiText(when {
+                    country != null -> "${country.flag}  ${country.name}"
+                    countries.isEmpty() -> "Loading countries…"
+                    else -> "Invalid country code"
+                }),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f),
             )
@@ -90,11 +106,16 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
         OutlinedTextField(
-            value = if (callingCode.isEmpty()) "+" else "+$callingCode",
-            onValueChange = {},
-            readOnly = true,
+            value = "+$code",
+            onValueChange = { value ->
+                code = value.filter(Char::isDigit).take(MaxCodeDigits)
+                picked = null
+            },
             label = { Text("Code") },
             singleLine = true,
+            isError = code.isNotEmpty() && countries.isNotEmpty() && country == null,
+            enabled = !busy,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
             modifier = Modifier.width(96.dp),
         )
         OutlinedTextField(
@@ -103,13 +124,14 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
                 // A full international number pasted with "+" picks the country.
                 if (value.startsWith("+")) {
                     val pasted = telegram.phoneInfo(value)
-                    val code = pasted?.countryCallingCode
+                    val pastedCode = pasted?.countryCallingCode
                     val match = countries.firstOrNull {
-                        it.callingCode == code && it.code == pasted?.country?.countryCode
-                    } ?: countries.firstOrNull { it.callingCode == code }
-                    if (match != null && code != null) {
-                        country = match
-                        number = value.filter(Char::isDigit).removePrefix(code)
+                        it.callingCode == pastedCode && it.code == pasted?.country?.countryCode
+                    } ?: countries.firstOrNull { it.callingCode == pastedCode }
+                    if (match != null && pastedCode != null) {
+                        picked = match
+                        code = pastedCode
+                        number = value.filter(Char::isDigit).removePrefix(pastedCode)
                         return@OutlinedTextField
                     }
                 }
@@ -141,7 +163,8 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
         CountryPicker(
             countries = countries,
             onPick = {
-                country = it
+                picked = it
+                code = it.callingCode
                 picking = false
             },
             onDismiss = { picking = false },
@@ -178,7 +201,7 @@ private fun CountryPicker(
                     items(filtered, key = { it.code + it.callingCode }) { country ->
                         ListItem(
                             modifier = Modifier.clickable { onPick(country) },
-                            leadingContent = { Text(country.flag, style = MaterialTheme.typography.titleLarge) },
+                            leadingContent = { Text(emojiText(country.flag), style = MaterialTheme.typography.titleLarge) },
                             headlineContent = { Text(country.name) },
                             trailingContent = { Text("+${country.callingCode}") },
                         )

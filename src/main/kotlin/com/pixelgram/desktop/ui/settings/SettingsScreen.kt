@@ -55,6 +55,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
@@ -75,6 +76,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,9 +85,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.pixelgram.desktop.BuildConfig
 import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
+import com.pixelgram.desktop.core.EmojiStyle
 import com.pixelgram.desktop.core.ThemeMode
 import com.pixelgram.desktop.telegram.ChatListKey
 import com.pixelgram.desktop.telegram.Telegram
@@ -97,15 +102,18 @@ import com.pixelgram.desktop.ui.components.AvatarImage
 import com.pixelgram.desktop.ui.components.InfoGroup
 import com.pixelgram.desktop.ui.components.InfoRow
 import com.pixelgram.desktop.ui.components.ShapePreview
-import com.pixelgram.desktop.ui.toShape
 import com.pixelgram.desktop.ui.main.CapsuleFolders
 import com.pixelgram.desktop.ui.main.FolderTab
 import com.pixelgram.desktop.ui.main.MessageBubble
 import com.pixelgram.desktop.ui.main.formatChatDate
 import com.pixelgram.desktop.ui.storage.MemoryContent
+import com.pixelgram.desktop.ui.theme.Emoji3D
+import com.pixelgram.desktop.ui.theme.Emoji3DState
 import com.pixelgram.desktop.ui.theme.Matugen
 import com.pixelgram.desktop.ui.theme.SeedColors
+import com.pixelgram.desktop.ui.theme.emojiText
 import com.pixelgram.desktop.ui.themedAppIcon
+import com.pixelgram.desktop.ui.toShape
 import it.tdlight.jni.TdApi
 import java.awt.Desktop
 import java.awt.Toolkit
@@ -129,6 +137,8 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
     Bubbles("Message bubbles", Icons.Outlined.ChatBubbleOutline, pixel = true),
 }
 
+private val QrAvatarSize = 80.dp
+
 private const val PixelPreferencesTitle = "pixelGram Preferences"
 private const val ChannelUrl = "https://t.me/pixelgramclient"
 
@@ -140,14 +150,14 @@ fun SettingsScreen(
     onOpenProfile: () -> Unit,
     onBack: () -> Unit,
 ) {
-    var section by remember {
+    var section by rememberSaveable {
         val initial = System.getProperty("pixelgram.section")
         mutableStateOf(
             Section.entries.firstOrNull { it.name == initial }
                 ?: if (startInPreferences) Section.Appearance else Section.MyAccount
         )
     }
-    var inPreferences by remember { mutableStateOf(section.pixel) }
+    var inPreferences by rememberSaveable { mutableStateOf(section.pixel) }
     var searching by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var menuOpen by remember { mutableStateOf(false) }
@@ -318,7 +328,7 @@ private fun ProfileCard(telegram: Telegram, settings: AppSettings, onClick: () -
         ) {
             Avatar(me.fullName(), me.profilePhoto?.small, telegram, settings, size = 64.dp)
             Column(Modifier.weight(1f)) {
-                Text(me.fullName(), style = MaterialTheme.typography.titleLargeEmphasized, maxLines = 1)
+                Text(emojiText(me.fullName()), style = MaterialTheme.typography.titleLargeEmphasized, maxLines = 1)
                 me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
                     Text("+$it", style = MaterialTheme.typography.bodyMedium)
                 }
@@ -336,16 +346,35 @@ private fun ProfileCard(telegram: Telegram, settings: AppSettings, onClick: () -
     if (showQr && username != null) {
         AlertDialog(
             onDismissRequest = { showQr = false },
-            title = { Text("@$username") },
             text = {
-                QrCode("https://t.me/$username", Modifier.size(260.dp)) {
-                    AvatarImage(
-                        me.fullName(),
-                        me.profilePhoto?.small,
-                        telegram,
-                        AvatarShape.Cookie12Sided.toShape(0),
-                        size = 52.dp,
-                        full = me.profilePhoto?.big,
+                // Like Telegram's QR card: the avatar sits on the top edge of the code.
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(contentAlignment = Alignment.TopCenter) {
+                        QrCode(
+                            "https://t.me/$username",
+                            Modifier.padding(top = QrAvatarSize / 2).size(260.dp),
+                        )
+                        val cookie = AvatarShape.Cookie12Sided.toShape(0)
+                        Box(
+                            Modifier
+                                .clip(cookie)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .padding(4.dp),
+                        ) {
+                            AvatarImage(
+                                me.fullName(),
+                                me.profilePhoto?.small,
+                                telegram,
+                                cookie,
+                                size = QrAvatarSize - 8.dp,
+                                full = me.profilePhoto?.big,
+                            )
+                        }
+                    }
+                    Text(
+                        "@$username",
+                        style = MaterialTheme.typography.titleMediumEmphasized,
+                        modifier = Modifier.padding(top = 12.dp),
                     )
                 }
             },
@@ -500,6 +529,9 @@ private fun AppearanceSection(settings: AppSettings) {
     Header("Theme")
     ThemeModeButtons(settings)
 
+    Header("Emoji")
+    EmojiStyleChoice(settings)
+
     Header("Accent color")
     Description("The whole color scheme is generated from this color with Google's Material color utilities.")
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 8.dp)) {
@@ -561,12 +593,17 @@ private fun AppearanceSection(settings: AppSettings) {
 
     Header("Chat folders")
     Text("Position", style = MaterialTheme.typography.bodyLarge)
+    val capsule = settings.capsuleFolders.value
     ConnectedChoice(
         options = listOf(true to "Left", false to "Top"),
-        selected = settings.materialFolders.value,
+        selected = settings.materialFolders.value && !capsule,
         onSelect = { settings.materialFolders.value = it },
+        enabled = { !(it && capsule) },
     )
-    Description("Left is a Material 3 navigation rail, top is a bar above the chat list.")
+    Description(
+        if (capsule) "The capsule is always on top." else
+            "Left is a Material 3 navigation rail, top is a bar above the chat list."
+    )
     Text("Style on top", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
     ConnectedChoice(
         options = listOf(false to "Tabs", true to "Capsule (experimental)"),
@@ -610,12 +647,53 @@ private fun AppearanceSection(settings: AppSettings) {
         Slider(
             value = settings.capsuleHeight.value.toFloat(),
             onValueChange = { settings.capsuleHeight.value = it.toInt() },
-            valueRange = 32f..64f,
+            valueRange = 40f..72f,
             steps = 31,
             modifier = Modifier.weight(1f),
         )
         Text("${settings.capsuleHeight.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
     }
+}
+
+@Composable
+private fun EmojiStyleChoice(settings: AppSettings) {
+    val scope = rememberCoroutineScope()
+    val state = Emoji3D.state
+    ConnectedChoice(
+        options = listOf(EmojiStyle.Noto to "Noto", EmojiStyle.Noto3D to "Noto 3D (experimental)"),
+        selected = settings.emojiStyle.value,
+        onSelect = {
+            settings.emojiStyle.value = it
+            if (it == EmojiStyle.Noto3D) Emoji3D.download(scope)
+        },
+    )
+    Text(emojiText("😀 😍 🥳 🫠 🤔 👍 🎉 ❤️ 🔥 🐱 🍕 🚀"), fontSize = 30.sp, modifier = Modifier.padding(vertical = 4.dp))
+    if (settings.emojiStyle.value == EmojiStyle.Noto3D) {
+        when (state) {
+            is Emoji3DState.Downloading -> {
+                LinearWavyProgressIndicator(progress = { state.progress }, modifier = Modifier.fillMaxWidth())
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Description(
+                        "Downloading Noto 3D: %.0f of %d MB".format(state.progress * Emoji3D.SizeMegabytes, Emoji3D.SizeMegabytes)
+                    )
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = Emoji3D::cancel) { Text("Cancel") }
+                }
+            }
+            is Emoji3DState.Failed -> {
+                Text("Download failed: ${state.reason}", color = MaterialTheme.colorScheme.error)
+                OutlinedButton(onClick = { Emoji3D.download(scope) }) { Text("Try again") }
+            }
+            Emoji3DState.Missing -> OutlinedButton(onClick = { Emoji3D.download(scope) }) {
+                Text("Download Noto 3D (${Emoji3D.SizeMegabytes} MB)")
+            }
+            Emoji3DState.Ready -> Unit
+        }
+    }
+    Description(
+        "Noto is Google's latest emoji set and is built in. Noto 3D is the new style " +
+            "from Android 17, downloaded once from Google (${Emoji3D.SizeMegabytes} MB)."
+    )
 }
 
 @Composable
@@ -627,12 +705,18 @@ private fun ThemeModeButtons(settings: AppSettings) = ConnectedChoice(
 
 // Material 3 Expressive connected button group with one choice.
 @Composable
-private fun <T> ConnectedChoice(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
+private fun <T> ConnectedChoice(
+    options: List<Pair<T, String>>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    enabled: (T) -> Boolean = { true },
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
         options.forEachIndexed { index, (value, label) ->
             ToggleButton(
                 checked = selected == value,
                 onCheckedChange = { onSelect(value) },
+                enabled = enabled(value),
                 shapes = when (index) {
                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
                     options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
@@ -822,7 +906,7 @@ private fun FoldersSection(telegram: Telegram) {
                     shapes = ListItemDefaults.segmentedShapes(index, folders.size),
                     leadingContent = { Icon(Icons.Outlined.Folder, contentDescription = null) },
                 ) {
-                    Text(folder.title)
+                    Text(emojiText(folder.title))
                 }
             }
         }

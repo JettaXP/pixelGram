@@ -5,6 +5,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.platform.Font
 
+internal fun fontBytes(name: String): ByteArray? =
+    Typography::class.java.getResourceAsStream("/fonts/$name.ttf")?.use { it.readBytes() }
+
 // Google Sans (SIL Open Font License, see fonts/GoogleSans-OFL.txt).
 val GoogleSans: FontFamily by lazy {
     FontFamily(
@@ -14,9 +17,7 @@ val GoogleSans: FontFamily by lazy {
             FontWeight.SemiBold to "SemiBold",
             FontWeight.Bold to "Bold",
         ).mapNotNull { (weight, name) ->
-            val data = Typography::class.java.getResourceAsStream("/fonts/GoogleSans-$name.ttf")
-                ?.use { it.readBytes() } ?: return@mapNotNull null
-            Font("GoogleSans-$name", data, weight)
+            fontBytes("GoogleSans-$name")?.let { Font("GoogleSans-$name", it, weight) }
         }
     )
 }

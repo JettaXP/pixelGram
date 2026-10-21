@@ -12,7 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.DpSize
@@ -32,12 +34,13 @@ import com.pixelgram.desktop.ui.people.ContactsScreen
 import com.pixelgram.desktop.ui.auth.AuthScreen
 import com.pixelgram.desktop.ui.main.MainScreen
 import com.pixelgram.desktop.ui.settings.SettingsScreen
+import com.pixelgram.desktop.ui.theme.EmojiFonts
 import com.pixelgram.desktop.ui.theme.PixelTheme
 import com.pixelgram.desktop.ui.theme.isDarkTheme
 import kotlinx.coroutines.MainScope
 
 fun main() = application {
-    val settings = remember { AppSettings.load() }
+    val settings = remember { AppSettings.load().also { EmojiFonts.settings = it } }
     val accounts = remember { Accounts(settings, MainScope()) }
     LaunchedEffect(Unit) { accounts.start() }
 
@@ -67,11 +70,20 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
     var screen by remember {
         mutableStateOf<Screen>(if (devScreen == "settings") Screen.Settings() else Screen.Chats)
     }
+    // Screens to return to, so Back leads where you came from.
+    val history = remember { mutableStateListOf<Screen>() }
+    val navigate = { to: Screen ->
+        history.add(screen)
+        screen = to
+    }
+    val back = { screen = history.removeLastOrNull() ?: Screen.Chats }
     var openChatId by remember { mutableStateOf<Long?>(null) }
     val openChat = { id: Long ->
         openChatId = id
+        history.clear()
         screen = Screen.Chats
     }
+    val saved = rememberSaveableStateHolder()
     val ready = telegram.authState == AuthState.Ready || devScreen != null
     // WHY: without a background the window shows through during the
     // crossfade, which looks like a white flash when opening settings.
@@ -82,27 +94,28 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
             targetState = ready to screen,
             transitionSpec = { fadeIn(enter) togetherWith fadeOut(exit) },
         ) { (isReady, current) ->
-            val back = { screen = Screen.Chats }
-            when {
-                !isReady -> AuthScreen(
-                    telegram,
-                    onCancel = if (accounts.list.size > 1) {
-                        { accounts.cancelAdding(telegram) }
-                    } else {
-                        null
-                    },
-                )
-                current is Screen.Settings -> SettingsScreen(
-                    telegram,
-                    settings,
-                    startInPreferences = current.preferences,
-                    onOpenProfile = { screen = Screen.Profile },
-                    onBack = back,
-                )
-                current == Screen.Profile -> ProfileScreen(telegram, settings, openChat, onBack = back)
-                current == Screen.Contacts -> ContactsScreen(telegram, settings, openChat, onBack = back)
-                current == Screen.Calls -> CallsScreen(telegram, settings, openChat, onBack = back)
-                else -> MainScreen(accounts, telegram, settings, openChatId, openChat, onNavigate = { screen = it })
+            saved.SaveableStateProvider(if (isReady) current.toString() else "auth") {
+                when {
+                    !isReady -> AuthScreen(
+                        telegram,
+                        onCancel = if (accounts.list.size > 1) {
+                            { accounts.cancelAdding(telegram) }
+                        } else {
+                            null
+                        },
+                    )
+                    current is Screen.Settings -> SettingsScreen(
+                        telegram,
+                        settings,
+                        startInPreferences = current.preferences,
+                        onOpenProfile = { navigate(Screen.Profile) },
+                        onBack = back,
+                    )
+                    current == Screen.Profile -> ProfileScreen(telegram, settings, openChat, onBack = back)
+                    current == Screen.Contacts -> ContactsScreen(telegram, settings, openChat, onBack = back)
+                    current == Screen.Calls -> CallsScreen(telegram, settings, openChat, onBack = back)
+                    else -> MainScreen(accounts, telegram, settings, openChatId, openChat, onNavigate = navigate)
+                }
             }
         }
     }

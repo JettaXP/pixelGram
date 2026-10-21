@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,10 +35,9 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.Work
-import androidx.compose.material3.FloatingToolbarDefaults
-import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,10 +62,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.ChatListKey
+import com.pixelgram.desktop.ui.theme.emojiText
 import kotlin.math.roundToInt
 
-// Experimental: folders in one Material 3 Expressive floating toolbar. Only
-// the selected folder shows its name, the others shrink to their icon.
+// Experimental: folders in one capsule. Only the selected folder shows its
+// name, the others shrink to their icon.
 @Composable
 internal fun CapsuleFolders(
     tabs: List<FolderTab>,
@@ -76,10 +75,9 @@ internal fun CapsuleFolders(
     onSelect: (ChatListKey) -> Unit,
 ) {
     if (tabs.size < 2) return
-    val height = settings.capsuleHeight.value.dp
-    // WHY: the toolbar is at least ContainerSize tall, the same inset on
-    // every side keeps the selected pill concentric with the capsule.
-    val inset = ((FloatingToolbarDefaults.ContainerSize - height) / 2).coerceAtLeast(6.dp)
+    // The selected pill is the capsule itself scaled down: both are fully
+    // round and the pill keeps the same inset on every side.
+    val height = settings.capsuleHeight.value.dp - CapsuleInset * 2
     // WHY: a bouncy spring makes the whole bar overshoot its final width;
     // labels and the indicator share one non-bouncy spec so they stay in sync.
     val spec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -97,13 +95,8 @@ internal fun CapsuleFolders(
     }
 
     Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
-        HorizontalFloatingToolbar(
-            expanded = true,
-            colors = FloatingToolbarDefaults.standardFloatingToolbarColors(),
-            contentPadding = PaddingValues(inset),
-            expandedShadowElevation = 0.dp,
-        ) {
-            Box(Modifier.horizontalScroll(rememberScrollState())) {
+        Surface(shape = CircleShape, color = colors.surfaceContainerHighest) {
+            Box(Modifier.padding(CapsuleInset).horizontalScroll(rememberScrollState())) {
                 // One indicator slides between folders instead of each button
                 // fading its own background.
                 Box(
@@ -143,7 +136,7 @@ internal fun CapsuleFolders(
                             Icon(folderIcon(tab.icon, isSelected), contentDescription = tab.title, tint = content)
                             if (progress > 0f) {
                                 Text(
-                                    tab.title,
+                                    emojiText(tab.title),
                                     color = content,
                                     style = MaterialTheme.typography.labelLarge,
                                     maxLines = 1,
@@ -170,6 +163,7 @@ internal fun CapsuleFolders(
 }
 
 private val LabelGap = 8.dp
+private val CapsuleInset = 4.dp
 private val IconSize = 24.dp
 
 // Telegram folder icon names (chatFolderIcon) mapped to Material icons.

@@ -16,8 +16,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,6 +36,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.key.Key
@@ -42,13 +46,21 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.ChatState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.profile.PersonalChannelCard
+import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
+import com.pixelgram.desktop.ui.theme.emojiText
 
 @Composable
 fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenChat: (Long) -> Unit) {
@@ -78,7 +90,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ChatAvatar(chat, telegram, settings, size = 40.dp)
-            Text(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
+            Text(emojiText(telegram.chatTitle(chat)), style = MaterialTheme.typography.titleMedium)
         }
         var personalChannel by remember(chat.id) { mutableLongStateOf(0L) }
         LaunchedEffect(chat.id) {
@@ -155,7 +167,7 @@ fun MessageBubble(message: UiMessage, senderName: String?, settings: AppSettings
                     )
                 }
                 SelectionContainer {
-                    Text(message.text, style = MaterialTheme.typography.bodyLarge)
+                    Text(emojiText(message.text), style = MaterialTheme.typography.bodyLarge)
                 }
                 Text(
                     formatTime(message.date),
@@ -171,12 +183,20 @@ fun MessageBubble(message: UiMessage, senderName: String?, settings: AppSettings
 
 @Composable
 private fun Composer(onSend: (String) -> Unit) {
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf(TextFieldValue("")) }
+    var emojiOpen by remember { mutableStateOf(false) }
+    val focus = remember { FocusRequester() }
     val send = {
-        if (text.isNotBlank()) {
-            onSend(text.trim())
-            text = ""
+        if (text.text.isNotBlank()) {
+            onSend(text.text.trim())
+            text = TextFieldValue("")
         }
+    }
+    val insert: (String) -> Unit = { emoji ->
+        val start = text.selection.min
+        val updated = text.text.replaceRange(start, text.selection.max, emoji)
+        text = TextFieldValue(updated, TextRange(start + emoji.length))
+        focus.requestFocus()
     }
     Row(
         modifier = Modifier
@@ -189,6 +209,7 @@ private fun Composer(onSend: (String) -> Unit) {
             value = text,
             onValueChange = { text = it },
             placeholder = { Text("Message") },
+            visualTransformation = EmojiVisualTransformation,
             maxLines = 6,
             shape = RoundedCornerShape(28.dp),
             colors = TextFieldDefaults.colors(
@@ -199,6 +220,7 @@ private fun Composer(onSend: (String) -> Unit) {
             ),
             modifier = Modifier
                 .weight(1f)
+                .focusRequester(focus)
                 .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown &&
                         event.key == Key.Enter &&
@@ -211,7 +233,22 @@ private fun Composer(onSend: (String) -> Unit) {
                     }
                 },
         )
-        FilledIconButton(onClick = send, enabled = text.isNotBlank()) {
+        Box {
+            IconToggleButton(checked = emojiOpen, onCheckedChange = { emojiOpen = it }) {
+                Icon(Icons.Outlined.EmojiEmotions, contentDescription = "Emoji")
+            }
+            if (emojiOpen) {
+                Popup(
+                    alignment = Alignment.BottomEnd,
+                    offset = IntOffset(0, -with(LocalDensity.current) { 56.dp.roundToPx() }),
+                    onDismissRequest = { emojiOpen = false },
+                    properties = PopupProperties(focusable = false),
+                ) {
+                    EmojiPanel(onPick = insert)
+                }
+            }
+        }
+        FilledIconButton(onClick = send, enabled = text.text.isNotBlank()) {
             Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
         }
     }

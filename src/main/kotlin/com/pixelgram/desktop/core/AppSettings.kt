@@ -7,6 +7,8 @@ import java.util.Properties
 
 enum class ThemeMode { System, Light, Dark }
 
+enum class EmojiStyle { Noto, Noto3D }
+
 class Setting<T>(
     private val owner: AppSettings,
     val key: String,
@@ -44,13 +46,15 @@ class AppSettings private constructor(private val props: Properties) {
     val themeMode = enum("themeMode", ThemeMode.System)
     val seedColor = int("seedColor", 0xFF6750A4.toInt())
     val matugen = bool("matugen", false)
+    val emojiStyle = enum("emojiStyle", EmojiStyle.Noto)
 
     // Folders.
     val materialFolders = bool("materialFolders", true)
     val hideAllChats = bool("hideAllChats", false)
     val capsuleFolders = bool("capsuleFolders", false)
+    val chatListWidth = int("chatListWidth", 360)
     val capsuleSpacing = int("capsuleSpacing", 4)
-    val capsuleHeight = int("capsuleHeight", 40)
+    val capsuleHeight = int("capsuleBarHeight", 48)
 
     // Avatars.
     val avatarShape = enum("avatarShape", AvatarShape.Circle)
@@ -69,9 +73,9 @@ class AppSettings private constructor(private val props: Properties) {
     val activeAccount = int("activeAccount", 0)
 
     private val all: List<Setting<*>> = listOf(
-        themeMode, seedColor, matugen,
+        themeMode, seedColor, matugen, emojiStyle,
         materialFolders, hideAllChats,
-        capsuleFolders, capsuleSpacing, capsuleHeight,
+        capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius,
         apiId, apiHash,

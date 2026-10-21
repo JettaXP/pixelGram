@@ -22,6 +22,7 @@ import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.fullName
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.ui.components.PageScaffold
+import com.pixelgram.desktop.ui.theme.emojiText
 
 @Composable
 fun ContactsScreen(
@@ -70,7 +71,7 @@ fun ContactsScreen(
                     },
                     supportingContent = user.usernames?.activeUsernames?.firstOrNull()?.let { { Text("@$it") } },
                 ) {
-                    Text(user.fullName())
+                    Text(emojiText(user.fullName()))
                 }
             }
         }

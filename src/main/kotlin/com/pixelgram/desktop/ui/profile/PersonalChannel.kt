@@ -25,6 +25,7 @@ import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.contentText
 import com.pixelgram.desktop.ui.components.ChatAvatar
+import com.pixelgram.desktop.ui.theme.emojiText
 
 // A user's personal channel with its latest post, as on Telegram profiles.
 @Composable
@@ -46,14 +47,14 @@ fun PersonalChannelCard(
         supportingContent = channel.lastMessage?.let { last ->
             {
                 Text(
-                    contentText(last.content).replace('\n', ' '),
+                    emojiText(contentText(last.content).replace('\n', ' ')),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
         },
     ) {
-        Text(channel.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(emojiText(channel.title), maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -90,7 +91,7 @@ fun PersonalChannelPicker(
                                 shapes = ListItemDefaults.segmentedShapes(index, channels.size),
                                 leadingContent = { ChatAvatar(channel, telegram, settings, size = 40.dp) },
                             ) {
-                                Text(channel.title)
+                                Text(emojiText(channel.title))
                             }
                         }
                     }

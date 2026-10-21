@@ -1,25 +1,25 @@
 package com.pixelgram.desktop.ui.profile
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.ui.Modifier
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.Telegram
@@ -28,6 +28,7 @@ import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.ui.components.InfoGroup
 import com.pixelgram.desktop.ui.components.InfoRow
 import com.pixelgram.desktop.ui.components.PageScaffold
+import com.pixelgram.desktop.ui.theme.emojiText
 import it.tdlight.jni.TdApi
 
 @Composable
@@ -58,7 +59,7 @@ fun ProfileScreen(
         }
         val name = me.fullName()
         Avatar(name, me.profilePhoto?.small, telegram, settings, size = 160.dp, full = me.profilePhoto?.big)
-        Text(name, style = MaterialTheme.typography.headlineMediumEmphasized)
+        Text(emojiText(name), style = MaterialTheme.typography.headlineMediumEmphasized)
         val rows = buildList {
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
                 add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it"))
