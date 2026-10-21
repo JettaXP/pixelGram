@@ -8780,7 +8780,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram keys generated
 
-"ayu_AyuPreferences" = "AyuGram Preferences";
+"ayu_AyuPreferences" = "pixelGram Preferences";
 "ayu_DocsText" = "Documentation";
 "ayu_CategoryGeneral" = "General";
 "ayu_CategoryAppearance" = "Appearance";
@@ -8879,7 +8879,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_CrashReporting" = "Crash Reporting";
 "ayu_CrashReportingDescription" = "When this option is enabled, you'll be prompted to send a report after the app crashes. You can decide whether to send it or not.";
 "ayu_ResetSettings" = "Reset Settings";
-"ayu_ResetSettingsConfirmation" = "Are you sure you want to reset **all** AyuGram preferences to their defaults?";
+"ayu_ResetSettingsConfirmation" = "Are you sure you want to reset **all** pixelGram preferences to their defaults?";
 "ayu_DisableColorfulCover" = "Disable adaptive color";
 "ayu_EnableColorfulCover" = "Enable adaptive color";
 "ayu_CustomizationHeader" = "Customization";
@@ -9189,5 +9189,5 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_ConfirmationRound" = "Do you want to send this round video?";
 "ayu_IntroAbout" = "Welcome to the AyuGram Desktop.\nMake Telegram your own.";
 "ayu_AboutText1" = "ToS breaking Telegram client based on {api_link}.";
-"ayu_UpdateAyuGram" = "Update AyuGram";
+"ayu_UpdateAyuGram" = "Update pixelGram";
 "ayu_UtilityRestartRequired" = "The app will close in 5 seconds.";

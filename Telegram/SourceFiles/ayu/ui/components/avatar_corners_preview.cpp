@@ -96,14 +96,14 @@ void AvatarCornersPreview::mouseReleaseEvent(QMouseEvent *e) {
 	}
 	if (e->button() == Qt::LeftButton && rect().contains(e->pos())) {
 		_controller->showPeerByLink(Window::PeerByLinkInfo{
-			.usernameOrId = u"AyuGramReleases"_q,
+			.usernameOrId = u"telegram"_q,
 		});
 	}
 }
 
 void AvatarCornersPreview::resolveChannel() {
 	const auto session = &_controller->session();
-	_peer = session->data().peerByUsername(u"AyuGramReleases"_q);
+	_peer = session->data().peerByUsername(u"telegram"_q);
 	if (_peer) {
 		_peer->loadUserpic();
 		subscribeToUpdates();
@@ -112,7 +112,7 @@ void AvatarCornersPreview::resolveChannel() {
 	const auto weak = base::make_weak(this);
 	session->api().request(MTPcontacts_ResolveUsername(
 		MTP_flags(0),
-		MTP_string(u"AyuGramReleases"_q),
+		MTP_string(u"telegram"_q),
 		MTP_string()
 	)).done([=](const MTPcontacts_ResolvedPeer &result) {
 		if (const auto strong = weak.get()) {
