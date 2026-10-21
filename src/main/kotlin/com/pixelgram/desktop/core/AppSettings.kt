@@ -1,0 +1,93 @@
+package com.pixelgram.desktop.core
+
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import com.pixelgram.desktop.ui.AvatarShape
+import java.util.Properties
+
+enum class ThemeMode { System, Light, Dark }
+
+class Setting<T>(
+    private val owner: AppSettings,
+    val key: String,
+    initial: T,
+) {
+    private val state: MutableState<T> = mutableStateOf(initial)
+
+    var value: T
+        get() = state.value
+        set(value) {
+            if (state.value != value) {
+                state.value = value
+                owner.save()
+            }
+        }
+}
+
+// User preferences, stored in settings.properties in the data folder.
+class AppSettings private constructor(private val props: Properties) {
+    private fun string(key: String, default: String) =
+        Setting(this, key, props.getProperty(key) ?: default)
+
+    private fun int(key: String, default: Int) =
+        Setting(this, key, props.getProperty(key)?.toIntOrNull() ?: default)
+
+    private fun bool(key: String, default: Boolean) =
+        Setting(this, key, props.getProperty(key)?.toBooleanStrictOrNull() ?: default)
+
+    private inline fun <reified E : Enum<E>> enum(key: String, default: E) =
+        Setting(this, key, props.getProperty(key)?.let { name ->
+            enumValues<E>().firstOrNull { it.name == name }
+        } ?: default)
+
+    // Appearance.
+    val themeMode = enum("themeMode", ThemeMode.System)
+    val seedColor = int("seedColor", 0xFF6750A4.toInt())
+    val matugen = bool("matugen", false)
+
+    // Folders.
+    val materialFolders = bool("materialFolders", true)
+    val hideAllChats = bool("hideAllChats", false)
+
+    // Avatars.
+    val avatarShape = enum("avatarShape", AvatarShape.Circle)
+    val avatarCorner = int("avatarCorner", 50)
+
+    // Message bubbles.
+    val bubbleRadius = int("bubbleRadius", 18)
+    val bubbleTailRadius = int("bubbleTailRadius", 4)
+
+    // Telegram API credentials entered in the app when not built in.
+    val apiId = int("apiId", 0)
+    val apiHash = string("apiHash", "")
+
+    private val all: List<Setting<*>> = listOf(
+        themeMode, seedColor, matugen,
+        materialFolders, hideAllChats,
+        avatarShape, avatarCorner,
+        bubbleRadius, bubbleTailRadius,
+        apiId, apiHash,
+    )
+
+    fun save() {
+        val out = Properties()
+        for (setting in all) {
+            val value = setting.value
+            out.setProperty(setting.key, if (value is Enum<*>) value.name else value.toString())
+        }
+        runCatching {
+            AppPaths.settingsFile.outputStream().use { out.store(it, "pixelGram settings") }
+        }
+    }
+
+    companion object {
+        fun load(): AppSettings {
+            val props = Properties()
+            runCatching {
+                val file = AppPaths.settingsFile
+                if (file.exists()) file.inputStream().use(props::load)
+            }
+            return AppSettings(props)
+        }
+    }
+}

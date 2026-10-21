@@ -1,37 +1,58 @@
 # pixelGram
 
-Private fork of [AyuGram Desktop](https://github.com/AyuGram/AyuGramDesktop),
-itself a fork of [Telegram Desktop](https://github.com/telegramdesktop/tdesktop).
+Telegram desktop client built with **Kotlin**, **Compose Multiplatform** and
+**Material 3 Expressive**, powered by **TDLib** (via TDLight).
 
-Goal: AyuGram base + selected features from rabbitGram and materialgram,
-plus pixelGram's own features (kept under `Telegram/SourceFiles/pixel/`).
+Channel: [@pixelgramclient](https://t.me/pixelgramclient)
 
-Licensed under GPLv3 with the OpenSSL exception (see `LICENSE`, `LEGAL`).
-The upstream README is preserved as `README.upstream.md`.
+## Features
 
-## Remotes
-
-- `upstream` — AyuGram/AyuGramDesktop
-- add later: `rabbitgram`, `materialgram`, `tdesktop`
+- Material 3 Expressive UI from the official Compose Material 3 library
+- Dynamic color schemes generated with Google's material-color-utilities
+- Material You from your wallpaper with [matugen](https://github.com/InioX/matugen) (Linux)
+- Avatar shapes: all official Material 3 shapes (`MaterialShapes`) and a custom corner radius
+- Message bubble corner and tail radius in a separate settings section
+- Chat folders in a Material 3 navigation rail or as tabs, optional hidden "All chats"
+- Sign in by phone, code, two-step password or QR code
 
 ## Building
 
-See `docs/building-linux.md` / `docs/building-win-x64.md`.
-Requires your own `TDESKTOP_API_ID` and `TDESKTOP_API_HASH` (my.telegram.org).
+Requirements: JDK 21.
+
+```bash
+./gradlew run                    # run from sources
+./gradlew packageDeb             # Linux .deb
+./gradlew packageMsi             # Windows .msi
+./gradlew createDistributable    # portable folder in build/compose/binaries
+```
+
+Telegram API credentials (from https://my.telegram.org) can be passed at build
+time with `TELEGRAM_API_ID` / `TELEGRAM_API_HASH` environment variables or the
+`pixelgram.apiId` / `pixelgram.apiHash` Gradle properties. Without them the app
+asks for them on first launch.
+
+On Linux the TDLib native library needs OpenSSL 3 (any current distribution).
 
 ## Material You with matugen (Linux)
 
-1. In pixelGram: Settings → pixelGram Preferences → Appearance → Material You,
-   enable **Dynamic theme from matugen** and press **Copy matugen config**.
-2. Paste the copied lines into `~/.config/matugen/config.toml`:
+Enable **Settings → Appearance → Dynamic colors from matugen**, then add to
+`~/.config/matugen/config.toml`:
 
-   ```toml
-   [templates.pixelgram]
-   input_path = '~/.config/pixelgram/matugen-template.tdesktop-palette'
-   output_path = '~/.config/pixelgram/matugen.tdesktop-palette'
-   ```
-3. Run `matugen image /path/to/wallpaper.png`. pixelGram applies the new colors
-   automatically every time matugen regenerates the palette.
+```toml
+[templates.pixelgram]
+input_path = '~/.config/pixelgram/matugen-template.json'
+output_path = '~/.config/pixelgram/matugen.json'
+```
 
-The template is generated from the default palette by
-`Telegram/Resources/matugen/generate_template.py`.
+Run `matugen image /path/to/wallpaper.png` and pixelGram picks up the colors.
+
+## Data
+
+All data lives in `~/.local/share/pixelgram` (Linux), `%APPDATA%\pixelgram`
+(Windows) or `~/Library/Application Support/pixelgram` (macOS).
+
+The previous C++ version (AyuGram Desktop fork) is kept in the `legacy-cpp` branch.
+
+## License
+
+GPLv3, see `LICENSE`.
