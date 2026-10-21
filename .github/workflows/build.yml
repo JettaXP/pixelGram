@@ -79,18 +79,29 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # TDLib needs the Visual C++ runtime, ship it with the app.
+      - name: Bundle Visual C++ runtime.
+        shell: bash
+        run: |
+          mkdir -p appResources/windows
+          for dll in vcruntime140.dll vcruntime140_1.dll msvcp140.dll msvcp140_1.dll msvcp140_2.dll concrt140.dll; do
+            cp "/c/Windows/System32/$dll" appResources/windows/
+          done
+          ls -la appResources/windows
+
       - name: Build.
         shell: bash
         run: ./gradlew --no-daemon packageMsi createDistributable
 
-      - name: Portable archive.
+      - name: Collect files.
         shell: bash
-        run: 7z a pixelGram-windows-x64-portable.zip ./build/compose/binaries/main/app/pixelGram
+        run: |
+          mkdir dist
+          cp build/compose/binaries/main/msi/*.msi dist/
+          7z a dist/pixelGram-windows-x64-portable.zip ./build/compose/binaries/main/app/pixelGram
 
       - uses: actions/upload-artifact@v4
         with:
           name: pixelGram-windows
-          path: |
-            build/compose/binaries/main/msi/*.msi
-            pixelGram-windows-x64-portable.zip
+          path: dist/
           retention-days: 14

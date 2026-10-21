@@ -94,6 +94,7 @@ compose.desktop {
             description = "pixelGram - Telegram client with Material 3"
             vendor = "jettax"
             licenseFile.set(project.file("LICENSE"))
+            appResourcesRootDir.set(project.layout.projectDirectory.dir("appResources"))
             modules("java.sql", "jdk.unsupported", "java.naming")
 
             linux {

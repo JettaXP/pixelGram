@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,12 +55,25 @@ fun AuthScreen(telegram: Telegram) {
                 ) {
                     Logo()
                     Text("pixelGram", style = MaterialTheme.typography.headlineMedium)
-                    when (val state = telegram.authState) {
+                    var editingNumber by remember { mutableStateOf(false) }
+                    val state = telegram.authState
+                    LaunchedEffect(state) {
+                        if (state !is AuthState.WaitCode) editingNumber = false
+                    }
+                    when {
+                        editingNumber && state is AuthState.WaitCode -> PhoneStep(
+                            telegram,
+                            onQr = {
+                                editingNumber = false
+                                telegram.requestQr()
+                            },
+                        )
+                        else -> when (state) {
                         AuthState.Starting, AuthState.Closing -> LoadingIndicator()
                         AuthState.NeedApiCredentials -> ApiCredentialsStep(telegram)
-                        AuthState.WaitPhone -> PhoneStep(telegram)
+                        AuthState.WaitPhone -> PhoneStep(telegram, onQr = telegram::requestQr)
                         is AuthState.WaitQr -> QrStep(state.link)
-                        AuthState.WaitCode -> CodeStep(telegram)
+                        is AuthState.WaitCode -> CodeStep(state.info, telegram) { editingNumber = true }
                         is AuthState.WaitPassword -> PasswordStep(state.hint, telegram)
                         is AuthState.Unsupported -> Hint(
                             "This sign-in step (${state.name}) is not supported yet. " +
@@ -67,6 +81,7 @@ fun AuthScreen(telegram: Telegram) {
                         )
                         is AuthState.Failed -> Hint(state.reason)
                         AuthState.Ready -> Unit
+                        }
                     }
                     telegram.authError?.let { error ->
                         Text(
@@ -100,7 +115,7 @@ private fun Logo() {
 }
 
 @Composable
-private fun Hint(text: String) {
+internal fun Hint(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
@@ -169,27 +184,6 @@ private fun ApiCredentialsStep(telegram: Telegram) {
         Text("Continue")
     }
 }
-
-@Composable
-private fun PhoneStep(telegram: Telegram) = SingleField(
-    label = "Phone number",
-    hint = "Enter your phone number with the country code.",
-    action = "Next",
-    keyboardType = KeyboardType.Phone,
-    secondary = {
-        TextButton(onClick = telegram::requestQr) { Text("Log in by QR code") }
-    },
-    onSubmit = telegram::sendPhone,
-)
-
-@Composable
-private fun CodeStep(telegram: Telegram) = SingleField(
-    label = "Code",
-    hint = "Enter the code sent to your Telegram app or by SMS.",
-    action = "Sign in",
-    keyboardType = KeyboardType.Number,
-    onSubmit = telegram::sendCode,
-)
 
 @Composable
 private fun PasswordStep(hint: String, telegram: Telegram) = SingleField(

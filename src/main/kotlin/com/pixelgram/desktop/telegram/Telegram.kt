@@ -8,7 +8,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.pixelgram.desktop.BuildConfig
 import com.pixelgram.desktop.core.AppPaths
+import com.pixelgram.desktop.core.AppLog
 import com.pixelgram.desktop.core.AppSettings
+import com.pixelgram.desktop.core.describe
 import it.tdlight.ClientFactory
 import it.tdlight.ExceptionHandler
 import it.tdlight.Init
@@ -18,13 +20,40 @@ import it.tdlight.jni.TdApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
+
+data class CodeInfo(
+    val phoneNumber: String,
+    val type: TdApi.AuthenticationCodeType?,
+    val nextType: TdApi.AuthenticationCodeType?,
+    val timeoutSeconds: Int,
+    val receivedAt: Long = System.currentTimeMillis(),
+) {
+    // Expected code length, 0 when unknown.
+    val length: Int
+        get() = when (val t = type) {
+            is TdApi.AuthenticationCodeTypeTelegramMessage -> t.length
+            is TdApi.AuthenticationCodeTypeSms -> t.length
+            is TdApi.AuthenticationCodeTypeCall -> t.length
+            is TdApi.AuthenticationCodeTypeMissedCall -> t.length
+            is TdApi.AuthenticationCodeTypeFragment -> t.length
+            else -> 0
+        }
+}
+
+data class Country(
+    val code: String,
+    val name: String,
+    val flag: String,
+    val callingCode: String,
+)
 
 sealed interface AuthState {
     data object Starting : AuthState
     data object NeedApiCredentials : AuthState
     data object WaitPhone : AuthState
     data class WaitQr(val link: String) : AuthState
-    data object WaitCode : AuthState
+    data class WaitCode(val info: CodeInfo) : AuthState
     data class WaitPassword(val hint: String) : AuthState
     data object Ready : AuthState
     data object Closing : AuthState
@@ -91,9 +120,13 @@ class Telegram(
 
     fun start() {
         try {
+            NativeLibraries.preload()
             Init.init()
         } catch (e: Throwable) {
-            authState = AuthState.Failed("TDLib native library failed to load: ${e.message}")
+            AppLog.write("TDLib native library failed to load", e)
+            authState = AuthState.Failed(
+                "TDLib native library failed to load: ${e.describe()}\n\nLog: ${AppLog.file.absolutePath}"
+            )
             return
         }
         factory = ClientFactory.create()
@@ -103,12 +136,51 @@ class Telegram(
     private fun createClient() {
         val client = factory?.createClient() ?: return
         this.client = client
+        client.execute(TdApi.SetLogVerbosityLevel(2))
+        client.execute(TdApi.SetLogStream(TdApi.LogStreamFile(
+            File(AppPaths.dataDir, "tdlib.log").absolutePath,
+            10L * 1024 * 1024,
+            false,
+        )))
         client.initialize(
             ResultHandler<TdApi.Update> { update -> onMain { handleUpdate(update) } },
-            ExceptionHandler { it.printStackTrace() },
-            ExceptionHandler { it.printStackTrace() },
+            ExceptionHandler { AppLog.write("TDLib update error", it) },
+            ExceptionHandler { AppLog.write("TDLib error", it) },
         )
+        loadCountries()
     }
+
+    // Countries with calling codes, straight from Telegram.
+    var countries by mutableStateOf<List<Country>>(emptyList())
+        private set
+
+    private fun loadCountries() {
+        send(TdApi.GetCountries()) { result ->
+            if (result !is TdApi.Countries) return@send
+            countries = result.countries.orEmpty()
+                .filter { !it.isHidden }
+                .flatMap { info ->
+                    info.callingCodes.orEmpty().map { code ->
+                        Country(info.countryCode, info.name, info.flagEmoji ?: "", code)
+                    }
+                }
+                .sortedBy { it.name }
+        }
+    }
+
+    // Formatted national number, expected digits are '-'; null when unknown.
+    fun phoneInfo(fullNumber: String): TdApi.PhoneNumberInfo? {
+        val client = client ?: return null
+        val result = client.execute(TdApi.GetPhoneNumberInfoSync(
+            System.getProperty("user.language") ?: "en",
+            fullNumber.filter(Char::isDigit),
+        ))
+        return result as? TdApi.PhoneNumberInfo
+    }
+
+    fun resendCode() = sendAuth(TdApi.ResendAuthenticationCode().apply {
+        reason = TdApi.ResendCodeReasonUserRequest()
+    })
 
     private var exiting = false
 
@@ -137,7 +209,8 @@ class Telegram(
         authError = null
         send(function) { result ->
             if (result is TdApi.Error) {
-                authError = result.message
+                AppLog.write("Auth error ${result.code}: ${result.message}")
+                authError = friendlyError(result.message)
             }
         }
     }
@@ -253,7 +326,12 @@ class Telegram(
             }
             is TdApi.AuthorizationStateWaitPhoneNumber -> AuthState.WaitPhone
             is TdApi.AuthorizationStateWaitOtherDeviceConfirmation -> AuthState.WaitQr(state.link)
-            is TdApi.AuthorizationStateWaitCode -> AuthState.WaitCode
+            is TdApi.AuthorizationStateWaitCode -> AuthState.WaitCode(CodeInfo(
+                phoneNumber = state.codeInfo?.phoneNumber ?: "",
+                type = state.codeInfo?.type,
+                nextType = state.codeInfo?.nextType,
+                timeoutSeconds = state.codeInfo?.timeout ?: 0,
+            ))
             is TdApi.AuthorizationStateWaitPassword -> AuthState.WaitPassword(state.passwordHint ?: "")
             is TdApi.AuthorizationStateReady -> {
                 send(TdApi.GetMe()) { result ->
@@ -431,3 +509,20 @@ fun contentText(content: TdApi.MessageContent?): String = when (content) {
 
 private fun List<String?>.filterNotBlank(): String =
     filterNot { it.isNullOrBlank() }.joinToString("\n")
+
+private fun friendlyError(message: String?): String {
+    val text = message.orEmpty()
+    return when {
+        text.contains("PHONE_NUMBER_INVALID") -> "Invalid phone number. Check the country code and number."
+        text.contains("PHONE_NUMBER_BANNED") -> "This phone number is banned in Telegram."
+        text.contains("PHONE_CODE_INVALID") -> "Wrong code. Try again."
+        text.contains("PHONE_CODE_EXPIRED") -> "The code has expired. Request a new one."
+        text.contains("PHONE_CODE_EMPTY") -> "Enter the code."
+        text.contains("PASSWORD_HASH_INVALID") -> "Wrong password."
+        text.contains("FLOOD_WAIT") || text.contains("Too Many Requests") ->
+            "Too many attempts. Please wait a bit and try again."
+        text.contains("API_ID_INVALID") || text.contains("API_ID_PUBLISHED_FLOOD") ->
+            "The API ID / hash are not valid. Check them on my.telegram.org."
+        else -> text.ifEmpty { "Something went wrong." }
+    }
+}
