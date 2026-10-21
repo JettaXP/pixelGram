@@ -1,0 +1,106 @@
+name: Linux build
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'changelog.txt'
+      - 'LEGAL'
+      - 'LICENSE'
+      - 'Telegram/SourceFiles/platform/win/**'
+      - 'Telegram/SourceFiles/platform/mac/**'
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      config:
+        description: Build configuration
+        type: choice
+        options: [Debug, Release]
+        default: Debug
+
+concurrency:
+  group: linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux (${{ inputs.config || 'Debug' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    env:
+      CONFIG: ${{ inputs.config || 'Debug' }}
+      # Prebuilt image with Qt and all libraries, same as in docs/building-linux.md.
+      IMAGE: ghcr.io/telegramdesktop/tdesktop/centos_env:latest
+
+    steps:
+      - name: Clone.
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Free up disk space.
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true
+
+      - name: Pull build image.
+        run: docker pull "$IMAGE"
+
+      - name: Restore ccache.
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/ccache
+          key: ccache-${{ env.CONFIG }}-${{ github.run_id }}
+          restore-keys: ccache-${{ env.CONFIG }}-
+
+      - name: Build.
+        env:
+          API_ID: ${{ secrets.TDESKTOP_API_ID }}
+          API_HASH: ${{ secrets.TDESKTOP_API_HASH }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/ccache"
+          if [ -n "$API_ID" ] && [ -n "$API_HASH" ]; then
+            API="-D TDESKTOP_API_ID=$API_ID -D TDESKTOP_API_HASH=$API_HASH"
+          else
+            echo "::warning::TDESKTOP_API_ID / TDESKTOP_API_HASH secrets are not set, building with test credentials (login will not work)."
+            API="-D TDESKTOP_API_TEST=ON"
+          fi
+          docker run --rm \
+            -u "$(id -u)" \
+            -v "$PWD:/usr/src/tdesktop" \
+            -v "$RUNNER_TEMP/ccache:/var/cache/ccache" \
+            -e CONFIG="$CONFIG" \
+            -e KEEP_GOING=1 \
+            -e CCACHE_SLOPPINESS=pch_defines,time_macros \
+            "$IMAGE" \
+            env -u CCACHE_DISABLE /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
+            -D CMAKE_CONFIGURATION_TYPES="$CONFIG" \
+            -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON \
+            -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON \
+            $API
+
+      - name: Save ccache.
+        if: always() && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/ccache
+          key: ccache-${{ env.CONFIG }}-${{ github.run_id }}
+
+      - name: Collect binary.
+        run: |
+          mkdir artifact
+          find "out/$CONFIG" -maxdepth 1 -type f -executable \
+            \( -name 'AyuGram' -o -name 'pixelGram' -o -name 'Telegram' \) \
+            -exec cp {} artifact/ \;
+          ls -la artifact
+          test -n "$(ls artifact)"
+
+      - name: Upload artifact.
+        uses: actions/upload-artifact@v4
+        with:
+          name: pixelGram-linux-${{ env.CONFIG }}
+          path: artifact/
+          retention-days: 7
