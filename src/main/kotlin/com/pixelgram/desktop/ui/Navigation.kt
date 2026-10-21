@@ -5,5 +5,6 @@ sealed interface Screen {
     data object Chats : Screen
     data class Settings(val preferences: Boolean = false) : Screen
     data object Profile : Screen
-    data object Memory : Screen
+    data object Contacts : Screen
+    data object Calls : Screen
 }

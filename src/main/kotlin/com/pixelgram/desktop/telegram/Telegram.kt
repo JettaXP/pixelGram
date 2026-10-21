@@ -85,6 +85,7 @@ class ChatState(val id: Long) {
     var unreadCount by mutableStateOf(0)
     var isGroup by mutableStateOf(false)
     val positions = mutableStateMapOf<ChatListKey, Long>()
+    val pinned = mutableStateMapOf<ChatListKey, Boolean>()
 }
 
 const val SavedMessagesTitle = "Saved Messages"
@@ -310,14 +311,63 @@ class Telegram(
         if (isSavedMessages(chat.id)) SavedMessagesTitle else chat.title
 
     fun openSavedMessages(onChat: (Long) -> Unit) {
-        if (myUserId == 0L) return
+        if (myUserId != 0L) openPrivateChat(myUserId, onChat)
+    }
+
+    fun openPrivateChat(userId: Long, onChat: (Long) -> Unit) {
         send(TdApi.CreatePrivateChat().apply {
-            userId = myUserId
+            this.userId = userId
             force = false
         }) { result ->
             if (result is TdApi.Chat) onChat(result.id)
         }
     }
+
+    // Groups are created as supergroups: they need no initial members.
+    fun createChat(
+        title: String,
+        description: String,
+        channel: Boolean,
+        onResult: (chatId: Long?, error: String?) -> Unit,
+    ) {
+        send(TdApi.CreateNewSupergroupChat().apply {
+            this.title = title.trim()
+            this.description = description.trim()
+            isChannel = channel
+            isForum = false
+            forImport = false
+        }) { result ->
+            when (result) {
+                is TdApi.Chat -> onResult(result.id, null)
+                is TdApi.Error -> onResult(null, friendlyError(result.message))
+                else -> onResult(null, null)
+            }
+        }
+    }
+
+    fun contacts(onResult: (List<Long>) -> Unit) {
+        send(TdApi.GetContacts()) { result ->
+            onResult((result as? TdApi.Users)?.userIds?.toList().orEmpty())
+        }
+    }
+
+    fun recentCalls(onResult: (List<TdApi.Message>) -> Unit) {
+        send(TdApi.SearchCallMessages().apply {
+            offset = ""
+            limit = 100
+            onlyMissed = false
+        }) { result ->
+            onResult((result as? TdApi.FoundMessages)?.messages?.toList().orEmpty())
+        }
+    }
+
+    fun activeSessions(onResult: (List<TdApi.Session>) -> Unit) {
+        send(TdApi.GetActiveSessions()) { result ->
+            onResult((result as? TdApi.Sessions)?.sessions?.toList().orEmpty())
+        }
+    }
+
+    fun userName(userId: Long): String = users[userId]?.fullName() ?: ""
 
     fun myFullInfo(onResult: (TdApi.UserFullInfo?) -> Unit) {
         if (myUserId == 0L) return onResult(null)
@@ -456,8 +506,10 @@ class Telegram(
         val key = ChatListKey.of(position.list) ?: return
         if (position.order == 0L) {
             chat.positions.remove(key)
+            chat.pinned.remove(key)
         } else {
             chat.positions[key] = position.order
+            chat.pinned[key] = position.isPinned
         }
     }
 
@@ -532,9 +584,7 @@ class Telegram(
     }
 
     fun senderName(message: UiMessage): String = when {
-        message.senderUserId != 0L -> users[message.senderUserId]?.let { user ->
-            listOf(user.firstName, user.lastName).filter { !it.isNullOrBlank() }.joinToString(" ")
-        } ?: ""
+        message.senderUserId != 0L -> userName(message.senderUserId)
         else -> chats[message.senderChatId]?.title ?: ""
     }
 
@@ -567,6 +617,9 @@ class Telegram(
         }
     }
 }
+
+fun TdApi.User.fullName(): String =
+    listOf(firstName, lastName).filter { !it.isNullOrBlank() }.joinToString(" ")
 
 fun TdApi.Message.toUi(): UiMessage {
     val sender = senderId

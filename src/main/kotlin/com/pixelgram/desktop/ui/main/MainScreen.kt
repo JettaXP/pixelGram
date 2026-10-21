@@ -1,14 +1,28 @@
 package com.pixelgram.desktop.ui.main
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.Call
+import androidx.compose.material.icons.outlined.Campaign
+import androidx.compose.material.icons.outlined.Contacts
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.draw.clip
+import com.pixelgram.desktop.core.ThemeMode
+import com.pixelgram.desktop.telegram.SavedMessagesTitle
+import com.pixelgram.desktop.ui.settings.PixelSwitch
+import com.pixelgram.desktop.ui.theme.isDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Bookmark
-import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailDefaults
@@ -51,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.ChatListKey
 import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.telegram.fullName
 
 private data class FolderTab(val key: ChatListKey, val title: String)
 
@@ -58,6 +73,8 @@ private data class FolderTab(val key: ChatListKey, val title: String)
 fun MainScreen(
     telegram: Telegram,
     settings: AppSettings,
+    openChatId: Long?,
+    onOpenChat: (Long) -> Unit,
     onNavigate: (Screen) -> Unit,
 ) {
     val tabs = buildList {
@@ -70,7 +87,7 @@ fun MainScreen(
     if (selectedKey != ChatListKey.Archive && tabs.none { it.key == selectedKey } && tabs.isNotEmpty()) {
         selectedKey = tabs.first().key
     }
-    var openChatId by remember { mutableStateOf<Long?>(null) }
+    var newChat by remember { mutableStateOf<Boolean?>(null) }
     val railState = rememberWideNavigationRailState()
     val scope = rememberCoroutineScope()
     val menuOpen = railState.targetValue == WideNavigationRailValue.Expanded
@@ -81,6 +98,7 @@ fun MainScreen(
     }
 
     LaunchedEffect(selectedKey) { telegram.loadChats(selectedKey) }
+    LaunchedEffect(Unit) { telegram.loadChats(ChatListKey.Archive) }
 
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         Row(Modifier.fillMaxSize()) {
@@ -97,8 +115,9 @@ fun MainScreen(
                     onSelect = { key -> closeMenuAnd { selectedKey = key } },
                     onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
                     onOpenSaved = {
-                        closeMenuAnd { telegram.openSavedMessages { openChatId = it } }
+                        closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
                     },
+                    onNewChat = { channel -> closeMenuAnd { newChat = channel } },
                 )
             }
             Column(
@@ -111,12 +130,19 @@ fun MainScreen(
                     FoldersTabs(tabs, selectedKey, onSelect = { selectedKey = it })
                 }
                 ChatList(
+                    listKey = selectedKey,
                     title = if (selectedKey == ChatListKey.Archive) "Archived chats" else "pixelGram",
                     chats = telegram.chatList(selectedKey),
                     selectedChatId = openChatId,
                     telegram = telegram,
                     settings = settings,
-                    onOpen = { openChatId = it },
+                    onOpen = onOpenChat,
+                    archivedCount = if (selectedKey == ChatListKey.Main) {
+                        telegram.chatList(ChatListKey.Archive).size
+                    } else {
+                        0
+                    },
+                    onOpenArchive = { selectedKey = ChatListKey.Archive },
                     onMenu = if (settings.materialFolders.value) null else toggleMenu,
                     onBack = if (selectedKey == ChatListKey.Archive) {
                         { selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main }
@@ -133,8 +159,7 @@ fun MainScreen(
                 shape = MaterialTheme.shapes.extraLarge,
                 color = MaterialTheme.colorScheme.surface,
             ) {
-                val chatId = openChatId
-                val chat = chatId?.let { telegram.chats[it] }
+                val chat = openChatId?.let { telegram.chats[it] }
                 if (chat != null) {
                     ChatView(chat, telegram, settings)
                 } else {
@@ -149,10 +174,21 @@ fun MainScreen(
             }
         }
     }
+    newChat?.let { channel ->
+        NewChatDialog(
+            telegram = telegram,
+            channel = channel,
+            onCreated = {
+                newChat = null
+                onOpenChat(it)
+            },
+            onDismiss = { newChat = null },
+        )
+    }
 }
 
 // Material 3 Expressive navigation rail: folders when collapsed, the app
-// menu (profile, saved, archive, preferences, settings, memory) when expanded.
+// menu when expanded.
 @Composable
 private fun PixelRail(
     state: WideNavigationRailState,
@@ -165,6 +201,7 @@ private fun PixelRail(
     onSelect: (ChatListKey) -> Unit,
     onNavigate: (Screen) -> Unit,
     onOpenSaved: () -> Unit,
+    onNewChat: (channel: Boolean) -> Unit,
 ) {
     WideNavigationRail(
         state = state,
@@ -181,26 +218,7 @@ private fun PixelRail(
         },
     ) {
         if (expanded) {
-            MenuHeader(telegram, settings)
-            val items = listOf(
-                Triple(Icons.Outlined.AccountCircle, "My Profile") { onNavigate(Screen.Profile) },
-                Triple(Icons.Outlined.Bookmark, "Saved Messages", onOpenSaved),
-                Triple(Icons.Outlined.Archive, "Archived chats") { onSelect(ChatListKey.Archive) },
-                Triple(Icons.Outlined.AutoAwesome, "pixelGram Preferences") {
-                    onNavigate(Screen.Settings(preferences = true))
-                },
-                Triple(Icons.Outlined.Settings, "Settings") { onNavigate(Screen.Settings()) },
-                Triple(Icons.Outlined.Storage, "Memory") { onNavigate(Screen.Memory) },
-            )
-            items.forEach { (icon, label, action) ->
-                WideNavigationRailItem(
-                    selected = icon == Icons.Outlined.Archive && selected == ChatListKey.Archive,
-                    onClick = action,
-                    icon = { Icon(icon, contentDescription = null) },
-                    label = { Text(label) },
-                    railExpanded = true,
-                )
-            }
+            MainMenu(telegram, settings, onNavigate, onOpenSaved, onNewChat)
         } else {
             tabs.forEach { tab ->
                 val isSelected = tab.key == selected
@@ -227,18 +245,94 @@ private fun PixelRail(
     }
 }
 
+// Telegram's main menu: accounts, then the app actions.
 @Composable
-private fun MenuHeader(telegram: Telegram, settings: AppSettings) {
+private fun MainMenu(
+    telegram: Telegram,
+    settings: AppSettings,
+    onNavigate: (Screen) -> Unit,
+    onOpenSaved: () -> Unit,
+    onNewChat: (channel: Boolean) -> Unit,
+) {
+    var accountsOpen by remember { mutableStateOf(false) }
+    Column(Modifier.verticalScroll(rememberScrollState())) {
+        AccountHeader(telegram, settings, accountsOpen) { accountsOpen = !accountsOpen }
+        if (accountsOpen) {
+            telegram.me?.let { me ->
+                WideNavigationRailItem(
+                    selected = true,
+                    onClick = {},
+                    icon = { Avatar(me.fullName(), me.profilePhoto?.small, telegram, settings, size = 24.dp) },
+                    label = { Text(me.fullName(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    railExpanded = true,
+                )
+            }
+            WideNavigationRailItem(
+                selected = false,
+                onClick = {},
+                enabled = false,
+                icon = { Icon(Icons.Outlined.PersonAdd, contentDescription = null) },
+                label = { Text("Add Account (soon)") },
+                railExpanded = true,
+            )
+            HorizontalDivider(Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+        }
+        val items = listOf(
+            Triple(Icons.Outlined.AccountCircle, "My Profile") { onNavigate(Screen.Profile) },
+            Triple(Icons.Outlined.Groups, "New Group") { onNewChat(false) },
+            Triple(Icons.Outlined.Campaign, "New Channel") { onNewChat(true) },
+            Triple(Icons.Outlined.Contacts, "Contacts") { onNavigate(Screen.Contacts) },
+            Triple(Icons.Outlined.Call, "Calls") { onNavigate(Screen.Calls) },
+            Triple(Icons.Outlined.Bookmark, SavedMessagesTitle, onOpenSaved),
+            Triple(Icons.Outlined.Settings, "Settings") { onNavigate(Screen.Settings()) },
+        )
+        items.forEach { (icon, label, action) ->
+            WideNavigationRailItem(
+                selected = false,
+                onClick = action,
+                icon = { Icon(icon, contentDescription = null) },
+                label = { Text(label) },
+                railExpanded = true,
+            )
+        }
+        val dark = isDarkTheme(settings)
+        val toggleNight = { settings.themeMode.value = if (dark) ThemeMode.Light else ThemeMode.Dark }
+        WideNavigationRailItem(
+            selected = false,
+            onClick = toggleNight,
+            icon = { Icon(Icons.Outlined.DarkMode, contentDescription = null) },
+            label = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Night Mode", modifier = Modifier.padding(end = 16.dp))
+                    PixelSwitch(checked = dark, onCheckedChange = { toggleNight() })
+                }
+            },
+            railExpanded = true,
+        )
+    }
+}
+
+@Composable
+private fun AccountHeader(
+    telegram: Telegram,
+    settings: AppSettings,
+    accountsOpen: Boolean,
+    onToggle: () -> Unit,
+) {
     val me = telegram.me ?: return
-    val name = listOf(me.firstName, me.lastName).filter { !it.isNullOrBlank() }.joinToString(" ")
+    val name = me.fullName()
     Row(
-        modifier = Modifier.padding(start = 20.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
+        modifier = Modifier
+            .padding(horizontal = 12.dp)
+            .clip(MaterialTheme.shapes.large)
+            .clickable(onClick = onToggle)
+            .padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Avatar(name, me.profilePhoto?.small, telegram, settings, size = 48.dp)
-        Column {
-            Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+        Column(Modifier.width(150.dp)) {
+            Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
                 Text(
                     "+$it",
@@ -247,6 +341,10 @@ private fun MenuHeader(telegram: Telegram, settings: AppSettings) {
                 )
             }
         }
+        Icon(
+            if (accountsOpen) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+            contentDescription = "Accounts",
+        )
     }
 }
 

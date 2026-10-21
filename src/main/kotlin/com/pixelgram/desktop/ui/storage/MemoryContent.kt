@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.storage
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Language
@@ -16,25 +18,26 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.components.InfoGroup
 import com.pixelgram.desktop.ui.components.InfoRow
-import com.pixelgram.desktop.ui.components.PageScaffold
 import it.tdlight.jni.TdApi
 
+// Storage usage and cache cleanup, shown in Settings → Advanced.
 @Composable
-fun MemoryScreen(telegram: Telegram, onBack: () -> Unit) {
+fun MemoryContent(telegram: Telegram) {
     var stats by remember { mutableStateOf<TdApi.StorageStatisticsFast?>(null) }
     var refresh by remember { mutableIntStateOf(0) }
     var clearing by remember { mutableStateOf(false) }
     LaunchedEffect(refresh) { telegram.storageStatistics { stats = it } }
 
-    PageScaffold("Memory", onBack) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         val current = stats
         if (current == null) {
             LoadingIndicator()
-            return@PageScaffold
+            return@Column
         }
         val total = current.filesSize + current.databaseSize + current.languagePackDatabaseSize + current.logSize
         Text(formatSize(total), style = MaterialTheme.typography.displaySmallEmphasized)

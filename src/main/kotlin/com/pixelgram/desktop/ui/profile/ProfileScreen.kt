@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.telegram.fullName
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.ui.components.InfoGroup
 import com.pixelgram.desktop.ui.components.InfoRow
@@ -33,7 +34,7 @@ fun ProfileScreen(telegram: Telegram, settings: AppSettings, onBack: () -> Unit)
             Text("Not signed in")
             return@PageScaffold
         }
-        val name = listOf(me.firstName, me.lastName).filter { !it.isNullOrBlank() }.joinToString(" ")
+        val name = me.fullName()
         Avatar(name, me.profilePhoto?.small, telegram, settings, size = 160.dp, full = me.profilePhoto?.big)
         Text(name, style = MaterialTheme.typography.headlineMediumEmphasized)
         val rows = buildList {

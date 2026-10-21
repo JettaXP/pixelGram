@@ -25,7 +25,8 @@ import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.AppIcons
 import com.pixelgram.desktop.ui.Screen
 import com.pixelgram.desktop.ui.profile.ProfileScreen
-import com.pixelgram.desktop.ui.storage.MemoryScreen
+import com.pixelgram.desktop.ui.people.CallsScreen
+import com.pixelgram.desktop.ui.people.ContactsScreen
 import com.pixelgram.desktop.ui.auth.AuthScreen
 import com.pixelgram.desktop.ui.main.MainScreen
 import com.pixelgram.desktop.ui.settings.SettingsScreen
@@ -62,6 +63,11 @@ private fun App(telegram: Telegram, settings: AppSettings) {
     var screen by remember {
         mutableStateOf<Screen>(if (devScreen == "settings") Screen.Settings() else Screen.Chats)
     }
+    var openChatId by remember { mutableStateOf<Long?>(null) }
+    val openChat = { id: Long ->
+        openChatId = id
+        screen = Screen.Chats
+    }
     val ready = telegram.authState == AuthState.Ready || devScreen != null
     // WHY: without a background the window shows through during the
     // crossfade, which looks like a white flash when opening settings.
@@ -79,11 +85,13 @@ private fun App(telegram: Telegram, settings: AppSettings) {
                     telegram,
                     settings,
                     startInPreferences = current.preferences,
+                    onOpenProfile = { screen = Screen.Profile },
                     onBack = back,
                 )
                 current == Screen.Profile -> ProfileScreen(telegram, settings, onBack = back)
-                current == Screen.Memory -> MemoryScreen(telegram, onBack = back)
-                else -> MainScreen(telegram, settings, onNavigate = { screen = it })
+                current == Screen.Contacts -> ContactsScreen(telegram, settings, openChat, onBack = back)
+                current == Screen.Calls -> CallsScreen(telegram, settings, openChat, onBack = back)
+                else -> MainScreen(telegram, settings, openChatId, openChat, onNavigate = { screen = it })
             }
         }
     }
