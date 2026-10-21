@@ -49,8 +49,9 @@ object AppPaths {
         File(base, "pixelgram").apply { mkdirs() }
     }
 
-    val tdlibDatabase: File get() = File(dataDir, "tdlib/database")
-    val tdlibFiles: File get() = File(dataDir, "tdlib/files")
+    // The first account keeps the folder used before multi-account support.
+    fun accountDir(account: Int): File =
+        if (account == 0) File(dataDir, "tdlib") else File(dataDir, "accounts/$account")
     val settingsFile: File get() = File(dataDir, "settings.properties")
 
     // TDLib's native library is unpacked here instead of the system temp folder.

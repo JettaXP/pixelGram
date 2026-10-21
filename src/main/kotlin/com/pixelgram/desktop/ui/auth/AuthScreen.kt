@@ -37,7 +37,7 @@ import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.themedAppIcon
 
 @Composable
-fun AuthScreen(telegram: Telegram) {
+fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -91,6 +91,9 @@ fun AuthScreen(telegram: Telegram) {
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                         )
+                    }
+                    if (onCancel != null) {
+                        TextButton(onClick = onCancel) { Text("Cancel adding account") }
                     }
                 }
             }

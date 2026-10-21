@@ -105,9 +105,28 @@ data class UiMessage(
 
 private const val AUTH_TIMEOUT_MS = 30_000L
 
+// One TDLib instance per process, shared by all accounts.
+private object Tdlib {
+    private var factory: ClientFactory? = null
+    private var error: Throwable? = null
+
+    fun factory(): Result<ClientFactory> {
+        error?.let { return Result.failure(it) }
+        factory?.let { return Result.success(it) }
+        return runCatching {
+            NativeLibraries.preload()
+            Init.init()
+            ClientFactory.create()
+        }.onSuccess { factory = it }.onFailure { error = it }
+    }
+}
+
 class Telegram(
+    val account: Int,
     private val settings: AppSettings,
     private val scope: CoroutineScope,
+    // Returns true when the account was removed and must not sign in again.
+    private val onLoggedOut: (Telegram) -> Boolean = { false },
 ) {
     var authState by mutableStateOf<AuthState>(AuthState.Starting)
         private set
@@ -131,18 +150,17 @@ class Telegram(
         private set
 
     fun start() {
-        try {
-            NativeLibraries.preload()
-            Init.init()
-        } catch (e: Throwable) {
-            AppLog.write("TDLib native library failed to load", e)
-            authState = AuthState.Failed(
-                "TDLib native library failed to load: ${e.describe()}\n\nLog: ${AppLog.file.absolutePath}"
-            )
-            return
-        }
-        factory = ClientFactory.create()
-        createClient()
+        Tdlib.factory()
+            .onSuccess {
+                factory = it
+                createClient()
+            }
+            .onFailure { e ->
+                AppLog.write("TDLib native library failed to load", e)
+                authState = AuthState.Failed(
+                    "TDLib native library failed to load: ${e.describe()}\n\nLog: ${AppLog.file.absolutePath}"
+                )
+            }
     }
 
     private fun createClient() {
@@ -195,6 +213,7 @@ class Telegram(
     })
 
     private var exiting = false
+    private var loggingOut = false
 
     fun close() {
         exiting = true
@@ -265,8 +284,8 @@ class Telegram(
         }
         val parameters = TdApi.SetTdlibParameters().apply {
             useTestDc = false
-            databaseDirectory = AppPaths.tdlibDatabase.absolutePath
-            filesDirectory = AppPaths.tdlibFiles.absolutePath
+            databaseDirectory = File(AppPaths.accountDir(account), "database").absolutePath
+            filesDirectory = File(AppPaths.accountDir(account), "files").absolutePath
             databaseEncryptionKey = ByteArray(0)
             useFileDatabase = true
             useChatInfoDatabase = true
@@ -471,7 +490,10 @@ class Telegram(
                 loadChats(ChatListKey.Main)
                 AuthState.Ready
             }
-            is TdApi.AuthorizationStateLoggingOut,
+            is TdApi.AuthorizationStateLoggingOut -> {
+                loggingOut = true
+                AuthState.Closing
+            }
             is TdApi.AuthorizationStateClosing -> AuthState.Closing
             is TdApi.AuthorizationStateClosed -> {
                 chats.clear()
@@ -481,7 +503,11 @@ class Telegram(
                 requestedFiles.clear()
                 // WHY: after logging out TDLib closes the instance, a new one
                 // is needed to sign in again.
-                if (!exiting) createClient()
+                me = null
+                myUserId = 0L
+                val removed = loggingOut && onLoggedOut(this)
+                loggingOut = false
+                if (!exiting && !removed) createClient()
                 AuthState.Starting
             }
             else -> AuthState.Unsupported(state.javaClass.simpleName)

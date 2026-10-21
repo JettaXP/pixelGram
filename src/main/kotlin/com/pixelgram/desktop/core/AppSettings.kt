@@ -64,6 +64,10 @@ class AppSettings private constructor(private val props: Properties) {
     val apiId = int("apiId", 0)
     val apiHash = string("apiHash", "")
 
+    // Comma-separated account numbers, each with its own TDLib folder.
+    val accounts = string("accounts", "0")
+    val activeAccount = int("activeAccount", 0)
+
     private val all: List<Setting<*>> = listOf(
         themeMode, seedColor, matugen,
         materialFolders, hideAllChats,
@@ -71,6 +75,7 @@ class AppSettings private constructor(private val props: Properties) {
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius,
         apiId, apiHash,
+        accounts, activeAccount,
     )
 
     fun save() {

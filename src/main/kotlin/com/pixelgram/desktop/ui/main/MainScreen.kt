@@ -14,7 +14,9 @@ import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.draw.clip
+import androidx.compose.material3.Badge
 import com.pixelgram.desktop.core.ThemeMode
+import com.pixelgram.desktop.telegram.Accounts
 import com.pixelgram.desktop.telegram.SavedMessagesTitle
 import com.pixelgram.desktop.ui.settings.PixelSwitch
 import com.pixelgram.desktop.ui.theme.isDarkTheme
@@ -71,6 +73,7 @@ internal data class FolderTab(val key: ChatListKey, val title: String, val icon:
 
 @Composable
 fun MainScreen(
+    accounts: Accounts,
     telegram: Telegram,
     settings: AppSettings,
     openChatId: Long?,
@@ -105,6 +108,7 @@ fun MainScreen(
             // The rail is the folders bar; the menu button expands it into the app menu.
             if (settings.materialFolders.value || menuOpen) {
                 PixelRail(
+                    accounts = accounts,
                     state = railState,
                     expanded = menuOpen,
                     telegram = telegram,
@@ -195,6 +199,7 @@ fun MainScreen(
 // menu when expanded.
 @Composable
 private fun PixelRail(
+    accounts: Accounts,
     state: WideNavigationRailState,
     expanded: Boolean,
     telegram: Telegram,
@@ -222,7 +227,7 @@ private fun PixelRail(
         },
     ) {
         if (expanded) {
-            MainMenu(telegram, settings, onNavigate, onOpenSaved, onNewChat)
+            MainMenu(accounts, telegram, settings, onNavigate, onOpenSaved, onNewChat)
         } else {
             tabs.forEach { tab ->
                 val isSelected = tab.key == selected
@@ -251,6 +256,7 @@ private fun PixelRail(
 // Telegram's main menu: accounts, then the app actions.
 @Composable
 private fun MainMenu(
+    accounts: Accounts,
     telegram: Telegram,
     settings: AppSettings,
     onNavigate: (Screen) -> Unit,
@@ -261,21 +267,31 @@ private fun MainMenu(
     Column(Modifier.verticalScroll(rememberScrollState())) {
         AccountHeader(telegram, settings, accountsOpen) { accountsOpen = !accountsOpen }
         if (accountsOpen) {
-            telegram.me?.let { me ->
+            accounts.list.forEach { account ->
+                val me = account.me
+                val name = me?.fullName() ?: "Signing in…"
+                val unread = account.chatList(ChatListKey.Main).sumOf { it.unreadCount }
                 WideNavigationRailItem(
-                    selected = true,
-                    onClick = {},
-                    icon = { Avatar(me.fullName(), me.profilePhoto?.small, telegram, settings, size = 24.dp) },
-                    label = { Text(me.fullName(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    selected = account == accounts.active,
+                    onClick = { accounts.switchTo(account) },
+                    icon = { Avatar(name, me?.profilePhoto?.small, account, settings, size = 24.dp) },
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            if (unread > 0 && account != accounts.active) {
+                                Badge(Modifier.padding(start = 8.dp)) { Text(unread.toString()) }
+                            }
+                        }
+                    },
                     railExpanded = true,
                 )
             }
             WideNavigationRailItem(
                 selected = false,
-                onClick = {},
-                enabled = false,
+                onClick = accounts::add,
+                enabled = accounts.canAdd,
                 icon = { Icon(Icons.Outlined.PersonAdd, contentDescription = null) },
-                label = { Text("Add Account (soon)") },
+                label = { Text("Add Account") },
                 railExpanded = true,
             )
             HorizontalDivider(Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
