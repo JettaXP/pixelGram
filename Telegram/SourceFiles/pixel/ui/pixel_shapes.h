@@ -7,26 +7,44 @@
 
 namespace PixelShapes {
 
+// Official Material 3 shapes, in androidx MaterialShapes order.
 // Values are persisted in settings, append new shapes at the end only.
 enum class AvatarShape : int {
 	Custom = 0, // AyuGram corner radius slider.
 	Circle,
 	Square,
+	Slanted,
+	Arch,
+	Fan,
+	Arrow,
+	SemiCircle,
+	Oval,
 	Pill,
-	Cookie4,
-	Cookie6,
-	Cookie7,
-	Cookie9,
-	Cookie12,
-	Clover4,
-	Clover8,
+	Triangle,
+	Diamond,
+	ClamShell,
+	Pentagon,
+	Gem,
 	Sunny,
 	VerySunny,
+	Cookie4Sided,
+	Cookie6Sided,
+	Cookie7Sided,
+	Cookie9Sided,
+	Cookie12Sided,
+	Ghostish,
+	Clover4Leaf,
+	Clover8Leaf,
+	Burst,
 	SoftBurst,
-	Diamond,
-	Pentagon,
-	Arch,
+	Boom,
+	SoftBoom,
+	Flower,
+	Puffy,
+	PuffyDiamond,
 	PixelCircle,
+	PixelTriangle,
+	Bun,
 	Heart,
 
 	kCount,
@@ -37,7 +55,7 @@ enum class AvatarShape : int {
 void SetAvatarShape(AvatarShape shape);
 [[nodiscard]] AvatarShape CurrentAvatarShape();
 
-// True when a non-rounded-rect shape replaces AyuGram corner rounding.
+// True when a Material 3 shape replaces AyuGram corner rounding.
 [[nodiscard]] bool HasCustomPath();
 
 // Approximate corner radius for places that can only draw rounded rects.
