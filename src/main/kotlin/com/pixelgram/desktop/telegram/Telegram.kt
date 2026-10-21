@@ -118,6 +118,9 @@ class Telegram(
     private var client: TelegramClient? = null
     private var myUserId = 0L
 
+    var me by mutableStateOf<TdApi.User?>(null)
+        private set
+
     fun start() {
         try {
             NativeLibraries.preload()
@@ -271,6 +274,41 @@ class Telegram(
 
     fun logOut() = send(TdApi.LogOut())
 
+    fun openSavedMessages(onChat: (Long) -> Unit) {
+        if (myUserId == 0L) return
+        send(TdApi.CreatePrivateChat().apply {
+            userId = myUserId
+            force = false
+        }) { result ->
+            if (result is TdApi.Chat) onChat(result.id)
+        }
+    }
+
+    fun myFullInfo(onResult: (TdApi.UserFullInfo?) -> Unit) {
+        if (myUserId == 0L) return onResult(null)
+        send(TdApi.GetUserFullInfo().apply { userId = myUserId }) { result ->
+            onResult(result as? TdApi.UserFullInfo)
+        }
+    }
+
+    fun storageStatistics(onResult: (TdApi.StorageStatisticsFast?) -> Unit) {
+        send(TdApi.GetStorageStatisticsFast()) { result ->
+            onResult(result as? TdApi.StorageStatisticsFast)
+        }
+    }
+
+    // Deletes all cached media and files; chats and messages stay.
+    fun clearCache(onDone: () -> Unit) {
+        send(TdApi.OptimizeStorage().apply {
+            size = 0
+            ttl = 0
+            count = 0
+            immunityDelay = 0
+            returnDeletedFileStatistics = false
+            chatLimit = 0
+        }) { onDone() }
+    }
+
     // Updates.
 
     private fun handleUpdate(update: TdApi.Object) {
@@ -285,7 +323,10 @@ class Telegram(
             }
             is TdApi.UpdateChatPosition -> chats[update.chatId]?.let { applyPosition(it, update.position) }
             is TdApi.UpdateChatReadInbox -> chats[update.chatId]?.unreadCount = update.unreadCount
-            is TdApi.UpdateUser -> users[update.user.id] = update.user
+            is TdApi.UpdateUser -> {
+                users[update.user.id] = update.user
+                if (update.user.id == myUserId) me = update.user
+            }
             is TdApi.UpdateFile -> {
                 val local = update.file.local
                 if (local != null && local.isDownloadingCompleted) {
@@ -335,7 +376,10 @@ class Telegram(
             is TdApi.AuthorizationStateWaitPassword -> AuthState.WaitPassword(state.passwordHint ?: "")
             is TdApi.AuthorizationStateReady -> {
                 send(TdApi.GetMe()) { result ->
-                    if (result is TdApi.User) myUserId = result.id
+                    if (result is TdApi.User) {
+                        myUserId = result.id
+                        me = result
+                    }
                 }
                 loadChats(ChatListKey.Main)
                 AuthState.Ready

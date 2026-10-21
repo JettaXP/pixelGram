@@ -10,7 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,12 +38,14 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun ChatList(
+    title: String,
     chats: List<ChatState>,
     selectedChatId: Long?,
     telegram: Telegram,
     settings: AppSettings,
     onOpen: (Long) -> Unit,
-    onOpenSettings: (() -> Unit)?,
+    onMenu: (() -> Unit)?,
+    onBack: (() -> Unit)?,
 ) {
     Column {
         Row(
@@ -51,16 +54,19 @@ fun ChatList(
                 .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                "pixelGram",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f),
-            )
-            if (onOpenSettings != null) {
-                IconButton(onClick = onOpenSettings) {
-                    Icon(Icons.Outlined.Settings, contentDescription = "Settings")
+            when {
+                onBack != null -> IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+                onMenu != null -> IconButton(onClick = onMenu) {
+                    Icon(Icons.Filled.Menu, contentDescription = "Menu")
                 }
             }
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f).padding(start = 4.dp),
+            )
         }
         LazyColumn(
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),

@@ -23,6 +23,9 @@ import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.AuthState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.AppIcons
+import com.pixelgram.desktop.ui.Screen
+import com.pixelgram.desktop.ui.profile.ProfileScreen
+import com.pixelgram.desktop.ui.storage.MemoryScreen
 import com.pixelgram.desktop.ui.auth.AuthScreen
 import com.pixelgram.desktop.ui.main.MainScreen
 import com.pixelgram.desktop.ui.settings.SettingsScreen
@@ -56,7 +59,9 @@ private val devScreen: String? = System.getProperty("pixelgram.screen")
 
 @Composable
 private fun App(telegram: Telegram, settings: AppSettings) {
-    var showSettings by remember { mutableStateOf(devScreen == "settings") }
+    var screen by remember {
+        mutableStateOf<Screen>(if (devScreen == "settings") Screen.Settings() else Screen.Chats)
+    }
     val ready = telegram.authState == AuthState.Ready || devScreen != null
     // WHY: without a background the window shows through during the
     // crossfade, which looks like a white flash when opening settings.
@@ -64,13 +69,21 @@ private fun App(telegram: Telegram, settings: AppSettings) {
         val enter = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
         val exit = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
         AnimatedContent(
-            targetState = ready to showSettings,
+            targetState = ready to screen,
             transitionSpec = { fadeIn(enter) togetherWith fadeOut(exit) },
-        ) { (isReady, inSettings) ->
+        ) { (isReady, current) ->
+            val back = { screen = Screen.Chats }
             when {
                 !isReady -> AuthScreen(telegram)
-                inSettings -> SettingsScreen(telegram, settings, onBack = { showSettings = false })
-                else -> MainScreen(telegram, settings, onOpenSettings = { showSettings = true })
+                current is Screen.Settings -> SettingsScreen(
+                    telegram,
+                    settings,
+                    startInPreferences = current.preferences,
+                    onBack = back,
+                )
+                current == Screen.Profile -> ProfileScreen(telegram, settings, onBack = back)
+                current == Screen.Memory -> MemoryScreen(telegram, onBack = back)
+                else -> MainScreen(telegram, settings, onNavigate = { screen = it })
             }
         }
     }

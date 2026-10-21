@@ -85,10 +85,18 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
 private const val PixelPreferencesTitle = "pixelGram Preferences"
 
 @Composable
-fun SettingsScreen(telegram: Telegram, settings: AppSettings, onBack: () -> Unit) {
+fun SettingsScreen(
+    telegram: Telegram,
+    settings: AppSettings,
+    startInPreferences: Boolean = false,
+    onBack: () -> Unit,
+) {
     var section by remember {
         val initial = System.getProperty("pixelgram.section")
-        mutableStateOf(Section.entries.firstOrNull { it.name == initial } ?: Section.Account)
+        mutableStateOf(
+            Section.entries.firstOrNull { it.name == initial }
+                ?: if (startInPreferences) Section.Appearance else Section.Account
+        )
     }
     var inPreferences by remember { mutableStateOf(section.pixel) }
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
