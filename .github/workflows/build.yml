@@ -64,6 +64,7 @@ jobs:
             *.pkg.tar.zst
             pixelGram-linux-x86_64.tar.gz
           retention-days: 14
+          compression-level: 0
 
   windows:
     name: Windows
@@ -105,3 +106,46 @@ jobs:
           name: pixelGram-windows
           path: dist/
           retention-days: 14
+          compression-level: 0
+
+  # Publishes the files as plain downloads: "nightly" for main, a release for tags.
+  release:
+    name: Release
+    needs: [linux, windows]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: files
+          merge-multiple: true
+
+      - name: Checksums.
+        run: |
+          cd files
+          ls -la
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Nightly pre-release.
+        if: github.ref == 'refs/heads/main'
+        run: |
+          gh release delete nightly --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create nightly files/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "pixelGram nightly" \
+            --notes "Latest build from main (${GITHUB_SHA::7}). Arch: \`sudo pacman -U pixelgram-*.pkg.tar.zst\`. Windows: run the .msi or unpack the portable .zip."
+
+      - name: Tagged release.
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          gh release create "$GITHUB_REF_NAME" files/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "pixelGram $GITHUB_REF_NAME" \
+            --generate-notes
