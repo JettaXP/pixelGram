@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -29,15 +31,16 @@ import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -114,21 +117,30 @@ fun SettingsScreen(telegram: Telegram, settings: AppSettings, onBack: () -> Unit
                 }
                 Spacer(Modifier.height(8.dp))
                 if (inPreferences) {
-                    Section.entries.filter { it.pixel }.forEach { item ->
-                        NavItem(item.title, item.icon, item == section) { section = item }
+                    val items = Section.entries.filter { it.pixel }
+                    SegmentedGroup {
+                        items.forEachIndexed { index, item ->
+                            NavItem(index, items.size, item.title, item.icon, item == section) {
+                                section = item
+                            }
+                        }
                     }
                 } else {
-                    NavItem("Account", Icons.Outlined.AccountCircle, section == Section.Account) {
-                        section = Section.Account
+                    SegmentedGroup {
+                        NavItem(0, 1, "Account", Icons.Outlined.AccountCircle, section == Section.Account) {
+                            section = Section.Account
+                        }
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     PreferencesEntry {
                         inPreferences = true
                         section = Section.Appearance
                     }
-                    Spacer(Modifier.height(8.dp))
-                    NavItem("About", Icons.Outlined.Info, section == Section.About) {
-                        section = Section.About
+                    Spacer(Modifier.height(12.dp))
+                    SegmentedGroup {
+                        NavItem(0, 1, "About", Icons.Outlined.Info, section == Section.About) {
+                            section = Section.About
+                        }
                     }
                 }
             }
@@ -168,21 +180,47 @@ fun SettingsScreen(telegram: Telegram, settings: AppSettings, onBack: () -> Unit
     }
 }
 
+// Material 3 Expressive segmented list: items separated by a small gap,
+// outer corners large, inner corners small.
 @Composable
-private fun NavItem(title: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
-    ListItem(
-        modifier = Modifier
-            .clip(MaterialTheme.shapes.extraLarge)
-            .clickable(onClick = onClick),
-        colors = ListItemDefaults.colors(
-            containerColor = if (selected) {
-                MaterialTheme.colorScheme.secondaryContainer
-            } else {
-                Color.Transparent
-            },
-        ),
+private fun SegmentedGroup(content: @Composable () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+        content()
+    }
+}
+
+@Composable
+private fun NavItem(
+    index: Int,
+    count: Int,
+    title: String,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    SegmentedListItem(
+        selected = selected,
+        onClick = onClick,
+        shapes = ListItemDefaults.segmentedShapes(index, count),
         leadingContent = { Icon(icon, contentDescription = null) },
-        headlineContent = { Text(title) },
+    ) {
+        Text(title)
+    }
+}
+
+// Official Material 3 switch with check / close icons on the thumb.
+@Composable
+fun PixelSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?) {
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        thumbContent = {
+            Icon(
+                imageVector = if (checked) Icons.Filled.Check else Icons.Filled.Close,
+                contentDescription = null,
+                modifier = Modifier.size(SwitchDefaults.IconSize),
+            )
+        },
     )
 }
 
@@ -229,27 +267,39 @@ private fun Description(text: String) {
 }
 
 @Composable
-private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
-    ListItem(
-        modifier = Modifier
-            .clip(MaterialTheme.shapes.large)
-            .clickable { onChange(!checked) },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        headlineContent = { Text(title) },
+private fun SwitchRow(
+    index: Int,
+    count: Int,
+    title: String,
+    subtitle: String?,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    SegmentedListItem(
+        checked = checked,
+        onCheckedChange = onChange,
+        shapes = ListItemDefaults.segmentedShapes(index, count),
         supportingContent = subtitle?.let { { Text(it) } },
-        trailingContent = { Switch(checked = checked, onCheckedChange = onChange) },
-    )
+        trailingContent = { PixelSwitch(checked = checked, onCheckedChange = null) },
+    ) {
+        Text(title)
+    }
 }
 
 @Composable
 private fun AppearanceSection(settings: AppSettings) {
     Header("Theme")
-    SingleChoiceSegmentedButtonRow {
-        ThemeMode.entries.forEachIndexed { index, mode ->
-            SegmentedButton(
-                selected = settings.themeMode.value == mode,
-                onClick = { settings.themeMode.value = mode },
-                shape = SegmentedButtonDefaults.itemShape(index, ThemeMode.entries.size),
+    Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
+        val modes = ThemeMode.entries
+        modes.forEachIndexed { index, mode ->
+            ToggleButton(
+                checked = settings.themeMode.value == mode,
+                onCheckedChange = { settings.themeMode.value = mode },
+                shapes = when (index) {
+                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    modes.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                },
             ) {
                 Text(mode.name)
             }
@@ -281,6 +331,8 @@ private fun AppearanceSection(settings: AppSettings) {
     if (AppPaths.isLinux) {
         Header("Material You (matugen)")
         SwitchRow(
+            index = 0,
+            count = 1,
             title = "Dynamic colors from matugen",
             subtitle = "Colors follow your wallpaper. Overrides the accent color.",
             checked = settings.matugen.value,
@@ -314,18 +366,24 @@ private fun AppearanceSection(settings: AppSettings) {
     }
 
     Header("Chat folders")
+    SegmentedGroup {
     SwitchRow(
+        index = 0,
+        count = 2,
         title = "Material 3 navigation rail",
         subtitle = "Show folders in a side rail. When off, folders are tabs above the chat list.",
         checked = settings.materialFolders.value,
         onChange = { settings.materialFolders.value = it },
     )
     SwitchRow(
+        index = 1,
+        count = 2,
         title = "Hide \"All chats\"",
         subtitle = "Only works when you have at least one folder.",
         checked = settings.hideAllChats.value,
         onChange = { settings.hideAllChats.value = it },
     )
+    }
 }
 
 @Composable

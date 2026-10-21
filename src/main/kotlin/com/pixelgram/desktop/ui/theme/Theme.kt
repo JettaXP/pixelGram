@@ -51,6 +51,7 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     MaterialExpressiveTheme(
         colorScheme = matugenScheme ?: seedScheme,
         motionScheme = MotionScheme.expressive(),
+        typography = PixelTypography,
         content = content,
     )
 }

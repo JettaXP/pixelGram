@@ -1,15 +1,19 @@
 package com.pixelgram.desktop
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -18,13 +22,13 @@ import androidx.compose.ui.window.rememberWindowState
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.AuthState
 import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.ui.AppIcons
 import com.pixelgram.desktop.ui.auth.AuthScreen
 import com.pixelgram.desktop.ui.main.MainScreen
 import com.pixelgram.desktop.ui.settings.SettingsScreen
 import com.pixelgram.desktop.ui.theme.PixelTheme
 import com.pixelgram.desktop.ui.theme.isDarkTheme
 import kotlinx.coroutines.MainScope
-import org.jetbrains.skia.Image as SkiaImage
 
 fun main() = application {
     val settings = remember { AppSettings.load() }
@@ -37,7 +41,7 @@ fun main() = application {
             exitApplication()
         },
         title = "pixelGram",
-        icon = if (isDarkTheme(settings)) darkIcon else lightIcon,
+        icon = AppIcons.forTheme(isDarkTheme(settings)),
         state = rememberWindowState(size = DpSize(1180.dp, 760.dp)),
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
@@ -47,13 +51,6 @@ fun main() = application {
     }
 }
 
-private fun loadIcon(name: String): Painter? = object {}.javaClass.getResourceAsStream("/$name")
-    ?.use { BitmapPainter(SkiaImage.makeFromEncoded(it.readBytes()).toComposeImageBitmap()) }
-
-// Window icon follows the theme: lime for light, green for dark.
-private val lightIcon = loadIcon("icon-light.png")
-private val darkIcon = loadIcon("icon-dark.png")
-
 // Development only: -Dpixelgram.screen=settings opens settings without signing in.
 private val devScreen: String? = System.getProperty("pixelgram.screen")
 
@@ -61,11 +58,20 @@ private val devScreen: String? = System.getProperty("pixelgram.screen")
 private fun App(telegram: Telegram, settings: AppSettings) {
     var showSettings by remember { mutableStateOf(devScreen == "settings") }
     val ready = telegram.authState == AuthState.Ready || devScreen != null
-    AnimatedContent(targetState = ready to showSettings) { (isReady, inSettings) ->
-        when {
-            !isReady -> AuthScreen(telegram)
-            inSettings -> SettingsScreen(telegram, settings, onBack = { showSettings = false })
-            else -> MainScreen(telegram, settings, onOpenSettings = { showSettings = true })
+    // WHY: without a background the window shows through during the
+    // crossfade, which looks like a white flash when opening settings.
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
+        val enter = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+        val exit = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+        AnimatedContent(
+            targetState = ready to showSettings,
+            transitionSpec = { fadeIn(enter) togetherWith fadeOut(exit) },
+        ) { (isReady, inSettings) ->
+            when {
+                !isReady -> AuthScreen(telegram)
+                inSettings -> SettingsScreen(telegram, settings, onBack = { showSettings = false })
+                else -> MainScreen(telegram, settings, onOpenSettings = { showSettings = true })
+            }
         }
     }
 }

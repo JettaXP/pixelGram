@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,13 +13,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.telegram.AuthState
 import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.ui.themedAppIcon
 
 @Composable
 fun AuthScreen(telegram: Telegram) {
@@ -99,19 +99,8 @@ fun AuthScreen(telegram: Telegram) {
 
 @Composable
 private fun Logo() {
-    Surface(
-        shape = MaterialShapes.Cookie9Sided.toShape(),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        modifier = Modifier.size(88.dp),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                "pG",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-        }
-    }
+    val icon = themedAppIcon() ?: return
+    Image(icon, contentDescription = "pixelGram", modifier = Modifier.size(96.dp))
 }
 
 @Composable

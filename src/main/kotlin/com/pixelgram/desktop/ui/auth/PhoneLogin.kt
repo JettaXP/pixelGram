@@ -87,7 +87,7 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
             Icon(Icons.Filled.ArrowDropDown, contentDescription = "Choose a country")
         }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
         OutlinedTextField(
             value = if (callingCode.isEmpty()) "+" else "+$callingCode",
             onValueChange = {},
@@ -116,15 +116,6 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
             },
             label = { Text("Phone number") },
             placeholder = { Text(pattern.replace(Regex("[0-9]"), "0").ifEmpty { "000 000 0000" }) },
-            supportingText = {
-                Text(
-                    when {
-                        digits.isEmpty() -> ""
-                        missing > 0 -> "$missing more digit${if (missing == 1) "" else "s"}"
-                        else -> "+$callingCode ${info?.formattedPhoneNumber ?: digits}"
-                    }
-                )
-            },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = {
@@ -133,6 +124,16 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
     }
+    Text(
+        when {
+            digits.isEmpty() -> " "
+            missing > 0 -> "$missing more digit${if (missing == 1) "" else "s"}"
+            else -> "+$callingCode ${info?.formattedPhoneNumber ?: digits}"
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth(),
+    )
     Button(
         onClick = { telegram.sendPhone("+$callingCode$digits") },
         enabled = complete,
