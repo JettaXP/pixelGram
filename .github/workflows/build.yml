@@ -33,8 +33,12 @@ jobs:
       - name: Build.
         run: ./gradlew --no-daemon createDistributable
 
+      # The pixelgram-data folder turns on portable mode (data next to the app).
       - name: Portable archive.
-        run: tar czf pixelGram-linux-x86_64.tar.gz -C build/compose/binaries/main/app pixelGram
+        run: |
+          cp -a build/compose/binaries/main/app/pixelGram portable
+          mkdir -p portable/pixelgram-data
+          tar czf pixelGram-linux-x86_64.tar.gz --transform 's,^portable,pixelGram,' portable
 
       - name: Arch package.
         run: |
@@ -99,6 +103,8 @@ jobs:
         run: |
           mkdir dist
           cp build/compose/binaries/main/msi/*.msi dist/
+          # The pixelgram-data folder turns on portable mode (data next to the app).
+          mkdir -p build/compose/binaries/main/app/pixelGram/pixelgram-data
           7z a dist/pixelGram-windows-x64-portable.zip ./build/compose/binaries/main/app/pixelGram
 
       - uses: actions/upload-artifact@v4

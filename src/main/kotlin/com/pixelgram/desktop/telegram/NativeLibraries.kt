@@ -18,6 +18,9 @@ object NativeLibraries {
     )
 
     fun preload() {
+        // WHY: TDLight unpacks tdjni into the system temp folder by default,
+        // which fails on a full system drive and ignores portable mode.
+        System.setProperty("it.tdlight.native.workdir", AppPaths.nativesDir.absolutePath)
         if (!AppPaths.isWindows) return
         val folders = listOfNotNull(
             System.getProperty("compose.application.resources.dir")?.let(::File),

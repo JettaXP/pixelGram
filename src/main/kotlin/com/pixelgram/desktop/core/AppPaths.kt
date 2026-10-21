@@ -11,9 +11,28 @@ object AppPaths {
 
     private val home = File(System.getProperty("user.home"))
 
+    // Root of the installed app (folder with pixelGram.exe, or with bin/ on
+    // Linux); null when running from sources.
+    private val appDir: File? by lazy {
+        val launcher = System.getProperty("jpackage.app-path")?.let { File(it).absoluteFile }
+        when {
+            launcher == null -> null
+            isWindows -> launcher.parentFile
+            else -> launcher.parentFile?.parentFile
+        }
+    }
+
+    // Portable mode: a "pixelgram-data" folder next to the app keeps all data.
+    val portableDir: File? by lazy {
+        appDir?.let { File(it, "pixelgram-data") }?.takeIf { it.isDirectory }
+    }
+
+    val isPortable: Boolean get() = portableDir != null
+
     // Linux: ~/.local/share/pixelgram, Windows: %APPDATA%\pixelgram,
-    // macOS: ~/Library/Application Support/pixelgram.
+    // macOS: ~/Library/Application Support/pixelgram, or the portable folder.
     val dataDir: File by lazy {
+        portableDir?.let { return@lazy it }
         val base = when {
             isWindows -> System.getenv("APPDATA")?.let(::File) ?: home
             isMac -> File(home, "Library/Application Support")
@@ -33,4 +52,7 @@ object AppPaths {
     val tdlibDatabase: File get() = File(dataDir, "tdlib/database")
     val tdlibFiles: File get() = File(dataDir, "tdlib/files")
     val settingsFile: File get() = File(dataDir, "settings.properties")
+
+    // TDLib's native library is unpacked here instead of the system temp folder.
+    val nativesDir: File get() = File(dataDir, "natives").apply { mkdirs() }
 }
