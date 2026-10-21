@@ -41,6 +41,7 @@ jobs:
           VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' build.gradle.kts)
           mkdir -p pkg
           cp packaging/arch/* LICENSE pkg/
+          cp -r packaging/icons/hicolor pkg/icons
           cp -a build/compose/binaries/main/app pkg/app
           sed -i "s/^pkgver=.*/pkgver=$VERSION/" pkg/PKGBUILD
           docker run --rm -v "$PWD/pkg:/pkg" archlinux:latest bash -c '

@@ -98,10 +98,12 @@ compose.desktop {
 
             linux {
                 packageName = "pixelgram"
+                iconFile.set(project.file("packaging/icons/pixelgram.png"))
                 appCategory = "Network"
                 menuGroup = "Network"
             }
             windows {
+                iconFile.set(project.file("packaging/icons/pixelgram.ico"))
                 menuGroup = "pixelGram"
                 perUserInstall = true
                 dirChooser = true

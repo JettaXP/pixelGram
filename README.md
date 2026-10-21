@@ -1,9 +1,17 @@
+<p align="center">
+  <img src="packaging/icons/variants/lime-light.png" width="128" alt="pixelGram">
+</p>
+
 # pixelGram
 
 Telegram desktop client built with **Kotlin**, **Compose Multiplatform** and
 **Material 3 Expressive**, powered by **TDLib** (via TDLight).
 
 Channel: [@pixelgramclient](https://t.me/pixelgramclient)
+
+## Screenshots
+
+![Sign in](docs/screenshots/login.png)
 
 ## Features
 

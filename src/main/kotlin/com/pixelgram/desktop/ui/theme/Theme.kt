@@ -32,12 +32,15 @@ val SeedColors = listOf(
 )
 
 @Composable
+fun isDarkTheme(settings: AppSettings): Boolean = when (settings.themeMode.value) {
+    ThemeMode.System -> isSystemInDarkTheme()
+    ThemeMode.Light -> false
+    ThemeMode.Dark -> true
+}
+
+@Composable
 fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
-    val dark = when (settings.themeMode.value) {
-        ThemeMode.System -> isSystemInDarkTheme()
-        ThemeMode.Light -> false
-        ThemeMode.Dark -> true
-    }
+    val dark = isDarkTheme(settings)
     val seed = settings.seedColor.value
     val seedScheme = remember(seed, dark) { schemeFromSeed(seed, dark) }
     val matugenScheme = if (AppPaths.isLinux && settings.matugen.value) {

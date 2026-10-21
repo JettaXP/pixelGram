@@ -20,6 +20,10 @@ package() {
 
     install -Dm644 "$startdir/com.pixelgram.desktop.desktop" \
         "$pkgdir/usr/share/applications/com.pixelgram.desktop.desktop"
+    for size in 16 24 32 48 64 128 256 512; do
+        install -Dm644 "$startdir/icons/$size.png" \
+            "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/com.pixelgram.desktop.png"
+    done
     install -Dm644 "$startdir/LICENSE" \
         "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
