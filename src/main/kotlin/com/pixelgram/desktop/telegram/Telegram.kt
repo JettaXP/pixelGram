@@ -87,6 +87,8 @@ class ChatState(val id: Long) {
     val positions = mutableStateMapOf<ChatListKey, Long>()
 }
 
+const val SavedMessagesTitle = "Saved Messages"
+
 data class FolderInfo(val id: Int, val title: String)
 
 // Immutable snapshot of a message for the UI; TdApi objects are mutable.
@@ -301,6 +303,11 @@ class Telegram(
     })
 
     fun logOut() = send(TdApi.LogOut())
+
+    fun isSavedMessages(chatId: Long): Boolean = me?.id == chatId
+
+    fun chatTitle(chat: ChatState): String =
+        if (isSavedMessages(chat.id)) SavedMessagesTitle else chat.title
 
     fun openSavedMessages(onChat: (Long) -> Unit) {
         if (myUserId == 0L) return
@@ -547,7 +554,17 @@ class Telegram(
             fileId = file.id
             priority = 1
             synchronous = false
-        })
+        }) { result ->
+            when (result) {
+                is TdApi.File -> result.local?.takeIf { it.isDownloadingCompleted }?.let {
+                    filePaths[result.id] = it.path
+                }
+                is TdApi.Error -> {
+                    AppLog.write("Download ${file.id} failed ${result.code}: ${result.message}")
+                    requestedFiles.remove(file.id)
+                }
+            }
+        }
     }
 }
 

@@ -34,7 +34,7 @@ fun ProfileScreen(telegram: Telegram, settings: AppSettings, onBack: () -> Unit)
             return@PageScaffold
         }
         val name = listOf(me.firstName, me.lastName).filter { !it.isNullOrBlank() }.joinToString(" ")
-        Avatar(name, me.profilePhoto?.big ?: me.profilePhoto?.small, telegram, settings, size = 160.dp)
+        Avatar(name, me.profilePhoto?.small, telegram, settings, size = 160.dp, full = me.profilePhoto?.big)
         Text(name, style = MaterialTheme.typography.headlineMediumEmphasized)
         val rows = buildList {
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {

@@ -30,7 +30,7 @@ import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.ChatState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.contentText
-import com.pixelgram.desktop.ui.components.Avatar
+import com.pixelgram.desktop.ui.components.ChatAvatar
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -103,10 +103,10 @@ private fun ChatRow(
             containerColor = if (selected) colors.secondaryContainer else Color.Transparent,
         ),
         leadingContent = {
-            Avatar(chat.title, chat.photo, telegram, settings, size = 48.dp)
+            ChatAvatar(chat, telegram, settings, size = 48.dp)
         },
         headlineContent = {
-            Text(chat.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         supportingContent = {
             Text(

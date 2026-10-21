@@ -46,7 +46,7 @@ import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.ChatState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
-import com.pixelgram.desktop.ui.components.Avatar
+import com.pixelgram.desktop.ui.components.ChatAvatar
 
 @Composable
 fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings) {
@@ -75,8 +75,8 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Avatar(chat.title, chat.photo, telegram, settings, size = 40.dp)
-            Text(chat.title, style = MaterialTheme.typography.titleMedium)
+            ChatAvatar(chat, telegram, settings, size = 40.dp)
+            Text(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
         }
         LazyColumn(
             state = listState,

@@ -4,6 +4,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import com.pixelgram.desktop.core.AppSettings
+import com.pixelgram.desktop.telegram.ChatState
+import com.pixelgram.desktop.telegram.SavedMessagesTitle
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.AvatarShape
 import com.pixelgram.desktop.ui.toShape
@@ -63,11 +68,43 @@ fun Avatar(
     settings: AppSettings,
     size: Dp,
     modifier: Modifier = Modifier,
+    full: TdApi.File? = null,
 ) {
     val shape = settings.avatarShape.value.toShape(settings.avatarCorner.value)
-    AvatarImage(title, photo, telegram, shape, size, modifier)
+    AvatarImage(title, photo, telegram, shape, size, modifier, full)
 }
 
+// Chat avatar: Saved Messages gets the bookmark instead of your own photo.
+@Composable
+fun ChatAvatar(
+    chat: ChatState,
+    telegram: Telegram,
+    settings: AppSettings,
+    size: Dp,
+    modifier: Modifier = Modifier,
+) {
+    if (!telegram.isSavedMessages(chat.id)) {
+        Avatar(chat.title, chat.photo, telegram, settings, size, modifier)
+        return
+    }
+    val colors = MaterialTheme.colorScheme
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(settings.avatarShape.value.toShape(settings.avatarCorner.value))
+            .background(colors.primary),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            Icons.Filled.Bookmark,
+            contentDescription = SavedMessagesTitle,
+            tint = colors.onPrimary,
+            modifier = Modifier.size(size * 0.5f),
+        )
+    }
+}
+
+// `full` is a higher resolution photo shown once it is downloaded.
 @Composable
 fun AvatarImage(
     title: String,
@@ -76,11 +113,13 @@ fun AvatarImage(
     shape: Shape,
     size: Dp,
     modifier: Modifier = Modifier,
+    full: TdApi.File? = null,
 ) {
     LaunchedEffect(photo?.id) { telegram.download(photo) }
-    val path = telegram.localPath(photo)
+    LaunchedEffect(full?.id) { telegram.download(full) }
+    val path = telegram.localPath(full) ?: telegram.localPath(photo)
     val image by produceState<ImageBitmap?>(null, path) {
-        value = path?.let { loadImage(it) }
+        path?.let { loadImage(it) }?.let { value = it }
     }
     val colors = MaterialTheme.colorScheme
     Box(
