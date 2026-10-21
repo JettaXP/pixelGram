@@ -15,7 +15,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -68,11 +67,13 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
     val pattern = info?.formattedPhoneNumber.orEmpty()
     val missing = pattern.count { it == '-' }
     val complete = digits.length >= MinNationalDigits && missing == 0
+    val busy = telegram.authBusy
+    val submit = { if (complete && !busy) telegram.sendPhone("+$callingCode$digits") }
 
     Hint("Choose your country and enter your phone number.")
     OutlinedCard(
         onClick = { picking = true },
-        enabled = countries.isNotEmpty(),
+        enabled = countries.isNotEmpty() && !busy,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -118,9 +119,8 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
             placeholder = { Text(pattern.replace(Regex("[0-9]"), "0").ifEmpty { "000 000 0000" }) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = {
-                if (complete) telegram.sendPhone("+$callingCode$digits")
-            }),
+            keyboardActions = KeyboardActions(onDone = { submit() }),
+            enabled = !busy,
             modifier = Modifier.weight(1f),
         )
     }
@@ -134,14 +134,8 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.fillMaxWidth(),
     )
-    Button(
-        onClick = { telegram.sendPhone("+$callingCode$digits") },
-        enabled = complete,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text("Next")
-    }
-    TextButton(onClick = onQr) { Text("Log in by QR code") }
+    BusyButton("Next", busy, enabled = complete, onClick = submit)
+    TextButton(onClick = onQr, enabled = !busy) { Text("Log in by QR code") }
 
     if (picking) {
         CountryPicker(
@@ -231,6 +225,8 @@ fun CodeStep(info: CodeInfo, telegram: Telegram, onChangeNumber: () -> Unit) {
         }
     }
     val length = info.length
+    val busy = telegram.authBusy
+    val submit = { if (code.isNotEmpty() && !busy) telegram.sendCode(code) }
     val via = describeCodeType(info.type)
 
     Text(
@@ -242,28 +238,28 @@ fun CodeStep(info: CodeInfo, telegram: Telegram, onChangeNumber: () -> Unit) {
         value = code,
         onValueChange = { value ->
             code = value.filter(Char::isLetterOrDigit).let { if (length > 0) it.take(length) else it }
-            if (length > 0 && code.length == length) telegram.sendCode(code)
+            if (length > 0 && code.length == length) submit()
         },
         label = { Text("Code") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { if (code.isNotEmpty()) telegram.sendCode(code) }),
+        keyboardActions = KeyboardActions(onDone = { submit() }),
+        enabled = !busy,
         modifier = Modifier.fillMaxWidth(),
     )
-    Button(
-        onClick = { telegram.sendCode(code) },
+    BusyButton(
+        "Sign in",
+        busy,
         enabled = code.isNotEmpty() && (length == 0 || code.length == length),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text("Sign in")
-    }
+        onClick = submit,
+    )
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        TextButton(onClick = onChangeNumber) { Text("Wrong number?") }
+        TextButton(onClick = onChangeNumber, enabled = !busy) { Text("Wrong number?") }
         if (info.nextType != null) {
-            TextButton(onClick = telegram::resendCode, enabled = secondsLeft == 0) {
+            TextButton(onClick = telegram::resendCode, enabled = secondsLeft == 0 && !busy) {
                 Text(
                     if (secondsLeft > 0) {
                         "%s in %d:%02d".format(describeNextType(info.nextType), secondsLeft / 60, secondsLeft % 60)

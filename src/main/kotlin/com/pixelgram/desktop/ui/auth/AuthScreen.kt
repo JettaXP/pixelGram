@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -103,6 +104,30 @@ private fun Logo() {
     Image(icon, contentDescription = "pixelGram", modifier = Modifier.size(96.dp))
 }
 
+// The button turns into a loading indicator while a sign-in request is pending.
+@Composable
+internal fun BusyButton(
+    text: String,
+    busy: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled && !busy,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        if (busy) {
+            LoadingIndicator(
+                modifier = Modifier.size(24.dp),
+                color = LocalContentColor.current,
+            )
+        } else {
+            Text(text)
+        }
+    }
+}
+
 @Composable
 internal fun Hint(text: String) {
     Text(
@@ -115,6 +140,7 @@ internal fun Hint(text: String) {
 
 @Composable
 private fun SingleField(
+    busy: Boolean,
     label: String,
     hint: String,
     action: String,
@@ -133,16 +159,11 @@ private fun SingleField(
         visualTransformation = if (password) PasswordVisualTransformation() else
             androidx.compose.ui.text.input.VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { if (value.isNotBlank()) onSubmit(value) }),
+        keyboardActions = KeyboardActions(onDone = { if (value.isNotBlank() && !busy) onSubmit(value) }),
+        enabled = !busy,
         modifier = Modifier.fillMaxWidth(),
     )
-    Button(
-        onClick = { onSubmit(value) },
-        enabled = value.isNotBlank(),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(action)
-    }
+    BusyButton(action, busy, enabled = value.isNotBlank()) { onSubmit(value) }
     secondary?.invoke()
 }
 
@@ -165,17 +186,16 @@ private fun ApiCredentialsStep(telegram: Telegram) {
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
-    Button(
-        onClick = { telegram.setApiCredentials(id.toInt(), hash) },
+    BusyButton(
+        "Continue",
+        busy = telegram.authBusy,
         enabled = id.toIntOrNull() != null && hash.length >= 16,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text("Continue")
-    }
+    ) { telegram.setApiCredentials(id.toInt(), hash) }
 }
 
 @Composable
 private fun PasswordStep(hint: String, telegram: Telegram) = SingleField(
+    busy = telegram.authBusy,
     label = "Password",
     hint = if (hint.isNotEmpty()) "Two-step verification is on. Hint: $hint" else
         "Two-step verification is on. Enter your password.",

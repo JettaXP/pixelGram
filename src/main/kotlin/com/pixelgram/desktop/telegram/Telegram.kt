@@ -19,6 +19,7 @@ import it.tdlight.TelegramClient
 import it.tdlight.jni.TdApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -99,6 +100,8 @@ data class UiMessage(
     val text: String,
 )
 
+private const val AUTH_TIMEOUT_MS = 30_000L
+
 class Telegram(
     private val settings: AppSettings,
     private val scope: CoroutineScope,
@@ -106,6 +109,9 @@ class Telegram(
     var authState by mutableStateOf<AuthState>(AuthState.Starting)
         private set
     var authError by mutableStateOf<String?>(null)
+    var authBusy by mutableStateOf(false)
+        private set
+    private var authRequest = 0
 
     val chats = mutableStateMapOf<Long, ChatState>()
     val users = mutableStateMapOf<Long, TdApi.User>()
@@ -209,11 +215,28 @@ class Telegram(
     }
 
     private fun sendAuth(function: TdApi.Function<TdApi.Ok>) {
+        if (authBusy) return
         authError = null
+        authBusy = true
+        val request = ++authRequest
+        scope.launch(Dispatchers.Main) {
+            delay(AUTH_TIMEOUT_MS)
+            if (authBusy && authRequest == request) {
+                authBusy = false
+                authError = "Telegram is taking too long to respond. Try again."
+            }
+        }
         send(function) { result ->
+            if (authRequest == request) authBusy = false
             if (result is TdApi.Error) {
                 AppLog.write("Auth error ${result.code}: ${result.message}")
-                authError = friendlyError(result.message)
+                // WHY: both mean an earlier request is still finishing or was
+                // superseded by a state change, the state update follows anyway.
+                if (result.message != "Another authorization query has started"
+                    && result.message != "Request aborted"
+                ) {
+                    authError = friendlyError(result.message)
+                }
             }
         }
     }
@@ -253,7 +276,12 @@ class Telegram(
             systemVersion = "${System.getProperty("os.name")} ${System.getProperty("os.version")}"
             applicationVersion = "pixelGram ${BuildConfig.VERSION}"
         }
-        sendAuth(parameters)
+        send(parameters) { result ->
+            if (result is TdApi.Error) {
+                AppLog.write("TDLib parameters error ${result.code}: ${result.message}")
+                authError = friendlyError(result.message)
+            }
+        }
     }
 
     fun sendPhone(phone: String) = sendAuth(TdApi.SetAuthenticationPhoneNumber().apply {
@@ -360,6 +388,8 @@ class Telegram(
     }
 
     private fun handleAuthState(state: TdApi.AuthorizationState) {
+        authBusy = false
+        authRequest++
         authState = when (state) {
             is TdApi.AuthorizationStateWaitTdlibParameters -> {
                 sendTdlibParameters()
