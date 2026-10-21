@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Folder
@@ -41,7 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.ToggleButtonShapes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,7 +69,7 @@ internal fun CapsuleFolders(
         HorizontalFloatingToolbar(
             expanded = true,
             colors = FloatingToolbarDefaults.standardFloatingToolbarColors(),
-            contentPadding = PaddingValues(4.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
             expandedShadowElevation = 0.dp,
         ) {
             Row(
@@ -81,7 +82,7 @@ internal fun CapsuleFolders(
                     ToggleButton(
                         checked = isSelected,
                         onCheckedChange = { onSelect(tab.key) },
-                        shapes = ToggleButtonDefaults.shapesFor(height),
+                        shapes = ToggleButtonShapes(CircleShape, CircleShape, CircleShape),
                         contentPadding = PaddingValues(horizontal = 12.dp),
                         modifier = Modifier.height(height),
                     ) {
