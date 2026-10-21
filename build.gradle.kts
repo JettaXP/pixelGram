@@ -109,3 +109,10 @@ compose.desktop {
         }
     }
 }
+
+// Development: forward -Dpixelgram.* properties to `./gradlew run`.
+tasks.withType<JavaExec>().configureEach {
+    System.getProperties()
+        .filterKeys { it.toString().startsWith("pixelgram.") }
+        .forEach { (key, value) -> systemProperty(key.toString(), value) }
+}

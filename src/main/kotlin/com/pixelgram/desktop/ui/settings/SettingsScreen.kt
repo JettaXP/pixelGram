@@ -77,7 +77,10 @@ private enum class Section(val title: String, val icon: ImageVector) {
 
 @Composable
 fun SettingsScreen(telegram: Telegram, settings: AppSettings, onBack: () -> Unit) {
-    var section by remember { mutableStateOf(Section.Appearance) }
+    var section by remember {
+        val initial = System.getProperty("pixelgram.section")
+        mutableStateOf(Section.entries.firstOrNull { it.name == initial } ?: Section.Appearance)
+    }
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
         Row {
             Column(

@@ -41,10 +41,13 @@ fun main() = application {
     }
 }
 
+// Development only: -Dpixelgram.screen=settings opens settings without signing in.
+private val devScreen: String? = System.getProperty("pixelgram.screen")
+
 @Composable
 private fun App(telegram: Telegram, settings: AppSettings) {
-    var showSettings by remember { mutableStateOf(false) }
-    val ready = telegram.authState == AuthState.Ready
+    var showSettings by remember { mutableStateOf(devScreen == "settings") }
+    val ready = telegram.authState == AuthState.Ready || devScreen != null
     AnimatedContent(targetState = ready to showSettings) { (isReady, inSettings) ->
         when {
             !isReady -> AuthScreen(telegram)
