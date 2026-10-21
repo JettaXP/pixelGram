@@ -11,6 +11,7 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.platform.Font
+import androidx.compose.ui.unit.em
 import com.pixelgram.desktop.core.AppLog
 import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
@@ -29,7 +30,7 @@ import java.security.MessageDigest
 
 // Noto Color Emoji, the latest flat set (SIL Open Font License, see
 // fonts/NotoColorEmoji-OFL.txt).
-private val FlatEmoji: FontFamily by lazy {
+internal val FlatEmoji: FontFamily by lazy {
     FontFamily(listOfNotNull(fontBytes("NotoColorEmoji")?.let { Font("NotoColorEmoji", it) }))
 }
 
@@ -119,12 +120,21 @@ object Emoji3D {
 // Current emoji font: Noto 3D once downloaded and chosen, otherwise flat Noto.
 object EmojiFonts {
     var settings: AppSettings? = null
+    val flat get() = FlatEmoji
+
+    // WHY: Noto 3D's pictures fill their whole square (stars, sparkles), so
+    // at full size they stick out of single-line text and get cut off.
+    private val Noto3DSize = 0.9.em
+
+    private val use3D: Boolean
+        get() = settings?.emojiStyle?.value == EmojiStyle.Noto3D &&
+            Emoji3D.state == Emoji3DState.Ready && Emoji3D.family != null
 
     val family: FontFamily
-        get() {
-            val use3D = settings?.emojiStyle?.value == EmojiStyle.Noto3D && Emoji3D.state == Emoji3DState.Ready
-            return (if (use3D) Emoji3D.family else null) ?: FlatEmoji
-        }
+        get() = (if (use3D) Emoji3D.family else null) ?: FlatEmoji
+
+    val style: SpanStyle
+        get() = if (use3D) SpanStyle(fontFamily = family, fontSize = Noto3DSize) else SpanStyle(fontFamily = FlatEmoji)
 }
 
 private const val Zwj = 0x200D
@@ -180,7 +190,7 @@ fun emojiRanges(text: String): List<IntRange> {
 fun emojiText(text: String): AnnotatedString {
     val ranges = emojiRanges(text)
     if (ranges.isEmpty()) return AnnotatedString(text)
-    val style = SpanStyle(fontFamily = EmojiFonts.family)
+    val style = EmojiFonts.style
     return buildAnnotatedString {
         append(text)
         ranges.forEach { addStyle(style, it.first, it.last + 1) }

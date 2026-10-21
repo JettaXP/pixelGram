@@ -47,6 +47,7 @@ class AppSettings private constructor(private val props: Properties) {
     val seedColor = int("seedColor", 0xFF6750A4.toInt())
     val matugen = bool("matugen", false)
     val emojiStyle = enum("emojiStyle", EmojiStyle.Noto)
+    val notificationSound = bool("notificationSound", true)
 
     // Folders.
     val materialFolders = bool("materialFolders", true)
@@ -54,7 +55,7 @@ class AppSettings private constructor(private val props: Properties) {
     val capsuleFolders = bool("capsuleFolders", false)
     val chatListWidth = int("chatListWidth", 360)
     val capsuleSpacing = int("capsuleSpacing", 4)
-    val capsuleHeight = int("capsuleBarHeight", 48)
+    val capsuleHeight = int("capsuleContainerHeight", 64)
 
     // Avatars.
     val avatarShape = enum("avatarShape", AvatarShape.Circle)
@@ -73,7 +74,7 @@ class AppSettings private constructor(private val props: Properties) {
     val activeAccount = int("activeAccount", 0)
 
     private val all: List<Setting<*>> = listOf(
-        themeMode, seedColor, matugen, emojiStyle,
+        themeMode, seedColor, matugen, emojiStyle, notificationSound,
         materialFolders, hideAllChats,
         capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth,
         avatarShape, avatarCorner,

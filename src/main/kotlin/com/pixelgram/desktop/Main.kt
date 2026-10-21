@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,6 +26,7 @@ import androidx.compose.ui.window.rememberWindowState
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.Accounts
 import com.pixelgram.desktop.telegram.AuthState
+import com.pixelgram.desktop.telegram.loadDemo
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.AppIcons
 import com.pixelgram.desktop.ui.Screen
@@ -42,7 +44,10 @@ import kotlinx.coroutines.MainScope
 fun main() = application {
     val settings = remember { AppSettings.load().also { EmojiFonts.settings = it } }
     val accounts = remember { Accounts(settings, MainScope()) }
-    LaunchedEffect(Unit) { accounts.start() }
+    LaunchedEffect(Unit) {
+        accounts.start()
+        if (System.getProperty("pixelgram.demo") == "true") accounts.active.loadDemo()
+    }
 
     Window(
         onCloseRequest = {
@@ -54,6 +59,8 @@ fun main() = application {
         state = rememberWindowState(size = DpSize(1180.dp, 760.dp)),
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
+        val focused = LocalWindowInfo.current.isWindowFocused
+        LaunchedEffect(focused) { accounts.list.forEach { it.windowFocused = focused } }
         PixelTheme(settings) {
             key(accounts.active) {
                 App(accounts, accounts.active, settings)
@@ -109,6 +116,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
                         settings,
                         startInPreferences = current.preferences,
                         onOpenProfile = { navigate(Screen.Profile) },
+                        onOpenChat = openChat,
                         onBack = back,
                     )
                     current == Screen.Profile -> ProfileScreen(telegram, settings, openChat, onBack = back)

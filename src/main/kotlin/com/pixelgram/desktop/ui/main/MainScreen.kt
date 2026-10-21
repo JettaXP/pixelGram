@@ -201,8 +201,8 @@ fun MainScreen(
                         .draggable(
                             orientation = Orientation.Horizontal,
                             state = rememberDraggableState { delta ->
-                                val start = if (dragWidth < CompactThreshold.value) CompactWidth.value else dragWidth
-                                dragWidth = (start + with(density) { delta.toDp() }.value)
+                                // Accumulates freely, so dragging out of the compact list works.
+                                dragWidth = (dragWidth + with(density) { delta.toDp() }.value)
                                     .coerceIn(CompactWidth.value, maxListWidth)
                             },
                             onDragStopped = {

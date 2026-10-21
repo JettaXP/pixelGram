@@ -160,9 +160,10 @@ fun ShapePreview(shape: AvatarShape, cornerPercent: Int, size: Dp, selected: Boo
     )
 }
 
+// First letters of the first two words; emoji and symbols are skipped.
 fun initials(title: String): String = title
     .split(' ')
-    .filter { it.isNotBlank() }
+    .mapNotNull { word -> word.codePoints().filter(Character::isLetterOrDigit).findFirst().orElse(-1).takeIf { it >= 0 } }
     .take(2)
-    .joinToString("") { it.first().uppercase() }
+    .joinToString("") { String(Character.toChars(it)).uppercase() }
     .ifEmpty { "?" }

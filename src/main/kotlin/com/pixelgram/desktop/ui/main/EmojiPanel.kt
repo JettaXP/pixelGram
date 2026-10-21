@@ -40,7 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pixelgram.desktop.ui.theme.EmojiFonts
+import com.pixelgram.desktop.ui.theme.emojiText
 import kotlinx.coroutines.launch
 
 private class EmojiGroup(val name: String, val emoji: List<String>)
@@ -122,7 +122,7 @@ fun EmojiPanel(onPick: (String) -> Unit, modifier: Modifier = Modifier) {
                                 .clickable { onPick(emoji) },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(emoji, fontFamily = EmojiFonts.family, fontSize = 26.sp)
+                            Text(emojiText(emoji), fontSize = 26.sp)
                         }
                     }
                 }

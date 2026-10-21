@@ -90,6 +90,7 @@ import com.pixelgram.desktop.BuildConfig
 import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.EmojiStyle
+import com.pixelgram.desktop.core.Sounds
 import com.pixelgram.desktop.core.ThemeMode
 import com.pixelgram.desktop.telegram.ChatListKey
 import com.pixelgram.desktop.telegram.Telegram
@@ -140,7 +141,8 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
 private val QrAvatarSize = 80.dp
 
 private const val PixelPreferencesTitle = "pixelGram Preferences"
-private const val ChannelUrl = "https://t.me/pixelgramclient"
+private const val ChannelUsername = "pixelgramclient"
+private const val ChannelUrl = "https://t.me/$ChannelUsername"
 
 @Composable
 fun SettingsScreen(
@@ -148,6 +150,7 @@ fun SettingsScreen(
     settings: AppSettings,
     startInPreferences: Boolean = false,
     onOpenProfile: () -> Unit,
+    onOpenChat: (Long) -> Unit,
     onBack: () -> Unit,
 ) {
     var section by rememberSaveable {
@@ -224,7 +227,9 @@ fun SettingsScreen(
                     }
                     Header("Links")
                     SegmentedListItem(
-                        onClick = { openUrl(ChannelUrl) },
+                        onClick = {
+                            telegram.openPublicChat(ChannelUsername, onOpenChat, onFail = { openUrl(ChannelUrl) })
+                        },
                         shapes = ListItemDefaults.segmentedShapes(0, 1),
                         leadingContent = { Icon(Icons.Outlined.Campaign, contentDescription = null) },
                         supportingContent = { Text("@pixelgramclient") },
@@ -299,7 +304,7 @@ fun SettingsScreen(
                         Section.Folders -> FoldersSection(telegram)
                         Section.Advanced -> AdvancedSection(telegram)
                         Section.Language -> Description("pixelGram is in English for now. More languages are coming.")
-                        Section.Notifications,
+                        Section.Notifications -> NotificationsSection(settings)
                         Section.SpeakersCamera,
                         Section.Battery -> Description("Not available in pixelGram yet.")
                     }
@@ -347,30 +352,16 @@ private fun ProfileCard(telegram: Telegram, settings: AppSettings, onClick: () -
         AlertDialog(
             onDismissRequest = { showQr = false },
             text = {
-                // Like Telegram's QR card: the avatar sits on the top edge of the code.
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(contentAlignment = Alignment.TopCenter) {
-                        QrCode(
-                            "https://t.me/$username",
-                            Modifier.padding(top = QrAvatarSize / 2).size(260.dp),
-                        )
-                        val cookie = AvatarShape.Cookie12Sided.toShape(0)
-                        Box(
-                            Modifier
-                                .clip(cookie)
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                .padding(4.dp),
-                        ) {
-                            AvatarImage(
-                                me.fullName(),
-                                me.profilePhoto?.small,
-                                telegram,
-                                cookie,
-                                size = QrAvatarSize - 8.dp,
-                                full = me.profilePhoto?.big,
-                            )
-                        }
-                    }
+                    AvatarImage(
+                        me.fullName(),
+                        me.profilePhoto?.small,
+                        telegram,
+                        AvatarShape.Cookie12Sided.toShape(0),
+                        size = QrAvatarSize,
+                        full = me.profilePhoto?.big,
+                    )
+                    QrCode("https://t.me/$username", Modifier.padding(top = 16.dp).size(260.dp))
                     Text(
                         "@$username",
                         style = MaterialTheme.typography.titleMediumEmphasized,
@@ -647,8 +638,8 @@ private fun AppearanceSection(settings: AppSettings) {
         Slider(
             value = settings.capsuleHeight.value.toFloat(),
             onValueChange = { settings.capsuleHeight.value = it.toInt() },
-            valueRange = 40f..72f,
-            steps = 31,
+            valueRange = 56f..80f,
+            steps = 23,
             modifier = Modifier.weight(1f),
         )
         Text("${settings.capsuleHeight.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
@@ -891,6 +882,20 @@ private fun ChatSettingsSection(settings: AppSettings, onOpenBubbles: () -> Unit
     Header("Message bubbles")
     Description("Bubble corners, avatar shapes and colors are in pixelGram Preferences.")
     OutlinedButton(onClick = onOpenBubbles) { Text("Open $PixelPreferencesTitle") }
+}
+
+@Composable
+private fun NotificationsSection(settings: AppSettings) {
+    SwitchRow(
+        index = 0,
+        count = 1,
+        title = "Sound for new messages",
+        subtitle = "Plays when a message arrives in a chat that is not muted.",
+        checked = settings.notificationSound.value,
+        onChange = { settings.notificationSound.value = it },
+    )
+    OutlinedButton(onClick = Sounds::newMessage, modifier = Modifier.padding(top = 8.dp)) { Text("Play sound") }
+    Description("Notification pop-ups are coming later.")
 }
 
 @Composable

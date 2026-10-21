@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
@@ -75,8 +74,9 @@ internal fun CapsuleFolders(
     onSelect: (ChatListKey) -> Unit,
 ) {
     if (tabs.size < 2) return
-    // The selected pill is the capsule itself scaled down: both are fully
-    // round and the pill keeps the same inset on every side.
+    // Official M3 Expressive proportions: a 64dp toolbar with a 40dp active
+    // indicator; the same inset on every side keeps the pill a scaled-down
+    // copy of the capsule.
     val height = settings.capsuleHeight.value.dp - CapsuleInset * 2
     // WHY: a bouncy spring makes the whole bar overshoot its final width;
     // labels and the indicator share one non-bouncy spec so they stay in sync.
@@ -128,10 +128,9 @@ internal fun CapsuleFolders(
                             modifier = Modifier
                                 .onPlaced { bounds[tab.key] = it.positionInParent().x to it.size.width.toFloat() }
                                 .height(height)
-                                .widthIn(min = height)
                                 .clip(CircleShape)
                                 .selectable(selected = isSelected, role = Role.Tab) { onSelect(tab.key) }
-                                .padding(horizontal = (height - IconSize) / 2),
+                                .padding(horizontal = IndicatorSidePadding),
                         ) {
                             Icon(folderIcon(tab.icon, isSelected), contentDescription = tab.title, tint = content)
                             if (progress > 0f) {
@@ -162,10 +161,9 @@ internal fun CapsuleFolders(
     }
 }
 
-private val LabelGap = 8.dp
-private val CapsuleInset = 4.dp
-private val IconSize = 24.dp
-
+private val LabelGap = 4.dp
+private val CapsuleInset = 12.dp
+private val IndicatorSidePadding = 16.dp
 // Telegram folder icon names (chatFolderIcon) mapped to Material icons.
 internal fun folderIcon(name: String, filled: Boolean): ImageVector = when (name) {
     "All" -> if (filled) Icons.Filled.Forum else Icons.Outlined.Forum

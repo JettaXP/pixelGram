@@ -10,6 +10,7 @@ import com.pixelgram.desktop.BuildConfig
 import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppLog
 import com.pixelgram.desktop.core.AppSettings
+import com.pixelgram.desktop.core.Sounds
 import com.pixelgram.desktop.core.describe
 import it.tdlight.ClientFactory
 import it.tdlight.ExceptionHandler
@@ -85,6 +86,8 @@ class ChatState(val id: Long) {
     var unreadCount by mutableStateOf(0)
     var isGroup by mutableStateOf(false)
     var privateUserId = 0L
+    var isChannel = false
+    var notifications: TdApi.ChatNotificationSettings? = null
     val positions = mutableStateMapOf<ChatListKey, Long>()
     val pinned = mutableStateMapOf<ChatListKey, Boolean>()
 }
@@ -148,7 +151,7 @@ class Telegram(
     private var myUserId = 0L
 
     var me by mutableStateOf<TdApi.User?>(null)
-        private set
+        internal set
 
     fun start() {
         Tdlib.factory()
@@ -334,6 +337,13 @@ class Telegram(
         if (myUserId != 0L) openPrivateChat(myUserId, onChat)
     }
 
+    // Opens a public chat or channel by its @username inside the app.
+    fun openPublicChat(username: String, onChat: (Long) -> Unit, onFail: () -> Unit) {
+        send(TdApi.SearchPublicChat().apply { this.username = username }) { result ->
+            if (result is TdApi.Chat) onChat(result.id) else onFail()
+        }
+    }
+
     fun openPrivateChat(userId: Long, onChat: (Long) -> Unit) {
         send(TdApi.CreatePrivateChat().apply {
             this.userId = userId
@@ -467,11 +477,18 @@ class Telegram(
                     folders.add(FolderInfo(info.id, info.name?.text?.text ?: "", info.icon?.name ?: ""))
                 }
             }
-            is TdApi.UpdateNewMessage -> messages[update.message.chatId]?.let { list ->
-                if (list.none { it.id == update.message.id }) {
-                    list.add(0, update.message.toUi())
+            is TdApi.UpdateNewMessage -> {
+                messages[update.message.chatId]?.let { list ->
+                    if (list.none { it.id == update.message.id }) {
+                        list.add(0, update.message.toUi())
+                    }
                 }
+                if (shouldNotify(update.message)) Sounds.newMessage()
             }
+            is TdApi.UpdateChatNotificationSettings ->
+                chats[update.chatId]?.notifications = update.notificationSettings
+            is TdApi.UpdateScopeNotificationSettings ->
+                scopeNotifications[update.scope.javaClass] = update.notificationSettings
             is TdApi.UpdateMessageSendSucceeded -> messages[update.message.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.oldMessageId }
                 if (index >= 0) list[index] = update.message.toUi()
@@ -548,6 +565,8 @@ class Telegram(
             unreadCount = chat.unreadCount
             isGroup = chat.type is TdApi.ChatTypeBasicGroup || chat.type is TdApi.ChatTypeSupergroup
             privateUserId = (chat.type as? TdApi.ChatTypePrivate)?.userId ?: 0L
+            isChannel = (chat.type as? TdApi.ChatTypeSupergroup)?.isChannel == true
+            notifications = chat.notificationSettings
         }
         chat.positions?.forEach { applyPosition(state, it) }
         chats[chat.id] = state
@@ -585,13 +604,40 @@ class Telegram(
     fun messages(chatId: Long): SnapshotStateList<UiMessage> =
         messages.getOrPut(chatId) { mutableStateListOf() }
 
+    // Default notification settings for private chats, groups and channels.
+    private val scopeNotifications = mutableMapOf<Class<*>, TdApi.ScopeNotificationSettings>()
+    private var openChatId = 0L
+
+    // Set by the window; no sound for the chat you are looking at.
+    var windowFocused = true
+
+    private fun shouldNotify(message: TdApi.Message): Boolean {
+        if (message.isOutgoing || !settings.notificationSound.value) return false
+        if (message.chatId == openChatId && windowFocused) return false
+        val chat = chats[message.chatId] ?: return false
+        val own = chat.notifications
+        val muteFor = if (own == null || own.useDefaultMuteFor) {
+            val scope = when {
+                chat.privateUserId != 0L -> TdApi.NotificationSettingsScopePrivateChats::class.java
+                chat.isChannel -> TdApi.NotificationSettingsScopeChannelChats::class.java
+                else -> TdApi.NotificationSettingsScopeGroupChats::class.java
+            }
+            scopeNotifications[scope]?.muteFor ?: 0
+        } else {
+            own.muteFor
+        }
+        return muteFor == 0
+    }
+
     fun openChat(chatId: Long) {
+        openChatId = chatId
         send(TdApi.OpenChat().apply { this.chatId = chatId })
         val list = messages(chatId)
         if (list.isEmpty()) loadMoreMessages(chatId)
     }
 
     fun closeChat(chatId: Long) {
+        if (openChatId == chatId) openChatId = 0L
         send(TdApi.CloseChat().apply { this.chatId = chatId })
     }
 
