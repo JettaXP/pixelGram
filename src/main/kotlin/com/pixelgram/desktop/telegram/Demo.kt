@@ -176,7 +176,15 @@ private fun Telegram.loadTypesDemo(pluginPath: String, now: Int) {
     val photo = TdApi.Photo().apply {
         sizes = arrayOf(TdApi.PhotoSize("x", demoFile(900_010, shot, 120_000), 1180, 760, IntArray(0)))
     }
+    fun albumPhoto(id: Long, caption: String) = msg(id, true, 10, TdApi.MessagePhoto().apply {
+        this.photo = photo
+        this.caption = TdApi.FormattedText(caption, emptyArray())
+    }).copy(photo = photo.sizes[0].photo, photoWidth = 1180, photoHeight = 760, fullPhoto = photo.sizes[0].photo, albumId = 77)
     list.addAll(listOf(
+        albumPhoto(37, ""),
+        albumPhoto(36, ""),
+        albumPhoto(35, ""),
+        albumPhoto(34, "Album with four photos"),
         msg(33, false, 20, link("t.me/addtheme/end4hypr", TdApi.LinkPreview().apply {
             siteName = "Color theme"; title = "end-4 theme"; description = TdApi.FormattedText("", emptyArray())
             type = TdApi.LinkPreviewTypeTheme(arrayOf(TdApi.Document().apply {

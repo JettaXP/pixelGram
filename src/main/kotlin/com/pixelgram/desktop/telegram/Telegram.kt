@@ -142,6 +142,7 @@ data class UiMessage(
     val reactions: List<TdApi.MessageReaction> = emptyList(),
     val keyboard: List<List<TdApi.InlineKeyboardButton>> = emptyList(),
     val viaBot: Long = 0,
+    val album: List<UiMessage> = emptyList(),
     val views: Int = 0,
     val pinned: Boolean = false,
     val albumId: Long = 0,

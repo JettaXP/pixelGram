@@ -214,7 +214,7 @@ fun openUrl(url: String) {
 }
 
 @Composable
-private fun rememberOpener(file: TdApi.File?, telegram: Telegram, onReady: (String) -> Unit): Pair<Boolean, () -> Unit> {
+fun rememberOpener(file: TdApi.File?, telegram: Telegram, onReady: (String) -> Unit): Pair<Boolean, () -> Unit> {
     var waiting by remember(file?.id) { mutableStateOf(false) }
     val path = telegram.localPath(file)
     LaunchedEffect(path, waiting) {
@@ -651,7 +651,7 @@ private data class MediaInfo(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun PlayBadge(busy: Boolean) {
+fun PlayBadge(busy: Boolean) {
     Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
         if (busy) LoadingIndicator(Modifier.size(34.dp), color = Color.White) else
             Icon(Icons.Rounded.PlayArrow, contentDescription = "Play", tint = Color.White, modifier = Modifier.size(30.dp))

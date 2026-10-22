@@ -148,6 +148,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
         onDispose { telegram.closeChat(chat.id) }
     }
     val messages = telegram.messages(chat.id)
+    val shown by remember(chat.id) { derivedStateOf { groupAlbums(messages.toList()) } }
     val listState = rememberLazyListState()
     val nearTop by remember {
         derivedStateOf {
@@ -238,7 +239,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 }
             },
             onQuoteClick = { id ->
-                val index = messages.indexOfFirst { it.id == id }
+                val index = shown.indexOfFirst { it.id == id || it.album.any { member -> member.id == id } }
                 if (index >= 0) {
                     scope.launch { listState.animateScrollToItem(index) }
                     highlight = id to System.nanoTime()
@@ -251,7 +252,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
         val (jumpChat, jumpId) = MessageSearch.jump ?: return@LaunchedEffect
         if (jumpChat != chat.id) return@LaunchedEffect
         repeat(JumpPages) {
-            val index = messages.indexOfFirst { it.id == jumpId }
+            val index = shown.indexOfFirst { it.id == jumpId || it.album.any { member -> member.id == jumpId } }
             if (index >= 0) {
                 listState.animateScrollToItem(index)
                 highlight = jumpId to System.nanoTime()
@@ -331,7 +332,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                                 telegram.loadMoreMessages(chat.id)
                                 delay(JumpPageDelayMs)
                             }
-                            if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
+                            if (shown.isNotEmpty()) listState.animateScrollToItem(shown.lastIndex)
                         }
                     },
                 )
@@ -360,8 +361,8 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom),
             ) {
-                itemsIndexed(messages, key = { _, message -> message.key }) { index, message ->
-                    val newDay = index == messages.lastIndex || !sameDay(message.date, messages[index + 1].date)
+                itemsIndexed(shown, key = { _, message -> message.key }) { index, message ->
+                    val newDay = index == shown.lastIndex || !sameDay(message.date, shown[index + 1].date)
                     val rise = remember { Animatable(if (message.fresh && slidIn.add(message.key)) 1f else 0f) }
                     LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
                     val flash = remember { Animatable(0f) }
@@ -433,7 +434,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             BotAnswer(botAnswer, onDismiss = { botAnswer = null }, modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
             FloatingDate(
                 listState = listState,
-                dateAt = { index -> messages.getOrNull(index)?.date },
+                dateAt = { index -> shown.getOrNull(index)?.date },
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
             )
         }
@@ -552,9 +553,10 @@ fun MessageBubble(
     }
     val colors = MaterialTheme.colorScheme
     val outgoing = message.isOutgoing
-    val photo = message.photo
-    val media = telegram != null && isMediaContent(content)
-    val block = telegram != null && isRich(content) && !media
+    val album = message.album.takeIf { it.size > 1 && telegram != null }
+    val photo = if (album != null) null else message.photo
+    val media = album == null && telegram != null && isMediaContent(content)
+    val block = album == null && telegram != null && isRich(content) && !media
     Box(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = if (outgoing) Alignment.CenterEnd else Alignment.CenterStart,
@@ -572,14 +574,27 @@ fun MessageBubble(
             val metaColor = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant).copy(alpha = 0.7f)
             val readColor = if (outgoing) colors.primary else metaColor
             val hasText = message.text.isNotEmpty()
-            Column(Modifier.padding(if (photo != null || media) PhotoInset else 0.dp).width(IntrinsicSize.Max)) {
+            Column(Modifier.padding(if (photo != null || media || album != null) PhotoInset else 0.dp).width(IntrinsicSize.Max)) {
                 if (quote != null) {
                     Box(
                         Modifier
                             .fillMaxWidth()
                             .widthIn(min = QuoteMinWidth)
-                            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = if (photo != null || media) 6.dp else 0.dp),
+                            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = if (photo != null || media || album != null) 6.dp else 0.dp),
                     ) { quote() }
+                }
+                if (album != null && telegram != null) {
+                    AlbumGrid(
+                        album,
+                        telegram,
+                        PhotoMaxWidth,
+                        (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp),
+                        overlay = if (hasText) {
+                            null
+                        } else {
+                            { MessageMeta(message, status, settings.messageSeconds.value, Color.White, Color.White) }
+                        },
+                    )
                 }
                 if (photo != null && telegram != null) {
                     MessagePhoto(
@@ -597,11 +612,11 @@ fun MessageBubble(
                 if (media && telegram != null) {
                     MediaContent(message, telegram, PhotoMaxWidth, (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp))
                 }
-                if (hasText || photo == null) {
+                if (hasText || (photo == null && album == null)) {
                     Column(
                         Modifier
                             .padding(horizontal = 12.dp, vertical = 7.dp)
-                            .then(if (photo != null || media) Modifier.width(PhotoMaxWidth - 24.dp) else Modifier),
+                            .then(if (photo != null || media || album != null) Modifier.width(PhotoMaxWidth - 24.dp) else Modifier),
                     ) {
                         if (!senderName.isNullOrEmpty()) {
                             Text(
