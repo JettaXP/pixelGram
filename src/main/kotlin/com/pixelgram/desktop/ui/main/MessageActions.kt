@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.telegram.Telegram
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.geometry.Offset
@@ -301,7 +302,14 @@ fun DeleteMessageDialog(
 }
 
 @Composable
-fun ReplyQuote(name: String, text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ReplyQuote(
+    name: String,
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    replied: UiMessage? = null,
+    telegram: Telegram? = null,
+) {
     val colors = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
@@ -311,6 +319,11 @@ fun ReplyQuote(name: String, text: String, onClick: () -> Unit, modifier: Modifi
     ) {
         Row {
             Box(Modifier.width(3.dp).fillMaxHeight().background(colors.primary))
+            if (telegram != null && replied?.let(::replyThumb) != null) {
+                Box(Modifier.padding(start = 6.dp).align(Alignment.CenterVertically)) {
+                    ReplyThumb(replied, telegram, ReplyThumbSize)
+                }
+            }
             Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                 EmojiText(
                     name,
@@ -330,6 +343,7 @@ fun ReplyQuote(name: String, text: String, onClick: () -> Unit, modifier: Modifi
     }
 }
 
+private val ReplyThumbSize = 32.dp
 private val SwipeThreshold = 64.dp
 private const val TouchpadFactor = 1.6f
 private const val SettleMs = 140L

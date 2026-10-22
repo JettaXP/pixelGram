@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.telegram.contentText
 import com.pixelgram.desktop.core.DoubleClickAction
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.material.icons.filled.MoreVert
@@ -378,8 +379,10 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                                     replied.isOutgoing -> "You"
                                     else -> telegram.senderName(replied)
                                 },
-                                text = replied?.text?.takeIf { it.isNotEmpty() } ?: if (replied?.photo != null) "Photo" else "…",
+                                text = replied?.text?.takeIf { it.isNotEmpty() } ?: if (replied?.photo != null) "Photo" else replied?.let { contentText(it.content) }?.ifBlank { null } ?: "…",
                                 onClick = { actions.onQuoteClick(message.replyToId) },
+                                replied = replied,
+                                telegram = telegram,
                             )
                         }
                     } else {
@@ -995,6 +998,7 @@ private fun Composer(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )
+            ReplyThumb(banner?.second, telegram, 40.dp)
             Column(Modifier.weight(1f)) {
                 Text(
                     if (isEdit) "Editing" else "Reply",
@@ -1002,7 +1006,7 @@ private fun Composer(
                     color = MaterialTheme.colorScheme.primary,
                 )
                 EmojiText(
-                    banner?.second?.text?.takeIf { it.isNotEmpty() } ?: "Photo",
+                    banner?.second?.text?.takeIf { it.isNotEmpty() } ?: banner?.second?.let { if (it.photo != null) "Photo" else contentText(it.content) }.orEmpty(),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

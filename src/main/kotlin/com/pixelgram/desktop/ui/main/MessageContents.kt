@@ -177,6 +177,26 @@ fun ThumbImage(
     }
 }
 
+fun replyThumb(message: UiMessage): Pair<TdApi.File?, TdApi.Minithumbnail?>? {
+    val thumb = when (val content = message.content) {
+        is TdApi.MessageVideo -> content.video.thumbnail?.file to content.video.minithumbnail
+        is TdApi.MessageAnimation -> content.animation.thumbnail?.file to content.animation.minithumbnail
+        is TdApi.MessageVideoNote -> content.videoNote.thumbnail?.file to content.videoNote.minithumbnail
+        is TdApi.MessageDocument -> content.document.thumbnail?.file to content.document.minithumbnail
+        is TdApi.MessageSticker -> content.sticker.thumbnail?.file to null
+        is TdApi.MessagePhoto -> message.photo to content.photo.minithumbnail
+        else -> message.photo to null
+    }
+    return thumb.takeIf { it.first != null || it.second != null }
+}
+
+@Composable
+fun ReplyThumb(message: UiMessage?, telegram: Telegram?, size: androidx.compose.ui.unit.Dp) {
+    val thumb = message?.let(::replyThumb) ?: return
+    if (telegram == null) return
+    ThumbImage(thumb.first, thumb.second, telegram, Modifier.size(size).clip(RoundedCornerShape(6.dp)))
+}
+
 fun openFile(path: String) {
     Thread {
         runCatching { Desktop.getDesktop().open(File(path)) }.recoverCatching {
