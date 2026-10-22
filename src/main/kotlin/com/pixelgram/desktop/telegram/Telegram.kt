@@ -957,6 +957,14 @@ class Telegram(
         return null
     }
 
+    fun stickerSet(setId: Long, onResult: (TdApi.StickerSet?) -> Unit) {
+        send(TdApi.GetStickerSet(setId)) { result -> onResult(result as? TdApi.StickerSet) }
+    }
+
+    fun setStickerSetInstalled(setId: Long, installed: Boolean, done: () -> Unit) {
+        send(TdApi.ChangeStickerSet(setId, installed, false)) { done() }
+    }
+
     fun senderTitle(sender: TdApi.MessageSender?): String = when (sender) {
         is TdApi.MessageSenderUser -> if (sender.userId == myUserId) "You" else userName(sender.userId)
         is TdApi.MessageSenderChat -> chats[sender.chatId]?.title ?: ""

@@ -431,6 +431,9 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 }
             }
             profileChat?.let { ChatInfoDialog(it, telegram, settings) { profileChat = null } }
+            StickerPack.current?.takeIf { it.chatId == chat.id && it.telegram == telegram }?.let { request ->
+                StickerPackDialog(request, settings) { StickerPack.current = null }
+            }
             BotAnswer(botAnswer, onDismiss = { botAnswer = null }, modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
             FloatingDate(
                 listState = listState,
@@ -553,10 +556,12 @@ fun MessageBubble(
     }
     val colors = MaterialTheme.colorScheme
     val outgoing = message.isOutgoing
-    val album = message.album.takeIf { it.size > 1 && telegram != null }
-    val photo = if (album != null) null else message.photo
-    val media = album == null && telegram != null && isMediaContent(content)
-    val block = album == null && telegram != null && isRich(content) && !media
+    val grouped = message.album.takeIf { it.size > 1 && telegram != null }
+    val album = grouped?.takeIf { members -> members.all { it.content is TdApi.MessagePhoto || isMediaContent(it.content) } }
+    val files = grouped?.takeIf { album == null }
+    val photo = if (grouped != null) null else message.photo
+    val media = grouped == null && telegram != null && isMediaContent(content)
+    val block = grouped == null && telegram != null && isRich(content) && !media
     Box(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = if (outgoing) Alignment.CenterEnd else Alignment.CenterStart,
@@ -665,6 +670,12 @@ fun MessageBubble(
                         if (block && telegram != null) {
                             BlockContent(message, telegram, onPlugin = { PluginViewer.path = it })
                             Spacer(Modifier.height(4.dp))
+                        }
+                        if (files != null && telegram != null) {
+                            files.forEach { member ->
+                                BlockContent(member, telegram, onPlugin = { PluginViewer.path = it })
+                                Spacer(Modifier.height(4.dp))
+                            }
                         }
                         val linkPreview = linkPreviewOf(message.content)
                         if (linkPreview != null && telegram != null) {

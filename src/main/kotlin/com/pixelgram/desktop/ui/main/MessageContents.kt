@@ -661,7 +661,12 @@ fun PlayBadge(busy: Boolean) {
 @Composable
 fun BareContent(message: UiMessage, telegram: Telegram) {
     when (val content = message.content) {
-        is TdApi.MessageSticker -> StickerView(content.sticker, telegram, StickerSize)
+        is TdApi.MessageSticker -> StickerView(
+            content.sticker,
+            telegram,
+            StickerSize,
+            Modifier.openPack(telegram, message.chatId, content.sticker),
+        )
         is TdApi.MessageAnimatedEmoji -> {
             val sticker = content.animatedEmoji?.sticker
             if (sticker != null) StickerView(sticker, telegram, StickerSize / 1.4f) else
