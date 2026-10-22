@@ -52,7 +52,7 @@ fun PageScaffold(title: String, onBack: () -> Unit, content: @Composable ColumnS
     }
 }
 
-data class InfoRow(val icon: ImageVector, val title: String, val value: String)
+data class InfoRow(val icon: ImageVector, val title: String, val value: String, val phone: Boolean = false)
 
 @Composable
 fun InfoGroup(rows: List<InfoRow>) {
@@ -64,7 +64,7 @@ fun InfoGroup(rows: List<InfoRow>) {
                 leadingContent = { Icon(row.icon, contentDescription = null) },
                 supportingContent = { Text(row.title) },
             ) {
-                Text(row.value)
+                if (row.phone) PhoneText(row.value) else Text(row.value)
             }
         }
     }

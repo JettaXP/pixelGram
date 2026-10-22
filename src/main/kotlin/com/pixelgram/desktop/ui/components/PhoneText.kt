@@ -1,0 +1,90 @@
+package com.pixelgram.desktop.ui.components
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.Text
+import androidx.compose.material3.toShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.dp
+import com.pixelgram.desktop.ui.theme.EmojiFonts
+import kotlinx.coroutines.delay
+
+private val PhoneShapes = listOf(
+    MaterialShapes.Clover4Leaf,
+    MaterialShapes.Arrow,
+    MaterialShapes.Pill,
+    MaterialShapes.SoftBurst,
+    MaterialShapes.Diamond,
+    MaterialShapes.ClamShell,
+    MaterialShapes.Pentagon,
+)
+
+@Composable
+fun PhoneText(
+    phone: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = LocalTextStyle.current,
+    color: Color = Color.Unspecified,
+) {
+    val hidden = EmojiFonts.settings?.hidePhone?.value == true
+    var peek by remember { mutableStateOf(false) }
+    LaunchedEffect(peek) {
+        if (peek) {
+            delay(PeekMs)
+            peek = false
+        }
+    }
+    val text = if (phone.startsWith("+")) phone else "+$phone"
+    val tint = if (color != Color.Unspecified) color else style.color.takeIf { it != Color.Unspecified } ?: LocalContentColor.current
+    AnimatedContent(
+        targetState = hidden && !peek,
+        transitionSpec = { (fadeIn() + scaleIn(initialScale = 0.9f)) togetherWith fadeOut() },
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .then(if (hidden) Modifier.clickable { peek = !peek } else Modifier),
+    ) { covered ->
+        if (!covered) {
+            Text(text, style = style, color = tint)
+        } else {
+            val size = with(LocalDensity.current) { (style.fontSize.takeIf { it.value > 0 } ?: LocalTextStyle.current.fontSize).toDp() }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(size * 0.15f),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.height(size * 1.4f),
+            ) {
+                repeat(CoverShapes) { index ->
+                    val shape = PhoneShapes[index % PhoneShapes.size].toShape()
+                    Box(Modifier.size(size).background(tint, shape))
+                }
+            }
+        }
+    }
+}
+
+private const val PeekMs = 4000L
+private const val CoverShapes = 8

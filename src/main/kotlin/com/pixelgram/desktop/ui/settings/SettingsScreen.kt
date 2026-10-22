@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
+import com.pixelgram.desktop.ui.components.PhoneText
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -333,7 +334,7 @@ private fun ProfileCard(telegram: Telegram, settings: AppSettings, onClick: () -
             Column(Modifier.weight(1f)) {
                 EmojiText(me.fullName(), style = MaterialTheme.typography.titleLargeEmphasized, maxLines = 1)
                 me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
-                    Text("+$it", style = MaterialTheme.typography.bodyMedium)
+                    PhoneText(it, style = MaterialTheme.typography.bodyMedium)
                 }
                 username?.let {
                     Text("@$it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
@@ -520,6 +521,16 @@ private fun AppearanceSection(settings: AppSettings) {
         subtitle = "Material 3 buttons instead of the system frame. Applies after restarting pixelGram.",
         checked = settings.customTitleBar.value,
         onChange = { settings.customTitleBar.value = it },
+    )
+
+    Header("Privacy")
+    SwitchRow(
+        index = 0,
+        count = 1,
+        title = "Hide my phone number",
+        subtitle = "Cover your number with Material shapes in your profile and settings. Click it to peek.",
+        checked = settings.hidePhone.value,
+        onChange = { settings.hidePhone.value = it },
     )
 
     Header("Messages")
@@ -813,7 +824,7 @@ private fun AccountSection(telegram: Telegram, onOpenProfile: () -> Unit) {
     val me = telegram.me
     if (me != null) {
         InfoGroup(buildList {
-            me.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it")) }
+            me.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it", phone = true)) }
             me.usernames?.activeUsernames?.firstOrNull()?.let {
                 add(InfoRow(Icons.Outlined.AlternateEmail, "Username", "@$it"))
             }

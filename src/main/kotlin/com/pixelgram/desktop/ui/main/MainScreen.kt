@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.PhoneText
 import com.pixelgram.desktop.telegram.UnreadCount
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.LocalContentColor
@@ -477,8 +478,8 @@ private fun AccountHeader(
         Column(Modifier.weight(1f)) {
             EmojiText(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
-                Text(
-                    "+$it",
+                PhoneText(
+                    it,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -62,7 +62,7 @@ fun ProfileScreen(
         EmojiText(name, style = MaterialTheme.typography.headlineMediumEmphasized)
         val rows = buildList {
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
-                add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it"))
+                add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it", phone = true))
             }
             me.usernames?.activeUsernames?.firstOrNull()?.let {
                 add(InfoRow(Icons.Outlined.AlternateEmail, "Username", "@$it"))

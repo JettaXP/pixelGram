@@ -61,6 +61,7 @@ class AppSettings private constructor(private val props: Properties) {
     val chatListWidth = int("chatListWidth", 360)
     val customTitleBar = bool("customTitleBar", !AppPaths.isLinux)
     val messageSeconds = bool("messageSeconds", false)
+    val hidePhone = bool("hidePhone", false)
     val capsuleSpacing = int("capsuleSpacing", 4)
     val capsuleHeight = int("capsuleContainerHeight", 64)
 
@@ -80,7 +81,7 @@ class AppSettings private constructor(private val props: Properties) {
         themeMode, seedColor, matugen, emojiStyle, notificationSound, notificationsMuted,
         notificationPopups, notificationSide, notificationStyle,
         materialFolders, hideAllChats,
-        capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds,
+        capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius,
         apiId, apiHash,
