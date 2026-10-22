@@ -1,5 +1,12 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.unit.DpOffset
+import com.pixelgram.desktop.ui.components.FormattedText
+import com.pixelgram.desktop.ui.components.endsWithQuote
 import androidx.compose.material.icons.filled.Search
 import com.pixelgram.desktop.telegram.isRich
 import androidx.compose.foundation.layout.height
@@ -121,7 +128,6 @@ import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.components.loadImage
 import com.pixelgram.desktop.ui.profile.PersonalChannelCard
 import com.pixelgram.desktop.ui.theme.EmojiText
-import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import it.tdlight.jni.TdApi
 import java.io.File
 import kotlinx.coroutines.launch
@@ -389,7 +395,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             },
             onCancelEdit = { editing = null },
             onAttach = attach,
-            onSend = { text ->
+            onSend = { text, entities ->
                 val edited = editing
                 val replyId = replyTo?.id ?: 0L
                 replyTo = null
@@ -397,20 +403,20 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                     val file = attachments.firstOrNull()
                     when {
                         file == null -> Unit
-                        file == editPhoto -> telegram.editMessage(edited, text)
-                        else -> telegram.editMessageMedia(edited, file, text, !asFiles && Attachments.isPhoto(file))
+                        file == editPhoto -> telegram.editMessage(edited, text, entities)
+                        else -> telegram.editMessageMedia(edited, file, text, !asFiles && Attachments.isPhoto(file), entities)
                     }
                     editing = null
                 } else if (edited != null) {
-                    telegram.editMessage(edited, text)
+                    telegram.editMessage(edited, text, entities)
                     editing = null
                 } else if (attachments.isNotEmpty()) {
                     val photos = !asFiles && attachments.all(Attachments::isPhoto)
-                    telegram.sendFiles(chat.id, attachments.toList(), photos, text, replyId)
+                    telegram.sendFiles(chat.id, attachments.toList(), photos, text, replyId, entities)
                     attachments.clear()
                     asFiles = false
                 } else {
-                    telegram.sendText(chat.id, text, replyId)
+                    telegram.sendText(chat.id, text, replyId, entities)
                 }
                 if (listState.firstVisibleItemIndex > 0) {
                     scope.launch { listState.animateScrollToItem(0) }
@@ -528,6 +534,7 @@ fun MessageBubble(
                         }
                         TextWithMeta(
                             text = message.text,
+                            entities = message.entities,
                             meta = { MessageMeta(message, status, settings.messageSeconds.value, metaColor, readColor) },
                         )
                     }
@@ -615,14 +622,15 @@ private fun MessageMeta(
 }
 
 @Composable
-private fun TextWithMeta(text: String, meta: @Composable () -> Unit) {
+private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @Composable () -> Unit) {
     var textLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val quoteAtEnd = remember(text, entities) { endsWithQuote(text, entities) }
     Layout(
         modifier = Modifier.fillMaxWidth(),
         content = {
             if (text.isNotEmpty()) {
                 SelectionContainer {
-                    EmojiText(text, style = MaterialTheme.typography.bodyLarge, onTextLayout = { textLayout = it })
+                    FormattedText(text, entities, style = MaterialTheme.typography.bodyLarge, onTextLayout = { textLayout = it })
                 }
             } else {
                 Box {}
@@ -637,7 +645,7 @@ private fun TextWithMeta(text: String, meta: @Composable () -> Unit) {
                 val gap = MetaGap.roundToPx()
                 val lines = textLayout?.takeIf { text.isNotEmpty() }
                 val lastLineRight = lines?.let { it.getLineRight(it.lineCount - 1).toInt() } ?: 0
-                val sameLine = text.isEmpty() || lastLineRight + gap + metaPlaceable.width <= constraints.maxWidth
+                val sameLine = text.isEmpty() || (!quoteAtEnd && lastLineRight + gap + metaPlaceable.width <= constraints.maxWidth)
                 val width: Int
                 val height: Int
                 val metaX: Int
@@ -770,9 +778,25 @@ private fun Composer(
     onEditLast: () -> Boolean,
     onCancelEdit: () -> Unit,
     onAttach: (List<File>) -> Unit,
-    onSend: (String) -> Unit,
+    onSend: (String, Array<TdApi.TextEntity>) -> Unit,
 ) {
     var text by remember { mutableStateOf(TextFieldValue("")) }
+    var spans by remember { mutableStateOf(emptyList<FormatSpan>()) }
+    var menuAt by remember { mutableStateOf<DpOffset?>(null) }
+    var linkFor by remember { mutableStateOf<TextRange?>(null) }
+    var dateFor by remember { mutableStateOf<TextRange?>(null) }
+    val setText = { value: TextFieldValue ->
+        spans = shiftSpans(spans, text.text, value.text)
+        text = value
+    }
+    val applyFormat = { type: FormatType ->
+        when {
+            text.selection.collapsed -> Unit
+            type == FormatType.Link -> linkFor = text.selection
+            type == FormatType.Date -> dateFor = text.selection
+            else -> spans = toggleFormat(spans, text.selection, type)
+        }
+    }
     var emojiOpen by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     val pickScope = rememberCoroutineScope()
@@ -780,14 +804,19 @@ private fun Composer(
     LaunchedEffect(editing?.key) {
         if (editing != null) {
             text = TextFieldValue(editing.text, TextRange(editing.text.length))
+            spans = spansFrom(editing.entities)
             focus.requestFocus()
         }
     }
     val canSend = if (editing?.photo != null) hasAttachments else text.text.isNotBlank() || hasAttachments
     val send = {
         if (canSend) {
-            onSend(text.text.trim())
+            val raw = text.text
+            val lead = raw.length - raw.trimStart().length
+            val trimmed = raw.trim()
+            onSend(trimmed, toEntities(spans, lead, trimmed.length))
             text = TextFieldValue("")
+            spans = emptyList()
         }
     }
     LaunchedEffect(replyTo?.key) {
@@ -796,6 +825,7 @@ private fun Composer(
     val cancelEdit = {
         onCancelEdit()
         text = TextFieldValue("")
+        spans = emptyList()
     }
     val shown = remember { MutableTransitionState(false) }
     shown.targetState = editing != null || replyTo != null
@@ -838,8 +868,20 @@ private fun Composer(
     val insert: (String) -> Unit = { emoji ->
         val start = text.selection.min
         val updated = text.text.replaceRange(start, text.selection.max, emoji)
-        text = TextFieldValue(updated, TextRange(start + emoji.length))
+        setText(TextFieldValue(updated, TextRange(start + emoji.length)))
         focus.requestFocus()
+    }
+    linkFor?.let { range ->
+        LinkDialog(onDismiss = { linkFor = null }) { url ->
+            spans = toggleFormat(spans, range, FormatType.Link, url = url)
+            linkFor = null
+        }
+    }
+    dateFor?.let { range ->
+        DateDialog(onDismiss = { dateFor = null }) { time ->
+            spans = toggleFormat(spans, range, FormatType.Date, time = time)
+            dateFor = null
+        }
     }
     Row(
         modifier = Modifier
@@ -851,48 +893,117 @@ private fun Composer(
         IconButton(onClick = { pickScope.launch { onAttach(Attachments.pick()) } }) {
             Icon(Icons.Outlined.AttachFile, contentDescription = "Attach files")
         }
-        TextField(
-            value = text,
-            onValueChange = { text = it },
-            placeholder = { Text(if (hasAttachments) "Add a caption" else "Message") },
-            visualTransformation = EmojiVisualTransformation,
-            maxLines = 6,
-            shape = RoundedCornerShape(28.dp),
-            colors = TextFieldDefaults.colors(
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ),
-            modifier = Modifier
+        val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+        val selected = { text.text.substring(text.selection.min, text.selection.max) }
+        val replaceSelection = { value: String ->
+            val start = text.selection.min
+            setText(TextFieldValue(text.text.replaceRange(start, text.selection.max, value), TextRange(start + value.length)))
+        }
+        val density = LocalDensity.current
+        Box(
+            Modifier
                 .weight(1f)
-                .focusRequester(focus)
-                .onPreviewKeyEvent { event ->
-                    when {
-                        event.type != KeyEventType.KeyDown -> false
-                        event.key == Key.Enter && !event.isShiftPressed -> {
-                            send()
-                            true
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                                val change = event.changes.first()
+                                change.consume()
+                                menuAt = with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) }
+                            }
                         }
-                        event.key == Key.DirectionUp && text.text.isEmpty() && !hasAttachments && editing == null ->
-                            onEditLast()
-                        event.key == Key.Escape && editing != null -> {
-                            cancelEdit()
-                            true
-                        }
-                        event.key == Key.Escape && replyTo != null -> {
-                            onCancelReply()
-                            true
-                        }
-                        event.key == Key.V && (event.isCtrlPressed || event.isMetaPressed) -> {
-                            val pasted = Attachments.fromClipboard()
-                            if (pasted.isNotEmpty()) onAttach(pasted)
-                            pasted.isNotEmpty()
-                        }
-                        else -> false
                     }
                 },
-        )
+        ) {
+            menuAt?.let { at ->
+                ComposerMenu(
+                    at = at,
+                    hasSelection = !text.selection.collapsed,
+                    onDismiss = { menuAt = null },
+                    onCut = {
+                        clipboard.setContents(java.awt.datatransfer.StringSelection(selected()), null)
+                        replaceSelection("")
+                    },
+                    onCopy = { clipboard.setContents(java.awt.datatransfer.StringSelection(selected()), null) },
+                    onPaste = {
+                        runCatching { clipboard.getData(java.awt.datatransfer.DataFlavor.stringFlavor) as String }.getOrNull()
+                            ?.let(replaceSelection)
+                    },
+                    onDelete = { replaceSelection("") },
+                    onSelectAll = { text = text.copy(selection = TextRange(0, text.text.length)) },
+                    onFormat = applyFormat,
+                    onClear = { spans = clearFormat(spans, text.selection) },
+                )
+            }
+            TextField(
+                value = text,
+                onValueChange = setText,
+                placeholder = { Text(if (hasAttachments) "Add a caption" else "Message") },
+                visualTransformation = FormatTransformation(spans, MaterialTheme.colorScheme.primary),
+                maxLines = 6,
+                shape = RoundedCornerShape(28.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focus)
+                    .onPreviewKeyEvent { event ->
+                        val shortcut = if (event.type == KeyEventType.KeyDown && (event.isCtrlPressed || event.isMetaPressed)) {
+                            when {
+                                event.isShiftPressed && event.key == Key.X -> FormatType.Strikethrough
+                                event.isShiftPressed && event.key == Key.Period -> FormatType.Quote
+                                event.isShiftPressed && event.key == Key.M -> FormatType.Monospace
+                                event.isShiftPressed && event.key == Key.P -> FormatType.Spoiler
+                                event.isShiftPressed && event.key == Key.D -> FormatType.Date
+                                !event.isShiftPressed && event.key == Key.B -> FormatType.Bold
+                                !event.isShiftPressed && event.key == Key.I -> FormatType.Italic
+                                !event.isShiftPressed && event.key == Key.U -> FormatType.Underline
+                                !event.isShiftPressed && event.key == Key.K -> FormatType.Link
+                                else -> null
+                            }
+                        } else {
+                            null
+                        }
+                        when {
+                            shortcut != null -> {
+                                applyFormat(shortcut)
+                                true
+                            }
+                            event.type == KeyEventType.KeyDown && (event.isCtrlPressed || event.isMetaPressed) &&
+                                event.isShiftPressed && event.key == Key.N -> {
+                                spans = clearFormat(spans, text.selection)
+                                true
+                            }
+                            event.type != KeyEventType.KeyDown -> false
+                            event.key == Key.Enter && !event.isShiftPressed -> {
+                                send()
+                                true
+                            }
+                            event.key == Key.DirectionUp && text.text.isEmpty() && !hasAttachments && editing == null ->
+                                onEditLast()
+                            event.key == Key.Escape && editing != null -> {
+                                cancelEdit()
+                                true
+                            }
+                            event.key == Key.Escape && replyTo != null -> {
+                                onCancelReply()
+                                true
+                            }
+                            event.key == Key.V && (event.isCtrlPressed || event.isMetaPressed) -> {
+                                val pasted = Attachments.fromClipboard()
+                                if (pasted.isNotEmpty()) onAttach(pasted)
+                                pasted.isNotEmpty()
+                            }
+                            else -> false
+                        }
+                    },
+            )
+        }
         Box {
             IconToggleButton(checked = emojiOpen, onCheckedChange = { emojiOpen = it }) {
                 Icon(Icons.Outlined.EmojiEmotions, contentDescription = "Emoji")

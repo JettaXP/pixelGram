@@ -95,6 +95,21 @@ fun Telegram.loadDemo() {
         UiMessage(-k.toLong(), 100, if (k % 2 == 0) 1 else 2, 0, k % 2 == 0, now - 86_400 - k * 3_000 - (if (k > 8) 86_400 * 3 else 0), "Older message $k")
     })
     messages(100L).add(0, UiMessage(5, 100, 2, 0, false, now - 10, "Looks great 🔥", replyToId = 2))
+    run {
+        val text = "Bold, italic, underline, struck out, mono and a secret spoiler text right here. Link to pixelGram.\nAnd a quote line"
+        fun at(part: String, type: TdApi.TextEntityType) = TdApi.TextEntity(text.indexOf(part), part.length, type)
+        val entities = listOf(
+            at("Bold", TdApi.TextEntityTypeBold()),
+            at("italic", TdApi.TextEntityTypeItalic()),
+            at("underline", TdApi.TextEntityTypeUnderline()),
+            at("struck out", TdApi.TextEntityTypeStrikethrough()),
+            at("mono", TdApi.TextEntityTypeCode()),
+            at("secret spoiler text right", TdApi.TextEntityTypeSpoiler()),
+            at("pixelGram", TdApi.TextEntityTypeTextUrl("https://t.me/pixelgramclient")),
+            at("And a quote line", TdApi.TextEntityTypeBlockQuote()),
+        )
+        messages(100L).add(0, UiMessage(6, 100, 2, 0, false, now - 5, text, entities = entities))
+    }
 }
 
 private fun Telegram.loadHeavyDemo(now: Int) {

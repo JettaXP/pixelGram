@@ -131,6 +131,7 @@ data class UiMessage(
     val editable: Boolean = true,
     val replyToId: Long = 0,
     val content: TdApi.MessageContent? = null,
+    val entities: List<TdApi.TextEntity> = emptyList(),
 )
 
 enum class MessageStatus { Sending, Sent, Read, Failed }
@@ -616,7 +617,7 @@ class Telegram(
                 val index = list.indexOfFirst { it.id == update.messageId }
                 if (index >= 0) {
                     val content = update.newContent
-                    list[index] = list[index].copy(text = messageText(content), content = content)
+                    list[index] = list[index].copy(text = messageText(content), content = content, entities = messageEntities(content))
                 }
             }
             is TdApi.UpdateDeleteMessages -> if (update.isPermanent) {
@@ -808,19 +809,19 @@ class Telegram(
         })
     }
 
-    fun sendText(chatId: Long, text: String, replyToId: Long = 0) {
+    fun sendText(chatId: Long, text: String, replyToId: Long = 0, entities: Array<TdApi.TextEntity> = emptyArray()) {
         if (text.isBlank()) return
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
             replyTo = replyInput(replyToId)
             inputMessageContent = TdApi.InputMessageText().apply {
-                this.text = TdApi.FormattedText(text, arrayOf())
+                this.text = TdApi.FormattedText(text, entities)
             }
         })
     }
 
-    fun editMessageMedia(message: UiMessage, file: File, caption: String, asPhoto: Boolean) {
-        val text = TdApi.FormattedText(caption.trim(), arrayOf())
+    fun editMessageMedia(message: UiMessage, file: File, caption: String, asPhoto: Boolean, entities: Array<TdApi.TextEntity> = emptyArray()) {
+        val text = TdApi.FormattedText(caption, entities)
         val input = TdApi.InputFileLocal(file.absolutePath)
         val content = if (asPhoto) {
             val (width, height) = imageSize(file)
@@ -898,8 +899,8 @@ class Telegram(
         })
     }
 
-    fun editMessage(message: UiMessage, text: String) {
-        val formatted = TdApi.FormattedText(text, arrayOf())
+    fun editMessage(message: UiMessage, text: String, entities: Array<TdApi.TextEntity> = emptyArray()) {
+        val formatted = TdApi.FormattedText(text, entities)
         if (message.photo != null) {
             send(TdApi.EditMessageCaption().apply {
                 chatId = message.chatId
@@ -938,13 +939,18 @@ class Telegram(
         return null
     }
 
-    fun sendFiles(chatId: Long, files: List<File>, asPhotos: Boolean, caption: String, replyToId: Long = 0) {
+    fun sendFiles(
+        chatId: Long,
+        files: List<File>,
+        asPhotos: Boolean,
+        caption: String,
+        replyToId: Long = 0,
+        entities: Array<TdApi.TextEntity> = emptyArray(),
+    ) {
         files.chunked(AlbumSize).forEachIndexed { chunkIndex, chunk ->
             val contents = chunk.mapIndexed { index, file ->
-                val text = TdApi.FormattedText(
-                    if (chunkIndex == 0 && index == 0) caption.trim() else "",
-                    arrayOf(),
-                )
+                val first = chunkIndex == 0 && index == 0
+                val text = TdApi.FormattedText(if (first) caption else "", if (first) entities else arrayOf())
                 val input = TdApi.InputFileLocal(file.absolutePath)
                 if (asPhotos) {
                     val (width, height) = imageSize(file)
@@ -1037,6 +1043,7 @@ fun TdApi.Message.toUi(): UiMessage {
         service = isService(content),
         editable = isOutgoing && (content is TdApi.MessageText || content is TdApi.MessagePhoto),
         content = content,
+        entities = messageEntities(content),
         replyToId = (replyTo as? TdApi.MessageReplyToMessage)?.takeIf { it.chatId == 0L || it.chatId == chatId }?.messageId ?: 0L,
     )
 }
@@ -1048,6 +1055,20 @@ fun isRich(content: TdApi.MessageContent?): Boolean = when (content) {
     is TdApi.MessagePoll, is TdApi.MessageContact, is TdApi.MessageLocation, is TdApi.MessageAnimatedEmoji,
     is TdApi.MessageDice -> true
     else -> false
+}
+
+fun messageEntities(content: TdApi.MessageContent?): List<TdApi.TextEntity> {
+    val formatted = when (content) {
+        is TdApi.MessageText -> content.text
+        is TdApi.MessagePhoto -> content.caption
+        is TdApi.MessageDocument -> content.caption
+        is TdApi.MessageAudio -> content.caption
+        is TdApi.MessageVoiceNote -> content.caption
+        is TdApi.MessageAnimation -> content.caption
+        is TdApi.MessageVideo -> content.caption
+        else -> null
+    }
+    return formatted?.entities?.toList().orEmpty()
 }
 
 fun messageText(content: TdApi.MessageContent?): String = when (content) {

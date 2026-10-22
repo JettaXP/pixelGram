@@ -228,6 +228,27 @@ fun EmojiText(
     )
 }
 
+fun withEmoji(text: AnnotatedString): Pair<AnnotatedString, Map<String, InlineTextContent>> {
+    val plain = text.text
+    val ranges = emojiRanges(plain)
+    if (ranges.isEmpty()) return text to emptyMap()
+    val builder = AnnotatedString.Builder(text)
+    if (!EmojiFonts.use3D) {
+        val style = SpanStyle(fontFamily = FlatEmoji)
+        ranges.forEach { builder.addStyle(style, it.first, it.last + 1) }
+        return builder.toAnnotatedString() to emptyMap()
+    }
+    ranges.forEach { builder.addStringAnnotation(InlineContentTag, plain.substring(it.first, it.last + 1), it.first, it.last + 1) }
+    val inline = ranges.map { plain.substring(it.first, it.last + 1) }.distinct().associateWith { emoji ->
+        InlineTextContent(Placeholder(EmojiSize, EmojiSize, PlaceholderVerticalAlign.TextCenter)) {
+            Emoji3DImage(emoji)
+        }
+    }
+    return builder.toAnnotatedString() to inline
+}
+
+private const val InlineContentTag = "androidx.compose.foundation.text.inlineContent"
+
 private val EmojiSize = 1.2.em
 
 @Composable
