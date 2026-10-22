@@ -1,6 +1,28 @@
 package com.pixelgram.desktop.ui.settings
 
 import com.pixelgram.desktop.ui.components.PhoneText
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -184,12 +206,23 @@ fun SettingsScreen(
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                    Text(
-                        if (inPreferences) PixelPreferencesTitle else "Settings",
-                        style = MaterialTheme.typography.titleLarge,
+                    val titleFx = effects<Float>()
+                    AnimatedContent(
+                        targetState = inPreferences,
+                        transitionSpec = { fadeIn(titleFx) togetherWith fadeOut(titleFx) },
                         modifier = Modifier.weight(1f),
-                    )
-                    if (!inPreferences) {
+                    ) { preferences ->
+                        Text(
+                            if (preferences) PixelPreferencesTitle else "Settings",
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                    }
+                    AnimatedVisibility(
+                        visible = !inPreferences,
+                        enter = fadeIn(effects()) + scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()),
+                        exit = fadeOut(effects()) + scaleOut(MaterialTheme.motionScheme.fastSpatialSpec()),
+                    ) {
+                      Row {
                         IconButton(onClick = {
                             searching = !searching
                             query = ""
@@ -211,10 +244,22 @@ fun SettingsScreen(
                                 )
                             }
                         }
+                      }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-                if (inPreferences) {
+                val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+                val paneFx = effects<Float>()
+                AnimatedContent(
+                    targetState = inPreferences,
+                    transitionSpec = {
+                        val direction = if (targetState) 1 else -1
+                        (slideInHorizontally(spatial) { it / 4 * direction } + fadeIn(paneFx)) togetherWith
+                            (slideOutHorizontally(spatial) { -it / 4 * direction } + fadeOut(paneFx))
+                    },
+                ) { preferencesPane ->
+                  Column {
+                if (preferencesPane) {
                     PreferencesHeader()
                     Header("Categories")
                     val items = Section.entries.filter { it.pixel }
@@ -238,7 +283,7 @@ fun SettingsScreen(
                         Text("Channel")
                     }
                 } else {
-                    if (searching) {
+                    Reveal(searching) {
                         OutlinedTextField(
                             value = query,
                             onValueChange = { query = it },
@@ -250,22 +295,31 @@ fun SettingsScreen(
                     val items = Section.entries.filter {
                         !it.pixel && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true))
                     }
-                    if (query.isBlank()) {
-                        ProfileCard(telegram, settings, onOpenProfile)
-                        Spacer(Modifier.height(12.dp))
-                        PreferencesEntry {
-                            inPreferences = true
-                            section = Section.Appearance
+                    Reveal(query.isBlank()) {
+                        Column {
+                            ProfileCard(telegram, settings, onOpenProfile)
+                            Spacer(Modifier.height(12.dp))
+                            PreferencesEntry {
+                                inPreferences = true
+                                section = Section.Appearance
+                            }
+                            Spacer(Modifier.height(12.dp))
                         }
-                        Spacer(Modifier.height(12.dp))
                     }
-                    SegmentedGroup {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+                        modifier = Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()),
+                    ) {
                         items.forEachIndexed { index, item ->
-                            NavItem(index, items.size, item.title, item.icon, item == section) {
-                                section = item
+                            key(item) {
+                                NavItem(index, items.size, item.title, item.icon, item == section) {
+                                    section = item
+                                }
                             }
                         }
                     }
+                }
+                  }
                 }
             }
             Surface(
@@ -276,22 +330,35 @@ fun SettingsScreen(
                 shape = MaterialTheme.shapes.extraLarge,
                 color = MaterialTheme.colorScheme.surface,
             ) {
+                val sectionSpatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+                val sectionIn = effects<Float>()
+                val sectionOut = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+                AnimatedContent(
+                    targetState = section,
+                    transitionSpec = {
+                        val direction = if (targetState.ordinal >= initialState.ordinal) 1 else -1
+                        (slideInVertically(sectionSpatial) { it / 12 * direction } + fadeIn(sectionIn)) togetherWith
+                            fadeOut(sectionOut)
+                    },
+                ) { shown ->
                 Column(
                     Modifier
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(24.dp),
+                        .padding(24.dp)
+                        .animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    if (section.pixel) {
+                    if (shown.pixel) {
                         Text(
                             PixelPreferencesTitle,
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    Text(section.title, style = MaterialTheme.typography.headlineSmall)
+                    Text(shown.title, style = MaterialTheme.typography.headlineSmall)
                     Spacer(Modifier.height(8.dp))
-                    when (section) {
+                    when (shown) {
                         Section.Appearance -> AppearanceSection(settings)
                         Section.Avatars -> AvatarsSection(settings)
                         Section.Bubbles -> BubblesSection(settings)
@@ -308,6 +375,7 @@ fun SettingsScreen(
                         Section.SpeakersCamera,
                         Section.Battery -> Description("Not available in pixelGram yet.")
                     }
+                }
                 }
             }
         }
@@ -468,6 +536,34 @@ private fun Header(text: String) {
 }
 
 @Composable
+private fun <T> effects() = MaterialTheme.motionScheme.defaultEffectsSpec<T>()
+
+@Composable
+private fun Reveal(visible: Boolean, content: @Composable () -> Unit) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(effects()),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(effects()),
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun AnimatedDescription(text: String) {
+    val fx = effects<Float>()
+    val size = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
+    AnimatedContent(
+        targetState = text,
+        transitionSpec = {
+            fadeIn(fx) togetherWith fadeOut(fx) using SizeTransform(sizeAnimationSpec = { _, _ -> size })
+        },
+    ) {
+        Description(it)
+    }
+}
+
+@Composable
 private fun Description(text: String) {
     Text(
         text,
@@ -551,14 +647,20 @@ private fun AppearanceSection(settings: AppSettings) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 8.dp)) {
         SeedColors.forEach { seed ->
             val selected = settings.seedColor.value == seed
+            val ring by animateDpAsState(if (selected) 3.dp else 0.dp, MaterialTheme.motionScheme.fastSpatialSpec())
+            val scale by animateFloatAsState(if (selected) 1f else 0.88f, MaterialTheme.motionScheme.fastSpatialSpec())
             Box(
                 Modifier
                     .size(40.dp)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
                     .clip(CircleShape)
                     .background(Color(seed))
                     .then(
-                        if (selected) {
-                            Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                        if (ring > 0.dp) {
+                            Modifier.border(ring, MaterialTheme.colorScheme.onSurface, CircleShape)
                         } else {
                             Modifier
                         }
@@ -614,7 +716,7 @@ private fun AppearanceSection(settings: AppSettings) {
         onSelect = { settings.materialFolders.value = it },
         enabled = { !(it && capsule) },
     )
-    Description(
+    AnimatedDescription(
         if (capsule) "The capsule is always on top." else
             "Left is a Material 3 navigation rail, top is a bar above the chat list."
     )
@@ -735,14 +837,16 @@ private fun AvatarsSection(settings: AppSettings) {
     ) {
         AvatarShape.entries.forEach { shape ->
             val selected = shape == current
+            val tile by animateColorAsState(
+                if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+                MaterialTheme.motionScheme.defaultEffectsSpec(),
+            )
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .width(88.dp)
                     .clip(MaterialTheme.shapes.large)
-                    .background(
-                        if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
-                    )
+                    .background(tile)
                     .clickable { settings.avatarShape.value = shape }
                     .padding(8.dp),
             ) {
@@ -842,11 +946,22 @@ private fun PrivacySection(telegram: Telegram) {
     var sessions by remember { mutableStateOf<List<TdApi.Session>?>(null) }
     LaunchedEffect(Unit) { telegram.activeSessions { sessions = it } }
     Header("Active sessions")
-    val loaded = sessions
-    if (loaded == null) {
-        LoadingIndicator()
-        return
+    val fx = effects<Float>()
+    AnimatedContent(
+        targetState = sessions,
+        transitionSpec = { fadeIn(fx) togetherWith fadeOut(fx) },
+        contentKey = { it == null },
+    ) { loaded ->
+        if (loaded == null) {
+            LoadingIndicator()
+        } else {
+            SessionList(loaded)
+        }
     }
+}
+
+@Composable
+private fun SessionList(loaded: List<TdApi.Session>) {
     val sorted = loaded.sortedWith(compareByDescending<TdApi.Session> { it.isCurrent }.thenByDescending { it.lastActiveDate })
     SegmentedGroup {
         sorted.forEachIndexed { index, session ->
@@ -881,10 +996,12 @@ private fun ChatSettingsSection(settings: AppSettings, onOpenBubbles: () -> Unit
 
 @Composable
 private fun NotificationsSection(settings: AppSettings) {
-    if (settings.notificationsMuted.value) {
-        Description("Notifications are disabled from the tray menu.")
-        Button(onClick = { settings.notificationsMuted.value = false }, modifier = Modifier.padding(bottom = 8.dp)) {
-            Text("Enable notifications")
+    Reveal(settings.notificationsMuted.value) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Description("Notifications are disabled from the tray menu.")
+            Button(onClick = { settings.notificationsMuted.value = false }, modifier = Modifier.padding(bottom = 8.dp)) {
+                Text("Enable notifications")
+            }
         }
     }
     SwitchRow(
@@ -914,18 +1031,20 @@ private fun NotificationsSection(settings: AppSettings) {
             selected = settings.notificationStyle.value,
             onSelect = { settings.notificationStyle.value = it },
         )
-        Description(
+        AnimatedDescription(
             if (systemStyle) "Shown by your desktop's notification daemon (mako, swaync, dunst…)." else
                 "pixelGram's own Material 3 cards."
         )
     }
-    if (!systemStyle) {
-        Text("Position", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
-        ConnectedChoice(
-            options = ToastSide.entries.map { it to it.name },
-            selected = settings.notificationSide.value,
-            onSelect = { settings.notificationSide.value = it },
-        )
+    Reveal(!systemStyle) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Position", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+            ConnectedChoice(
+                options = ToastSide.entries.map { it to it.name },
+                selected = settings.notificationSide.value,
+                onSelect = { settings.notificationSide.value = it },
+            )
+        }
     }
     OutlinedButton(
         onClick = {
