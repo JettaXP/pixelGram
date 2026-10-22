@@ -308,6 +308,11 @@ private fun ChatRow(
 private val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
 private val dateFormat = DateTimeFormatter.ofPattern("dd.MM.yy")
 
+fun formatMessageTime(unixSeconds: Int): String =
+    Instant.ofEpochSecond(unixSeconds.toLong()).atZone(ZoneId.systemDefault()).format(messageTimeFormat)
+
+private val messageTimeFormat = DateTimeFormatter.ofPattern("HH:mm:ss")
+
 fun formatTime(unixSeconds: Int): String =
     Instant.ofEpochSecond(unixSeconds.toLong()).atZone(ZoneId.systemDefault()).format(timeFormat)
 

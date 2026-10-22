@@ -114,6 +114,9 @@ data class UiMessage(
     val fullPhoto: TdApi.File? = null,
     val sending: Boolean = false,
     val failed: Boolean = false,
+    val edited: Boolean = false,
+    val service: Boolean = false,
+    val editable: Boolean = true,
 )
 
 enum class MessageStatus { Sending, Sent, Read, Failed }
@@ -514,9 +517,17 @@ class Telegram(
                 val index = list.indexOfFirst { it.id == update.oldMessageId }
                 if (index >= 0) list[index] = update.message.toUi().copy(key = list[index].key, fresh = true)
             }
+            is TdApi.UpdateMessageEdited -> messages[update.chatId]?.let { list ->
+                val index = list.indexOfFirst { it.id == update.messageId }
+                if (index >= 0) list[index] = list[index].copy(edited = update.editDate > 0)
+            }
             is TdApi.UpdateMessageContent -> messages[update.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.messageId }
-                if (index >= 0) list[index] = list[index].copy(text = contentText(update.newContent))
+                if (index >= 0) {
+                    val content = update.newContent
+                    val text = if (content is TdApi.MessagePhoto) content.caption?.text.orEmpty() else contentText(content)
+                    list[index] = list[index].copy(text = text)
+                }
             }
             is TdApi.UpdateDeleteMessages -> if (update.isPermanent) {
                 messages[update.chatId]?.removeAll { it.id in update.messageIds }
@@ -717,6 +728,24 @@ class Telegram(
         })
     }
 
+    fun editMessage(message: UiMessage, text: String) {
+        val formatted = TdApi.FormattedText(text, arrayOf())
+        if (message.photo != null) {
+            send(TdApi.EditMessageCaption().apply {
+                chatId = message.chatId
+                messageId = message.id
+                caption = formatted
+            })
+        } else {
+            if (text.isBlank()) return
+            send(TdApi.EditMessageText().apply {
+                chatId = message.chatId
+                messageId = message.id
+                inputMessageContent = TdApi.InputMessageText().apply { this.text = formatted }
+            })
+        }
+    }
+
     fun sendFiles(chatId: Long, files: List<File>, asPhotos: Boolean, caption: String) {
         files.chunked(AlbumSize).forEachIndexed { chunkIndex, chunk ->
             val contents = chunk.mapIndexed { index, file ->
@@ -810,7 +839,21 @@ fun TdApi.Message.toUi(): UiMessage {
         fullPhoto = (content as? TdApi.MessagePhoto)?.photo?.sizes?.maxByOrNull { it.width }?.photo,
         sending = sendingState is TdApi.MessageSendingStatePending,
         failed = sendingState is TdApi.MessageSendingStateFailed,
+        edited = editDate > 0,
+        service = isService(content),
+        editable = isOutgoing && (content is TdApi.MessageText || content is TdApi.MessagePhoto),
     )
+}
+
+fun isService(content: TdApi.MessageContent?): Boolean = when (content) {
+    is TdApi.MessageSupergroupChatCreate, is TdApi.MessageBasicGroupChatCreate, is TdApi.MessageChatChangeTitle,
+    is TdApi.MessageChatChangePhoto, is TdApi.MessageChatDeletePhoto, is TdApi.MessageChatAddMembers,
+    is TdApi.MessageChatJoinByLink, is TdApi.MessageChatJoinByRequest, is TdApi.MessageChatDeleteMember,
+    is TdApi.MessagePinMessage, is TdApi.MessageScreenshotTaken, is TdApi.MessageContactRegistered,
+    is TdApi.MessageChatUpgradeTo, is TdApi.MessageChatUpgradeFrom, is TdApi.MessageCustomServiceAction,
+    is TdApi.MessageChatSetMessageAutoDeleteTime, is TdApi.MessageForumTopicCreated,
+    is TdApi.MessageVideoChatStarted, is TdApi.MessageVideoChatEnded -> true
+    else -> false
 }
 
 private fun chatPhotoSize(photo: TdApi.Photo?): TdApi.PhotoSize? {
@@ -833,8 +876,29 @@ fun contentText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageContact -> "👤 Contact"
     is TdApi.MessageLocation -> "📍 Location"
     is TdApi.MessagePoll -> "📊 Poll"
+    is TdApi.MessageSupergroupChatCreate -> "Created «${content.title}»"
+    is TdApi.MessageBasicGroupChatCreate -> "Created the group «${content.title}»"
+    is TdApi.MessageChatChangeTitle -> "Changed the name to «${content.title}»"
+    is TdApi.MessageChatChangePhoto -> "Updated the photo"
+    is TdApi.MessageChatDeletePhoto -> "Removed the photo"
+    is TdApi.MessageChatAddMembers -> "Added new members"
+    is TdApi.MessageChatJoinByLink -> "Joined via invite link"
+    is TdApi.MessageChatJoinByRequest -> "Joined the chat"
+    is TdApi.MessageChatDeleteMember -> "Left the chat"
+    is TdApi.MessagePinMessage -> "📌 Pinned a message"
+    is TdApi.MessageScreenshotTaken -> "Took a screenshot"
+    is TdApi.MessageContactRegistered -> "Joined Telegram"
+    is TdApi.MessageChatUpgradeTo, is TdApi.MessageChatUpgradeFrom -> "The group was upgraded to a supergroup"
+    is TdApi.MessageCustomServiceAction -> content.text
+    is TdApi.MessageChatSetMessageAutoDeleteTime ->
+        if (content.messageAutoDeleteTime == 0) "Disabled auto-delete" else "Enabled auto-delete"
+    is TdApi.MessageForumTopicCreated -> "Created the topic «${content.name}»"
+    is TdApi.MessageVideoChatStarted -> "Started a video chat"
+    is TdApi.MessageVideoChatEnded -> "Video chat ended"
+    is TdApi.MessageCall -> if (content.isVideo) "📹 Video call" else "📞 Call"
     null -> ""
     else -> content.javaClass.simpleName.removePrefix("Message")
+        .replace(Regex("(?<=[a-z])(?=[A-Z])"), " ").lowercase().replaceFirstChar { it.uppercase() }
 }
 
 private fun List<String?>.filterNotBlank(): String =

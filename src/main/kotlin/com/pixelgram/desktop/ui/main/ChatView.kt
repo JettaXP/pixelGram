@@ -1,5 +1,16 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.layout.Layout
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.outlined.Edit
 import com.pixelgram.desktop.telegram.MessageStatus
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Schedule
@@ -128,6 +139,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val slide = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     val slidIn = remember(chat.id) { mutableSetOf<Long>() }
+    var editing by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -200,9 +212,23 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
         }
         Composer(
             hasAttachments = attachments.isNotEmpty(),
+            editing = editing,
+            onEditLast = {
+                val now = System.currentTimeMillis() / 1000
+                val last = messages.firstOrNull {
+                    it.isOutgoing && it.editable && !it.service && !it.sending && !it.failed
+                }?.takeIf { now - it.date < EditWindowSeconds || telegram.isSavedMessages(chat.id) }
+                editing = last
+                last != null
+            },
+            onCancelEdit = { editing = null },
             onAttach = attach,
             onSend = { text ->
-                if (attachments.isNotEmpty()) {
+                val edited = editing
+                if (edited != null) {
+                    telegram.editMessage(edited, text)
+                    editing = null
+                } else if (attachments.isNotEmpty()) {
                     val photos = !asFiles && attachments.all(Attachments::isPhoto)
                     telegram.sendFiles(chat.id, attachments.toList(), photos, text)
                     attachments.clear()
@@ -235,6 +261,10 @@ fun MessageBubble(
     telegram: Telegram? = null,
     status: MessageStatus? = null,
 ) {
+    if (message.service) {
+        ServiceMessage(message, senderName, modifier)
+        return
+    }
     val colors = MaterialTheme.colorScheme
     val outgoing = message.isOutgoing
     val photo = message.photo
@@ -252,48 +282,127 @@ fun MessageBubble(
             contentColor = if (outgoing) colors.onPrimaryContainer else colors.onSurface,
             modifier = Modifier.widthIn(max = 520.dp),
         ) {
+            val metaColor = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant).copy(alpha = 0.7f)
+            val readColor = if (outgoing) colors.primary else metaColor
+            val hasText = message.text.isNotEmpty()
             Column(Modifier.padding(if (photo != null) PhotoInset else 0.dp)) {
                 if (photo != null && telegram != null) {
-                    MessagePhoto(message, photo, telegram, (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp))
+                    MessagePhoto(
+                        message,
+                        photo,
+                        telegram,
+                        (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp),
+                        overlay = if (hasText) {
+                            null
+                        } else {
+                            { MessageMeta(message, status, Color.White, Color.White) }
+                        },
+                    )
                 }
-                Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
-                    if (!senderName.isNullOrEmpty()) {
-                        Text(
-                            senderName,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = colors.primary,
-                        )
-                    }
-                    if (message.text.isNotEmpty()) {
-                        SelectionContainer {
-                            EmojiText(message.text, style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
-                    val metaColor = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant)
-                        .copy(alpha = 0.7f)
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp),
-                        modifier = Modifier.align(Alignment.End),
+                if (hasText || photo == null) {
+                    Column(
+                        Modifier
+                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                            .then(if (photo != null) Modifier.width(PhotoMaxWidth - 24.dp) else Modifier),
                     ) {
-                        Text(
-                            formatTime(message.date),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = metaColor,
-                        )
-                        if (status != null) {
-                            MessageStatusIcon(
-                                status,
-                                color = if (status == MessageStatus.Read) colors.primary else metaColor,
-                                size = 16.dp,
+                        if (!senderName.isNullOrEmpty()) {
+                            Text(
+                                senderName,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = colors.primary,
                             )
                         }
+                        TextWithMeta(
+                            text = message.text,
+                            meta = { MessageMeta(message, status, metaColor, readColor) },
+                        )
                     }
                 }
             }
         }
     }
 }
+
+@Composable
+private fun ServiceMessage(message: UiMessage, senderName: String?, modifier: Modifier) {
+    Box(modifier.fillMaxWidth().padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ) {
+            EmojiText(
+                listOfNotNull(senderName?.takeIf { it.isNotBlank() }, message.text).joinToString(" · "),
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MessageMeta(message: UiMessage, status: MessageStatus?, color: Color, readColor: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        if (message.edited) {
+            Icon(Icons.Outlined.Edit, contentDescription = "Edited", tint = color, modifier = Modifier.size(13.dp))
+        }
+        Text(formatMessageTime(message.date), style = MaterialTheme.typography.labelSmall, color = color)
+        if (status != null) {
+            MessageStatusIcon(status, color = if (status == MessageStatus.Read) readColor else color, size = 16.dp)
+        }
+    }
+}
+
+@Composable
+private fun TextWithMeta(text: String, meta: @Composable () -> Unit) {
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    Layout(
+        content = {
+            if (text.isNotEmpty()) {
+                SelectionContainer {
+                    EmojiText(text, style = MaterialTheme.typography.bodyLarge, onTextLayout = { layout = it })
+                }
+            } else {
+                Box {}
+            }
+            meta()
+        },
+    ) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0)
+        val textPlaceable = measurables[0].measure(loose)
+        val metaPlaceable = measurables[1].measure(loose)
+        val gap = MetaGap.roundToPx()
+        val lines = layout?.takeIf { text.isNotEmpty() }
+        val lastLineRight = lines?.let { it.getLineRight(it.lineCount - 1).toInt() } ?: 0
+        val sameLine = text.isEmpty() || lastLineRight + gap + metaPlaceable.width <= constraints.maxWidth
+        val width: Int
+        val height: Int
+        val metaX: Int
+        val metaY: Int
+        if (sameLine) {
+            width = maxOf(textPlaceable.width, lastLineRight + gap + metaPlaceable.width)
+                .coerceAtLeast(constraints.minWidth)
+            height = maxOf(textPlaceable.height, metaPlaceable.height)
+            metaX = width - metaPlaceable.width
+            metaY = height - metaPlaceable.height
+        } else {
+            width = maxOf(textPlaceable.width, metaPlaceable.width).coerceAtLeast(constraints.minWidth)
+            height = textPlaceable.height + metaPlaceable.height
+            metaX = width - metaPlaceable.width
+            metaY = textPlaceable.height
+        }
+        layout(width, height) {
+            textPlaceable.place(0, 0)
+            metaPlaceable.place(metaX, metaY)
+        }
+    }
+}
+
+private val MetaGap = 10.dp
+private const val EditWindowSeconds = 48 * 3600
 
 @Composable
 fun MessageStatusIcon(status: MessageStatus, color: Color, size: Dp, modifier: Modifier = Modifier) {
@@ -317,7 +426,13 @@ private val PhotoInset = 4.dp
 private val PhotoMaxWidth = 360.dp
 
 @Composable
-private fun MessagePhoto(message: UiMessage, file: TdApi.File, telegram: Telegram, corner: Dp) {
+private fun MessagePhoto(
+    message: UiMessage,
+    file: TdApi.File,
+    telegram: Telegram,
+    corner: Dp,
+    overlay: (@Composable () -> Unit)?,
+) {
     LaunchedEffect(file.id) { telegram.download(file) }
     val path = telegram.localPath(file)
     val image by produceState<ImageBitmap?>(null, path) {
@@ -344,6 +459,16 @@ private fun MessagePhoto(message: UiMessage, file: TdApi.File, telegram: Telegra
         } else {
             LoadingIndicator()
         }
+        if (overlay != null) {
+            Surface(
+                shape = CircleShape,
+                color = Color.Black.copy(alpha = 0.45f),
+                contentColor = Color.White,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
+            ) {
+                Box(Modifier.padding(horizontal = 8.dp, vertical = 2.dp)) { overlay() }
+            }
+        }
     }
 }
 
@@ -352,17 +477,59 @@ private const val PhotoPixels = 1024
 @Composable
 private fun Composer(
     hasAttachments: Boolean,
+    editing: UiMessage?,
+    onEditLast: () -> Boolean,
+    onCancelEdit: () -> Unit,
     onAttach: (List<File>) -> Unit,
     onSend: (String) -> Unit,
 ) {
     var text by remember { mutableStateOf(TextFieldValue("")) }
     var emojiOpen by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
-    val canSend = text.text.isNotBlank() || hasAttachments
+    LaunchedEffect(editing?.key) {
+        if (editing != null) {
+            text = TextFieldValue(editing.text, TextRange(editing.text.length))
+            focus.requestFocus()
+        }
+    }
+    val canSend = text.text.isNotBlank() || hasAttachments || editing?.photo != null
     val send = {
         if (canSend) {
             onSend(text.text.trim())
             text = TextFieldValue("")
+        }
+    }
+    val cancelEdit = {
+        onCancelEdit()
+        text = TextFieldValue("")
+    }
+    val shown = remember { MutableTransitionState(false) }
+    shown.targetState = editing != null
+    var lastEditing by remember { mutableStateOf<UiMessage?>(null) }
+    if (editing != null) lastEditing = editing
+    AnimatedVisibility(
+        visibleState = shown,
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(Icons.Outlined.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column(Modifier.weight(1f)) {
+                Text("Editing", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                EmojiText(
+                    lastEditing?.text?.takeIf { it.isNotEmpty() } ?: "Photo",
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            IconButton(onClick = cancelEdit) {
+                Icon(Icons.Filled.Close, contentDescription = "Cancel editing")
+            }
         }
     }
     val insert: (String) -> Unit = { emoji ->
@@ -404,6 +571,12 @@ private fun Composer(
                             send()
                             true
                         }
+                        event.key == Key.DirectionUp && text.text.isEmpty() && !hasAttachments && editing == null ->
+                            onEditLast()
+                        event.key == Key.Escape && editing != null -> {
+                            cancelEdit()
+                            true
+                        }
                         event.key == Key.V && (event.isCtrlPressed || event.isMetaPressed) -> {
                             val pasted = Attachments.fromClipboard()
                             if (pasted.isNotEmpty()) onAttach(pasted)
@@ -429,7 +602,13 @@ private fun Composer(
             }
         }
         FilledIconButton(onClick = send, enabled = canSend) {
-            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+            Crossfade(editing != null) { isEditing ->
+                if (isEditing) {
+                    Icon(Icons.Filled.Check, contentDescription = "Save")
+                } else {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                }
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.theme
 
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -179,6 +180,7 @@ fun EmojiText(
     style: TextStyle = LocalTextStyle.current,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
+    onTextLayout: (TextLayoutResult) -> Unit = {},
 ) {
     val ranges = remember(text) { emojiRanges(text) }
     if (!EmojiFonts.use3D || ranges.isEmpty()) {
@@ -190,6 +192,7 @@ fun EmojiText(
             style = style,
             maxLines = maxLines,
             overflow = overflow,
+            onTextLayout = onTextLayout,
         )
         return
     }
@@ -221,6 +224,7 @@ fun EmojiText(
         maxLines = maxLines,
         overflow = overflow,
         inlineContent = inline,
+        onTextLayout = onTextLayout,
     )
 }
 
