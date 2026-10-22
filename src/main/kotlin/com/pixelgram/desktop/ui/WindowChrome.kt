@@ -63,6 +63,7 @@ import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class WindowChrome(private val window: Window, private val scope: CoroutineScope) {
@@ -114,35 +115,21 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
     }
 
     private fun animateNative(from: Rectangle, target: Rectangle) {
-        job?.cancel()
-        job = scope.launch {
-            animate(0f, 1f, animationSpec = tween(BoundsMs, easing = FastOutSlowInEasing)) { t, _ ->
-                WindowsCorners.setRect(
-                    handle,
-                    Rectangle(
-                        lerp(from.x, target.x, t),
-                        lerp(from.y, target.y, t),
-                        lerp(from.width, target.width, t),
-                        lerp(from.height, target.height, t),
-                    ),
-                )
-            }
-            updateCorners()
-        }
+        swap { WindowsCorners.setRect(handle, target) }
     }
 
     private fun animateTo(target: Rectangle) {
+        swap { window.bounds = target }
+    }
+
+    private fun swap(resize: () -> Unit) {
         job?.cancel()
-        val from = window.bounds
         job = scope.launch {
-            animate(0f, 1f, animationSpec = tween(BoundsMs, easing = FastOutSlowInEasing)) { t, _ ->
-                window.setBounds(
-                    lerp(from.x, target.x, t),
-                    lerp(from.y, target.y, t),
-                    lerp(from.width, target.width, t),
-                    lerp(from.height, target.height, t),
-                )
-            }
+            fade(window.opacity, SwapOpacity, SwapOutMs)
+            resize()
+            delay(SwapSettleMs)
+            updateCorners()
+            fade(window.opacity, 1f, SwapInMs)
         }
     }
 
@@ -162,19 +149,20 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
         }
     }
 
-    private suspend fun fade(from: Float, to: Float) {
+    private suspend fun fade(from: Float, to: Float, duration: Int = FadeMs) {
         runCatching {
-            animate(from, to, animationSpec = tween(FadeMs, easing = FastOutSlowInEasing)) { value, _ ->
+            animate(from, to, animationSpec = tween(duration, easing = FastOutSlowInEasing)) { value, _ ->
                 window.opacity = value.coerceIn(0f, 1f)
             }
         }
     }
 }
 
-private const val BoundsMs = 260
 private const val FadeMs = 160
-
-private fun lerp(from: Int, to: Int, t: Float) = (from + (to - from) * t).toInt()
+private const val SwapOutMs = 70
+private const val SwapInMs = 140
+private const val SwapSettleMs = 40L
+private const val SwapOpacity = 0.15f
 
 @Composable
 fun FrameWindowScope.rememberWindowChrome(): WindowChrome {

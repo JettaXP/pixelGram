@@ -1,5 +1,6 @@
 package com.pixelgram.desktop
 
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.DisposableEffect
 import com.pixelgram.desktop.core.UrlScheme
 import com.pixelgram.desktop.ui.main.Links
@@ -97,6 +98,7 @@ import kotlinx.coroutines.MainScope
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main(args: Array<String>) {
+    System.setProperty("sun.awt.noerasebackground", "true")
     val link = args.firstOrNull { Links.isTelegram(it) }
     when (SingleInstance.acquire(link)) {
         InstanceState.Primary -> Unit
@@ -227,6 +229,11 @@ private fun ApplicationScope.PixelApp() {
         state = windowState,
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
+        LaunchedEffect(scheme.surfaceContainer) {
+            val background = java.awt.Color(scheme.surfaceContainer.toArgb())
+            window.background = background
+            window.contentPane.background = background
+        }
         LaunchedEffect(scheme.primaryContainer, scheme.onPrimaryContainer) {
             val images = withContext(Dispatchers.IO) { AppIcons.sizes(scheme) }
             if (images.isNotEmpty()) window.iconImages = images
