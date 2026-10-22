@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.outlined.Forward
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.isSecondaryPressed
@@ -282,6 +283,29 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             }
             IconButton(onClick = { MessageSearch.start(chat.id) }) {
                 Icon(Icons.Filled.Search, contentDescription = "Search in chat")
+            }
+            Box {
+                var headerMenu by remember(chat.id) { mutableStateOf<DpOffset?>(null) }
+                IconButton(onClick = { headerMenu = DpOffset(0.dp, 0.dp) }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "Chat menu")
+                }
+                ChatActions(
+                    chat,
+                    telegram,
+                    settings,
+                    headerMenu,
+                    onDismiss = { headerMenu = null },
+                    onSearch = { MessageSearch.start(chat.id) },
+                    onToBeginning = {
+                        scope.launch {
+                            repeat(BeginningPages) {
+                                telegram.loadMoreMessages(chat.id)
+                                delay(JumpPageDelayMs)
+                            }
+                            if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
+                        }
+                    },
+                )
             }
         }
         var personalChannel by remember(chat.id) { mutableLongStateOf(0L) }
@@ -742,6 +766,7 @@ private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @
 }
 
 private val MetaGap = 10.dp
+private const val BeginningPages = 10
 private const val MentionDelayMs = 150L
 private val KeyboardMinWidth = 260.dp
 private const val JumpPages = 40

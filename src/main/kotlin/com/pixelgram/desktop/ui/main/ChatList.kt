@@ -1,5 +1,14 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.Dp
@@ -194,7 +203,7 @@ private fun ChatListBody(
                     item(key = "archive-gap") { Spacer(Modifier.height(GroupGap)) }
                 }
                 itemsIndexed(pinned, key = { _, chat -> chat.id }) { index, chat ->
-                    ChatRow(chat, index, pinned.size, chat.id == selectedChatId, telegram, settings) {
+                    ChatRow(chat, index, pinned.size, chat.id == selectedChatId, telegram, settings, key) {
                         onOpen(chat.id)
                     }
                 }
@@ -202,7 +211,7 @@ private fun ChatListBody(
                     item(key = "pinned-gap") { Spacer(Modifier.height(GroupGap)) }
                 }
                 itemsIndexed(rest, key = { _, chat -> chat.id }) { index, chat ->
-                    ChatRow(chat, index, rest.size, chat.id == selectedChatId, telegram, settings) {
+                    ChatRow(chat, index, rest.size, chat.id == selectedChatId, telegram, settings, key) {
                         onOpen(chat.id)
                     }
                 }
@@ -324,53 +333,72 @@ private fun ChatRow(
     selected: Boolean,
     telegram: Telegram,
     settings: AppSettings,
+    listKey: ChatListKey,
     onClick: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
     val last = chat.lastMessage
-    SegmentedListItem(
-        selected = selected,
-        onClick = onClick,
-        shapes = ListItemDefaults.segmentedShapes(index, count),
-        leadingContent = {
-            OnlineAvatar(chat, telegram, settings, 48.dp)
-        },
-        supportingContent = {
-            EmojiText(
-                last?.let { contentText(it.content).replace('\n', ' ') } ?: "",
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
-        trailingContent = {
-            Column(horizontalAlignment = Alignment.End) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    if (last != null && last.isOutgoing && !chat.isChannel) {
-                        val status = telegram.status(chat, last)
-                        MessageStatusIcon(
-                            status,
-                            color = if (status == MessageStatus.Read) colors.primary else colors.onSurfaceVariant,
-                            size = 16.dp,
-                        )
-                    }
-                    Text(
-                        text = last?.let { formatChatDate(it.date) } ?: "",
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
-                if (chat.unreadCount > 0) {
-                    Badge(
-                        modifier = Modifier.padding(top = 6.dp),
-                        containerColor = colors.primary,
-                        contentColor = colors.onPrimary,
-                    ) {
-                        Text(if (chat.unreadCount > 999) "999+" else chat.unreadCount.toString())
+    var menuAt by remember { mutableStateOf<DpOffset?>(null) }
+    val density = LocalDensity.current
+    Box(
+        Modifier.pointerInput(chat.id) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                        val change = event.changes.first()
+                        change.consume()
+                        menuAt = with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) }
                     }
                 }
             }
         },
     ) {
-        EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        ChatActions(chat, telegram, settings, menuAt, onDismiss = { menuAt = null }, listKey = listKey)
+        SegmentedListItem(
+            selected = selected,
+            onClick = onClick,
+            shapes = ListItemDefaults.segmentedShapes(index, count),
+            leadingContent = {
+                OnlineAvatar(chat, telegram, settings, 48.dp)
+            },
+            supportingContent = {
+                EmojiText(
+                    last?.let { contentText(it.content).replace('\n', ' ') } ?: "",
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            trailingContent = {
+                Column(horizontalAlignment = Alignment.End) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        if (last != null && last.isOutgoing && !chat.isChannel) {
+                            val status = telegram.status(chat, last)
+                            MessageStatusIcon(
+                                status,
+                                color = if (status == MessageStatus.Read) colors.primary else colors.onSurfaceVariant,
+                                size = 16.dp,
+                            )
+                        }
+                        Text(
+                            text = last?.let { formatChatDate(it.date) } ?: "",
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                    if (chat.unreadCount > 0) {
+                        Badge(
+                            modifier = Modifier.padding(top = 6.dp),
+                            containerColor = colors.primary,
+                            contentColor = colors.onPrimary,
+                        ) {
+                            Text(if (chat.unreadCount > 999) "999+" else chat.unreadCount.toString())
+                        }
+                    }
+                }
+            },
+        ) {
+            EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 

@@ -1,5 +1,7 @@
 package com.pixelgram.desktop
 
+import com.pixelgram.desktop.ui.main.ChatView
+import com.pixelgram.desktop.ui.main.ChatWindows
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.mutableIntStateOf
 import io.github.vinceglb.filekit.FileKit
@@ -128,6 +130,24 @@ fun main() = application {
             }
         }
         Notifications.showTest = { toasts.push(testToast(accounts.active)) }
+    }
+    ChatWindows.open.toList().forEach { (owner, chatId) ->
+        key(owner.account, chatId) {
+            var shownId by remember { mutableStateOf(chatId) }
+            val chat = owner.chats[shownId]
+            Window(
+                onCloseRequest = { ChatWindows.open.remove(owner to chatId) },
+                title = chat?.let { owner.chatTitle(it) } ?: "pixelGram",
+                icon = icon,
+                state = rememberWindowState(size = DpSize(520.dp, 720.dp)),
+            ) {
+                PixelTheme(settings) {
+                    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
+                        if (chat != null) key(shownId) { ChatView(chat, owner, settings, onOpenChat = { shownId = it }) }
+                    }
+                }
+            }
+        }
     }
     PhotoViewer.current?.let { photo ->
         key(photo) { PhotoViewerWindow(photo, settings) }

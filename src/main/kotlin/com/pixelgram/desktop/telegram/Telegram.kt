@@ -70,6 +70,12 @@ sealed interface ChatListKey {
     data object Archive : ChatListKey
     data class Folder(val id: Int) : ChatListKey
 
+    fun toTd(): TdApi.ChatList = when (this) {
+        Main -> TdApi.ChatListMain()
+        Archive -> TdApi.ChatListArchive()
+        is Folder -> TdApi.ChatListFolder(id)
+    }
+
     companion object {
         fun of(list: TdApi.ChatList?): ChatListKey? = when (list) {
             is TdApi.ChatListMain -> Main
@@ -89,7 +95,7 @@ class ChatState(val id: Long) {
     var isGroup by mutableStateOf(false)
     var privateUserId = 0L
     var isChannel = false
-    var notifications: TdApi.ChatNotificationSettings? = null
+    var notifications by mutableStateOf<TdApi.ChatNotificationSettings?>(null)
     val positions = mutableStateMapOf<ChatListKey, Long>()
     val pinned = mutableStateMapOf<ChatListKey, Boolean>()
 }
@@ -146,6 +152,7 @@ private const val ClockTickMs = 20_000L
 private const val SearchLimit = 100
 private const val ReactionRow = 8
 private const val MentionLimit = 30
+private const val MuteForever = 366 * 24 * 3600
 private const val AlbumSize = 10
 
 private object Tdlib {
@@ -766,6 +773,10 @@ class Telegram(
         if (message.isOutgoing || !settings.notificationSound.value || settings.notificationsMuted.value) return false
         if (message.chatId == openChatId && windowFocused) return false
         val chat = chats[message.chatId] ?: return false
+        return !isMuted(chat)
+    }
+
+    fun isMuted(chat: ChatState): Boolean {
         val own = chat.notifications
         val muteFor = if (own == null || own.useDefaultMuteFor) {
             val scope = when {
@@ -777,7 +788,62 @@ class Telegram(
         } else {
             own.muteFor
         }
-        return muteFor == 0
+        return muteFor != 0
+    }
+
+    fun setMuted(chat: ChatState, muted: Boolean) {
+        val settings = (chat.notifications ?: TdApi.ChatNotificationSettings().apply {
+            useDefaultSound = true
+            useDefaultShowPreview = true
+            useDefaultMuteStories = true
+            useDefaultStorySound = true
+            useDefaultShowStoryPoster = true
+            useDefaultDisablePinnedMessageNotifications = true
+            useDefaultDisableMentionNotifications = true
+        }).apply {
+            useDefaultMuteFor = false
+            muteFor = if (muted) MuteForever else 0
+        }
+        send(TdApi.SetChatNotificationSettings(chat.id, settings))
+    }
+
+    fun setPinned(chat: ChatState, key: ChatListKey, pinned: Boolean) {
+        send(TdApi.ToggleChatIsPinned(key.toTd(), chat.id, pinned))
+    }
+
+    fun setArchived(chat: ChatState, archived: Boolean) {
+        send(TdApi.AddChatToList(chat.id, if (archived) TdApi.ChatListArchive() else TdApi.ChatListMain()))
+    }
+
+    fun markRead(chat: ChatState) {
+        chat.lastMessage?.let { send(TdApi.ViewMessages(chat.id, longArrayOf(it.id), null, true)) }
+        send(TdApi.ToggleChatIsMarkedAsUnread(chat.id, false))
+    }
+
+    fun isBot(chat: ChatState): Boolean = users[chat.privateUserId]?.type is TdApi.UserTypeBot
+
+    fun block(chat: ChatState) {
+        if (chat.privateUserId == 0L) return
+        send(TdApi.SetMessageSenderBlockList(TdApi.MessageSenderUser(chat.privateUserId), TdApi.BlockListMain()))
+    }
+
+    fun clearHistory(chat: ChatState) {
+        send(TdApi.DeleteChatHistory(chat.id, false, false))
+        messages[chat.id]?.clear()
+    }
+
+    fun deleteChat(chat: ChatState) {
+        if (chat.privateUserId != 0L) send(TdApi.DeleteChatHistory(chat.id, true, false)) else send(TdApi.LeaveChat(chat.id))
+    }
+
+    fun addToFolder(chat: ChatState, folderId: Int) {
+        send(TdApi.GetChatFolder(folderId)) { result ->
+            val folder = result as? TdApi.ChatFolder ?: return@send
+            if (chat.id in folder.includedChatIds) return@send
+            folder.includedChatIds = folder.includedChatIds + chat.id
+            folder.excludedChatIds = folder.excludedChatIds.filter { it != chat.id }.toLongArray()
+            send(TdApi.EditChatFolder(folderId, folder))
+        }
     }
 
     fun openChat(chatId: Long) {
