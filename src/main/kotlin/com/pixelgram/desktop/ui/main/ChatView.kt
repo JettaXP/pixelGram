@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.AnimatedContent
 import kotlinx.coroutines.delay
@@ -150,8 +151,17 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     }
     val attachments = remember(chat.id) { mutableStateListOf<File>() }
     var asFiles by remember(chat.id) { mutableStateOf(false) }
+    var editPhoto by remember(chat.id) { mutableStateOf<File?>(null) }
+    var editingPhoto by remember(chat.id) { mutableStateOf(false) }
     val attach = { files: List<File> ->
-        files.filter { it !in attachments }.let(attachments::addAll)
+        if (editingPhoto) {
+            files.firstOrNull()?.let {
+                attachments.clear()
+                attachments.add(it)
+            }
+        } else {
+            files.filter { it !in attachments }.let(attachments::addAll)
+        }
         if (files.any { !Attachments.isPhoto(it) }) asFiles = true
     }
     val placement = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
@@ -161,12 +171,26 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     var editing by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var replyTo by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var deleting by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
+    LaunchedEffect(editing?.key) {
+        val message = editing
+        if (message?.photo != null) {
+            editingPhoto = true
+            asFiles = false
+            attachments.clear()
+            editPhoto = telegram.photoPath(message)?.let(::File)?.also { attachments.add(it) }
+        } else if (editingPhoto) {
+            editingPhoto = false
+            editPhoto = null
+            attachments.clear()
+        }
+    }
     var highlight by remember(chat.id) { mutableStateOf<Pair<Long, Long>?>(null) }
     val actions = remember(chat.id) {
         MessageActions(
             onReply = { editing = null; replyTo = it },
             onEdit = { replyTo = null; editing = it },
             onDelete = { deleting = it },
+            onCopyPhoto = { message -> telegram.photoPath(message)?.let(Attachments::copyImage) },
             onQuoteClick = { id ->
                 val index = messages.indexOfFirst { it.id == id }
                 if (index >= 0) {
@@ -229,71 +253,81 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             )
         }
-        LazyColumn(
-            state = listState,
-            reverseLayout = true,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom),
-        ) {
-            items(messages, key = { it.key }) { message ->
-                val rise = remember { Animatable(if (message.fresh && slidIn.add(message.key)) 1f else 0f) }
-                LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
-                val flash = remember { Animatable(0f) }
-                LaunchedEffect(highlight) {
-                    if (highlight?.first == message.id) {
-                        flash.snapTo(1f)
-                        delay(HighlightHoldMs)
-                        flash.animateTo(0f, tween(HighlightFadeMs))
-                    }
-                }
-                val flashColor = MaterialTheme.colorScheme.primary
-                val itemModifier = Modifier
-                    .animateItem(fadeInSpec = fade, placementSpec = placement, fadeOutSpec = fade)
-                    .graphicsLayer { translationY = rise.value * size.height }
-                    .drawBehind {
-                        if (flash.value > 0f) {
-                            drawRoundRect(
-                                flashColor.copy(alpha = HighlightAlpha * flash.value),
-                                cornerRadius = CornerRadius(HighlightCorner.toPx()),
-                            )
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            LazyColumn(
+                state = listState,
+                reverseLayout = true,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom),
+            ) {
+                itemsIndexed(messages, key = { _, message -> message.key }) { index, message ->
+                    val newDay = index == messages.lastIndex || !sameDay(message.date, messages[index + 1].date)
+                    val rise = remember { Animatable(if (message.fresh && slidIn.add(message.key)) 1f else 0f) }
+                    LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
+                    val flash = remember { Animatable(0f) }
+                    LaunchedEffect(highlight) {
+                        if (highlight?.first == message.id) {
+                            flash.snapTo(1f)
+                            delay(HighlightHoldMs)
+                            flash.animateTo(0f, tween(HighlightFadeMs))
                         }
                     }
-                val quote: (@Composable () -> Unit)? = if (message.replyToId != 0L) {
-                    {
-                        val replied = telegram.replyPreview(chat.id, message.replyToId)
-                        ReplyQuote(
-                            name = when {
-                                replied == null -> "Message"
-                                replied.isOutgoing -> "You"
-                                else -> telegram.senderName(replied)
-                            },
-                            text = replied?.text?.takeIf { it.isNotEmpty() } ?: if (replied?.photo != null) "Photo" else "…",
-                            onClick = { actions.onQuoteClick(message.replyToId) },
-                        )
+                    val flashColor = MaterialTheme.colorScheme.primary
+                    val itemModifier = Modifier
+                        .graphicsLayer { translationY = rise.value * size.height }
+                        .drawBehind {
+                            if (flash.value > 0f) {
+                                drawRoundRect(
+                                    flashColor.copy(alpha = HighlightAlpha * flash.value),
+                                    cornerRadius = CornerRadius(HighlightCorner.toPx()),
+                                )
+                            }
+                        }
+                    val quote: (@Composable () -> Unit)? = if (message.replyToId != 0L) {
+                        {
+                            val replied = telegram.replyPreview(chat.id, message.replyToId)
+                            ReplyQuote(
+                                name = when {
+                                    replied == null -> "Message"
+                                    replied.isOutgoing -> "You"
+                                    else -> telegram.senderName(replied)
+                                },
+                                text = replied?.text?.takeIf { it.isNotEmpty() } ?: if (replied?.photo != null) "Photo" else "…",
+                                onClick = { actions.onQuoteClick(message.replyToId) },
+                            )
+                        }
+                    } else {
+                        null
                     }
-                } else {
-                    null
-                }
-                if (message.service) {
-                    MessageBubble(message = message, senderName = null, settings = settings, modifier = itemModifier)
-                } else {
-                    MessageGestures(message, actions, itemModifier) {
-                        MessageBubble(
-                            telegram = telegram,
-                            quote = quote,
-                            message = message,
-                            senderName = if (chat.isGroup && !message.isOutgoing) {
-                                telegram.senderName(message)
-                            } else {
-                                null
-                            },
-                            settings = settings,
-                            status = if (message.isOutgoing && !chat.isChannel) telegram.status(chat, message) else null,
-                        )
+                    Column(Modifier.animateItem(fadeInSpec = fade, placementSpec = placement, fadeOutSpec = fade)) {
+                        if (newDay) DateDivider(message.date)
+                        if (message.service) {
+                            MessageBubble(message = message, senderName = null, settings = settings, modifier = itemModifier)
+                        } else {
+                            MessageGestures(message, actions, itemModifier) {
+                                MessageBubble(
+                                    telegram = telegram,
+                                    quote = quote,
+                                    message = message,
+                                    senderName = if (chat.isGroup && !message.isOutgoing) {
+                                        telegram.senderName(message)
+                                    } else {
+                                        null
+                                    },
+                                    settings = settings,
+                                    status = if (message.isOutgoing && !chat.isChannel) telegram.status(chat, message) else null,
+                                )
+                            }
+                        }
                     }
                 }
             }
+            FloatingDate(
+                listState = listState,
+                dateAt = { index -> messages.getOrNull(index)?.date },
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
+            )
         }
         val panelSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
         val panelFade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -332,7 +366,15 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 val edited = editing
                 val replyId = replyTo?.id ?: 0L
                 replyTo = null
-                if (edited != null) {
+                if (edited != null && edited.photo != null) {
+                    val file = attachments.firstOrNull()
+                    when {
+                        file == null -> Unit
+                        file == editPhoto -> telegram.editMessage(edited, text)
+                        else -> telegram.editMessageMedia(edited, file, text, !asFiles && Attachments.isPhoto(file))
+                    }
+                    editing = null
+                } else if (edited != null) {
                     telegram.editMessage(edited, text)
                     editing = null
                 } else if (attachments.isNotEmpty()) {
@@ -643,7 +685,7 @@ private fun Composer(
             focus.requestFocus()
         }
     }
-    val canSend = text.text.isNotBlank() || hasAttachments || editing?.photo != null
+    val canSend = if (editing?.photo != null) hasAttachments else text.text.isNotBlank() || hasAttachments
     val send = {
         if (canSend) {
             onSend(text.text.trim())

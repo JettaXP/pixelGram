@@ -78,6 +78,9 @@ fun Telegram.loadDemo() {
         UiMessage(1, 100, 2, 0, false, now - 180, "Hi there 👋"),
         UiMessage(0, 100, 2, 0, false, now - 240, "Created «pixelGram 🎨»", service = true),
     ))
+    messages(100L).addAll((1..16).map { k ->
+        UiMessage(-k.toLong(), 100, if (k % 2 == 0) 1 else 2, 0, k % 2 == 0, now - 86_400 - k * 3_000 - (if (k > 8) 86_400 * 3 else 0), "Older message $k")
+    })
     messages(100L).add(0, UiMessage(5, 100, 2, 0, false, now - 10, "Looks great 🔥", replyToId = 2))
 }
 

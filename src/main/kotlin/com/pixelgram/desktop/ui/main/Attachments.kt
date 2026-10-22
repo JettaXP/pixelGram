@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import io.github.vinceglb.filekit.dialogs.openFileSaver
 import java.awt.KeyboardFocusManager
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import io.github.vinceglb.filekit.dialogs.FileKitMode
@@ -92,6 +93,33 @@ object Attachments {
         val dialog = FileDialog(parent, "Send files", FileDialog.LOAD).apply { isMultipleMode = true }
         dialog.isVisible = true
         return dialog.files.orEmpty().filter { it.isFile }
+    }
+
+    fun copyImage(path: String) {
+        runCatching {
+            val image = ImageIO.read(File(path)) ?: return
+            Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageSelection(image), null)
+        }.onFailure { AppLog.write("Copy image failed", it) }
+    }
+
+    suspend fun saveImage(path: String) {
+        val source = File(path)
+        runCatching {
+            val target = FileKit.openFileSaver(
+                suggestedName = source.nameWithoutExtension.ifBlank { "photo" },
+                extension = source.extension.ifBlank { "jpg" },
+            ) ?: return
+            source.copyTo(target.file, overwrite = true)
+        }.onFailure { AppLog.write("Save image failed", it) }
+    }
+
+    private class ImageSelection(private val image: java.awt.Image) : java.awt.datatransfer.Transferable {
+        override fun getTransferDataFlavors() = arrayOf(DataFlavor.imageFlavor)
+        override fun isDataFlavorSupported(flavor: DataFlavor) = flavor == DataFlavor.imageFlavor
+        override fun getTransferData(flavor: DataFlavor): Any {
+            if (flavor != DataFlavor.imageFlavor) throw java.awt.datatransfer.UnsupportedFlavorException(flavor)
+            return image
+        }
     }
 
     fun fromClipboard(): List<File> = runCatching {

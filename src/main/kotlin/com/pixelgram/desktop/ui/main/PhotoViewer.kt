@@ -1,5 +1,18 @@
 package com.pixelgram.desktop.ui.main
 
+import kotlinx.coroutines.launch
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material3.Text
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
@@ -140,6 +153,9 @@ private fun ZoomablePhoto(photo: ViewedPhoto, modifier: Modifier) {
     val full by produceState<ImageBitmap?>(null, fullPath) {
         fullPath?.let { loadImage(it, maxSize = FullSize) }?.let { value = it }
     }
+    var menuAt by remember { mutableStateOf<DpOffset?>(null) }
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
     var zoom by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     val shownZoom by animateFloatAsState(zoom)
@@ -157,6 +173,18 @@ private fun ZoomablePhoto(photo: ViewedPhoto, modifier: Modifier) {
                         scaleY = shownZoom
                         translationX = offset.x
                         translationY = offset.y
+                    }
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                                    val change = event.changes.first()
+                                    change.consume()
+                                    menuAt = with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) }
+                                }
+                            }
+                        }
                     }
                     .pointerInput(Unit) {
                         detectTapGestures(onDoubleTap = {
@@ -184,6 +212,36 @@ private fun ZoomablePhoto(photo: ViewedPhoto, modifier: Modifier) {
             )
         }
         if (full == null) LoadingIndicator(Modifier.align(Alignment.Center))
+        menuAt?.let { at ->
+            val path = fullPath ?: previewPath
+            Box(Modifier.align(Alignment.TopStart).offset(at.x, at.y)) {
+                DropdownMenu(
+                    expanded = true,
+                    onDismissRequest = { menuAt = null },
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Copy photo") },
+                        leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) },
+                        enabled = path != null,
+                        onClick = {
+                            menuAt = null
+                            path?.let(Attachments::copyImage)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Save as…") },
+                        leadingIcon = { Icon(Icons.Outlined.Download, contentDescription = null) },
+                        enabled = path != null,
+                        onClick = {
+                            menuAt = null
+                            path?.let { scope.launch { Attachments.saveImage(it) } }
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 

@@ -806,6 +806,35 @@ class Telegram(
         })
     }
 
+    fun editMessageMedia(message: UiMessage, file: File, caption: String, asPhoto: Boolean) {
+        val text = TdApi.FormattedText(caption.trim(), arrayOf())
+        val input = TdApi.InputFileLocal(file.absolutePath)
+        val content = if (asPhoto) {
+            val (width, height) = imageSize(file)
+            TdApi.InputMessagePhoto().apply {
+                photo = TdApi.InputPhoto().apply {
+                    photo = input
+                    addedStickerFileIds = IntArray(0)
+                    this.width = width
+                    this.height = height
+                }
+                this.caption = text
+            }
+        } else {
+            TdApi.InputMessageDocument().apply {
+                document = TdApi.InputDocument().apply { document = input }
+                this.caption = text
+            }
+        }
+        send(TdApi.EditMessageMedia().apply {
+            chatId = message.chatId
+            messageId = message.id
+            inputMessageContent = content
+        })
+    }
+
+    fun photoPath(message: UiMessage): String? = localPath(message.fullPhoto) ?: localPath(message.photo)
+
     fun editMessage(message: UiMessage, text: String) {
         val formatted = TdApi.FormattedText(text, arrayOf())
         if (message.photo != null) {

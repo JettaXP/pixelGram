@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -69,6 +70,7 @@ class MessageActions(
     val onEdit: (UiMessage) -> Unit,
     val onDelete: (UiMessage) -> Unit,
     val onQuoteClick: (Long) -> Unit,
+    val onCopyPhoto: (UiMessage) -> Unit,
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -192,6 +194,16 @@ private fun MessageMenu(message: UiMessage, actions: MessageActions, onDismiss: 
                 onClick = {
                     onDismiss()
                     actions.onEdit(message)
+                },
+            )
+        }
+        if (message.photo != null) {
+            DropdownMenuItem(
+                text = { Text("Copy photo") },
+                leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
+                onClick = {
+                    onDismiss()
+                    actions.onCopyPhoto(message)
                 },
             )
         }
