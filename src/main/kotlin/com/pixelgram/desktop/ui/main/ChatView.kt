@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material.icons.automirrored.outlined.Reply
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -140,6 +141,33 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     val slide = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     val slidIn = remember(chat.id) { mutableSetOf<Long>() }
     var editing by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
+    var replyTo by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
+    var deleting by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
+    val actions = remember(chat.id) {
+        MessageActions(
+            onReply = { editing = null; replyTo = it },
+            onEdit = { replyTo = null; editing = it },
+            onDelete = { deleting = it },
+            onQuoteClick = { id ->
+                val index = messages.indexOfFirst { it.id == id }
+                if (index >= 0) scope.launch { listState.animateScrollToItem(index) }
+            },
+        )
+    }
+    deleting?.let { message ->
+        val private = chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id)
+        DeleteMessageDialog(
+            canRevoke = private || (message.isOutgoing && !telegram.isSavedMessages(chat.id)),
+            revokeLabel = if (private) "Also delete for ${telegram.chatTitle(chat)}" else "Delete for everyone",
+            onDismiss = { deleting = null },
+            onConfirm = { revoke ->
+                telegram.deleteMessages(chat.id, longArrayOf(message.id), revoke)
+                if (editing?.id == message.id) editing = null
+                if (replyTo?.id == message.id) replyTo = null
+                deleting = null
+            },
+        )
+    }
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -177,20 +205,43 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             items(messages, key = { it.key }) { message ->
                 val rise = remember { Animatable(if (message.fresh && slidIn.add(message.key)) 1f else 0f) }
                 LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
-                MessageBubble(
-                    telegram = telegram,
-                    modifier = Modifier
-                        .animateItem(fadeInSpec = fade, placementSpec = placement, fadeOutSpec = fade)
-                        .graphicsLayer { translationY = rise.value * size.height },
-                    message = message,
-                    senderName = if (chat.isGroup && !message.isOutgoing) {
-                        telegram.senderName(message)
-                    } else {
-                        null
-                    },
-                    settings = settings,
-                    status = if (message.isOutgoing && !chat.isChannel) telegram.status(chat, message) else null,
-                )
+                val itemModifier = Modifier
+                    .animateItem(fadeInSpec = fade, placementSpec = placement, fadeOutSpec = fade)
+                    .graphicsLayer { translationY = rise.value * size.height }
+                val quote: (@Composable () -> Unit)? = if (message.replyToId != 0L) {
+                    {
+                        val replied = telegram.replyPreview(chat.id, message.replyToId)
+                        ReplyQuote(
+                            name = when {
+                                replied == null -> "Message"
+                                replied.isOutgoing -> "You"
+                                else -> telegram.senderName(replied)
+                            },
+                            text = replied?.text?.takeIf { it.isNotEmpty() } ?: if (replied?.photo != null) "Photo" else "…",
+                            onClick = { actions.onQuoteClick(message.replyToId) },
+                        )
+                    }
+                } else {
+                    null
+                }
+                if (message.service) {
+                    MessageBubble(message = message, senderName = null, settings = settings, modifier = itemModifier)
+                } else {
+                    MessageGestures(message, actions, itemModifier) {
+                        MessageBubble(
+                            telegram = telegram,
+                            quote = quote,
+                            message = message,
+                            senderName = if (chat.isGroup && !message.isOutgoing) {
+                                telegram.senderName(message)
+                            } else {
+                                null
+                            },
+                            settings = settings,
+                            status = if (message.isOutgoing && !chat.isChannel) telegram.status(chat, message) else null,
+                        )
+                    }
+                }
             }
         }
         val panelSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
@@ -213,6 +264,8 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
         Composer(
             hasAttachments = attachments.isNotEmpty(),
             editing = editing,
+            replyTo = replyTo,
+            onCancelReply = { replyTo = null },
             onEditLast = {
                 val now = System.currentTimeMillis() / 1000
                 val last = messages.firstOrNull {
@@ -225,16 +278,18 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             onAttach = attach,
             onSend = { text ->
                 val edited = editing
+                val replyId = replyTo?.id ?: 0L
+                replyTo = null
                 if (edited != null) {
                     telegram.editMessage(edited, text)
                     editing = null
                 } else if (attachments.isNotEmpty()) {
                     val photos = !asFiles && attachments.all(Attachments::isPhoto)
-                    telegram.sendFiles(chat.id, attachments.toList(), photos, text)
+                    telegram.sendFiles(chat.id, attachments.toList(), photos, text, replyId)
                     attachments.clear()
                     asFiles = false
                 } else {
-                    telegram.sendText(chat.id, text)
+                    telegram.sendText(chat.id, text, replyId)
                 }
                 scope.launch { listState.animateScrollToItem(0) }
             },
@@ -260,6 +315,7 @@ fun MessageBubble(
     modifier: Modifier = Modifier,
     telegram: Telegram? = null,
     status: MessageStatus? = null,
+    quote: (@Composable () -> Unit)? = null,
 ) {
     if (message.service) {
         ServiceMessage(message, senderName, modifier)
@@ -286,6 +342,13 @@ fun MessageBubble(
             val readColor = if (outgoing) colors.primary else metaColor
             val hasText = message.text.isNotEmpty()
             Column(Modifier.padding(if (photo != null) PhotoInset else 0.dp)) {
+                if (quote != null) {
+                    Box(
+                        Modifier
+                            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = if (photo != null) 6.dp else 0.dp)
+                            .then(if (photo != null) Modifier.width(PhotoMaxWidth - 16.dp) else Modifier),
+                    ) { quote() }
+                }
                 if (photo != null && telegram != null) {
                     MessagePhoto(
                         message,
@@ -478,6 +541,8 @@ private const val PhotoPixels = 1024
 private fun Composer(
     hasAttachments: Boolean,
     editing: UiMessage?,
+    replyTo: UiMessage?,
+    onCancelReply: () -> Unit,
     onEditLast: () -> Boolean,
     onCancelEdit: () -> Unit,
     onAttach: (List<File>) -> Unit,
@@ -499,14 +564,17 @@ private fun Composer(
             text = TextFieldValue("")
         }
     }
+    LaunchedEffect(replyTo?.key) {
+        if (replyTo != null) focus.requestFocus()
+    }
     val cancelEdit = {
         onCancelEdit()
         text = TextFieldValue("")
     }
     val shown = remember { MutableTransitionState(false) }
-    shown.targetState = editing != null
-    var lastEditing by remember { mutableStateOf<UiMessage?>(null) }
-    if (editing != null) lastEditing = editing
+    shown.targetState = editing != null || replyTo != null
+    var banner by remember { mutableStateOf<Pair<Boolean, UiMessage>?>(null) }
+    if (editing != null) banner = true to editing else if (replyTo != null) banner = false to replyTo
     AnimatedVisibility(
         visibleState = shown,
         enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
@@ -517,18 +585,27 @@ private fun Composer(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(Icons.Outlined.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            val isEdit = banner?.first == true
+            Icon(
+                if (isEdit) Icons.Outlined.Edit else Icons.AutoMirrored.Outlined.Reply,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
             Column(Modifier.weight(1f)) {
-                Text("Editing", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    if (isEdit) "Editing" else "Reply",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
                 EmojiText(
-                    lastEditing?.text?.takeIf { it.isNotEmpty() } ?: "Photo",
+                    banner?.second?.text?.takeIf { it.isNotEmpty() } ?: "Photo",
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            IconButton(onClick = cancelEdit) {
-                Icon(Icons.Filled.Close, contentDescription = "Cancel editing")
+            IconButton(onClick = { if (editing != null) cancelEdit() else onCancelReply() }) {
+                Icon(Icons.Filled.Close, contentDescription = "Cancel")
             }
         }
     }
@@ -575,6 +652,10 @@ private fun Composer(
                             onEditLast()
                         event.key == Key.Escape && editing != null -> {
                             cancelEdit()
+                            true
+                        }
+                        event.key == Key.Escape && replyTo != null -> {
+                            onCancelReply()
                             true
                         }
                         event.key == Key.V && (event.isCtrlPressed || event.isMetaPressed) -> {

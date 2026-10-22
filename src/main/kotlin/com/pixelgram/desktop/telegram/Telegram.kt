@@ -117,6 +117,7 @@ data class UiMessage(
     val edited: Boolean = false,
     val service: Boolean = false,
     val editable: Boolean = true,
+    val replyToId: Long = 0,
 )
 
 enum class MessageStatus { Sending, Sent, Read, Failed }
@@ -718,10 +719,11 @@ class Telegram(
         })
     }
 
-    fun sendText(chatId: Long, text: String) {
+    fun sendText(chatId: Long, text: String, replyToId: Long = 0) {
         if (text.isBlank()) return
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
+            replyTo = replyInput(replyToId)
             inputMessageContent = TdApi.InputMessageText().apply {
                 this.text = TdApi.FormattedText(text, arrayOf())
             }
@@ -746,7 +748,29 @@ class Telegram(
         }
     }
 
-    fun sendFiles(chatId: Long, files: List<File>, asPhotos: Boolean, caption: String) {
+    private fun replyInput(id: Long): TdApi.InputMessageReplyTo? =
+        if (id == 0L) null else TdApi.InputMessageReplyToMessage().apply { messageId = id }
+
+    fun deleteMessages(chatId: Long, ids: LongArray, revoke: Boolean) {
+        send(TdApi.DeleteMessages(chatId, ids, revoke))
+    }
+
+    private val replyCache = mutableStateMapOf<Pair<Long, Long>, UiMessage>()
+    private val replyRequests = HashSet<Pair<Long, Long>>()
+
+    fun replyPreview(chatId: Long, id: Long): UiMessage? {
+        messages[chatId]?.firstOrNull { it.id == id }?.let { return it }
+        val key = chatId to id
+        replyCache[key]?.let { return it }
+        if (replyRequests.add(key)) {
+            send(TdApi.GetMessage(chatId, id)) { result ->
+                if (result is TdApi.Message) replyCache[key] = result.toUi()
+            }
+        }
+        return null
+    }
+
+    fun sendFiles(chatId: Long, files: List<File>, asPhotos: Boolean, caption: String, replyToId: Long = 0) {
         files.chunked(AlbumSize).forEachIndexed { chunkIndex, chunk ->
             val contents = chunk.mapIndexed { index, file ->
                 val text = TdApi.FormattedText(
@@ -775,11 +799,13 @@ class Telegram(
             if (contents.size == 1) {
                 send(TdApi.SendMessage().apply {
                     this.chatId = chatId
+                    if (chunkIndex == 0) replyTo = replyInput(replyToId)
                     inputMessageContent = contents.single()
                 })
             } else {
                 send(TdApi.SendMessageAlbum().apply {
                     this.chatId = chatId
+                    if (chunkIndex == 0) replyTo = replyInput(replyToId)
                     inputMessageContents = contents.toTypedArray()
                 })
             }
@@ -842,6 +868,7 @@ fun TdApi.Message.toUi(): UiMessage {
         edited = editDate > 0,
         service = isService(content),
         editable = isOutgoing && (content is TdApi.MessageText || content is TdApi.MessagePhoto),
+        replyToId = (replyTo as? TdApi.MessageReplyToMessage)?.takeIf { it.chatId == 0L || it.chatId == chatId }?.messageId ?: 0L,
     )
 }
 
