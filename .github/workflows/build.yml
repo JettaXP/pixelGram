@@ -33,6 +33,15 @@ jobs:
       - name: Build.
         run: ./gradlew --no-daemon createDistributable
 
+      # The jpackage launcher crashes in setenv on some distros (CachyOS), so start the bundled JVM from a script.
+      - name: Script launcher.
+        run: |
+          app=build/compose/binaries/main/app/pixelGram
+          mv "$app/bin/pixelGram" "$app/bin/pixelGram-native"
+          install -m755 packaging/linux/pixelGram "$app/bin/pixelGram"
+          install -Dm755 "$JAVA_HOME/bin/java" "$app/lib/runtime/bin/java"
+          test "$(sed -n 's/^JAVA_VERSION=//p' "$app/lib/runtime/release")" = "$(sed -n 's/^JAVA_VERSION=//p' "$JAVA_HOME/release")"
+
       # The pixelgram-data folder turns on portable mode (data next to the app).
       - name: Portable archive.
         run: |

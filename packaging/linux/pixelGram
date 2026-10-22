@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -e
+launcher="$(readlink -f "$0")"
+root="$(cd "$(dirname "$launcher")/.." && pwd)"
+APPDIR="$root/lib/app"
+classpath=()
+options=()
+main=""
+while IFS= read -r line || [ -n "$line" ]; do
+    value="${line#*=}"
+    value="${value//\$APPDIR/$APPDIR}"
+    case "$line" in
+        app.classpath=*) classpath+=("$value") ;;
+        app.mainclass=*) main="$value" ;;
+        java-options=*) options+=("$value") ;;
+    esac
+done < "$APPDIR/pixelGram.cfg"
+joined="$(IFS=:; echo "${classpath[*]}")"
+exec "$root/lib/runtime/bin/java" "-Djpackage.app-path=$launcher" "${options[@]}" -cp "$joined" "$main" "$@"
