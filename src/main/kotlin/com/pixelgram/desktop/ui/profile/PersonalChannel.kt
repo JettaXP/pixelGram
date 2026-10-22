@@ -27,7 +27,6 @@ import com.pixelgram.desktop.telegram.contentText
 import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.theme.EmojiText
 
-// A user's personal channel with its latest post, as on Telegram profiles.
 @Composable
 fun PersonalChannelCard(
     chatId: Long,

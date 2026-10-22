@@ -29,6 +29,7 @@ import androidx.compose.ui.window.rememberWindowState
 import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.NotificationStyle
+import com.pixelgram.desktop.core.Sounds
 import com.pixelgram.desktop.core.SystemNotifications
 import com.pixelgram.desktop.telegram.Accounts
 import com.pixelgram.desktop.telegram.AuthState
@@ -67,6 +68,7 @@ fun main() = application {
     val settings = remember {
         Emoji3D.removeOldFont()
         Attachments.cleanTemp()
+        Sounds.warmUp()
         AppSettings.load().also { EmojiFonts.settings = it }
     }
     val accounts = remember { Accounts(settings, MainScope()) }
@@ -83,14 +85,15 @@ fun main() = application {
     val scheme = appColorScheme(settings)
     val icon = remember(scheme.primaryContainer, scheme.onPrimaryContainer) { AppIcons.painter(scheme) }
     LaunchedEffect(scheme.primaryContainer, scheme.onPrimaryContainer) {
-        withContext(Dispatchers.IO) { SystemNotifications.updateIcon(scheme) }
+        withContext(Dispatchers.IO) {
+            SystemNotifications.updateIcon(scheme)
+            AppIcons.installForSystem(scheme)
+        }
     }
-    // Without a system tray closing the window quits. Wayland panels show
-    // trays over D-Bus, which Java's tray doesn't use, so there it's off too.
     val hasTray = remember {
         SystemTray.isSupported() && !(AppPaths.isLinux && System.getenv("WAYLAND_DISPLAY") != null)
     }
-    if (hasTray && icon != null) {
+    if (hasTray && icon != null) key(icon) {
         Tray(
             icon = icon,
             tooltip = "pixelGram",
@@ -135,12 +138,9 @@ fun main() = application {
     PhotoViewer.current?.let { photo ->
         key(photo) { PhotoViewerWindow(photo, settings) }
     }
-    if (toasts.entries.isNotEmpty()) {
-        ToastWindow(toasts, settings, onOpen = openFromNotification)
-    }
+    ToastWindow(toasts, settings, onOpen = openFromNotification)
 
     val close = { if (hasTray) visible = false else quit() }
-    // Read once: a window can't switch between system and own frame while open.
     val ownTitleBar = remember { settings.customTitleBar.value }
     val windowState = rememberWindowState(size = DpSize(1180.dp, 760.dp))
     Window(
@@ -152,6 +152,10 @@ fun main() = application {
         state = windowState,
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
+        LaunchedEffect(scheme.primaryContainer, scheme.onPrimaryContainer) {
+            val images = withContext(Dispatchers.IO) { AppIcons.sizes(scheme) }
+            if (images.isNotEmpty()) window.iconImages = images
+        }
         LaunchedEffect(visible) {
             if (!visible) return@LaunchedEffect
             if (window.extendedState and java.awt.Frame.ICONIFIED != 0) window.extendedState = java.awt.Frame.NORMAL
@@ -174,7 +178,6 @@ fun main() = application {
     }
 }
 
-// Development only: -Dpixelgram.screen=settings opens settings without signing in.
 private val devScreen: String? = System.getProperty("pixelgram.screen")
 
 @Composable
@@ -182,7 +185,6 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
     var screen by remember {
         mutableStateOf<Screen>(if (devScreen == "settings") Screen.Settings() else Screen.Chats)
     }
-    // Screens to return to, so Back leads where you came from.
     val history = remember { mutableStateListOf<Screen>() }
     val navigate = { to: Screen ->
         history.add(screen)
@@ -196,7 +198,6 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
         screen = Screen.Chats
     }
     val saved = rememberSaveableStateHolder()
-    // A click on a notification pop-up opens its chat.
     LaunchedEffect(Notifications.openRequest) {
         val request = Notifications.openRequest ?: return@LaunchedEffect
         if (request.first == telegram.account) {
@@ -205,8 +206,6 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
         }
     }
     val ready = telegram.authState == AuthState.Ready || devScreen != null
-    // WHY: without a background the window shows through during the
-    // crossfade, which looks like a white flash when opening settings.
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
         val enter = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
         val exit = MaterialTheme.motionScheme.fastEffectsSpec<Float>()

@@ -107,7 +107,6 @@ private fun Logo() {
     Image(icon, contentDescription = "pixelGram", modifier = Modifier.size(96.dp))
 }
 
-// The button turns into a loading indicator while a sign-in request is pending.
 @Composable
 internal fun BusyButton(
     text: String,

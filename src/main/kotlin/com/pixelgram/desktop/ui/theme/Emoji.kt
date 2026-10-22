@@ -48,16 +48,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
-// Noto Color Emoji, the latest flat set (SIL Open Font License, see
-// fonts/NotoColorEmoji-OFL.txt).
 internal val FlatEmoji: FontFamily by lazy {
     FontFamily(listOfNotNull(fontBytes("NotoColorEmoji")?.let { Font("NotoColorEmoji", it) }))
 }
 
-// Google's Noto 3D emoji (Android 17, Pixel 11). Each emoji is a picture
-// fetched from Google's repository the first time it is shown and cached on
-// disk; drawn as an image it stays sharp and centred on every system, which
-// the 3D font's bitmaps are not on Windows.
 object Emoji3D {
     private const val BaseUrl = "https://raw.githubusercontent.com/googlefonts/noto-emoji/main/3D/png/128/"
     private const val MaxDownloads = 6
@@ -68,13 +62,11 @@ object Emoji3D {
     private val pending = ConcurrentHashMap<String, Deferred<File?>>()
     private val missing: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
-    // Google's file names: code points in hex, without the FE0F selector.
     private fun fileName(emoji: String): String = "emoji_u" + emoji.codePoints()
         .filter { it != VariationSelector }
         .toArray()
         .joinToString("_") { "%04x".format(it) } + ".png"
 
-    // Checked once per emoji: composition asks for every emoji on every redraw.
     private val onDisk = ConcurrentHashMap<String, File>()
 
     fun cached(emoji: String): File? = onDisk[emoji] ?: File(dir, fileName(emoji)).takeIf { it.isFile }?.also {
@@ -109,13 +101,11 @@ object Emoji3D {
         null
     }
 
-    // The 3D font from earlier versions is no longer used.
     fun removeOldFont() {
         File(AppPaths.dataDir, "emoji/Noto-3D.ttf").delete()
     }
 }
 
-// The chosen emoji style; read in composition so the UI follows changes.
 object EmojiFonts {
     var settings: AppSettings? = null
 
@@ -131,10 +121,8 @@ private const val Keycap = 0x20E3
 private fun isRegional(cp: Int) = cp in 0x1F1E6..0x1F1FF
 private fun isTag(cp: Int) = cp in 0xE0020..0xE007F
 
-// The JDK knows emoji up to Unicode 15; newer ones are still undefined there.
 private fun isNewEmoji(cp: Int) = cp in 0x1F000..0x1FAFF && !Character.isDefined(cp)
 
-// Character ranges of emoji sequences: flags, keycaps, skin tones, ZWJ families.
 fun emojiRanges(text: String): List<IntRange> {
     val ranges = mutableListOf<IntRange>()
     var i = 0
@@ -172,8 +160,6 @@ fun emojiRanges(text: String): List<IntRange> {
     return ranges
 }
 
-// WHY: Skia takes missing glyphs from the system fonts first, which have no
-// flags on Windows and lack new emoji elsewhere, so emoji get Noto explicitly.
 fun emojiText(text: String): AnnotatedString {
     val ranges = emojiRanges(text)
     if (ranges.isEmpty()) return AnnotatedString(text)
@@ -184,8 +170,6 @@ fun emojiText(text: String): AnnotatedString {
     }
 }
 
-// Text with emoji in the chosen style: flat Noto through the font, Noto 3D
-// as pictures placed in the line.
 @Composable
 fun EmojiText(
     text: String,
@@ -242,7 +226,6 @@ fun EmojiText(
 
 private val EmojiSize = 1.2.em
 
-// The picture once it is on disk; until then the flat emoji stands in.
 @Composable
 private fun Emoji3DImage(emoji: String) {
     val file by produceState(Emoji3D.cached(emoji), emoji) {
@@ -262,7 +245,6 @@ private fun Emoji3DImage(emoji: String) {
     }
 }
 
-// Text being typed always shows flat emoji: an input field cannot hold pictures.
 object EmojiVisualTransformation : VisualTransformation {
     override fun filter(text: AnnotatedString) = TransformedText(emojiText(text.text), OffsetMapping.Identity)
 }

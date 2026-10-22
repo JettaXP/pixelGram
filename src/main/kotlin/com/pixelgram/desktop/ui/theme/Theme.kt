@@ -19,7 +19,6 @@ import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.ThemeMode
 
-// Seed colors offered in settings (Material 3 baseline and friends).
 val SeedColors = listOf(
     0xFF6750A4.toInt(),
     0xFF0061A4.toInt(),
@@ -61,8 +60,6 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     )
 }
 
-// Dynamic color scheme from a seed color, using Google's
-// material-color-utilities (Kotlin port by MaterialKolor).
 fun schemeFromSeed(seed: Int, dark: Boolean): ColorScheme {
     val scheme = SchemeTonalSpot(
         Hct.fromInt(seed),
@@ -115,7 +112,6 @@ fun schemeFromSeed(seed: Int, dark: Boolean): ColorScheme {
     return colorSchemeOf(roles, dark)
 }
 
-// Builds a ColorScheme from Material 3 role names (camelCase).
 fun colorSchemeOf(roles: Map<String, Color>, dark: Boolean): ColorScheme {
     val base = if (dark) darkColorScheme() else lightColorScheme()
     return base.copy(

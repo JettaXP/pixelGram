@@ -3,8 +3,6 @@ package com.pixelgram.desktop.telegram
 import it.tdlight.jni.TdApi
 import kotlinx.coroutines.launch
 
-// Development only: -Dpixelgram.demo=true fills the UI with sample chats so
-// layouts can be checked without signing in.
 fun Telegram.loadDemo() {
     me = TdApi.User().apply {
         id = 1
@@ -47,7 +45,6 @@ fun Telegram.loadDemo() {
     }
     chatListsChanged()
     if (System.getProperty("pixelgram.demo.heavy") == "true") loadHeavyDemo(now)
-    // A photo from a local file, to see photo bubbles.
     System.getProperty("pixelgram.demo.photo")?.let { path ->
         val file = TdApi.File().apply {
             id = 999_999
@@ -65,8 +62,6 @@ fun Telegram.loadDemo() {
     ))
 }
 
-// Hundreds of chats and a stream of updates, like the first minute after
-// signing in to a real account.
 private fun Telegram.loadHeavyDemo(now: Int) {
     listOf("Groups" to "Groups", "Bots" to "Bots", "Home" to "Home", "Plugins" to "Custom", "Unread" to "Unread")
         .forEachIndexed { index, (title, icon) -> folders.add(FolderInfo(10 + index, title, icon)) }

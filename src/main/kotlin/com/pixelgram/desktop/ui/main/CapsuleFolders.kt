@@ -64,8 +64,6 @@ import com.pixelgram.desktop.telegram.ChatListKey
 import com.pixelgram.desktop.ui.theme.EmojiText
 import kotlin.math.roundToInt
 
-// Experimental: folders in one capsule. Only the selected folder shows its
-// name, the others shrink to their icon.
 @Composable
 internal fun CapsuleFolders(
     tabs: List<FolderTab>,
@@ -74,18 +72,12 @@ internal fun CapsuleFolders(
     onSelect: (ChatListKey) -> Unit,
 ) {
     if (tabs.size < 2) return
-    // Official M3 Expressive proportions: a 64dp toolbar with a 40dp active
-    // indicator; the same inset on every side keeps the pill a scaled-down
-    // copy of the capsule.
     val height = settings.capsuleHeight.value.dp - CapsuleInset * 2
-    // WHY: a bouncy spring makes the whole bar overshoot its final width;
-    // labels and the indicator share one non-bouncy spec so they stay in sync.
     val spec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val colors = MaterialTheme.colorScheme
 
     val bounds = remember { mutableStateMapOf<ChatListKey, Pair<Float, Float>>() }
     val scroll = rememberScrollState()
-    // Keeps the selected folder in view, centred when the row scrolls.
     LaunchedEffect(selected, bounds[selected], scroll.viewportSize) {
         val (left, width) = bounds[selected] ?: return@LaunchedEffect
         if (scroll.maxValue == 0) return@LaunchedEffect
@@ -104,11 +96,7 @@ internal fun CapsuleFolders(
 
     Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
         Surface(shape = CircleShape, color = colors.surfaceContainerHighest) {
-            // With many folders the row scrolls; rounded ends match the pill, so
-            // folders slide under the curve instead of being cut off flat.
             Box(Modifier.padding(CapsuleInset).clip(CircleShape).horizontalScroll(scroll)) {
-                // One indicator slides between folders instead of each button
-                // fading its own background.
                 Box(
                     Modifier
                         .layout { measurable, _ ->
@@ -173,7 +161,6 @@ internal fun CapsuleFolders(
 private val LabelGap = 4.dp
 private val CapsuleInset = 12.dp
 private val IndicatorSidePadding = 16.dp
-// Telegram folder icon names (chatFolderIcon) mapped to Material icons.
 internal fun folderIcon(name: String, filled: Boolean): ImageVector = when (name) {
     "All" -> if (filled) Icons.Filled.Forum else Icons.Outlined.Forum
     "Unread" -> if (filled) Icons.Filled.MarkChatUnread else Icons.Outlined.MarkChatUnread

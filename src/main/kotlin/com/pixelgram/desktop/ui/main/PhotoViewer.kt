@@ -63,13 +63,10 @@ class ViewedPhoto(
     val caption: String,
 )
 
-// The photo open in the full screen viewer, if any.
 object PhotoViewer {
     var current by mutableStateOf<ViewedPhoto?>(null)
 }
 
-// Like Telegram Desktop: the photo in its own window over the whole screen,
-// closed with ×, Esc or a click around it; wheel zooms, drag pans.
 @Composable
 fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
     val shown = remember(photo) { MutableTransitionState(false).apply { targetState = true } }
@@ -161,7 +158,6 @@ private fun ZoomablePhoto(photo: ViewedPhoto, modifier: Modifier) {
                         translationX = offset.x
                         translationY = offset.y
                     }
-                    // Taps on the photo don't close the viewer; double tap resets the zoom.
                     .pointerInput(Unit) {
                         detectTapGestures(onDoubleTap = {
                             zoom = if (zoom > 1f) 1f else 2.5f

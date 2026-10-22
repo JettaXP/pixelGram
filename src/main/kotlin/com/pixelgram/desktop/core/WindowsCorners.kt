@@ -5,8 +5,6 @@ import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.IntByReference
 
-// Windows 11 rounds the corners of windows with a system frame only; the
-// frameless window asks the window manager (DWM) for them itself.
 object WindowsCorners {
     @Suppress("FunctionName")
     private interface Dwm : Library {
@@ -20,13 +18,11 @@ object WindowsCorners {
     private val dwm: Dwm? by lazy {
         if (!AppPaths.isWindows) return@lazy null
         runCatching {
-            // JNA unpacks its library like TDLib does; keep it off a full system drive.
             System.setProperty("jna.tmpdir", AppPaths.nativesDir.absolutePath)
             Native.load("dwmapi", Dwm::class.java)
         }.onFailure { AppLog.write("dwmapi is not available", it) }.getOrNull()
     }
 
-    // Windows 10 doesn't know the attribute and just returns an error.
     fun apply(windowHandle: Long, round: Boolean) {
         if (windowHandle == 0L) return
         val dwm = dwm ?: return

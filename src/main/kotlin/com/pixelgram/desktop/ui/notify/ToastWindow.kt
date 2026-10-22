@@ -1,5 +1,11 @@
 package com.pixelgram.desktop.ui.notify
 
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.unit.DpSize
@@ -38,10 +44,9 @@ fun testToast(telegram: Telegram) = ToastData(
     title = "pixelGram",
     sender = "Notifications",
     text = "This is how new messages will look 🎉",
+    appIcon = true,
 )
 
-// Where the pop-up window goes on the main screen, inside the work area
-// (without the taskbar): left and right use the bottom corners.
 private fun positionFor(side: ToastSide): WindowPosition {
     val config = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
     val bounds = config.bounds
@@ -61,19 +66,27 @@ private fun positionFor(side: ToastSide): WindowPosition {
     return WindowPosition(x.dp, y.dp)
 }
 
-// A frameless, transparent window above everything that never takes focus;
-// as a dialog it gets no taskbar button. Sized for a full stack, the cards
-// sit at the edge nearest the screen corner.
 @Composable
 fun ToastWindow(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) -> Unit) {
     val side = settings.notificationSide.value
+    var warm by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        delay(WarmUpMs)
+        warm = false
+    }
+    val showing = stack.entries.isNotEmpty()
     key(side) {
+        val state = rememberDialogState(
+            position = OffScreen,
+            size = DpSize(ToastWindowWidth, ToastWindowHeight),
+        )
+        LaunchedEffect(showing) {
+            state.position = if (showing) positionFor(side) else OffScreen
+        }
         DialogWindow(
             onCloseRequest = stack::dismissAll,
-            state = rememberDialogState(
-                position = positionFor(side),
-                size = DpSize(ToastWindowWidth, ToastWindowHeight),
-            ),
+            visible = warm || showing,
+            state = state,
             title = "pixelGram",
             undecorated = true,
             transparent = true,
@@ -87,3 +100,6 @@ fun ToastWindow(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) ->
         }
     }
 }
+
+private val OffScreen = WindowPosition((-10000).dp, (-10000).dp)
+private const val WarmUpMs = 1500L

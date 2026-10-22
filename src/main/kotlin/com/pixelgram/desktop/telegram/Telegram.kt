@@ -34,7 +34,6 @@ data class CodeInfo(
     val timeoutSeconds: Int,
     val receivedAt: Long = System.currentTimeMillis(),
 ) {
-    // Expected code length, 0 when unknown.
     val length: Int
         get() = when (val t = type) {
             is TdApi.AuthenticationCodeTypeTelegramMessage -> t.length
@@ -66,7 +65,6 @@ sealed interface AuthState {
     data class Failed(val reason: String) : AuthState
 }
 
-// Chat list key: main list, archive or a chat folder.
 sealed interface ChatListKey {
     data object Main : ChatListKey
     data object Archive : ChatListKey
@@ -99,7 +97,6 @@ const val SavedMessagesTitle = "Saved Messages"
 
 data class FolderInfo(val id: Int, val title: String, val icon: String)
 
-// Immutable snapshot of a message for the UI; TdApi objects are mutable.
 data class UiMessage(
     val id: Long,
     val chatId: Long,
@@ -108,15 +105,11 @@ data class UiMessage(
     val isOutgoing: Boolean,
     val date: Int,
     val text: String,
-    // Stays the same when a sent message gets its final id, so the list keeps the item.
     val key: Long = id,
-    // Arrived or was sent while the app runs, not loaded from history.
     val fresh: Boolean = false,
-    // A photo message: the size shown in the chat and its dimensions; text is the caption.
     val photo: TdApi.File? = null,
     val photoWidth: Int = 0,
     val photoHeight: Int = 0,
-    // The biggest size of the photo, for the full screen viewer.
     val fullPhoto: TdApi.File? = null,
 )
 
@@ -124,7 +117,6 @@ private const val AUTH_TIMEOUT_MS = 30_000L
 private const val ListsInterval = 100L
 private const val AlbumSize = 10
 
-// One TDLib instance per process, shared by all accounts.
 private object Tdlib {
     private var factory: ClientFactory? = null
     private var error: Throwable? = null
@@ -144,7 +136,6 @@ class Telegram(
     val account: Int,
     private val settings: AppSettings,
     private val scope: CoroutineScope,
-    // Returns true when the account was removed and must not sign in again.
     private val onLoggedOut: (Telegram) -> Boolean = { false },
 ) {
     var authState by mutableStateOf<AuthState>(AuthState.Starting)
@@ -199,7 +190,6 @@ class Telegram(
         loadCountries()
     }
 
-    // Countries with calling codes, straight from Telegram.
     var countries by mutableStateOf<List<Country>>(emptyList())
         private set
 
@@ -217,7 +207,6 @@ class Telegram(
         }
     }
 
-    // Formatted national number, expected digits are '-'; null when unknown.
     fun phoneInfo(fullNumber: String): TdApi.PhoneNumberInfo? {
         val client = client ?: return null
         val result = client.execute(TdApi.GetPhoneNumberInfoSync(
@@ -271,8 +260,6 @@ class Telegram(
             if (authRequest == request) authBusy = false
             if (result is TdApi.Error) {
                 AppLog.write("Auth error ${result.code}: ${result.message}")
-                // WHY: both mean an earlier request is still finishing or was
-                // superseded by a state change, the state update follows anyway.
                 if (result.message != "Another authorization query has started"
                     && result.message != "Request aborted"
                 ) {
@@ -281,8 +268,6 @@ class Telegram(
             }
         }
     }
-
-    // Authorization.
 
     private val apiId: Int
         get() = if (BuildConfig.API_ID != 0) BuildConfig.API_ID else settings.apiId.value
@@ -352,7 +337,6 @@ class Telegram(
         if (myUserId != 0L) openPrivateChat(myUserId, onChat)
     }
 
-    // Opens a public chat or channel by its @username inside the app.
     fun openPublicChat(username: String, onChat: (Long) -> Unit, onFail: () -> Unit) {
         send(TdApi.SearchPublicChat().apply { this.username = username }) { result ->
             if (result is TdApi.Chat) onChat(result.id) else onFail()
@@ -368,7 +352,6 @@ class Telegram(
         }
     }
 
-    // Groups are created as supergroups: they need no initial members.
     fun createChat(
         title: String,
         description: String,
@@ -425,19 +408,16 @@ class Telegram(
         }
     }
 
-    // Makes sure the chat is known, e.g. a channel linked from a profile.
     fun loadChat(chatId: Long) {
         if (chatId != 0L && chatId !in chats) send(TdApi.GetChat().apply { this.chatId = chatId })
     }
 
-    // Your channels that can be shown on your profile.
     fun suitablePersonalChats(onResult: (List<Long>) -> Unit) {
         send(TdApi.GetSuitablePersonalChats()) { result ->
             onResult((result as? TdApi.Chats)?.chatIds?.toList().orEmpty())
         }
     }
 
-    // 0 removes the personal channel.
     fun setPersonalChat(chatId: Long, onResult: (error: String?) -> Unit) {
         send(TdApi.SetPersonalChat().apply { this.chatId = chatId }) { result ->
             onResult((result as? TdApi.Error)?.let { friendlyError(it.message) })
@@ -450,7 +430,6 @@ class Telegram(
         }
     }
 
-    // Deletes all cached media and files; chats and messages stay.
     fun clearCache(onDone: () -> Unit) {
         send(TdApi.OptimizeStorage().apply {
             size = 0
@@ -461,8 +440,6 @@ class Telegram(
             chatLimit = 0
         }) { onDone() }
     }
-
-    // Updates.
 
     private fun handleUpdate(update: TdApi.Object) {
         when (update) {
@@ -561,8 +538,6 @@ class Telegram(
                 users.clear()
                 folders.clear()
                 requestedFiles.clear()
-                // WHY: after logging out TDLib closes the instance, a new one
-                // is needed to sign in again.
                 me = null
                 myUserId = 0L
                 val removed = loggingOut && onLoggedOut(this)
@@ -573,8 +548,6 @@ class Telegram(
             else -> AuthState.Unsupported(state.javaClass.simpleName)
         }
     }
-
-    // Chats.
 
     private fun addChat(chat: TdApi.Chat) {
         val state = ChatState(chat.id).apply {
@@ -604,9 +577,6 @@ class Telegram(
         chatListsChanged()
     }
 
-    // WHY: right after sign-in TDLib sends thousands of chat updates; sorting
-    // every list on each recomposition burned gigabytes per second and ran
-    // Windows out of memory. Lists are rebuilt at most every ListsInterval.
     private val listCache = HashMap<ChatListKey, List<ChatState>>()
     private var listsVersion by mutableIntStateOf(0)
     private var listsRefresh: Job? = null
@@ -643,16 +613,12 @@ class Telegram(
         })
     }
 
-    // Messages.
-
     fun messages(chatId: Long): SnapshotStateList<UiMessage> =
         messages.getOrPut(chatId) { mutableStateListOf() }
 
-    // Default notification settings for private chats, groups and channels.
     private val scopeNotifications = mutableMapOf<Class<*>, TdApi.ScopeNotificationSettings>()
     private var openChatId = 0L
 
-    // Set by the window; no sound for the chat you are looking at.
     var windowFocused = true
 
     private fun shouldNotify(message: TdApi.Message): Boolean {
@@ -724,8 +690,6 @@ class Telegram(
         })
     }
 
-    // Sends pictures as photos, or any files as documents; several at once
-    // go as albums of up to ten, the caption on the first one.
     fun sendFiles(chatId: Long, files: List<File>, asPhotos: Boolean, caption: String) {
         files.chunked(AlbumSize).forEachIndexed { chunkIndex, chunk ->
             val contents = chunk.mapIndexed { index, file ->
@@ -770,8 +734,6 @@ class Telegram(
         message.senderUserId != 0L -> userName(message.senderUserId)
         else -> chats[message.senderChatId]?.title ?: ""
     }
-
-    // Files.
 
     fun localPath(file: TdApi.File?): String? {
         file ?: return null
@@ -822,7 +784,6 @@ fun TdApi.Message.toUi(): UiMessage {
     )
 }
 
-// The smallest size that still looks sharp in a bubble, else the biggest one.
 private fun chatPhotoSize(photo: TdApi.Photo?): TdApi.PhotoSize? {
     val sizes = photo?.sizes.orEmpty().sortedBy { it.width }
     return sizes.firstOrNull { it.width >= ChatPhotoMinWidth } ?: sizes.lastOrNull()
@@ -867,7 +828,6 @@ private fun friendlyError(message: String?): String {
     }
 }
 
-// Width and height from the image header, without decoding the picture.
 fun imageSize(file: File): Pair<Int, Int> = runCatching {
     javax.imageio.ImageIO.createImageInputStream(file).use { stream ->
         val reader = javax.imageio.ImageIO.getImageReaders(stream).next()

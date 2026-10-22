@@ -38,8 +38,6 @@ import org.jetbrains.skia.SamplingMode
 import org.jetbrains.skia.Surface
 import java.io.File
 
-// Decoded pictures by path and size, limited by memory rather than count:
-// photos are far bigger than avatars.
 private object ImageCache {
     private const val MaxBytes = 128L * 1024 * 1024
     private var bytes = 0L
@@ -65,7 +63,6 @@ private object ImageCache {
 
 suspend fun loadImage(path: String): ImageBitmap? = loadImage(path, maxSize = 0)
 
-// maxSize > 0 scales the longer side down to it, so big photos stay small in memory.
 suspend fun loadImage(path: String, maxSize: Int): ImageBitmap? {
     val key = "$path@$maxSize"
     ImageCache.get(key)?.let { return it }
@@ -109,7 +106,6 @@ fun Avatar(
     AvatarImage(title, photo, telegram, shape, size, modifier, full)
 }
 
-// Chat avatar: Saved Messages gets the bookmark instead of your own photo.
 @Composable
 fun ChatAvatar(
     chat: ChatState,
@@ -139,7 +135,6 @@ fun ChatAvatar(
     }
 }
 
-// `full` is a higher resolution photo shown once it is downloaded.
 @Composable
 fun AvatarImage(
     title: String,
@@ -183,7 +178,6 @@ fun AvatarImage(
     }
 }
 
-// Shape preview without a real photo, used in settings.
 @Composable
 fun ShapePreview(shape: AvatarShape, cornerPercent: Int, size: Dp, selected: Boolean) {
     val colors = MaterialTheme.colorScheme
@@ -195,7 +189,6 @@ fun ShapePreview(shape: AvatarShape, cornerPercent: Int, size: Dp, selected: Boo
     )
 }
 
-// First letters of the first two words; emoji and symbols are skipped.
 fun initials(title: String): String = title
     .split(' ')
     .mapNotNull { word -> word.codePoints().filter(Character::isLetterOrDigit).findFirst().orElse(-1).takeIf { it >= 0 } }

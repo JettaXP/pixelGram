@@ -9,14 +9,13 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import com.pixelgram.desktop.core.AppPaths
+import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 
-// The app icon recolored to the current scheme, so a purple theme gets a purple icon.
 object AppIcons {
-    // icon-dark.png is a dark green square with a white glyph: how white a pixel
-    // is says how much of the glyph color it gets, its alpha is kept as is.
     private val mask: BufferedImage? by lazy {
         AppIcons::class.java.getResourceAsStream("/icon-dark.png")?.use { ImageIO.read(it) }
     }
@@ -47,16 +46,47 @@ object AppIcons {
     fun painter(scheme: ColorScheme): Painter? =
         image(scheme.primaryContainer, scheme.onPrimaryContainer)?.let { BitmapPainter(it.toComposeImageBitmap()) }
 
-    // A PNG of the icon for places that want a file, like system notifications.
     fun writeTo(file: File, scheme: ColorScheme) {
         val image = image(scheme.primaryContainer, scheme.onPrimaryContainer) ?: return
         runCatching { ImageIO.write(image, "png", file) }
     }
 
+    fun sizes(scheme: ColorScheme): List<BufferedImage> {
+        val image = image(scheme.primaryContainer, scheme.onPrimaryContainer) ?: return emptyList()
+        return SystemSizes.map { scaled(image, it) }
+    }
+
+    fun installForSystem(scheme: ColorScheme) {
+        if (!AppPaths.isLinux) return
+        val image = image(scheme.primaryContainer, scheme.onPrimaryContainer) ?: return
+        val dataHome = System.getenv("XDG_DATA_HOME")?.takeIf { it.isNotBlank() }
+            ?: (System.getProperty("user.home") + "/.local/share")
+        val hicolor = File(dataHome, "icons/hicolor")
+        runCatching {
+            SystemSizes.forEach { size ->
+                val dir = File(hicolor, "${size}x$size/apps").apply { mkdirs() }
+                ImageIO.write(scaled(image, size), "png", File(dir, "com.pixelgram.desktop.png"))
+            }
+            hicolor.setLastModified(System.currentTimeMillis())
+            ProcessBuilder("gtk-update-icon-cache", "-f", "-t", hicolor.path)
+                .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()
+        }
+    }
+
+    private fun scaled(image: BufferedImage, size: Int): BufferedImage {
+        val result = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
+        val graphics = result.createGraphics()
+        graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+        graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+        graphics.drawImage(image.getScaledInstance(size, size, java.awt.Image.SCALE_SMOOTH), 0, 0, null)
+        graphics.dispose()
+        return result
+    }
+
+    private val SystemSizes = listOf(16, 24, 32, 48, 64, 128, 256, 512)
     private const val MaskBackground = 74f
 }
 
-// Icon matching the current color scheme.
 @Composable
 fun themedAppIcon(): Painter? {
     val scheme = MaterialTheme.colorScheme

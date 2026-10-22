@@ -4,9 +4,6 @@ import com.pixelgram.desktop.core.AppLog
 import com.pixelgram.desktop.core.AppPaths
 import java.io.File
 
-// TDLib on Windows needs the Microsoft Visual C++ runtime. The DLLs ship
-// with the app (and with the bundled Java runtime); loading them first lets
-// Windows resolve TDLib's imports without a system-wide installation.
 object NativeLibraries {
     private val windowsRuntime = listOf(
         "vcruntime140.dll",
@@ -18,8 +15,6 @@ object NativeLibraries {
     )
 
     fun preload() {
-        // WHY: TDLight unpacks tdjni into the system temp folder by default,
-        // which fails on a full system drive and ignores portable mode.
         System.setProperty("it.tdlight.native.workdir", AppPaths.nativesDir.absolutePath)
         if (!AppPaths.isWindows) return
         val folders = listOfNotNull(

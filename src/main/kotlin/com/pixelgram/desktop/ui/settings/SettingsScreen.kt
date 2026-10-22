@@ -122,8 +122,6 @@ import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.net.URI
 
-// Telegram settings on the main list; pixelGram's own settings live in
-// the "pixelGram Preferences" sub-list, like AyuGram Preferences.
 private enum class Section(val title: String, val icon: ImageVector, val pixel: Boolean = false) {
     MyAccount("My Account", Icons.Outlined.AccountCircle),
     Notifications("Notifications and Sounds", Icons.Outlined.Notifications),
@@ -315,7 +313,6 @@ fun SettingsScreen(
     }
 }
 
-// Profile summary at the top of Settings, like in Telegram.
 @Composable
 private fun ProfileCard(telegram: Telegram, settings: AppSettings, onClick: () -> Unit) {
     val me = telegram.me ?: return
@@ -375,7 +372,6 @@ private fun ProfileCard(telegram: Telegram, settings: AppSettings, onClick: () -
     }
 }
 
-// AyuGram-style header of the preferences list: app icon, name, version.
 @Composable
 private fun PreferencesHeader() {
     Column(
@@ -392,8 +388,6 @@ private fun PreferencesHeader() {
     }
 }
 
-// Material 3 Expressive segmented list: items separated by a small gap,
-// outer corners large, inner corners small.
 @Composable
 private fun SegmentedGroup(content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
@@ -420,7 +414,6 @@ private fun NavItem(
     }
 }
 
-// Official Material 3 switch with check / close icons on the thumb.
 @Composable
 fun PixelSwitch(
     checked: Boolean,
@@ -441,7 +434,6 @@ fun PixelSwitch(
     )
 }
 
-// Highlighted entry that opens the pixelGram Preferences sub-list.
 @Composable
 private fun PreferencesEntry(onClick: () -> Unit) {
     ListItem(
@@ -492,7 +484,6 @@ private fun SwitchRow(
     checked: Boolean,
     onChange: (Boolean) -> Unit,
 ) {
-    // The row's presses also reach the switch, so its thumb grows while held.
     val interaction = remember { MutableInteractionSource() }
     SegmentedListItem(
         checked = checked,
@@ -678,7 +669,6 @@ private fun ThemeModeButtons(settings: AppSettings) = ConnectedChoice(
     onSelect = { settings.themeMode.value = it },
 )
 
-// Material 3 Expressive connected button group with one choice.
 @Composable
 private fun <T> ConnectedChoice(
     options: List<Pair<T, String>>,

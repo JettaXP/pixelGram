@@ -107,7 +107,6 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     LaunchedEffect(nearTop, messages.size) {
         if (nearTop) telegram.loadMoreMessages(chat.id)
     }
-    // Follow the newest message while you are at the bottom, and always after sending.
     val newest = messages.firstOrNull()?.key
     val scope = rememberCoroutineScope()
     LaunchedEffect(newest) {
@@ -122,7 +121,6 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     val placement = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
     val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val slide = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
-    // New messages slide in once; scrolling back to them later does not replay it.
     val slidIn = remember(chat.id) { mutableSetOf<Long>() }
 
     Column(Modifier.fillMaxSize()) {
@@ -156,7 +154,6 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             reverseLayout = true,
             modifier = Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            // Short chats sit at the bottom, next to the composer.
             verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom),
         ) {
             items(messages, key = { it.key }) { message ->
@@ -280,7 +277,6 @@ fun MessageBubble(
 private val PhotoInset = 4.dp
 private val PhotoMaxWidth = 360.dp
 
-// A photo in a bubble, sized by its aspect ratio; downloads when first shown.
 @Composable
 private fun MessagePhoto(message: UiMessage, file: TdApi.File, telegram: Telegram, corner: Dp) {
     LaunchedEffect(file.id) { telegram.download(file) }
@@ -369,7 +365,6 @@ private fun Composer(
                             send()
                             true
                         }
-                        // Pictures and files from the clipboard open the preview; text pastes as usual.
                         event.key == Key.V && (event.isCtrlPressed || event.isMetaPressed) -> {
                             val pasted = Attachments.fromClipboard()
                             if (pasted.isNotEmpty()) onAttach(pasted)

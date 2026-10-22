@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
-// Full-window page with a back button, used by profile and memory screens.
 @Composable
 fun PageScaffold(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
@@ -55,7 +54,6 @@ fun PageScaffold(title: String, onBack: () -> Unit, content: @Composable ColumnS
 
 data class InfoRow(val icon: ImageVector, val title: String, val value: String)
 
-// Material 3 Expressive segmented group of read-only rows.
 @Composable
 fun InfoGroup(rows: List<InfoRow>) {
     Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {

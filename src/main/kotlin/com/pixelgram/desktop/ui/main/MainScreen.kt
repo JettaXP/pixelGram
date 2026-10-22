@@ -130,12 +130,10 @@ fun MainScreen(
     LaunchedEffect(selectedKey) { telegram.loadChats(selectedKey) }
     LaunchedEffect(Unit) { telegram.loadChats(ChatListKey.Archive) }
 
-    // The experimental capsule only exists on top.
     val foldersLeft = settings.materialFolders.value && !settings.capsuleFolders.value
     val railSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
     val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val density = LocalDensity.current
-    // Width while dragging the divider; snaps to the compact list when narrow.
     var dragWidth by remember { mutableStateOf(settings.chatListWidth.value.toFloat()) }
 
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
@@ -144,7 +142,6 @@ fun MainScreen(
             val compact = dragWidth < CompactThreshold.value
             val listWidth = if (compact) CompactWidth else dragWidth.coerceAtMost(maxListWidth).dp
             Row(Modifier.fillMaxSize()) {
-                // The rail is the folders bar; the menu button expands it into the app menu.
                 AnimatedVisibility(
                     visible = foldersLeft || menuOpen,
                     enter = expandHorizontally(railSpec) + fadeIn(fade),
@@ -155,8 +152,6 @@ fun MainScreen(
                         state = railState,
                         expanded = menuOpen,
                         showFolders = foldersLeft,
-                        // With folders on top the chat list's button opens the menu;
-                        // a second one on the rail would sit at another height.
                         showMenuButton = foldersLeft,
                         telegram = telegram,
                         settings = settings,
@@ -206,7 +201,6 @@ fun MainScreen(
                         },
                     )
                 }
-                // Drag to resize the chat list; too narrow leaves only avatars.
                 Box(
                     Modifier
                         .width(DividerWidth)
@@ -215,7 +209,6 @@ fun MainScreen(
                         .draggable(
                             orientation = Orientation.Horizontal,
                             state = rememberDraggableState { delta ->
-                                // Accumulates freely, so dragging out of the compact list works.
                                 dragWidth = (dragWidth + with(density) { delta.toDp() }.value)
                                     .coerceIn(CompactWidth.value, maxListWidth)
                             },
@@ -262,8 +255,6 @@ fun MainScreen(
     }
 }
 
-// Material 3 Expressive navigation rail: folders when collapsed, the app
-// menu when expanded.
 @Composable
 private fun PixelRail(
     accounts: Accounts,
@@ -299,9 +290,6 @@ private fun PixelRail(
             null
         },
     ) {
-        // WHY: the rail animates its own width; crossfading folders and menu at the
-        // same time overlapped them and spilled text onto the chat list. One fades
-        // out, then the other fades in, clipped to the rail.
         AnimatedContent(
             targetState = expanded,
             transitionSpec = {
@@ -332,7 +320,6 @@ private fun PixelRail(
     }
 }
 
-// Telegram's main menu: accounts, then the app actions.
 @Composable
 private fun MainMenu(
     accounts: Accounts,
@@ -389,7 +376,6 @@ private fun MainMenu(
     }
 }
 
-// Signed-in accounts and "Add Account" as one Material 3 segmented list.
 @Composable
 private fun AccountsList(accounts: Accounts, settings: AppSettings) {
     val count = accounts.list.size + 1
@@ -443,7 +429,6 @@ private fun AccountHeader(
 ) {
     val me = telegram.me ?: return
     val name = me.fullName()
-    // Same width and corners as the accounts list under it, content centred.
     Row(
         modifier = Modifier
             .width(AccountsWidth)
@@ -477,8 +462,6 @@ private fun AccountHeader(
     }
 }
 
-// The side rail's items laid out horizontally: Material 3 short navigation
-// bar items with the icon in a pill and the label underneath.
 @Composable
 private fun TopFolders(
     tabs: List<FolderTab>,

@@ -5,7 +5,6 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.time.LocalDateTime
 
-// Simple app log in the data folder, for problems users can send us.
 object AppLog {
     val file: File get() = File(AppPaths.dataDir, "pixelgram.log")
 
@@ -24,7 +23,6 @@ object AppLog {
     }
 }
 
-// "Message (cause: ...)" for every cause in the chain.
 fun Throwable.describe(): String = generateSequence(this) { it.cause }
     .mapNotNull { it.message?.takeIf(String::isNotBlank) ?: it.javaClass.simpleName }
     .distinct()

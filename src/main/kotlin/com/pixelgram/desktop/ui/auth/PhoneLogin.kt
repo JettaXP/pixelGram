@@ -54,7 +54,6 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
     var number by remember { mutableStateOf("") }
     var picking by remember { mutableStateOf(false) }
 
-    // Default country from the system locale, once the list arrives.
     LaunchedEffect(countries) {
         if (code.isEmpty() && countries.isNotEmpty()) {
             val region = Locale.getDefault().country
@@ -68,8 +67,6 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
     val info = remember(code, digits) {
         if (code.isEmpty()) null else telegram.phoneInfo(code + digits)
     }
-    // Like Telegram: the typed code picks the country; codes shared by several
-    // countries (+1, +7) are told apart by the number.
     val country = when {
         picked?.callingCode == code -> picked
         else -> countries.firstOrNull { it.callingCode == code && it.code == info?.country?.countryCode }
@@ -121,7 +118,6 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
         OutlinedTextField(
             value = number,
             onValueChange = { value ->
-                // A full international number pasted with "+" picks the country.
                 if (value.startsWith("+")) {
                     val pasted = telegram.phoneInfo(value)
                     val pastedCode = pasted?.countryCallingCode

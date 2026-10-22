@@ -65,13 +65,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-// Maximized state and the size to go back to. A frameless window gets no
-// system maximize, so pixelGram fills the work area itself and animates it.
 class WindowChrome(private val window: Window, private val scope: CoroutineScope) {
     var maximized by mutableStateOf(false)
         private set
 
-    // Rounded corners like other Windows 11 windows, square when maximized.
     fun updateCorners() {
         (window as? ComposeWindow)?.let { WindowsCorners.apply(it.windowHandle, round = !maximized) }
     }
@@ -117,7 +114,6 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
         }
     }
 
-    // Fades out before going to the taskbar, fades back in when restored.
     fun minimize() {
         job?.cancel()
         job = scope.launch {
@@ -137,7 +133,6 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
                 window.opacity = value.coerceIn(0f, 1f)
             }
         }
-        // Without window transparency there is simply no fade.
     }
 }
 
@@ -161,8 +156,6 @@ fun FrameWindowScope.rememberWindowChrome(): WindowChrome {
     return chrome
 }
 
-// pixelGram's own window title bar: drag to move, double click to maximize,
-// Material 3 buttons instead of the system ones.
 @Composable
 fun FrameWindowScope.TitleBar(chrome: WindowChrome, onClose: () -> Unit) {
     val lastClick = remember { longArrayOf(0L) }
@@ -246,8 +239,6 @@ private fun TitleButton(icon: ImageVector, label: String, danger: Boolean = fals
     }
 }
 
-// Invisible handles on the edges and corners: a window without the system
-// frame can't be resized otherwise.
 @Composable
 fun FrameWindowScope.ResizeHandles(chrome: WindowChrome) {
     if (chrome.maximized) return
@@ -280,7 +271,6 @@ private fun BoxScope.Handle(
     left: Boolean = false,
     right: Boolean = false,
 ) {
-    // Screen coordinates, so the handle moving with the window doesn't skew the drag.
     val start = remember { Drag() }
     Box(
         Modifier

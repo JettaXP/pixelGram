@@ -25,7 +25,6 @@ import com.pixelgram.desktop.ui.components.InfoGroup
 import com.pixelgram.desktop.ui.components.InfoRow
 import it.tdlight.jni.TdApi
 
-// Storage usage and cache cleanup, shown in Settings → Advanced.
 @Composable
 fun MemoryContent(telegram: Telegram) {
     var stats by remember { mutableStateOf<TdApi.StorageStatisticsFast?>(null) }

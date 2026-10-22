@@ -30,7 +30,6 @@ class Setting<T>(
         }
 }
 
-// User preferences, stored in settings.properties in the data folder.
 class AppSettings private constructor(private val props: Properties) {
     private fun string(key: String, default: String) =
         Setting(this, key, props.getProperty(key) ?: default)
@@ -46,42 +45,33 @@ class AppSettings private constructor(private val props: Properties) {
             enumValues<E>().firstOrNull { it.name == name }
         } ?: default)
 
-    // Appearance.
     val themeMode = enum("themeMode", ThemeMode.System)
     val seedColor = int("seedColor", 0xFF6750A4.toInt())
     val matugen = bool("matugen", false)
     val emojiStyle = enum("emojiStyle", EmojiStyle.Noto)
     val notificationSound = bool("notificationSound", true)
-    // Set from the tray menu; silences all notifications until enabled again.
     val notificationsMuted = bool("notificationsMuted", false)
     val notificationPopups = bool("notificationPopups", true)
     val notificationSide = enum("notificationSide", ToastSide.Right)
-    // Linux only: the desktop's notifications, or pixelGram's own cards.
     val notificationStyle = enum("notificationStyle", NotificationStyle.System)
 
-    // Folders.
     val materialFolders = bool("materialFolders", true)
     val hideAllChats = bool("hideAllChats", false)
     val capsuleFolders = bool("capsuleFolders", false)
     val chatListWidth = int("chatListWidth", 360)
-    // pixelGram's own title bar; tiling Linux desktops usually want none.
     val customTitleBar = bool("customTitleBar", !AppPaths.isLinux)
     val capsuleSpacing = int("capsuleSpacing", 4)
     val capsuleHeight = int("capsuleContainerHeight", 64)
 
-    // Avatars.
     val avatarShape = enum("avatarShape", AvatarShape.Circle)
     val avatarCorner = int("avatarCorner", 50)
 
-    // Message bubbles.
     val bubbleRadius = int("bubbleRadius", 18)
     val bubbleTailRadius = int("bubbleTailRadius", 4)
 
-    // Telegram API credentials entered in the app when not built in.
     val apiId = int("apiId", 0)
     val apiHash = string("apiHash", "")
 
-    // Comma-separated account numbers, each with its own TDLib folder.
     val accounts = string("accounts", "0")
     val activeAccount = int("activeAccount", 0)
 

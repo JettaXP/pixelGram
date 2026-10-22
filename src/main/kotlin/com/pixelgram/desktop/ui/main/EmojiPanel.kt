@@ -45,7 +45,6 @@ import kotlinx.coroutines.launch
 
 private class EmojiGroup(val name: String, val emoji: List<String>)
 
-// Built from Unicode's emoji-test.txt, see resources/emoji/emoji.txt.
 private val EmojiGroups: List<EmojiGroup> by lazy {
     val text = EmojiGroup::class.java.getResourceAsStream("/emoji/emoji.txt")
         ?.bufferedReader(Charsets.UTF_8)?.readLines().orEmpty()
@@ -72,7 +71,6 @@ fun EmojiPanel(onPick: (String) -> Unit, modifier: Modifier = Modifier) {
     val groups = EmojiGroups
     val grid = rememberLazyGridState()
     val scope = rememberCoroutineScope()
-    // Grid index of each group's header, for the category buttons.
     val starts = remember(groups) {
         groups.runningFold(0) { index, group -> index + 1 + group.emoji.size }.dropLast(1)
     }

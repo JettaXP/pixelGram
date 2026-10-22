@@ -7,9 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Shape
 import androidx.graphics.shapes.RoundedPolygon
 
-// Avatar shapes: the official Material 3 Expressive shapes from Compose
-// Material 3 (MaterialShapes), plus a rounded square with a custom corner.
-// Stored by name in settings, so entries can be reordered safely.
 enum class AvatarShape(val title: String) {
     Custom("Custom corner"),
     Circle("Circle"),
@@ -89,7 +86,6 @@ enum class AvatarShape(val title: String) {
         }
 }
 
-// cornerPercent (0..50) is used by the Custom shape only.
 @Composable
 fun AvatarShape.toShape(cornerPercent: Int): Shape =
     polygon?.toShape() ?: RoundedCornerShape(cornerPercent.coerceIn(0, 50))

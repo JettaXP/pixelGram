@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.LineEvent
 
-// Notification sounds, played off the UI thread.
 object Sounds {
     private const val MinInterval = 1_000L
 
@@ -15,12 +14,20 @@ object Sounds {
     @Volatile
     private var lastPlayed = 0L
 
-    // Several messages arriving at once make one sound, not a burst.
     fun newMessage() {
         val now = System.currentTimeMillis()
         if (now - lastPlayed < MinInterval) return
         lastPlayed = now
         play(message ?: return)
+    }
+
+    fun warmUp() {
+        Thread {
+            runCatching {
+                message
+                AudioSystem.getClip().close()
+            }
+        }.apply { isDaemon = true }.start()
     }
 
     private fun play(data: ByteArray) {

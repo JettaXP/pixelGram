@@ -7,8 +7,6 @@ import androidx.compose.runtime.setValue
 import com.pixelgram.desktop.core.AppSettings
 import kotlinx.coroutines.CoroutineScope
 
-// All signed-in accounts; each one is a separate TDLib client that keeps
-// running in the background, the UI shows the active one.
 class Accounts(private val settings: AppSettings, private val scope: CoroutineScope) {
     val list = mutableStateListOf<Telegram>()
 
@@ -44,7 +42,6 @@ class Accounts(private val settings: AppSettings, private val scope: CoroutineSc
         switchTo(telegram)
     }
 
-    // Leaves a sign-in that was started with "Add Account".
     fun cancelAdding(telegram: Telegram) {
         if (list.size < 2 || telegram.authState == AuthState.Ready) return
         telegram.close()

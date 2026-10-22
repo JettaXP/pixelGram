@@ -20,8 +20,6 @@ kotlin {
     }
 }
 
-// TDLib native library for the OS we build on. Release builds are made
-// per OS in CI, so each package carries only its own native library.
 val tdlightNatives: String = run {
     val os = System.getProperty("os.name").lowercase()
     val arm = System.getProperty("os.arch").let { it == "aarch64" || it == "arm64" }
@@ -47,9 +45,7 @@ dependencies {
     implementation(group = "it.tdlight", name = "tdlight-natives", classifier = tdlightNatives)
 }
 
-// API credentials are compiled in from the environment or gradle.properties.
 val generateBuildConfig by tasks.registering {
-    // Empty environment variables (unset CI secrets) fall back to gradle.properties.
     val apiId = providers.environmentVariable("TELEGRAM_API_ID").filter { it.isNotBlank() }
         .orElse(providers.gradleProperty("pixelgram.apiId"))
         .orElse("")
@@ -87,8 +83,6 @@ kotlin.sourceSets.named("main") {
 compose.desktop {
     application {
         mainClass = "com.pixelgram.desktop.MainKt"
-        // Keep the heap small and give unused memory back to the system: by
-        // default Java may take a quarter of RAM and holds on to it.
         jvmArgs += listOf(
             "-Xmx1g",
             "-XX:MinHeapFreeRatio=10",
@@ -123,7 +117,6 @@ compose.desktop {
     }
 }
 
-// Development: forward -Dpixelgram.* properties to `./gradlew run`.
 tasks.withType<JavaExec>().configureEach {
     System.getProperties()
         .filterKeys { it.toString().startsWith("pixelgram.") }

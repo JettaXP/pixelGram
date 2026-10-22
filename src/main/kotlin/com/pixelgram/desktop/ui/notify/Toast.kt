@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.notify
 
+import com.pixelgram.desktop.ui.themedAppIcon
+import androidx.compose.foundation.Image
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -74,9 +76,6 @@ import kotlin.math.PI
 import kotlin.math.sin
 import kotlinx.coroutines.delay
 
-// Material 3 notification card with a wavy timer, ported from the
-// Alert Notifier tutorial; colors come from the app's color scheme.
-
 data class ToastColors(val bg: Color, val fg: Color, val accent: Color, val onAccent: Color, val band: Color)
 
 @Composable
@@ -84,7 +83,6 @@ fun toastColors(): ToastColors {
     val scheme = MaterialTheme.colorScheme
     val dark = scheme.surface.luminance() < 0.5f
     val bg = scheme.primaryContainer
-    // The band under the wave: the container about 30% darker.
     val band = if (dark) lerp(bg, Color.Black, 0.3f) else lerp(bg, scheme.primary, 0.25f)
     return ToastColors(bg, scheme.onPrimaryContainer, scheme.primary, scheme.onPrimary, band)
 }
@@ -94,7 +92,6 @@ const val ToastDurationMs = 6000
 val ToastCardWidth = 368.dp
 val ToastCardHeight = 118.dp
 
-// Window around the stack: room for three cards, "Close all" and the shadows.
 val ToastWindowWidth = 400.dp
 val ToastWindowHeight = 470.dp
 
@@ -113,9 +110,6 @@ private fun enterFor(side: ToastSide): EnterTransition {
 }
 
 private fun exitFor(side: ToastSide): ExitTransition {
-    // WHY: a fast exit curve covers most of the way in the first frame, so the
-    // card seems to vanish; an ease-in-out slide with a fade stays visible, and
-    // shrinking lets the rest of the stack close the gap smoothly.
     val slide = tween<IntOffset>(ExitMs, easing = FastOutSlowInEasing)
     val fade = tween<Float>(ExitMs, easing = LinearEasing)
     val shrink = tween<IntSize>(ExitMs, delayMillis = 150, easing = FastOutSlowInEasing)
@@ -129,7 +123,6 @@ private fun exitFor(side: ToastSide): ExitTransition {
 
 private const val ExitMs = 450
 
-// Up to MaxToasts cards at once; a new one pushes the oldest out.
 class ToastStack {
     class Entry(val data: ToastData) {
         val visible = MutableTransitionState(false).apply { targetState = true }
@@ -158,7 +151,6 @@ class ToastStack {
 
 const val MaxToasts = 3
 
-// The stack: newest card nearest the screen corner, "Close all" with three.
 @Composable
 fun ToastStackContent(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) -> Unit) {
     val side = settings.notificationSide.value
@@ -218,6 +210,7 @@ data class ToastData(
     val title: String,
     val sender: String?,
     val text: String,
+    val appIcon: Boolean = false,
 )
 
 @Composable
@@ -239,19 +232,22 @@ private fun ToastCard(toast: ToastData, settings: AppSettings, onClick: () -> Un
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // The tutorial's icon circle, here the chat avatar with the same "pop".
                 val pop = remember(toast.id) { Animatable(0.6f) }
                 LaunchedEffect(toast.id) {
                     delay(120)
                     pop.animateTo(1f, tween(600, easing = PopEasing))
                 }
                 Box(Modifier.size(52.dp).graphicsLayer { scaleX = pop.value; scaleY = pop.value }) {
-                    // Avatars without a photo use the accent circle, as the tutorial's icon does.
                     val scheme = MaterialTheme.colorScheme
                     MaterialTheme(
                         colorScheme = scheme.copy(primaryContainer = colors.accent, onPrimaryContainer = colors.onAccent),
                     ) {
-                        ChatAvatar(toast.chat, toast.telegram, settings, size = 52.dp)
+                        val icon = if (toast.appIcon) themedAppIcon() else null
+                        if (icon != null) {
+                            Image(icon, contentDescription = null, modifier = Modifier.size(52.dp))
+                        } else {
+                            ChatAvatar(toast.chat, toast.telegram, settings, size = 52.dp)
+                        }
                     }
                 }
                 Column(Modifier.weight(1f)) {
@@ -295,9 +291,6 @@ private fun ToastCard(toast: ToastData, settings: AppSettings, onClick: () -> Un
 
 private val WaveZone = 30.dp
 
-// MD3 wavy progress: the active wave shrinks over the toast's lifetime, a
-// faint track and a stop dot follow it, and a wavy band fills the bottom;
-// all share one phase so they move together.
 @Composable
 private fun WaveTimer(colors: ToastColors, key: Long, modifier: Modifier = Modifier) {
     val left = remember(key) { Animatable(1f) }

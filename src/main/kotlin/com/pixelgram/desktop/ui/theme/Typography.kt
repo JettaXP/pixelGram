@@ -8,7 +8,6 @@ import androidx.compose.ui.text.platform.Font
 internal fun fontBytes(name: String): ByteArray? =
     Typography::class.java.getResourceAsStream("/fonts/$name.ttf")?.use { it.readBytes() }
 
-// Google Sans (SIL Open Font License, see fonts/GoogleSans-OFL.txt).
 val GoogleSans: FontFamily by lazy {
     FontFamily(
         listOf(
@@ -22,7 +21,6 @@ val GoogleSans: FontFamily by lazy {
     )
 }
 
-// Material 3 Expressive type scale with Google Sans.
 val PixelTypography: Typography by lazy {
     val base = Typography()
     Typography(

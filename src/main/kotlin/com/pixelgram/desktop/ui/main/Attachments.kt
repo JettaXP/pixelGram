@@ -57,11 +57,9 @@ import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 
-// Files picked or pasted for sending.
 object Attachments {
     private val PhotoExtensions = setOf("jpg", "jpeg", "png", "webp", "bmp")
 
-    // Telegram compresses photos; bigger files go as documents.
     private const val MaxPhotoBytes = 10L * 1024 * 1024
 
     private val tempDir: File get() = File(AppPaths.dataDir, "temp")
@@ -74,7 +72,6 @@ object Attachments {
         return dialog.files.orEmpty().filter { it.isFile }
     }
 
-    // Files copied in a file manager, or a picture copied from anywhere (saved as PNG).
     fun fromClipboard(): List<File> = runCatching {
         val clipboard = Toolkit.getDefaultToolkit().systemClipboard
         when {
@@ -101,15 +98,12 @@ object Attachments {
         return file
     }
 
-    // Pasted pictures from earlier days are no longer needed.
     fun cleanTemp() {
         val dayAgo = System.currentTimeMillis() - 24 * 60 * 60 * 1000
         tempDir.listFiles()?.filter { it.lastModified() < dayAgo }?.forEach { it.delete() }
     }
 }
 
-// Preview above the composer: the files in a row, photo or file mode; the
-// composer below becomes the caption and its send button sends everything.
 @Composable
 fun AttachmentsPanel(
     files: List<File>,

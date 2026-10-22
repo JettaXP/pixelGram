@@ -61,9 +61,7 @@ fun ChatList(
     listKey: ChatListKey,
     title: String,
     chatsFor: (ChatListKey) -> List<ChatState>,
-    // Position of a list among the folders, to slide in the right direction.
     order: (ChatListKey) -> Int,
-    // Folders on the left switch lists vertically, folders on top sideways.
     vertical: Boolean,
     compact: Boolean,
     selectedChatId: Long?,
@@ -104,7 +102,6 @@ fun ChatList(
                 modifier = Modifier.weight(1f).padding(start = 4.dp),
             )
         }
-        // Material 3 Expressive segmented groups: archive, pinned chats, the rest.
         val forward = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
         val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
         AnimatedContent(
@@ -174,7 +171,6 @@ private val GroupGap = 8.dp
 
 private fun menuIcon(open: Boolean) = if (open) Icons.AutoMirrored.Filled.MenuOpen else Icons.Filled.Menu
 
-// Narrow chat list: only avatars with unread badges.
 @Composable
 private fun CompactChatList(
     listKey: ChatListKey,

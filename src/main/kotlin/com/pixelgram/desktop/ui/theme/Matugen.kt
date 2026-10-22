@@ -12,8 +12,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
 
-// Material You from matugen (Linux). matugen renders the bundled template
-// into outputFile, pixelGram polls it and rebuilds the color scheme.
 object Matugen {
     private const val PollIntervalMs = 1000L
 

@@ -11,8 +11,6 @@ object AppPaths {
 
     private val home = File(System.getProperty("user.home"))
 
-    // Root of the installed app (folder with pixelGram.exe, or with bin/ on
-    // Linux); null when running from sources.
     private val appDir: File? by lazy {
         val launcher = System.getProperty("jpackage.app-path")?.let { File(it).absoluteFile }
         when {
@@ -22,15 +20,12 @@ object AppPaths {
         }
     }
 
-    // Portable mode: a "pixelgram-data" folder next to the app keeps all data.
     val portableDir: File? by lazy {
         appDir?.let { File(it, "pixelgram-data") }?.takeIf { it.isDirectory }
     }
 
     val isPortable: Boolean get() = portableDir != null
 
-    // Linux: ~/.local/share/pixelgram, Windows: %APPDATA%\pixelgram,
-    // macOS: ~/Library/Application Support/pixelgram, or the portable folder.
     val dataDir: File by lazy {
         portableDir?.let { return@lazy it }
         val base = when {
@@ -42,18 +37,15 @@ object AppPaths {
         File(base, "pixelgram").apply { mkdirs() }
     }
 
-    // Linux: ~/.config/pixelgram, used for the matugen template and output.
     val configDir: File by lazy {
         val base = System.getenv("XDG_CONFIG_HOME")?.takeIf { it.isNotBlank() }?.let(::File)
             ?: File(home, ".config")
         File(base, "pixelgram").apply { mkdirs() }
     }
 
-    // The first account keeps the folder used before multi-account support.
     fun accountDir(account: Int): File =
         if (account == 0) File(dataDir, "tdlib") else File(dataDir, "accounts/$account")
     val settingsFile: File get() = File(dataDir, "settings.properties")
 
-    // TDLib's native library is unpacked here instead of the system temp folder.
     val nativesDir: File get() = File(dataDir, "natives").apply { mkdirs() }
 }
