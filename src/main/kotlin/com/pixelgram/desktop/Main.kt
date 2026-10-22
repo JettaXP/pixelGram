@@ -39,6 +39,7 @@ import com.pixelgram.desktop.ui.AppIcons
 import com.pixelgram.desktop.ui.ResizeHandles
 import com.pixelgram.desktop.ui.Screen
 import com.pixelgram.desktop.ui.TitleBar
+import com.pixelgram.desktop.ui.rememberWindowChrome
 import com.pixelgram.desktop.ui.auth.AuthScreen
 import com.pixelgram.desktop.ui.main.Attachments
 import com.pixelgram.desktop.ui.main.MainScreen
@@ -55,7 +56,6 @@ import com.pixelgram.desktop.ui.theme.Emoji3D
 import com.pixelgram.desktop.ui.theme.EmojiFonts
 import com.pixelgram.desktop.ui.theme.PixelTheme
 import com.pixelgram.desktop.ui.theme.isDarkTheme
-import java.awt.GraphicsEnvironment
 import java.awt.SystemTray
 import kotlinx.coroutines.MainScope
 
@@ -141,20 +141,23 @@ fun main() = application {
         state = windowState,
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
-        // A frameless window would cover the taskbar when maximized.
-        if (ownTitleBar) window.maximizedBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
-        LaunchedEffect(visible) { if (visible) window.toFront() }
+        LaunchedEffect(visible) {
+            if (!visible) return@LaunchedEffect
+            if (window.extendedState and java.awt.Frame.ICONIFIED != 0) window.extendedState = java.awt.Frame.NORMAL
+            window.toFront()
+        }
         val focused = LocalWindowInfo.current.isWindowFocused
         LaunchedEffect(focused) { accounts.list.forEach { it.windowFocused = focused } }
+        val chrome = rememberWindowChrome()
         PixelTheme(settings) {
             Box(Modifier.fillMaxSize()) {
                 Column {
-                    if (ownTitleBar) TitleBar(windowState, onClose = close)
+                    if (ownTitleBar) TitleBar(chrome, onClose = close)
                     key(accounts.active) {
                         App(accounts, accounts.active, settings)
                     }
                 }
-                if (ownTitleBar) ResizeHandles(windowState)
+                if (ownTitleBar) ResizeHandles(chrome)
             }
         }
     }

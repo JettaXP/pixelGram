@@ -1,6 +1,9 @@
 package com.pixelgram.desktop.ui
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
@@ -29,8 +32,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,20 +50,111 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
-import androidx.compose.ui.window.WindowPlacement
-import androidx.compose.ui.window.WindowState
 import java.awt.Cursor
+import java.awt.Frame
 import java.awt.MouseInfo
 import java.awt.Rectangle
+import java.awt.Toolkit
+import java.awt.Window
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+
+// Maximized state and the size to go back to. A frameless window gets no
+// system maximize, so pixelGram fills the work area itself and animates it.
+class WindowChrome(private val window: Window, private val scope: CoroutineScope) {
+    var maximized by mutableStateOf(false)
+        private set
+    private var restoreBounds: Rectangle? = null
+    private var job: Job? = null
+
+    private fun workArea(): Rectangle {
+        val config = window.graphicsConfiguration
+        val insets = Toolkit.getDefaultToolkit().getScreenInsets(config)
+        val screen = config.bounds
+        return Rectangle(
+            screen.x + insets.left,
+            screen.y + insets.top,
+            screen.width - insets.left - insets.right,
+            screen.height - insets.top - insets.bottom,
+        )
+    }
+
+    fun toggleMaximized() {
+        if (maximized) {
+            maximized = false
+            restoreBounds?.let { animateTo(it) }
+        } else {
+            restoreBounds = window.bounds
+            maximized = true
+            animateTo(workArea())
+        }
+    }
+
+    private fun animateTo(target: Rectangle) {
+        job?.cancel()
+        val from = window.bounds
+        job = scope.launch {
+            animate(0f, 1f, animationSpec = tween(BoundsMs, easing = FastOutSlowInEasing)) { t, _ ->
+                window.setBounds(
+                    lerp(from.x, target.x, t),
+                    lerp(from.y, target.y, t),
+                    lerp(from.width, target.width, t),
+                    lerp(from.height, target.height, t),
+                )
+            }
+        }
+    }
+
+    // Fades out before going to the taskbar, fades back in when restored.
+    fun minimize() {
+        job?.cancel()
+        job = scope.launch {
+            fade(1f, 0f)
+            (window as? Frame)?.extendedState = Frame.ICONIFIED
+        }
+    }
+
+    fun restored() {
+        job?.cancel()
+        job = scope.launch { fade(window.opacity, 1f) }
+    }
+
+    private suspend fun fade(from: Float, to: Float) {
+        runCatching {
+            animate(from, to, animationSpec = tween(FadeMs, easing = FastOutSlowInEasing)) { value, _ ->
+                window.opacity = value.coerceIn(0f, 1f)
+            }
+        }
+        // Without window transparency there is simply no fade.
+    }
+}
+
+private const val BoundsMs = 260
+private const val FadeMs = 160
+
+private fun lerp(from: Int, to: Int, t: Float) = (from + (to - from) * t).toInt()
+
+@Composable
+fun FrameWindowScope.rememberWindowChrome(): WindowChrome {
+    val scope = rememberCoroutineScope()
+    val chrome = remember { WindowChrome(window, scope) }
+    DisposableEffect(window) {
+        val listener = object : WindowAdapter() {
+            override fun windowDeiconified(e: WindowEvent) = chrome.restored()
+        }
+        window.addWindowListener(listener)
+        onDispose { window.removeWindowListener(listener) }
+    }
+    return chrome
+}
 
 // pixelGram's own window title bar: drag to move, double click to maximize,
 // Material 3 buttons instead of the system ones.
 @Composable
-fun FrameWindowScope.TitleBar(state: WindowState, onClose: () -> Unit) {
-    val maximized = state.placement == WindowPlacement.Maximized
-    val toggleMaximized = {
-        state.placement = if (maximized) WindowPlacement.Floating else WindowPlacement.Maximized
-    }
+fun FrameWindowScope.TitleBar(chrome: WindowChrome, onClose: () -> Unit) {
     val lastClick = remember { longArrayOf(0L) }
     Row(
         modifier = Modifier.fillMaxWidth().height(TitleBarHeight).background(MaterialTheme.colorScheme.surfaceContainer),
@@ -66,12 +164,12 @@ fun FrameWindowScope.TitleBar(state: WindowState, onClose: () -> Unit) {
             Modifier
                 .weight(1f)
                 .fillMaxHeight()
-                .pointerInput(maximized) {
+                .pointerInput(Unit) {
                     awaitPointerEventScope {
                         while (true) {
                             if (awaitPointerEvent().type != PointerEventType.Release) continue
                             val now = System.currentTimeMillis()
-                            if (now - lastClick[0] < DoubleClickMs) toggleMaximized()
+                            if (now - lastClick[0] < DoubleClickMs) chrome.toggleMaximized()
                             lastClick[0] = now
                         }
                     }
@@ -83,11 +181,19 @@ fun FrameWindowScope.TitleBar(state: WindowState, onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 themedAppIcon()?.let { Image(it, contentDescription = null, modifier = Modifier.size(20.dp)) }
-                Text("pixelGram", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "pixelGram",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
-        TitleButton(Icons.Filled.Remove, "Minimize") { state.isMinimized = true }
-        TitleButton(if (maximized) Icons.Filled.FilterNone else Icons.Filled.CropSquare, "Maximize", onClick = toggleMaximized)
+        TitleButton(Icons.Filled.Remove, "Minimize", onClick = chrome::minimize)
+        TitleButton(
+            if (chrome.maximized) Icons.Filled.FilterNone else Icons.Filled.CropSquare,
+            if (chrome.maximized) "Restore" else "Maximize",
+            onClick = chrome::toggleMaximized,
+        )
         TitleButton(Icons.Filled.Close, "Close", danger = true, onClick = onClose)
         Spacer(Modifier.width(6.dp))
     }
@@ -133,8 +239,8 @@ private fun TitleButton(icon: ImageVector, label: String, danger: Boolean = fals
 // Invisible handles on the edges and corners: a window without the system
 // frame can't be resized otherwise.
 @Composable
-fun FrameWindowScope.ResizeHandles(state: WindowState) {
-    if (state.placement != WindowPlacement.Floating) return
+fun FrameWindowScope.ResizeHandles(chrome: WindowChrome) {
+    if (chrome.maximized) return
     Box(Modifier.fillMaxSize()) {
         val window = window
         Handle(window, Alignment.TopCenter, Modifier.fillMaxWidth().height(Edge), Cursor.N_RESIZE_CURSOR, top = true)
