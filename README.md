@@ -37,7 +37,8 @@ Channel: [@pixelgramclient](https://t.me/pixelgramclient)
 
 - **Arch Linux and derivatives:** `sudo pacman -U pixelgram-*.pkg.tar.zst`
 - **Windows:** run the `.msi` installer or unpack the portable `.zip`
-- **Any Linux:** unpack `pixelGram-linux-x86_64.tar.gz` and run `pixelGram/bin/pixelGram`
+- **Any Linux (AppImage):** `chmod +x pixelGram-x86_64.AppImage && ./pixelGram-x86_64.AppImage`
+- **Any Linux (archive):** unpack `pixelGram-linux-x86_64.tar.gz` and run `pixelGram/bin/pixelGram`
 - Sign in by phone, code, two-step password or QR code
 
 ## Building

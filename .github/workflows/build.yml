@@ -70,12 +70,33 @@ jobs:
           mv pkg/*.pkg.tar.zst .
           ls -la *.pkg.tar.zst
 
+      - name: AppImage.
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: |
+          appdir=pixelGram.AppDir
+          mkdir -p "$appdir/usr/lib" "$appdir/usr/share/applications"
+          cp -a build/compose/binaries/main/app/pixelGram "$appdir/usr/lib/pixelGram"
+          for size in 16 24 32 48 64 128 256 512; do
+            install -Dm644 "packaging/icons/hicolor/$size.png" "$appdir/usr/share/icons/hicolor/${size}x${size}/apps/com.pixelgram.desktop.png"
+          done
+          cp packaging/icons/hicolor/256.png "$appdir/com.pixelgram.desktop.png"
+          sed 's/^Exec=.*/Exec=pixelGram/' packaging/arch/com.pixelgram.desktop.desktop > "$appdir/com.pixelgram.desktop.desktop"
+          cp "$appdir/com.pixelgram.desktop.desktop" "$appdir/usr/share/applications/"
+          printf '#!/bin/sh\nhere="$(dirname "$(readlink -f "$0")")"\nexec "$here/usr/lib/pixelGram/bin/pixelGram" "$@"\n' > "$appdir/AppRun"
+          chmod +x "$appdir/AppRun"
+          curl -fsSLo appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+          ARCH=x86_64 ./appimagetool --no-appstream "$appdir" pixelGram-x86_64.AppImage
+          ls -la pixelGram-x86_64.AppImage
+
       - uses: actions/upload-artifact@v4
         with:
           name: pixelGram-linux-arch
           path: |
             *.pkg.tar.zst
             pixelGram-linux-x86_64.tar.gz
+            pixelGram-x86_64.AppImage
           retention-days: 14
           compression-level: 0
 
@@ -155,7 +176,7 @@ jobs:
             --target "$GITHUB_SHA" \
             --prerelease \
             --title "pixelGram nightly" \
-            --notes "Latest build from main (${GITHUB_SHA::7}). Arch: \`sudo pacman -U pixelgram-*.pkg.tar.zst\`. Windows: run the .msi or unpack the portable .zip."
+            --notes "Latest build from main (${GITHUB_SHA::7}). Arch: \`sudo pacman -U pixelgram-*.pkg.tar.zst\`. Any Linux: chmod +x and run the .AppImage. Windows: run the .msi or unpack the portable .zip."
 
       - name: Tagged release.
         if: startsWith(github.ref, 'refs/tags/v')
