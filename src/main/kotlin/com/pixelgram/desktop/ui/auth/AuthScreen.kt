@@ -128,26 +128,23 @@ fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
                             textAlign = TextAlign.Center,
                         )
                     }
-                    val back: (() -> Unit)? = when {
-                        editingNumber -> { { editingNumber = false } }
-                        state is AuthState.WaitQr -> { { editingNumber = true } }
-                        else -> onCancel
+                    val onQr = state is AuthState.WaitQr && !editingNumber
+                    val pill: Pair<String, () -> Unit>? = when {
+                        onQr -> "Back" to { editingNumber = true }
+                        onCancel != null -> "Cancel" to onCancel
+                        else -> null
                     }
-                    var lastBack by remember { mutableStateOf<(() -> Unit)?>(null) }
-                    if (back != null) lastBack = back
+                    var lastPill by remember { mutableStateOf(pill) }
+                    if (pill != null) lastPill = pill
                     AnimatedVisibility(
-                        visible = back != null,
+                        visible = pill != null,
                         enter = scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(),
                         exit = scaleOut() + fadeOut(),
                     ) {
-                        FilledTonalButton(onClick = { lastBack?.invoke() }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = null,
-                                modifier = Modifier.size(ButtonDefaults.IconSize),
-                            )
-                            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                            Text("Back")
+                        lastPill?.let { (label, action) ->
+                            FilledTonalButton(onClick = action) {
+                                AnimatedContent(label, transitionSpec = { fadeIn() togetherWith fadeOut() }) { Text(it) }
+                            }
                         }
                     }
                 }
