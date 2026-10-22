@@ -112,10 +112,15 @@ data class UiMessage(
     val key: Long = id,
     // Arrived or was sent while the app runs, not loaded from history.
     val fresh: Boolean = false,
+    // A photo message: the size shown in the chat and its dimensions; text is the caption.
+    val photo: TdApi.File? = null,
+    val photoWidth: Int = 0,
+    val photoHeight: Int = 0,
 )
 
 private const val AUTH_TIMEOUT_MS = 30_000L
 private const val ListsInterval = 100L
+private const val AlbumSize = 10
 
 // One TDLib instance per process, shared by all accounts.
 private object Tdlib {
@@ -717,6 +722,48 @@ class Telegram(
         })
     }
 
+    // Sends pictures as photos, or any files as documents; several at once
+    // go as albums of up to ten, the caption on the first one.
+    fun sendFiles(chatId: Long, files: List<File>, asPhotos: Boolean, caption: String) {
+        files.chunked(AlbumSize).forEachIndexed { chunkIndex, chunk ->
+            val contents = chunk.mapIndexed { index, file ->
+                val text = TdApi.FormattedText(
+                    if (chunkIndex == 0 && index == 0) caption.trim() else "",
+                    arrayOf(),
+                )
+                val input = TdApi.InputFileLocal(file.absolutePath)
+                if (asPhotos) {
+                    val (width, height) = imageSize(file)
+                    TdApi.InputMessagePhoto().apply {
+                        photo = TdApi.InputPhoto().apply {
+                            photo = input
+                            addedStickerFileIds = IntArray(0)
+                            this.width = width
+                            this.height = height
+                        }
+                        this.caption = text
+                    }
+                } else {
+                    TdApi.InputMessageDocument().apply {
+                        document = TdApi.InputDocument().apply { document = input }
+                        this.caption = text
+                    }
+                }
+            }
+            if (contents.size == 1) {
+                send(TdApi.SendMessage().apply {
+                    this.chatId = chatId
+                    inputMessageContent = contents.single()
+                })
+            } else {
+                send(TdApi.SendMessageAlbum().apply {
+                    this.chatId = chatId
+                    inputMessageContents = contents.toTypedArray()
+                })
+            }
+        }
+    }
+
     fun senderName(message: UiMessage): String = when {
         message.senderUserId != 0L -> userName(message.senderUserId)
         else -> chats[message.senderChatId]?.title ?: ""
@@ -757,6 +804,7 @@ fun TdApi.User.fullName(): String =
 
 fun TdApi.Message.toUi(): UiMessage {
     val sender = senderId
+    val photo = (content as? TdApi.MessagePhoto)?.let { chatPhotoSize(it.photo) }
     return UiMessage(
         id = id,
         chatId = chatId,
@@ -764,9 +812,20 @@ fun TdApi.Message.toUi(): UiMessage {
         senderChatId = (sender as? TdApi.MessageSenderChat)?.chatId ?: 0L,
         isOutgoing = isOutgoing,
         date = date,
-        text = contentText(content),
+        text = if (photo != null) (content as TdApi.MessagePhoto).caption?.text.orEmpty() else contentText(content),
+        photo = photo?.photo,
+        photoWidth = photo?.width ?: 0,
+        photoHeight = photo?.height ?: 0,
     )
 }
+
+// The smallest size that still looks sharp in a bubble, else the biggest one.
+private fun chatPhotoSize(photo: TdApi.Photo?): TdApi.PhotoSize? {
+    val sizes = photo?.sizes.orEmpty().sortedBy { it.width }
+    return sizes.firstOrNull { it.width >= ChatPhotoMinWidth } ?: sizes.lastOrNull()
+}
+
+private const val ChatPhotoMinWidth = 640
 
 fun contentText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageText -> content.text?.text ?: ""
@@ -804,3 +863,16 @@ private fun friendlyError(message: String?): String {
         else -> text.ifEmpty { "Something went wrong." }
     }
 }
+
+// Width and height from the image header, without decoding the picture.
+fun imageSize(file: File): Pair<Int, Int> = runCatching {
+    javax.imageio.ImageIO.createImageInputStream(file).use { stream ->
+        val reader = javax.imageio.ImageIO.getImageReaders(stream).next()
+        try {
+            reader.input = stream
+            reader.getWidth(0) to reader.getHeight(0)
+        } finally {
+            reader.dispose()
+        }
+    }
+}.getOrDefault(0 to 0)

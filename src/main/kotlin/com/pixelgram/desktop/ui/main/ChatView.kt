@@ -1,6 +1,13 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,10 +25,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,26 +43,34 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
@@ -61,9 +80,12 @@ import com.pixelgram.desktop.telegram.ChatState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.ui.components.ChatAvatar
+import com.pixelgram.desktop.ui.components.loadImage
 import com.pixelgram.desktop.ui.profile.PersonalChannelCard
 import com.pixelgram.desktop.ui.theme.EmojiText
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
+import it.tdlight.jni.TdApi
+import java.io.File
 import kotlinx.coroutines.launch
 
 @Composable
@@ -89,6 +111,12 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     val scope = rememberCoroutineScope()
     LaunchedEffect(newest) {
         if (newest != null && listState.firstVisibleItemIndex <= 1) listState.animateScrollToItem(0)
+    }
+    val attachments = remember(chat.id) { mutableStateListOf<File>() }
+    var asFiles by remember(chat.id) { mutableStateOf(false) }
+    val attach = { files: List<File> ->
+        files.filter { it !in attachments }.let(attachments::addAll)
+        if (files.any { !Attachments.isPhoto(it) }) asFiles = true
     }
     val placement = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
     val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -134,6 +162,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 val rise = remember { Animatable(if (message.fresh && slidIn.add(message.key)) 1f else 0f) }
                 LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
                 MessageBubble(
+                    telegram = telegram,
                     modifier = Modifier
                         .animateItem(fadeInSpec = fade, placementSpec = placement, fadeOutSpec = fade)
                         .graphicsLayer { translationY = rise.value * size.height },
@@ -147,10 +176,38 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 )
             }
         }
-        Composer(onSend = {
-            telegram.sendText(chat.id, it)
-            scope.launch { listState.animateScrollToItem(0) }
-        })
+        val panelSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+        val panelFade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+        AnimatedVisibility(
+            visible = attachments.isNotEmpty(),
+            enter = slideInVertically(panelSpec) { it } + fadeIn(panelFade),
+            exit = slideOutVertically(panelSpec) { it } + fadeOut(panelFade),
+        ) {
+            AttachmentsPanel(
+                files = attachments.toList(),
+                asFiles = asFiles,
+                onAsFiles = { asFiles = it },
+                onRemove = { attachments.remove(it) },
+                onAdd = { attach(Attachments.pick()) },
+                onClose = { attachments.clear() },
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp),
+            )
+        }
+        Composer(
+            hasAttachments = attachments.isNotEmpty(),
+            onAttach = attach,
+            onSend = { text ->
+                if (attachments.isNotEmpty()) {
+                    val photos = !asFiles && attachments.all(Attachments::isPhoto)
+                    telegram.sendFiles(chat.id, attachments.toList(), photos, text)
+                    attachments.clear()
+                    asFiles = false
+                } else {
+                    telegram.sendText(chat.id, text)
+                }
+                scope.launch { listState.animateScrollToItem(0) }
+            },
+        )
     }
 }
 
@@ -170,9 +227,11 @@ fun MessageBubble(
     senderName: String?,
     settings: AppSettings,
     modifier: Modifier = Modifier,
+    telegram: Telegram? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     val outgoing = message.isOutgoing
+    val photo = message.photo
     Box(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = if (outgoing) Alignment.CenterEnd else Alignment.CenterStart,
@@ -187,36 +246,84 @@ fun MessageBubble(
             contentColor = if (outgoing) colors.onPrimaryContainer else colors.onSurface,
             modifier = Modifier.widthIn(max = 520.dp),
         ) {
-            Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
-                if (!senderName.isNullOrEmpty()) {
+            Column(Modifier.padding(if (photo != null) PhotoInset else 0.dp)) {
+                if (photo != null && telegram != null) {
+                    MessagePhoto(message, photo, telegram, (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp))
+                }
+                Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                    if (!senderName.isNullOrEmpty()) {
+                        Text(
+                            senderName,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = colors.primary,
+                        )
+                    }
+                    if (message.text.isNotEmpty()) {
+                        SelectionContainer {
+                            EmojiText(message.text, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
                     Text(
-                        senderName,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = colors.primary,
+                        formatTime(message.date),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant)
+                            .copy(alpha = 0.7f),
+                        modifier = Modifier.align(Alignment.End),
                     )
                 }
-                SelectionContainer {
-                    EmojiText(message.text, style = MaterialTheme.typography.bodyLarge)
-                }
-                Text(
-                    formatTime(message.date),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant)
-                        .copy(alpha = 0.7f),
-                    modifier = Modifier.align(Alignment.End),
-                )
             }
         }
     }
 }
 
+private val PhotoInset = 4.dp
+private val PhotoMaxWidth = 360.dp
+
+// A photo in a bubble, sized by its aspect ratio; downloads when first shown.
 @Composable
-private fun Composer(onSend: (String) -> Unit) {
+private fun MessagePhoto(message: UiMessage, file: TdApi.File, telegram: Telegram, corner: Dp) {
+    LaunchedEffect(file.id) { telegram.download(file) }
+    val path = telegram.localPath(file)
+    val image by produceState<ImageBitmap?>(null, path) {
+        path?.let { loadImage(it, maxSize = PhotoPixels) }?.let { value = it }
+    }
+    val ratio = if (message.photoWidth > 0 && message.photoHeight > 0) {
+        message.photoWidth.toFloat() / message.photoHeight
+    } else {
+        4f / 3f
+    }
+    val width = PhotoMaxWidth
+    val height = (width / ratio).coerceIn(120.dp, 420.dp)
+    Box(
+        Modifier
+            .size(width, height)
+            .clip(RoundedCornerShape(corner))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        contentAlignment = Alignment.Center,
+    ) {
+        val bitmap = image
+        if (bitmap != null) {
+            Image(bitmap, contentDescription = "Photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        } else {
+            LoadingIndicator()
+        }
+    }
+}
+
+private const val PhotoPixels = 1024
+
+@Composable
+private fun Composer(
+    hasAttachments: Boolean,
+    onAttach: (List<File>) -> Unit,
+    onSend: (String) -> Unit,
+) {
     var text by remember { mutableStateOf(TextFieldValue("")) }
     var emojiOpen by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
+    val canSend = text.text.isNotBlank() || hasAttachments
     val send = {
-        if (text.text.isNotBlank()) {
+        if (canSend) {
             onSend(text.text.trim())
             text = TextFieldValue("")
         }
@@ -234,10 +341,13 @@ private fun Composer(onSend: (String) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        IconButton(onClick = { onAttach(Attachments.pick()) }) {
+            Icon(Icons.Outlined.AttachFile, contentDescription = "Attach files")
+        }
         TextField(
             value = text,
             onValueChange = { text = it },
-            placeholder = { Text("Message") },
+            placeholder = { Text(if (hasAttachments) "Add a caption" else "Message") },
             visualTransformation = EmojiVisualTransformation,
             maxLines = 6,
             shape = RoundedCornerShape(28.dp),
@@ -251,14 +361,19 @@ private fun Composer(onSend: (String) -> Unit) {
                 .weight(1f)
                 .focusRequester(focus)
                 .onPreviewKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown &&
-                        event.key == Key.Enter &&
-                        !event.isShiftPressed
-                    ) {
-                        send()
-                        true
-                    } else {
-                        false
+                    when {
+                        event.type != KeyEventType.KeyDown -> false
+                        event.key == Key.Enter && !event.isShiftPressed -> {
+                            send()
+                            true
+                        }
+                        // Pictures and files from the clipboard open the preview; text pastes as usual.
+                        event.key == Key.V && (event.isCtrlPressed || event.isMetaPressed) -> {
+                            val pasted = Attachments.fromClipboard()
+                            if (pasted.isNotEmpty()) onAttach(pasted)
+                            pasted.isNotEmpty()
+                        }
+                        else -> false
                     }
                 },
         )
@@ -277,7 +392,7 @@ private fun Composer(onSend: (String) -> Unit) {
                 }
             }
         }
-        FilledIconButton(onClick = send, enabled = text.text.isNotBlank()) {
+        FilledIconButton(onClick = send, enabled = canSend) {
             Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
         }
     }

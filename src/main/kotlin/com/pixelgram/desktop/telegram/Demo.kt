@@ -47,6 +47,17 @@ fun Telegram.loadDemo() {
     }
     chatListsChanged()
     if (System.getProperty("pixelgram.demo.heavy") == "true") loadHeavyDemo(now)
+    // A photo from a local file, to see photo bubbles.
+    System.getProperty("pixelgram.demo.photo")?.let { path ->
+        val file = TdApi.File().apply {
+            id = 999_999
+            local = TdApi.LocalFile().apply {
+                this.path = path
+                isDownloadingCompleted = true
+            }
+        }
+        messages(100L).add(UiMessage(4, 100, 1, 0, true, now - 30, "Screenshot of the new build 🎉", photo = file, photoWidth = 1280, photoHeight = 800))
+    }
     messages(100L).addAll(listOf(
         UiMessage(3, 100, 2, 0, false, now - 60, "Did the new emoji arrive? 😀🥳🫠👍"),
         UiMessage(2, 100, 1, 0, true, now - 120, "Yes! 🎉🔥❤️ and flags 🇷🇺🇺🇦"),
@@ -57,6 +68,8 @@ fun Telegram.loadDemo() {
 // Hundreds of chats and a stream of updates, like the first minute after
 // signing in to a real account.
 private fun Telegram.loadHeavyDemo(now: Int) {
+    listOf("Groups" to "Groups", "Bots" to "Bots", "Home" to "Home", "Plugins" to "Custom", "Unread" to "Unread")
+        .forEachIndexed { index, (title, icon) -> folders.add(FolderInfo(10 + index, title, icon)) }
     val emoji = listOf("🚀", "🎉", "😀", "🔥", "❤️", "🇺🇦", "👍", "🥳", "🤔", "🐱")
     for (index in 0 until 600) {
         val chatId = 1000L + index

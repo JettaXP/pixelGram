@@ -84,6 +84,14 @@ internal fun CapsuleFolders(
     val colors = MaterialTheme.colorScheme
 
     val bounds = remember { mutableStateMapOf<ChatListKey, Pair<Float, Float>>() }
+    val scroll = rememberScrollState()
+    // Keeps the selected folder in view, centred when the row scrolls.
+    LaunchedEffect(selected, bounds[selected], scroll.viewportSize) {
+        val (left, width) = bounds[selected] ?: return@LaunchedEffect
+        if (scroll.maxValue == 0) return@LaunchedEffect
+        val target = (left + width / 2 - scroll.viewportSize / 2f).roundToInt().coerceIn(0, scroll.maxValue)
+        scroll.animateScrollTo(target, spec)
+    }
     var previous by remember { mutableStateOf(selected) }
     val travel = remember { Animatable(1f) }
     LaunchedEffect(selected) {
@@ -96,7 +104,9 @@ internal fun CapsuleFolders(
 
     Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
         Surface(shape = CircleShape, color = colors.surfaceContainerHighest) {
-            Box(Modifier.padding(CapsuleInset).horizontalScroll(rememberScrollState())) {
+            // With many folders the row scrolls; rounded ends match the pill, so
+            // folders slide under the curve instead of being cut off flat.
+            Box(Modifier.padding(CapsuleInset).clip(CircleShape).horizontalScroll(scroll)) {
                 // One indicator slides between folders instead of each button
                 // fading its own background.
                 Box(

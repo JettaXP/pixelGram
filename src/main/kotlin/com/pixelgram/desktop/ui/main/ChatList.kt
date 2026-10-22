@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material3.Badge
@@ -73,11 +74,12 @@ fun ChatList(
     onOpenArchive: () -> Unit,
     onMenu: (() -> Unit)?,
     onBack: (() -> Unit)?,
+    menuOpen: Boolean = false,
 ) {
     if (compact) {
         CompactChatList(
             listKey, chatsFor, selectedChatId, telegram, settings,
-            onOpen, archivedCount, onOpenArchive, onMenu, onBack,
+            onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen,
         )
         return
     }
@@ -93,7 +95,7 @@ fun ChatList(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
                 onMenu != null -> IconButton(onClick = onMenu) {
-                    Icon(Icons.Filled.Menu, contentDescription = "Menu")
+                    Icon(menuIcon(menuOpen), contentDescription = "Menu")
                 }
             }
             Text(
@@ -170,6 +172,8 @@ fun ChatList(
 
 private val GroupGap = 8.dp
 
+private fun menuIcon(open: Boolean) = if (open) Icons.AutoMirrored.Filled.MenuOpen else Icons.Filled.Menu
+
 // Narrow chat list: only avatars with unread badges.
 @Composable
 private fun CompactChatList(
@@ -183,6 +187,7 @@ private fun CompactChatList(
     onOpenArchive: () -> Unit,
     onMenu: (() -> Unit)?,
     onBack: (() -> Unit)?,
+    menuOpen: Boolean,
 ) {
     val colors = MaterialTheme.colorScheme
     val shape = settings.avatarShape.value.toShape(settings.avatarCorner.value)
@@ -192,7 +197,7 @@ private fun CompactChatList(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
             onMenu != null -> IconButton(onClick = onMenu, modifier = Modifier.padding(top = 8.dp)) {
-                Icon(Icons.Filled.Menu, contentDescription = "Menu")
+                Icon(menuIcon(menuOpen), contentDescription = "Menu")
             }
         }
         LazyColumn(

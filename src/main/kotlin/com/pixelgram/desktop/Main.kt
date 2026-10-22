@@ -28,6 +28,7 @@ import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.Accounts
 import com.pixelgram.desktop.telegram.AuthState
 import com.pixelgram.desktop.telegram.Notifications
+import com.pixelgram.desktop.ui.main.Attachments
 import com.pixelgram.desktop.ui.notify.ToastData
 import com.pixelgram.desktop.ui.notify.ToastWindow
 import com.pixelgram.desktop.ui.notify.testToast
@@ -52,6 +53,7 @@ import java.awt.SystemTray
 fun main() = application {
     val settings = remember {
         Emoji3D.removeOldFont()
+        Attachments.cleanTemp()
         AppSettings.load().also { EmojiFonts.settings = it }
     }
     val accounts = remember { Accounts(settings, MainScope()) }

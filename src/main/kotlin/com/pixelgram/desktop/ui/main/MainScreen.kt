@@ -151,6 +151,9 @@ fun MainScreen(
                         state = railState,
                         expanded = menuOpen,
                         showFolders = foldersLeft,
+                        // With folders on top the chat list's button opens the menu;
+                        // a second one on the rail would sit at another height.
+                        showMenuButton = foldersLeft,
                         telegram = telegram,
                         settings = settings,
                         tabs = tabs,
@@ -191,6 +194,7 @@ fun MainScreen(
                         archivedCount = telegram.chatList(ChatListKey.Archive).size,
                         onOpenArchive = { selectedKey = ChatListKey.Archive },
                         onMenu = if (foldersLeft) null else toggleMenu,
+                    menuOpen = menuOpen,
                         onBack = if (selectedKey == ChatListKey.Archive) {
                             { selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main }
                         } else {
@@ -262,6 +266,7 @@ private fun PixelRail(
     state: WideNavigationRailState,
     expanded: Boolean,
     showFolders: Boolean,
+    showMenuButton: Boolean,
     telegram: Telegram,
     settings: AppSettings,
     tabs: List<FolderTab>,
@@ -277,13 +282,17 @@ private fun PixelRail(
         colors = WideNavigationRailDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
-        header = {
-            IconButton(onClick = onToggleMenu, modifier = Modifier.padding(start = 24.dp)) {
-                Icon(
-                    if (expanded) Icons.AutoMirrored.Filled.MenuOpen else Icons.Filled.Menu,
-                    contentDescription = "Menu",
-                )
+        header = if (showMenuButton) {
+            {
+                IconButton(onClick = onToggleMenu, modifier = Modifier.padding(start = 24.dp)) {
+                    Icon(
+                        if (expanded) Icons.AutoMirrored.Filled.MenuOpen else Icons.Filled.Menu,
+                        contentDescription = "Menu",
+                    )
+                }
             }
+        } else {
+            null
         },
     ) {
         val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()

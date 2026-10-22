@@ -1,0 +1,218 @@
+package com.pixelgram.desktop.ui.main
+
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.pixelgram.desktop.core.AppLog
+import com.pixelgram.desktop.core.AppPaths
+import com.pixelgram.desktop.telegram.imageSize
+import com.pixelgram.desktop.ui.components.loadImage
+import com.pixelgram.desktop.ui.storage.formatSize
+import java.awt.FileDialog
+import java.awt.Frame
+import java.awt.Image
+import java.awt.Toolkit
+import java.awt.datatransfer.DataFlavor
+import java.awt.image.BufferedImage
+import java.io.File
+import javax.imageio.ImageIO
+
+// Files picked or pasted for sending.
+object Attachments {
+    private val PhotoExtensions = setOf("jpg", "jpeg", "png", "webp", "bmp")
+
+    // Telegram compresses photos; bigger files go as documents.
+    private const val MaxPhotoBytes = 10L * 1024 * 1024
+
+    private val tempDir: File get() = File(AppPaths.dataDir, "temp")
+
+    fun isPhoto(file: File) = file.extension.lowercase() in PhotoExtensions && file.length() <= MaxPhotoBytes
+
+    fun pick(): List<File> {
+        val dialog = FileDialog(null as Frame?, "Send files", FileDialog.LOAD).apply { isMultipleMode = true }
+        dialog.isVisible = true
+        return dialog.files.orEmpty().filter { it.isFile }
+    }
+
+    // Files copied in a file manager, or a picture copied from anywhere (saved as PNG).
+    fun fromClipboard(): List<File> = runCatching {
+        val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+        when {
+            clipboard.isDataFlavorAvailable(DataFlavor.javaFileListFlavor) ->
+                (clipboard.getData(DataFlavor.javaFileListFlavor) as List<*>).filterIsInstance<File>().filter { it.isFile }
+            clipboard.isDataFlavorAvailable(DataFlavor.imageFlavor) -> {
+                val image = clipboard.getData(DataFlavor.imageFlavor) as Image
+                listOfNotNull(savePasted(image))
+            }
+            else -> emptyList()
+        }
+    }.onFailure { AppLog.write("Paste failed", it) }.getOrDefault(emptyList())
+
+    private fun savePasted(image: Image): File? {
+        val width = image.getWidth(null)
+        val height = image.getHeight(null)
+        if (width <= 0 || height <= 0) return null
+        val buffered = image as? BufferedImage ?: BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB).also {
+            it.createGraphics().apply { drawImage(image, 0, 0, null) }.dispose()
+        }
+        tempDir.mkdirs()
+        val file = File(tempDir, "pasted-${System.currentTimeMillis()}.png")
+        ImageIO.write(buffered, "png", file)
+        return file
+    }
+
+    // Pasted pictures from earlier days are no longer needed.
+    fun cleanTemp() {
+        val dayAgo = System.currentTimeMillis() - 24 * 60 * 60 * 1000
+        tempDir.listFiles()?.filter { it.lastModified() < dayAgo }?.forEach { it.delete() }
+    }
+}
+
+// Preview above the composer: the files in a row, photo or file mode; the
+// composer below becomes the caption and its send button sends everything.
+@Composable
+fun AttachmentsPanel(
+    files: List<File>,
+    asFiles: Boolean,
+    onAsFiles: (Boolean) -> Unit,
+    onRemove: (File) -> Unit,
+    onAdd: () -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val canBePhotos = files.all(Attachments::isPhoto)
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shadowElevation = 3.dp,
+        modifier = modifier.fillMaxWidth().animateContentSize(),
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val kind = if (asFiles || !canBePhotos) "file" else "photo"
+                Text(
+                    "${files.size} $kind${if (files.size == 1) "" else "s"}",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+                Spacer(Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
+                    ToggleButton(
+                        checked = !asFiles && canBePhotos,
+                        onCheckedChange = { onAsFiles(false) },
+                        enabled = canBePhotos,
+                        shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                    ) { Text("Photo") }
+                    ToggleButton(
+                        checked = asFiles || !canBePhotos,
+                        onCheckedChange = { onAsFiles(true) },
+                        shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                    ) { Text("File") }
+                }
+                IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = "Cancel") }
+            }
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(files, key = { it.absolutePath }) { file ->
+                    AttachmentTile(file, showAsPhoto = !asFiles && canBePhotos, onRemove = { onRemove(file) })
+                }
+                item(key = "add") {
+                    OutlinedCard(
+                        onClick = onAdd,
+                        shape = TileShape,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier.size(width = 96.dp, height = TileHeight),
+                    ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Outlined.Add, contentDescription = "Add files")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private val TileHeight = 180.dp
+private val TileShape = RoundedCornerShape(20.dp)
+
+@Composable
+private fun AttachmentTile(file: File, showAsPhoto: Boolean, onRemove: () -> Unit) {
+    val image by produceState<ImageBitmap?>(null, file, showAsPhoto) {
+        value = if (showAsPhoto) loadImage(file.absolutePath, maxSize = PreviewSize) else null
+    }
+    val width = if (showAsPhoto) {
+        val (w, h) = remember(file) { imageSize(file) }
+        if (w > 0 && h > 0) (TileHeight.value * w / h).coerceIn(110f, 320f).dp else TileHeight
+    } else {
+        200.dp
+    }
+    Box(Modifier.size(width = width, height = TileHeight).clip(TileShape)) {
+        val bitmap = image
+        if (bitmap != null) {
+            Image(bitmap, contentDescription = file.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        } else {
+            Column(
+                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHighest).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(Icons.Outlined.Description, contentDescription = null, modifier = Modifier.size(40.dp))
+                Text(file.name, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    formatSize(file.length()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        FilledTonalIconButton(
+            onClick = onRemove,
+            modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(32.dp),
+            colors = IconButtonDefaults.filledTonalIconButtonColors(),
+        ) {
+            Icon(Icons.Filled.Close, contentDescription = "Remove", modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+private const val PreviewSize = 640

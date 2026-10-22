@@ -33,31 +33,66 @@ import it.tdlight.jni.TdApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Image as SkiaImage
+import org.jetbrains.skia.Rect
+import org.jetbrains.skia.SamplingMode
+import org.jetbrains.skia.Surface
 import java.io.File
 
+// Decoded pictures by path and size, limited by memory rather than count:
+// photos are far bigger than avatars.
 private object ImageCache {
-    private const val MaxEntries = 300
+    private const val MaxBytes = 128L * 1024 * 1024
+    private var bytes = 0L
     private val cache = object : LinkedHashMap<String, ImageBitmap>(64, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ImageBitmap>) =
-            size > MaxEntries
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ImageBitmap>): Boolean {
+            if (bytes <= MaxBytes) return false
+            bytes -= eldest.value.sizeInBytes()
+            return true
+        }
     }
 
-    @Synchronized
-    fun get(path: String): ImageBitmap? = cache[path]
+    private fun ImageBitmap.sizeInBytes() = width.toLong() * height * 4
 
     @Synchronized
-    fun put(path: String, image: ImageBitmap) {
-        cache[path] = image
+    fun get(key: String): ImageBitmap? = cache[key]
+
+    @Synchronized
+    fun put(key: String, image: ImageBitmap) {
+        cache.put(key, image)?.let { bytes -= it.sizeInBytes() }
+        bytes += image.sizeInBytes()
     }
 }
 
-suspend fun loadImage(path: String): ImageBitmap? {
-    ImageCache.get(path)?.let { return it }
+suspend fun loadImage(path: String): ImageBitmap? = loadImage(path, maxSize = 0)
+
+// maxSize > 0 scales the longer side down to it, so big photos stay small in memory.
+suspend fun loadImage(path: String, maxSize: Int): ImageBitmap? {
+    val key = "$path@$maxSize"
+    ImageCache.get(key)?.let { return it }
     return withContext(Dispatchers.IO) {
         runCatching {
-            SkiaImage.makeFromEncoded(File(path).readBytes()).toComposeImageBitmap()
+            val image = SkiaImage.makeFromEncoded(File(path).readBytes())
+            val longer = maxOf(image.width, image.height)
+            if (maxSize <= 0 || longer <= maxSize) {
+                image.toComposeImageBitmap()
+            } else {
+                val scale = maxSize.toFloat() / longer
+                val width = (image.width * scale).toInt().coerceAtLeast(1)
+                val height = (image.height * scale).toInt().coerceAtLeast(1)
+                val surface = Surface.makeRasterN32Premul(width, height)
+                surface.canvas.drawImageRect(
+                    image,
+                    Rect.makeWH(image.width.toFloat(), image.height.toFloat()),
+                    Rect.makeWH(width.toFloat(), height.toFloat()),
+                    SamplingMode.CATMULL_ROM,
+                    null,
+                    true,
+                )
+                image.close()
+                surface.makeImageSnapshot().toComposeImageBitmap().also { surface.close() }
+            }
         }.getOrNull()
-    }?.also { ImageCache.put(path, it) }
+    }?.also { ImageCache.put(key, it) }
 }
 
 @Composable
