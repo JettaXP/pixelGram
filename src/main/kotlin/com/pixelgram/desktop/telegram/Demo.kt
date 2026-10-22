@@ -168,7 +168,33 @@ private fun Telegram.loadTypesDemo(pluginPath: String, now: Int) {
     val list = messages(101L)
     fun msg(id: Long, out: Boolean, ago: Int, content: TdApi.MessageContent) =
         UiMessage(id, 101, if (out) 1 else 2, 0, out, now - ago, messageText(content), content = content)
+    fun link(url: String, preview: TdApi.LinkPreview) = TdApi.MessageText().apply {
+        text = TdApi.FormattedText(url, arrayOf(TdApi.TextEntity(0, url.length, TdApi.TextEntityTypeUrl())))
+        linkPreview = preview.apply { this.url = "https://$url"; displayUrl = url }
+    }
+    val shot = System.getProperty("pixelgram.demo.photo")
+    val photo = TdApi.Photo().apply {
+        sizes = arrayOf(TdApi.PhotoSize("x", demoFile(900_010, shot, 120_000), 1180, 760, IntArray(0)))
+    }
     list.addAll(listOf(
+        msg(33, false, 20, link("t.me/addtheme/end4hypr", TdApi.LinkPreview().apply {
+            siteName = "Color theme"; title = "end-4 theme"; description = TdApi.FormattedText("", emptyArray())
+            type = TdApi.LinkPreviewTypeTheme(arrayOf(TdApi.Document().apply {
+                fileName = "theme.tdesktop-theme"
+                thumbnail = TdApi.Thumbnail(TdApi.ThumbnailFormatPng(), 1180, 760, demoFile(900_010, shot, 120_000))
+                document = demoFile(900_011, null, 1000)
+            }), null)
+        })),
+        msg(32, true, 30, link("github.com/JettaXP/pixelGram", TdApi.LinkPreview().apply {
+            siteName = "GitHub"; title = "JettaXP/pixelGram"
+            description = TdApi.FormattedText("Telegram desktop client with Material 3 Expressive design.", emptyArray())
+            type = TdApi.LinkPreviewTypeArticle(photo)
+        })),
+        msg(31, false, 40, link("t.me/addemoji/GOOGLEturtlestickers", TdApi.LinkPreview().apply {
+            siteName = "Telegram"; title = "Google Turtle"
+            description = TdApi.FormattedText("Free sticker pack with 120 stickers.", emptyArray())
+            type = TdApi.LinkPreviewTypeStickerSet(emptyArray())
+        })),
         msg(30, true, 60, TdApi.MessageDocument().apply {
             document = TdApi.Document().apply { fileName = "media_glow.plugin"; document = demoFile(900_001, pluginPath, 1006_284) }
             caption = TdApi.FormattedText("", emptyArray())

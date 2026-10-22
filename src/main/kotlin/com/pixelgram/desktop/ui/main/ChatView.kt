@@ -620,11 +620,20 @@ fun MessageBubble(
                             BlockContent(message, telegram, onPlugin = { PluginViewer.path = it })
                             Spacer(Modifier.height(4.dp))
                         }
-                        TextWithMeta(
-                            text = message.text,
-                            entities = message.entities,
-                            meta = { MessageMeta(message, status, settings.messageSeconds.value, metaColor, readColor) },
-                        )
+                        val linkPreview = linkPreviewOf(message.content)
+                        if (linkPreview != null && telegram != null) {
+                            TextWithMeta(text = message.text, entities = message.entities, meta = { Box(Modifier) })
+                            LinkPreviewCard(linkPreview, telegram, outgoing, PhotoMaxWidth - 24.dp)
+                            Box(Modifier.align(Alignment.End).padding(top = 4.dp)) {
+                                MessageMeta(message, status, settings.messageSeconds.value, metaColor, readColor)
+                            }
+                        } else {
+                            TextWithMeta(
+                                text = message.text,
+                                entities = message.entities,
+                                meta = { MessageMeta(message, status, settings.messageSeconds.value, metaColor, readColor) },
+                            )
+                        }
                         if (message.reactions.isNotEmpty() && onReact != null) {
                             ReactionChips(message.reactions, outgoing, onReact)
                         }
