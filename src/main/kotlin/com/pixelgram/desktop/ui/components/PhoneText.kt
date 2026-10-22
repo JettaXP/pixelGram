@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.components
 
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -71,16 +75,20 @@ fun PhoneText(
         if (!covered) {
             Text(text, style = style, color = tint)
         } else {
-            val size = with(LocalDensity.current) { (style.fontSize.takeIf { it.value > 0 } ?: LocalTextStyle.current.fontSize).toDp() }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(size * 0.15f),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.height(size * 1.4f),
-            ) {
-                Text("+", style = style, color = tint)
-                repeat(CoverShapes) { index ->
-                    val shape = PhoneShapes[index % PhoneShapes.size].toShape()
-                    Box(Modifier.size(size).background(tint, shape))
+            val full = with(LocalDensity.current) { (style.fontSize.takeIf { it.value > 0 } ?: LocalTextStyle.current.fontSize).toDp() }
+            val digits = text.count(Char::isDigit).coerceAtLeast(1)
+            BoxWithConstraints {
+                val fit = if (maxWidth.value.isFinite()) maxWidth / ((digits + 1) * (1f + ShapeGap)) else full
+                val size = minOf(full, fit)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(size * ShapeGap),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.height(full * 1.4f),
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = null, tint = tint, modifier = Modifier.size(size * 1.1f))
+                    repeat(digits) { index ->
+                        Box(Modifier.size(size).background(tint, PhoneShapes[index % PhoneShapes.size].toShape()))
+                    }
                 }
             }
         }
@@ -88,4 +96,4 @@ fun PhoneText(
 }
 
 private const val PeekMs = 4000L
-private const val CoverShapes = 8
+private const val ShapeGap = 0.15f
