@@ -386,20 +386,14 @@ private fun AudioContent(message: UiMessage, audio: TdApi.Audio, telegram: Teleg
         Column(Modifier.width(WaveWidth)) {
             EmojiText(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (active) {
-                WavySeekBar(
-                    fraction = AudioPlayer.progress(key),
-                    onSeek = { fraction -> telegram.localPath(audio.audio)?.let { AudioPlayer.seek(key, it, fraction) } },
-                    modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+                Text(
+                    "%02d:%02d / %02d:%02d".format(
+                        AudioPlayer.position.toInt() / 60, AudioPlayer.position.toInt() % 60,
+                        audio.duration / 60, audio.duration % 60,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LocalContentColorAlpha(),
                 )
-                Row(Modifier.fillMaxWidth()) {
-                    Text(
-                        formatDuration(AudioPlayer.position.toInt()),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = LocalContentColorAlpha(),
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(formatDuration(audio.duration), style = MaterialTheme.typography.labelSmall, color = LocalContentColorAlpha())
-                }
             } else {
                 Text(
                     "%02d:%02d, %s".format(audio.duration / 60, audio.duration % 60, formatSize(audio.audio?.size ?: 0)),

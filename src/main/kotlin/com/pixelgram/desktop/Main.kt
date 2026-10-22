@@ -1,5 +1,7 @@
 package com.pixelgram.desktop
 
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.mutableIntStateOf
 import io.github.vinceglb.filekit.FileKit
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -101,8 +103,10 @@ fun main() = application {
     }
 
     val toasts = remember { ToastStack() }
+    var raise by remember { mutableIntStateOf(0) }
     val openFromNotification = { card: ToastData ->
         visible = true
+        raise++
         if (card.chat.id != 0L) {
             accounts.switchTo(card.telegram)
             Notifications.openRequest = card.telegram.account to card.chat.id
@@ -146,10 +150,15 @@ fun main() = application {
             val images = withContext(Dispatchers.IO) { AppIcons.sizes(scheme) }
             if (images.isNotEmpty()) window.iconImages = images
         }
-        LaunchedEffect(visible) {
+        LaunchedEffect(visible, raise) {
             if (!visible) return@LaunchedEffect
             if (window.extendedState and java.awt.Frame.ICONIFIED != 0) window.extendedState = java.awt.Frame.NORMAL
+            if (window.opacity < 1f) window.opacity = 1f
+            window.isAlwaysOnTop = true
             window.toFront()
+            window.requestFocus()
+            delay(RaiseHoldMs)
+            window.isAlwaysOnTop = false
         }
         val focused = LocalWindowInfo.current.isWindowFocused
         LaunchedEffect(focused) { accounts.list.forEach { it.windowFocused = focused } }
@@ -230,3 +239,5 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
         }
     }
 }
+
+private const val RaiseHoldMs = 150L
