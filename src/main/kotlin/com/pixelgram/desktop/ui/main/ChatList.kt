@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.graphicsLayer
@@ -81,11 +82,12 @@ fun ChatList(
     onMenu: (() -> Unit)?,
     onBack: (() -> Unit)?,
     menuOpen: Boolean = false,
+    onSearch: (() -> Unit)? = null,
 ) {
     Box(Modifier.fillMaxSize()) {
         ChatListBody(
             listKey, title, chatsFor, order, vertical, compact, selectedChatId, telegram, settings,
-            onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen,
+            onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen, onSearch,
         )
         ConnectionPill(
             status = telegram.connection,
@@ -111,6 +113,7 @@ private fun ChatListBody(
     onMenu: (() -> Unit)?,
     onBack: (() -> Unit)?,
     menuOpen: Boolean = false,
+    onSearch: (() -> Unit)? = null,
 ) {
     if (compact) {
         CompactChatList(
@@ -139,6 +142,9 @@ private fun ChatListBody(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.weight(1f).padding(start = 4.dp),
             )
+            if (onSearch != null) {
+                IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Search messages") }
+            }
         }
         val forward = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
         val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()

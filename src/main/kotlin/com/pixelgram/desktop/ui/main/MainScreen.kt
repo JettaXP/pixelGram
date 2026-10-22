@@ -210,7 +210,9 @@ fun MainScreen(
                             TopFolders(tabs, selectedKey, onSelect = { selectedKey = it })
                         }
                     }
-                    ChatList(
+                    if (MessageSearch.open && !compact) {
+                        MessageSearchPanel(telegram, settings, onOpen = onOpenChat)
+                    } else ChatList(
                         listKey = selectedKey,
                         title = if (selectedKey == ChatListKey.Archive) "Archived chats" else "pixelGram",
                         chatsFor = telegram::chatList,
@@ -224,6 +226,7 @@ fun MainScreen(
                         archivedCount = telegram.chatList(ChatListKey.Archive).size,
                         onOpenArchive = { selectedKey = ChatListKey.Archive },
                         onMenu = if (foldersLeft) null else toggleMenu,
+                        onSearch = { MessageSearch.start(null) },
                     menuOpen = menuOpen,
                         onBack = if (selectedKey == ChatListKey.Archive) {
                             { selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main }

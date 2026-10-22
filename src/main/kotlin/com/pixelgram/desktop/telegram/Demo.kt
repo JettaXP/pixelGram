@@ -158,6 +158,7 @@ private fun Telegram.loadTypesDemo(pluginPath: String, now: Int) {
                     TdApi.PollOption().apply { text = TdApi.FormattedText("Noto 3D", emptyArray()); votePercentage = 58; isChosen = true },
                     TdApi.PollOption().apply { text = TdApi.FormattedText("Noto", emptyArray()); votePercentage = 25 },
                     TdApi.PollOption().apply { text = TdApi.FormattedText("Apple", emptyArray()); votePercentage = 17 },
+                    TdApi.PollOption().apply { text = TdApi.FormattedText("Everyone", emptyArray()); votePercentage = 100 },
                 )
             }
         }),

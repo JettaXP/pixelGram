@@ -138,6 +138,7 @@ enum class MessageStatus { Sending, Sent, Read, Failed }
 private const val AUTH_TIMEOUT_MS = 30_000L
 private const val ListsInterval = 100L
 private const val ClockTickMs = 20_000L
+private const val SearchLimit = 100
 private const val AlbumSize = 10
 
 private object Tdlib {
@@ -865,6 +866,29 @@ class Telegram(
     }
 
     fun photoPath(message: UiMessage): String? = localPath(message.fullPhoto) ?: localPath(message.photo)
+
+    fun searchMessages(query: String, chatId: Long?, onResult: (Int, List<TdApi.Message>) -> Unit) {
+        val function: TdApi.Function<*> = if (chatId != null) {
+            TdApi.SearchChatMessages().apply {
+                this.chatId = chatId
+                this.query = query
+                limit = SearchLimit
+            }
+        } else {
+            TdApi.SearchMessages().apply {
+                this.query = query
+                offset = ""
+                limit = SearchLimit
+            }
+        }
+        send(function) { result ->
+            when (result) {
+                is TdApi.FoundChatMessages -> onResult(result.totalCount, result.messages.toList())
+                is TdApi.FoundMessages -> onResult(result.totalCount, result.messages.toList())
+                else -> onResult(0, emptyList())
+            }
+        }
+    }
 
     fun votePoll(chatId: Long, messageId: Long, options: IntArray) {
         send(TdApi.SetPollAnswer().apply {

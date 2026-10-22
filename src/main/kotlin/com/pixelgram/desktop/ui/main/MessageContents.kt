@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.ArrowDownward
 import com.pixelgram.desktop.core.AudioPlayer
@@ -10,7 +11,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Checkbox
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -40,7 +41,7 @@ import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
@@ -310,8 +311,8 @@ private fun PlayButton(key: Long, chatId: Long, title: String, file: TdApi.File?
         ) {
             when {
                 busy || (active && AudioPlayer.loading) -> LoadingIndicator(Modifier.size(32.dp), color = scheme.onPrimary)
-                active && AudioPlayer.playing -> Icon(Icons.Filled.Pause, contentDescription = "Pause", tint = scheme.onPrimary, modifier = Modifier.size(30.dp))
-                else -> Icon(Icons.Filled.PlayArrow, contentDescription = "Play", tint = scheme.onPrimary, modifier = Modifier.size(30.dp))
+                active && AudioPlayer.playing -> Icon(Icons.Rounded.Pause, contentDescription = "Pause", tint = scheme.onPrimary, modifier = Modifier.size(30.dp))
+                else -> Icon(Icons.Rounded.PlayArrow, contentDescription = "Play", tint = scheme.onPrimary, modifier = Modifier.size(30.dp))
             }
         }
         if (!downloaded && !busy) {
@@ -385,19 +386,20 @@ private fun AudioContent(message: UiMessage, audio: TdApi.Audio, telegram: Teleg
         Column(Modifier.width(WaveWidth)) {
             EmojiText(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (active) {
-                Canvas(Modifier.fillMaxWidth().height(14.dp).seekable(key, audio.audio, telegram)) {
-                    val y = size.height / 2
-                    val stroke = 4.dp.toPx()
-                    val played = size.width * AudioPlayer.progress(key)
-                    drawLine(color.copy(alpha = 0.25f), Offset(0f, y), Offset(size.width, y), stroke, StrokeCap.Round)
-                    drawLine(color, Offset(0f, y), Offset(played.coerceAtLeast(stroke / 2), y), stroke, StrokeCap.Round)
-                    drawCircle(color, radius = stroke * 1.2f, center = Offset(played, y))
-                }
-                Text(
-                    formatDuration(AudioPlayer.position.toInt()) + " / " + formatDuration(audio.duration),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = LocalContentColorAlpha(),
+                WavySeekBar(
+                    fraction = AudioPlayer.progress(key),
+                    onSeek = { fraction -> telegram.localPath(audio.audio)?.let { AudioPlayer.seek(key, it, fraction) } },
+                    modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
                 )
+                Row(Modifier.fillMaxWidth()) {
+                    Text(
+                        formatDuration(AudioPlayer.position.toInt()),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = LocalContentColorAlpha(),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(formatDuration(audio.duration), style = MaterialTheme.typography.labelSmall, color = LocalContentColorAlpha())
+                }
             } else {
                 Text(
                     "%02d:%02d, %s".format(audio.duration / 60, audio.duration % 60, formatSize(audio.audio?.size ?: 0)),
@@ -474,6 +476,7 @@ private fun callLength(seconds: Int): String = when {
     else -> "$seconds s"
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun PollContent(message: UiMessage, poll: TdApi.Poll, telegram: Telegram) {
     val scheme = MaterialTheme.colorScheme
@@ -509,11 +512,12 @@ private fun PollContent(message: UiMessage, poll: TdApi.Poll, telegram: Telegram
                             Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = scheme.primary, modifier = Modifier.size(18.dp))
                         }
                     }
-                    LinearProgressIndicator(
+                    LinearWavyProgressIndicator(
                         progress = { option.votePercentage / 100f },
                         color = scheme.primary,
-                        trackColor = scheme.primary.copy(alpha = 0.15f),
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        trackColor = scheme.primary.copy(alpha = 0.2f),
+                        waveSpeed = 0.dp,
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     )
                 }
             } else {
@@ -608,7 +612,7 @@ private data class MediaInfo(
 private fun PlayBadge(busy: Boolean) {
     Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
         if (busy) LoadingIndicator(Modifier.size(34.dp), color = Color.White) else
-            Icon(Icons.Filled.PlayArrow, contentDescription = "Play", tint = Color.White, modifier = Modifier.size(30.dp))
+            Icon(Icons.Rounded.PlayArrow, contentDescription = "Play", tint = Color.White, modifier = Modifier.size(30.dp))
     }
 }
 

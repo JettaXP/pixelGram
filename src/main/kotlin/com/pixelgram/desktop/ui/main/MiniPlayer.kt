@@ -1,5 +1,11 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
@@ -37,12 +43,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOn
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -170,23 +176,11 @@ fun MiniPlayer(telegram: Telegram) {
                         Icon(Icons.Filled.Close, contentDescription = "Close player")
                     }
                 }
-                val color = MaterialTheme.colorScheme.primary
-                val track = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                Canvas(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(SeekHeight)
-                        .pointerInput(Unit) { detectTapGestures { AudioPlayer.seekCurrent(it.x / size.width) } }
-                        .pointerInput(Unit) {
-                            detectHorizontalDragGestures { change, _ -> AudioPlayer.seekCurrent(change.position.x / size.width) }
-                        },
-                ) {
-                    val y = size.height / 2
-                    val stroke = 3.dp.toPx()
-                    val played = if (AudioPlayer.duration > 0f) size.width * (AudioPlayer.position / AudioPlayer.duration) else 0f
-                    drawLine(track, Offset(0f, y), Offset(size.width, y), stroke, StrokeCap.Round)
-                    drawLine(color, Offset(0f, y), Offset(played.coerceIn(0f, size.width), y), stroke, StrokeCap.Round)
-                }
+                WavySeekBar(
+                    fraction = if (AudioPlayer.duration > 0f) AudioPlayer.position / AudioPlayer.duration else 0f,
+                    onSeek = AudioPlayer::seekCurrent,
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                )
             }
         }
     }
@@ -228,7 +222,7 @@ private fun MorphControls(playing: Boolean, onPrevious: () -> Unit, onPlay: () -
             colors = scheme.secondaryContainer to scheme.onSecondaryContainer,
             source = sources.getValue(Control.Previous),
             onClick = onPrevious,
-        ) { Icon(Icons.Filled.SkipPrevious, contentDescription = "Previous", modifier = Modifier.size(22.dp)) }
+        ) { Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous", modifier = Modifier.size(22.dp)) }
         MorphButton(
             width = playWidth,
             height = 88f,
@@ -248,7 +242,7 @@ private fun MorphControls(playing: Boolean, onPrevious: () -> Unit, onPlay: () -
             colors = scheme.secondaryContainer to scheme.onSecondaryContainer,
             source = sources.getValue(Control.Next),
             onClick = onNext,
-        ) { Icon(Icons.Filled.SkipNext, contentDescription = "Next", modifier = Modifier.size(22.dp)) }
+        ) { Icon(Icons.Rounded.SkipNext, contentDescription = "Next", modifier = Modifier.size(22.dp)) }
     }
 }
 
@@ -281,7 +275,7 @@ private fun PlayPauseIcon(playing: Boolean) {
     val alt by animateFloatAsState(if (playing) 1f else 0f, spring(dampingRatio = 0.6f, stiffness = 520f))
     Box(contentAlignment = Alignment.Center) {
         Icon(
-            Icons.Filled.PlayArrow,
+            Icons.Rounded.PlayArrow,
             contentDescription = if (playing) null else "Play",
             modifier = Modifier.size(26.dp).graphicsLayer {
                 alpha = (1f - alt).coerceIn(0f, 1f)
@@ -290,7 +284,7 @@ private fun PlayPauseIcon(playing: Boolean) {
             },
         )
         Icon(
-            Icons.Filled.Pause,
+            Icons.Rounded.Pause,
             contentDescription = if (playing) "Pause" else null,
             modifier = Modifier.size(26.dp).graphicsLayer {
                 alpha = alt.coerceIn(0f, 1f)
@@ -303,3 +297,32 @@ private fun PlayPauseIcon(playing: Boolean) {
 
 private const val ControlScale = 0.5f
 private val ControlGap = 4.dp
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = Modifier) {
+    var dragging by remember { mutableStateOf<Float?>(null) }
+    val interaction = remember { MutableInteractionSource() }
+    Slider(
+        value = dragging ?: fraction.coerceIn(0f, 1f),
+        onValueChange = { dragging = it },
+        onValueChangeFinished = {
+            dragging?.let(onSeek)
+            dragging = null
+        },
+        interactionSource = interaction,
+        thumb = {
+            SliderDefaults.Thumb(
+                interactionSource = interaction,
+                thumbSize = DpSize(4.dp, 22.dp),
+            )
+        },
+        track = { state ->
+            LinearWavyProgressIndicator(
+                progress = { state.value },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        modifier = modifier.height(28.dp),
+    )
+}

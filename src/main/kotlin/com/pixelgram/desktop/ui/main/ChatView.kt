@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material.icons.filled.Search
 import com.pixelgram.desktop.telegram.isRich
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
@@ -203,6 +204,23 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             },
         )
     }
+    LaunchedEffect(chat.id) { MessageSearch.lastChat = chat.id }
+    LaunchedEffect(MessageSearch.jump, chat.id) {
+        val (jumpChat, jumpId) = MessageSearch.jump ?: return@LaunchedEffect
+        if (jumpChat != chat.id) return@LaunchedEffect
+        repeat(JumpPages) {
+            val index = messages.indexOfFirst { it.id == jumpId }
+            if (index >= 0) {
+                listState.animateScrollToItem(index)
+                highlight = jumpId to System.nanoTime()
+                MessageSearch.jump = null
+                return@LaunchedEffect
+            }
+            telegram.loadMoreMessages(chat.id)
+            delay(JumpPageDelayMs)
+        }
+        MessageSearch.jump = null
+    }
     PluginViewer.path?.let { path -> PluginDialog(path, telegram) { PluginViewer.path = null } }
     deleting?.let { message ->
         val private = chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id)
@@ -230,7 +248,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ChatAvatar(chat, telegram, settings, size = 40.dp)
-            Column {
+            Column(Modifier.weight(1f)) {
                 EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
                 val status = telegram.presence(chat)
                 AnimatedContent(status, transitionSpec = { fadeIn() togetherWith fadeOut() }) { text ->
@@ -242,6 +260,9 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                         )
                     }
                 }
+            }
+            IconButton(onClick = { MessageSearch.start(chat.id) }) {
+                Icon(Icons.Filled.Search, contentDescription = "Search in chat")
             }
         }
         var personalChannel by remember(chat.id) { mutableLongStateOf(0L) }
@@ -655,6 +676,8 @@ private fun TextWithMeta(text: String, meta: @Composable () -> Unit) {
 }
 
 private val MetaGap = 10.dp
+private const val JumpPages = 40
+private const val JumpPageDelayMs = 300L
 
 object PluginViewer {
     var path by mutableStateOf<String?>(null)
