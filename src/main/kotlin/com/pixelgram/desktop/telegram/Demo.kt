@@ -94,7 +94,15 @@ fun Telegram.loadDemo() {
     messages(100L).addAll((1..16).map { k ->
         UiMessage(-k.toLong(), 100, if (k % 2 == 0) 1 else 2, 0, k % 2 == 0, now - 86_400 - k * 3_000 - (if (k > 8) 86_400 * 3 else 0), "Older message $k")
     })
-    messages(100L).add(0, UiMessage(5, 100, 2, 0, false, now - 10, "Looks great 🔥", replyToId = 2))
+    messages(100L).add(0, UiMessage(5, 100, 2, 0, false, now - 10, "Looks great 🔥", replyToId = 2, reactions = listOf(
+        TdApi.MessageReaction().apply { type = TdApi.ReactionTypeEmoji("❤️"); totalCount = 2; isChosen = true },
+        TdApi.MessageReaction().apply { type = TdApi.ReactionTypeEmoji("🔥"); totalCount = 1 },
+    )))
+    run {
+        fun button(text: String) = TdApi.InlineKeyboardButton().apply { this.text = text; type = TdApi.InlineKeyboardButtonTypeCallback(text.toByteArray()) }
+        val rows = (0 until 3).map { r -> (0 until 4).map { c -> button(if ((r + c) % 3 == 0) "⚫" else " ") } } + listOf(listOf(button("🏳️ Сдаться")))
+        messages(100L).add(0, UiMessage(7, 100, 2, 0, false, now - 3, "Шашки\nХодит: Alice (⚪ белые)", keyboard = rows, viaBot = 2))
+    }
     run {
         val text = "Bold, italic, underline, struck out, mono and a secret spoiler text right here. Link to pixelGram.\nAnd a quote line"
         fun at(part: String, type: TdApi.TextEntityType) = TdApi.TextEntity(text.indexOf(part), part.length, type)

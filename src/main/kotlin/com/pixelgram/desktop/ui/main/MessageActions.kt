@@ -73,6 +73,8 @@ class MessageActions(
     val onQuoteClick: (Long) -> Unit,
     val onCopyPhoto: (UiMessage) -> Unit,
     val onForward: (UiMessage) -> Unit,
+    val onReact: (UiMessage, String) -> Unit,
+    val loadReactions: (UiMessage, (List<String>) -> Unit) -> Unit,
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -181,6 +183,15 @@ private fun MessageMenu(message: UiMessage, actions: MessageActions, onDismiss: 
         shape = RoundedCornerShape(16.dp),
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
     ) {
+        if (!message.service) {
+            var available by remember(message.key) { mutableStateOf(emptyList<String>()) }
+            androidx.compose.runtime.LaunchedEffect(message.key) { actions.loadReactions(message) { available = it } }
+            ReactionPicker(available) { emoji ->
+                onDismiss()
+                actions.onReact(message, emoji)
+            }
+            HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        }
         DropdownMenuItem(
             text = { Text("Reply") },
             leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Reply, contentDescription = null) },

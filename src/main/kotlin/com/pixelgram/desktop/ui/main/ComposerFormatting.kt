@@ -24,9 +24,17 @@ enum class FormatType(val label: String, val shortcut: String) {
     Spoiler("Spoiler", "Ctrl+Shift+P"),
     Link("Create link", "Ctrl+K"),
     Date("Date", "Ctrl+Shift+D"),
+    Mention("Mention", ""),
 }
 
-data class FormatSpan(val start: Int, val end: Int, val type: FormatType, val url: String = "", val time: Int = 0)
+data class FormatSpan(
+    val start: Int,
+    val end: Int,
+    val type: FormatType,
+    val url: String = "",
+    val time: Int = 0,
+    val userId: Long = 0,
+)
 
 fun shiftSpans(spans: List<FormatSpan>, old: String, new: String): List<FormatSpan> {
     if (old == new || spans.isEmpty()) return spans
@@ -60,10 +68,10 @@ fun toggleFormat(spans: List<FormatSpan>, selection: TextRange, type: FormatType
     val to = selection.max
     if (from >= to) return spans
     val covered = (from until to).all { index -> spans.any { it.type == type && index >= it.start && index < it.end } }
-    if (covered && type != FormatType.Link && type != FormatType.Date) return cut(spans, from, to) { it.type == type }
+    if (covered && type != FormatType.Link && type != FormatType.Date && type != FormatType.Mention) return cut(spans, from, to) { it.type == type }
     val rest = cut(spans, from, to) { it.type == type }
     val added = FormatSpan(from, to, type, url, time)
-    if (type == FormatType.Link || type == FormatType.Date) return rest + added
+    if (type == FormatType.Link || type == FormatType.Date || type == FormatType.Mention) return rest + added
     val same = (rest.filter { it.type == type && it.end >= from && it.start <= to } + added)
     val merged = FormatSpan(same.minOf { it.start }, same.maxOf { it.end }, type)
     return rest.filterNot { it.type == type && it.end >= from && it.start <= to } + merged
@@ -84,6 +92,7 @@ fun spansFrom(entities: List<TdApi.TextEntity>): List<FormatSpan> = entities.map
         is TdApi.TextEntityTypeSpoiler -> FormatSpan(entity.offset, end, FormatType.Spoiler)
         is TdApi.TextEntityTypeTextUrl -> FormatSpan(entity.offset, end, FormatType.Link, url = type.url)
         is TdApi.TextEntityTypeDateTime -> FormatSpan(entity.offset, end, FormatType.Date, time = type.unixTime)
+        is TdApi.TextEntityTypeMentionName -> FormatSpan(entity.offset, end, FormatType.Mention, userId = type.userId)
         else -> null
     }
 }
@@ -101,6 +110,7 @@ fun toEntities(spans: List<FormatSpan>, shift: Int, length: Int): Array<TdApi.Te
         FormatType.Monospace -> TdApi.TextEntityTypeCode()
         FormatType.Spoiler -> TdApi.TextEntityTypeSpoiler()
         FormatType.Link -> TdApi.TextEntityTypeTextUrl(span.url)
+        FormatType.Mention -> TdApi.TextEntityTypeMentionName(span.userId)
         FormatType.Date -> TdApi.TextEntityTypeDateTime(
             span.time,
             TdApi.DateTimeFormattingTypeAbsolute(TdApi.DateTimePartPrecisionShort(), TdApi.DateTimePartPrecisionLong(), false),
@@ -126,7 +136,7 @@ class FormatTransformation(private val spans: List<FormatSpan>, private val acce
                 FormatType.Monospace -> SpanStyle(fontFamily = FontFamily.Monospace, background = accent.copy(alpha = 0.12f))
                 FormatType.Spoiler -> SpanStyle(background = accent.copy(alpha = 0.3f))
                 FormatType.Link -> SpanStyle(color = accent, textDecoration = TextDecoration.Underline)
-                FormatType.Date -> SpanStyle(color = accent)
+                FormatType.Date, FormatType.Mention -> SpanStyle(color = accent)
             }
             builder.addStyle(style, start, end)
         }

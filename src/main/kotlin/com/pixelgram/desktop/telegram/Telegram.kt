@@ -133,6 +133,9 @@ data class UiMessage(
     val content: TdApi.MessageContent? = null,
     val entities: List<TdApi.TextEntity> = emptyList(),
     val forwardOrigin: TdApi.MessageOrigin? = null,
+    val reactions: List<TdApi.MessageReaction> = emptyList(),
+    val keyboard: List<List<TdApi.InlineKeyboardButton>> = emptyList(),
+    val viaBot: Long = 0,
 )
 
 enum class MessageStatus { Sending, Sent, Read, Failed }
@@ -141,6 +144,8 @@ private const val AUTH_TIMEOUT_MS = 30_000L
 private const val ListsInterval = 100L
 private const val ClockTickMs = 20_000L
 private const val SearchLimit = 100
+private const val ReactionRow = 8
+private const val MentionLimit = 30
 private const val AlbumSize = 10
 
 private object Tdlib {
@@ -612,7 +617,13 @@ class Telegram(
             }
             is TdApi.UpdateMessageEdited -> messages[update.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.messageId }
-                if (index >= 0) list[index] = list[index].copy(edited = update.editDate > 0)
+                if (index >= 0) list[index] = list[index].copy(edited = update.editDate > 0, keyboard = inlineRows(update.replyMarkup))
+            }
+            is TdApi.UpdateMessageInteractionInfo -> messages[update.chatId]?.let { list ->
+                val index = list.indexOfFirst { it.id == update.messageId }
+                if (index >= 0) {
+                    list[index] = list[index].copy(reactions = update.interactionInfo?.reactions?.reactions?.toList().orEmpty())
+                }
             }
             is TdApi.UpdateMessageContent -> messages[update.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.messageId }
@@ -908,6 +919,83 @@ class Telegram(
         else -> ""
     }
 
+    fun mentionSuggestions(chatId: Long, inGroup: Boolean, query: String, onResult: (List<Long>) -> Unit) {
+        val found = LinkedHashSet<Long>()
+        var pending = if (inGroup) 2 else 1
+        val done = {
+            pending--
+            if (pending == 0) onResult(found.filter { it != myUserId }.take(MentionLimit))
+        }
+        fun ensure(ids: List<Long>) = ids.forEach { id ->
+            if (users[id] == null) send(TdApi.GetUser(id)) { result -> if (result is TdApi.User) users[id] = result }
+        }
+        if (inGroup) {
+            send(TdApi.SearchChatMembers(chatId, query, MentionLimit, null)) { result ->
+                val ids = (result as? TdApi.ChatMembers)?.members?.mapNotNull { (it.memberId as? TdApi.MessageSenderUser)?.userId }.orEmpty()
+                ensure(ids)
+                found.addAll(ids)
+                done()
+            }
+        }
+        send(TdApi.GetRecentInlineBots()) { result ->
+            val ids = (result as? TdApi.Users)?.userIds?.toList().orEmpty()
+            ensure(ids)
+            found.addAll(ids.filter { id ->
+                query.isEmpty() || users[id]?.let { user ->
+                    user.firstName.contains(query, true) || user.usernames?.activeUsernames?.any { it.contains(query, true) } == true
+                } == true
+            })
+            done()
+        }
+    }
+
+    fun toggleReaction(message: UiMessage, emoji: String) {
+        val type = TdApi.ReactionTypeEmoji(emoji)
+        val chosen = message.reactions.any { (it.type as? TdApi.ReactionTypeEmoji)?.emoji == emoji && it.isChosen }
+        send(
+            if (chosen) TdApi.RemoveMessageReaction(message.chatId, message.id, type)
+            else TdApi.AddMessageReaction(message.chatId, message.id, type, false, true)
+        )
+    }
+
+    fun availableReactions(message: UiMessage, onResult: (List<String>) -> Unit) {
+        send(TdApi.GetMessageAvailableReactions(message.chatId, message.id, ReactionRow)) { result ->
+            if (result is TdApi.AvailableReactions) {
+                onResult(
+                    (result.topReactions + result.recentReactions + result.popularReactions)
+                        .mapNotNull { (it.type as? TdApi.ReactionTypeEmoji)?.emoji }
+                        .distinct()
+                )
+            }
+        }
+    }
+
+    fun pressButton(message: UiMessage, button: TdApi.InlineKeyboardButton, onAnswer: (String, Boolean) -> Unit) {
+        when (val type = button.type) {
+            is TdApi.InlineKeyboardButtonTypeCallback ->
+                send(TdApi.GetCallbackQueryAnswer(message.chatId, message.id, TdApi.CallbackQueryPayloadData(type.data))) { result ->
+                    when (result) {
+                        is TdApi.CallbackQueryAnswer -> {
+                            if (result.text.isNotBlank()) onAnswer(result.text, result.showAlert)
+                            if (result.url.isNotBlank()) com.pixelgram.desktop.ui.main.openUrl(result.url)
+                        }
+                        is TdApi.Error -> if (result.code != 502) onAnswer(result.message, false)
+                    }
+                }
+            is TdApi.InlineKeyboardButtonTypeUrl -> com.pixelgram.desktop.ui.main.openUrl(type.url)
+            is TdApi.InlineKeyboardButtonTypeLoginUrl -> com.pixelgram.desktop.ui.main.openUrl(type.url)
+            is TdApi.InlineKeyboardButtonTypeCopyText -> {
+                java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(java.awt.datatransfer.StringSelection(type.text), null)
+                onAnswer("Copied", false)
+            }
+            is TdApi.InlineKeyboardButtonTypeUser -> openPrivateChat(type.userId) { }
+            else -> onAnswer("This button isn't supported yet", false)
+        }
+    }
+
+    fun botName(userId: Long): String =
+        users[userId]?.usernames?.activeUsernames?.firstOrNull()?.let { "@$it" } ?: userName(userId)
+
     fun votePoll(chatId: Long, messageId: Long, options: IntArray) {
         send(TdApi.SetPollAnswer().apply {
             this.chatId = chatId
@@ -1062,6 +1150,9 @@ fun TdApi.Message.toUi(): UiMessage {
         content = content,
         entities = messageEntities(content),
         forwardOrigin = forwardInfo?.origin,
+        reactions = interactionInfo?.reactions?.reactions?.toList().orEmpty(),
+        keyboard = inlineRows(replyMarkup),
+        viaBot = viaBotUserId,
         replyToId = (replyTo as? TdApi.MessageReplyToMessage)?.takeIf { it.chatId == 0L || it.chatId == chatId }?.messageId ?: 0L,
     )
 }
@@ -1074,6 +1165,9 @@ fun isRich(content: TdApi.MessageContent?): Boolean = when (content) {
     is TdApi.MessageDice -> true
     else -> false
 }
+
+fun inlineRows(markup: TdApi.ReplyMarkup?): List<List<TdApi.InlineKeyboardButton>> =
+    (markup as? TdApi.ReplyMarkupInlineKeyboard)?.rows?.map { it.toList() }.orEmpty()
 
 fun messageEntities(content: TdApi.MessageContent?): List<TdApi.TextEntity> {
     val formatted = when (content) {

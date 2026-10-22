@@ -183,6 +183,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     var replyTo by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var deleting by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var forwarding by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
+    var botAnswer by remember(chat.id) { mutableStateOf<Pair<String, Boolean>?>(null) }
     LaunchedEffect(editing?.key) {
         val message = editing
         if (message?.photo != null) {
@@ -204,6 +205,8 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             onDelete = { deleting = it },
             onCopyPhoto = { message -> telegram.photoPath(message)?.let(Attachments::copyImage) },
             onForward = { forwarding = it },
+            onReact = { message, emoji -> telegram.toggleReaction(message, emoji) },
+            loadReactions = { message, done -> telegram.availableReactions(message, done) },
             onQuoteClick = { id ->
                 val index = messages.indexOfFirst { it.id == id }
                 if (index >= 0) {
@@ -360,12 +363,17 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                                     },
                                     settings = settings,
                                     status = if (message.isOutgoing && !chat.isChannel) telegram.status(chat, message) else null,
+                                    onReact = { emoji -> telegram.toggleReaction(message, emoji) },
+                                    onButton = { button ->
+                                        telegram.pressButton(message, button) { text, alert -> botAnswer = text to alert }
+                                    },
                                 )
                             }
                         }
                     }
                 }
             }
+            BotAnswer(botAnswer, onDismiss = { botAnswer = null }, modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
             FloatingDate(
                 listState = listState,
                 dateAt = { index -> messages.getOrNull(index)?.date },
@@ -391,6 +399,9 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
         }
         Composer(
             chatId = chat.id,
+            inGroup = chat.isGroup,
+            telegram = telegram,
+            settings = settings,
             hasAttachments = attachments.isNotEmpty(),
             editing = editing,
             replyTo = replyTo,
@@ -455,6 +466,8 @@ fun MessageBubble(
     telegram: Telegram? = null,
     status: MessageStatus? = null,
     quote: (@Composable () -> Unit)? = null,
+    onReact: ((String) -> Unit)? = null,
+    onButton: ((TdApi.InlineKeyboardButton) -> Unit)? = null,
 ) {
     val seconds = settings.messageSeconds.value
     if (message.service) {
@@ -538,6 +551,13 @@ fun MessageBubble(
                                 color = colors.primary,
                             )
                         }
+                        if (message.viaBot != 0L && telegram != null && telegram.botName(message.viaBot).isNotBlank()) {
+                            Text(
+                                "via " + telegram.botName(message.viaBot),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = colors.primary,
+                            )
+                        }
                         val origin = message.forwardOrigin
                         if (origin != null && telegram != null) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -565,7 +585,17 @@ fun MessageBubble(
                             entities = message.entities,
                             meta = { MessageMeta(message, status, settings.messageSeconds.value, metaColor, readColor) },
                         )
+                        if (message.reactions.isNotEmpty() && onReact != null) {
+                            ReactionChips(message.reactions, outgoing, onReact)
+                        }
                     }
+                }
+                if (message.keyboard.isNotEmpty() && onButton != null) {
+                    InlineKeyboard(
+                        message.keyboard,
+                        onButton,
+                        Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp).widthIn(min = KeyboardMinWidth),
+                    )
                 }
             }
         }
@@ -712,6 +742,8 @@ private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @
 }
 
 private val MetaGap = 10.dp
+private const val MentionDelayMs = 150L
+private val KeyboardMinWidth = 260.dp
 private const val JumpPages = 40
 private const val JumpPageDelayMs = 300L
 
@@ -799,6 +831,9 @@ private const val PhotoPixels = 1024
 @Composable
 private fun Composer(
     chatId: Long,
+    inGroup: Boolean,
+    telegram: Telegram,
+    settings: AppSettings,
     hasAttachments: Boolean,
     editing: UiMessage?,
     replyTo: UiMessage?,
@@ -816,6 +851,41 @@ private fun Composer(
     val setText = { value: TextFieldValue ->
         spans = shiftSpans(spans, text.text, value.text)
         text = value
+    }
+    val mentionQuery = if (text.selection.collapsed) {
+        MentionQuery.find(text.text.substring(0, text.selection.start.coerceAtMost(text.text.length)))?.groupValues?.get(1)
+    } else {
+        null
+    }
+    var suggestions by remember { mutableStateOf(emptyList<Long>()) }
+    var suggestionIndex by remember { mutableStateOf(0) }
+    LaunchedEffect(mentionQuery, chatId) {
+        if (mentionQuery == null) {
+            suggestions = emptyList()
+            return@LaunchedEffect
+        }
+        delay(MentionDelayMs)
+        telegram.mentionSuggestions(chatId, inGroup, mentionQuery) {
+            suggestions = it
+            suggestionIndex = 0
+        }
+    }
+    val showSuggestions = mentionQuery != null && suggestions.isNotEmpty()
+    val pickMention = { userId: Long ->
+        val query = mentionQuery.orEmpty()
+        val user = telegram.users[userId]
+        val username = user?.usernames?.activeUsernames?.firstOrNull()
+        val start = text.selection.start - query.length - 1
+        val insert = if (username != null) "@$username " else (user?.firstName.orEmpty() + " ")
+        val updated = text.text.replaceRange(start, text.selection.start, insert)
+        spans = shiftSpans(spans, text.text, updated)
+        if (username == null) {
+            spans = toggleFormat(spans, TextRange(start, start + insert.length - 1), FormatType.Mention).map {
+                if (it.type == FormatType.Mention && it.start == start) it.copy(userId = userId) else it
+            }
+        }
+        text = TextFieldValue(updated, TextRange(start + insert.length))
+        suggestions = emptyList()
     }
     val applyFormat = { type: FormatType ->
         when {
@@ -898,6 +968,20 @@ private fun Composer(
         val updated = text.text.replaceRange(start, text.selection.max, emoji)
         setText(TextFieldValue(updated, TextRange(start + emoji.length)))
         focus.requestFocus()
+    }
+    AnimatedVisibility(
+        visible = showSuggestions,
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+    ) {
+        MentionSuggestions(
+            suggestions,
+            suggestionIndex,
+            telegram,
+            settings,
+            onPick = pickMention,
+            modifier = Modifier.fillMaxWidth().padding(start = 64.dp, end = 120.dp, top = 8.dp),
+        )
     }
     linkFor?.let { range ->
         LinkDialog(onDismiss = { linkFor = null }) { url ->
@@ -998,6 +1082,18 @@ private fun Composer(
                             null
                         }
                         when {
+                            showSuggestions && event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown -> {
+                                suggestionIndex = (suggestionIndex + 1) % suggestions.size
+                                true
+                            }
+                            showSuggestions && event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp -> {
+                                suggestionIndex = (suggestionIndex - 1 + suggestions.size) % suggestions.size
+                                true
+                            }
+                            showSuggestions && event.type == KeyEventType.KeyDown && (event.key == Key.Enter || event.key == Key.Tab) -> {
+                                pickMention(suggestions[suggestionIndex.coerceIn(0, suggestions.lastIndex)])
+                                true
+                            }
                             shortcut != null -> {
                                 applyFormat(shortcut)
                                 true

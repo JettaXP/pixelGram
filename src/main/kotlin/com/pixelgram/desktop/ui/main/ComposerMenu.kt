@@ -88,7 +88,7 @@ fun ComposerMenu(
                             onClick = { formatting = false },
                         )
                         HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                        FormatType.entries.filter { it != FormatType.Link && it != FormatType.Date }.forEach { type ->
+                        FormatType.entries.filter { it != FormatType.Link && it != FormatType.Date && it != FormatType.Mention }.forEach { type ->
                             Item(type.label, type.shortcut, true) { onFormat(type); onDismiss() }
                         }
                         HorizontalDivider(Modifier.padding(vertical = 4.dp))
