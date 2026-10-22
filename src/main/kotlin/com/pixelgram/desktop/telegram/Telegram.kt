@@ -165,6 +165,7 @@ private const val MentionLimit = 30
 private const val MuteForever = 366 * 24 * 3600
 private const val AlbumSize = 10
 private const val HistoryPageSize = 100
+private const val ProfilePhotosLimit = 100
 private const val MentionResolveMin = 4
 private const val HistoryPagesMax = 300
 
@@ -564,6 +565,38 @@ class Telegram(
     fun myFullInfo(onResult: (TdApi.UserFullInfo?) -> Unit) {
         if (myUserId == 0L) return onResult(null)
         userFullInfo(myUserId, onResult)
+    }
+
+    private fun okOrError(done: (String?) -> Unit): (TdApi.Object) -> Unit = { result ->
+        done((result as? TdApi.Error)?.message?.let(::friendlyError))
+    }
+
+    fun setName(first: String, last: String, done: (String?) -> Unit) =
+        send(TdApi.SetName(first.trim(), last.trim()), okOrError(done))
+
+    fun setUsername(username: String, done: (String?) -> Unit) =
+        send(TdApi.SetUsername(username.trim().removePrefix("@")), okOrError(done))
+
+    fun setBio(bio: String, done: (String?) -> Unit) = send(TdApi.SetBio(bio.trim()), okOrError(done))
+
+    fun setBirthdate(day: Int, month: Int, year: Int, done: (String?) -> Unit) {
+        val date = if (day == 0 || month == 0) null else TdApi.Birthdate(day, month, year)
+        send(TdApi.SetBirthdate(date), okOrError(done))
+    }
+
+    fun setProfilePhoto(path: String, done: (String?) -> Unit) =
+        send(TdApi.SetProfilePhoto(TdApi.InputChatPhotoStatic(TdApi.InputFileLocal(path)), false), okOrError(done))
+
+    fun setPreviousProfilePhoto(photoId: Long, done: (String?) -> Unit) =
+        send(TdApi.SetProfilePhoto(TdApi.InputChatPhotoPrevious(photoId), false), okOrError(done))
+
+    fun deleteProfilePhoto(photoId: Long, done: (String?) -> Unit) =
+        send(TdApi.DeleteProfilePhoto(photoId), okOrError(done))
+
+    fun profilePhotos(userId: Long, onResult: (List<TdApi.ChatPhoto>) -> Unit) {
+        send(TdApi.GetUserProfilePhotos(userId, 0, ProfilePhotosLimit)) { result ->
+            onResult((result as? TdApi.ChatPhotos)?.photos?.toList().orEmpty())
+        }
     }
 
     fun userFullInfo(userId: Long, onResult: (TdApi.UserFullInfo?) -> Unit) {
