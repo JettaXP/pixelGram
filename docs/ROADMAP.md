@@ -50,6 +50,13 @@ Planned features, not started yet.
   __icon__ = "sfsymbols/347"
   ```
 
+  `__icon__` is a sticker: `<sticker set short name>/<index>`, the index
+  counted from 0 in the set. `GOOGLEturtlestickers/4` is the fifth sticker of
+  t.me/addstickers/GOOGLEturtlestickers (the pixel turtle); `sfsymbols/347` is
+  sticker 347 of the "sfsymbols" set. Load the set with
+  `searchStickerSet(name)`, take `stickers[index]` and draw it (static, WebP,
+  animated TGS or video WebM).
+
   It shows the icon, the name, "Version 1.1 • @author", the description, a
   folder button (show the file) and Close. No "Plugins are not supported" line.
 
