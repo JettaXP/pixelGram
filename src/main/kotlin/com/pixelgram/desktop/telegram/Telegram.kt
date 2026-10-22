@@ -96,6 +96,8 @@ class ChatState(val id: Long) {
 
 const val SavedMessagesTitle = "Saved Messages"
 
+data class UnreadCount(val chats: Int, val unmuted: Int)
+
 data class FolderInfo(val id: Int, val title: String, val icon: String)
 
 data class UiMessage(
@@ -156,6 +158,7 @@ class Telegram(
 
     val chats = mutableStateMapOf<Long, ChatState>()
     val users = mutableStateMapOf<Long, TdApi.User>()
+    val unread = mutableStateMapOf<ChatListKey, UnreadCount>()
     val folders = mutableStateListOf<FolderInfo>()
     private val filePaths = mutableStateMapOf<Int, String>()
     private val messages = mutableMapOf<Long, SnapshotStateList<UiMessage>>()
@@ -478,6 +481,9 @@ class Telegram(
             }
             is TdApi.UpdateChatPosition -> chats[update.chatId]?.let { applyPosition(it, update.position) }
             is TdApi.UpdateChatReadInbox -> chats[update.chatId]?.unreadCount = update.unreadCount
+            is TdApi.UpdateUnreadChatCount -> ChatListKey.of(update.chatList)?.let { key ->
+                unread[key] = UnreadCount(update.unreadCount, update.unreadUnmutedCount)
+            }
             is TdApi.UpdateChatReadOutbox -> chats[update.chatId]?.lastReadOutbox = update.lastReadOutboxMessageId
             is TdApi.UpdateMessageSendFailed -> messages[update.message.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.oldMessageId }

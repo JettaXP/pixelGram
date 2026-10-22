@@ -46,6 +46,9 @@ fun Telegram.loadDemo() {
         }
     }
     chats[100L]?.lastReadOutbox = 2
+    unread[ChatListKey.Main] = UnreadCount(5, 3)
+    unread[ChatListKey.Folder(1)] = UnreadCount(2, 0)
+    unread[ChatListKey.Folder(2)] = UnreadCount(12, 4)
     chatListsChanged()
     if (System.getProperty("pixelgram.demo.heavy") == "true") loadHeavyDemo(now)
     System.getProperty("pixelgram.demo.photo")?.let { path ->

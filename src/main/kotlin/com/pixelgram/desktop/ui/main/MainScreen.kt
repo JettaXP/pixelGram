@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.telegram.UnreadCount
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.BadgedBox
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
@@ -96,7 +100,31 @@ import java.awt.Cursor
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
-internal data class FolderTab(val key: ChatListKey, val title: String, val icon: String = "")
+internal data class FolderTab(
+    val key: ChatListKey,
+    val title: String,
+    val icon: String = "",
+    val unread: UnreadCount? = null,
+)
+
+@Composable
+internal fun FolderIcon(tab: FolderTab, selected: Boolean, tint: Color = LocalContentColor.current) {
+    val unread = tab.unread?.takeIf { it.chats > 0 }
+    BadgedBox(
+        badge = {
+            if (unread != null) {
+                Badge(
+                    containerColor = if (unread.unmuted > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                    contentColor = if (unread.unmuted > 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.surface,
+                ) {
+                    Text(if (unread.chats > 999) "999+" else unread.chats.toString())
+                }
+            }
+        },
+    ) {
+        Icon(folderIcon(tab.icon, selected), contentDescription = tab.title, tint = tint)
+    }
+}
 
 @Composable
 fun MainScreen(
@@ -109,9 +137,12 @@ fun MainScreen(
 ) {
     val tabs = buildList {
         if (!settings.hideAllChats.value || telegram.folders.isEmpty()) {
-            add(FolderTab(ChatListKey.Main, "All chats", "All"))
+            add(FolderTab(ChatListKey.Main, "All chats", "All", telegram.unread[ChatListKey.Main]))
         }
-        telegram.folders.forEach { add(FolderTab(ChatListKey.Folder(it.id), it.title, it.icon)) }
+        telegram.folders.forEach {
+            val key = ChatListKey.Folder(it.id)
+            add(FolderTab(key, it.title, it.icon, telegram.unread[key]))
+        }
     }
     var selectedKey by rememberSaveable { mutableStateOf<ChatListKey>(ChatListKey.Main) }
     if (selectedKey != ChatListKey.Archive && tabs.none { it.key == selectedKey } && tabs.isNotEmpty()) {
@@ -309,7 +340,7 @@ private fun PixelRail(
                         WideNavigationRailItem(
                             selected = isSelected,
                             onClick = { onSelect(tab.key) },
-                            icon = { Icon(folderIcon(tab.icon, isSelected), contentDescription = tab.title) },
+                            icon = { FolderIcon(tab, isSelected) },
                             label = { EmojiText(tab.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             railExpanded = false,
                         )
@@ -480,7 +511,7 @@ private fun TopFolders(
             ShortNavigationBarItem(
                 selected = isSelected,
                 onClick = { onSelect(tab.key) },
-                icon = { Icon(folderIcon(tab.icon, isSelected), contentDescription = null) },
+                icon = { FolderIcon(tab, isSelected) },
                 label = { EmojiText(tab.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 iconPosition = NavigationItemIconPosition.Top,
                 modifier = Modifier.width(TopFolderWidth),

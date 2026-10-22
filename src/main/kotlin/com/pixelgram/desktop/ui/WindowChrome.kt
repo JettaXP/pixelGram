@@ -73,7 +73,10 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
         (window as? ComposeWindow)?.let { WindowsCorners.apply(it.windowHandle, round = !maximized) }
     }
     private var restoreBounds: Rectangle? = null
+    private var nativeRestore: Rectangle? = null
     private var job: Job? = null
+
+    private val handle: Long get() = (window as? ComposeWindow)?.windowHandle ?: 0L
 
     private fun workArea(): Rectangle {
         val config = window.graphicsConfiguration
@@ -88,7 +91,18 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
     }
 
     fun toggleMaximized() {
-        if (maximized) {
+        val current = WindowsCorners.windowRect(handle)
+        val work = WindowsCorners.workArea(handle)
+        if (current != null && work != null) {
+            if (maximized) {
+                maximized = false
+                nativeRestore?.let { animateNative(current, it) }
+            } else {
+                nativeRestore = current
+                maximized = true
+                animateNative(current, work)
+            }
+        } else if (maximized) {
             maximized = false
             restoreBounds?.let { animateTo(it) }
         } else {
@@ -97,6 +111,24 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
             animateTo(workArea())
         }
         updateCorners()
+    }
+
+    private fun animateNative(from: Rectangle, target: Rectangle) {
+        job?.cancel()
+        job = scope.launch {
+            animate(0f, 1f, animationSpec = tween(BoundsMs, easing = FastOutSlowInEasing)) { t, _ ->
+                WindowsCorners.setRect(
+                    handle,
+                    Rectangle(
+                        lerp(from.x, target.x, t),
+                        lerp(from.y, target.y, t),
+                        lerp(from.width, target.width, t),
+                        lerp(from.height, target.height, t),
+                    ),
+                )
+            }
+            updateCorners()
+        }
     }
 
     private fun animateTo(target: Rectangle) {
@@ -124,7 +156,10 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
 
     fun restored() {
         job?.cancel()
-        job = scope.launch { fade(window.opacity, 1f) }
+        job = scope.launch {
+            fade(window.opacity, 1f)
+            updateCorners()
+        }
     }
 
     private suspend fun fade(from: Float, to: Float) {
@@ -149,6 +184,8 @@ fun FrameWindowScope.rememberWindowChrome(): WindowChrome {
     DisposableEffect(window) {
         val listener = object : WindowAdapter() {
             override fun windowDeiconified(e: WindowEvent) = chrome.restored()
+            override fun windowOpened(e: WindowEvent) = chrome.updateCorners()
+            override fun windowActivated(e: WindowEvent) = chrome.updateCorners()
         }
         window.addWindowListener(listener)
         onDispose { window.removeWindowListener(listener) }

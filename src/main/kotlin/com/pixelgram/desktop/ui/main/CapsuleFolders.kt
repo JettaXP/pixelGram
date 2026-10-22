@@ -130,7 +130,7 @@ internal fun CapsuleFolders(
                                 .selectable(selected = isSelected, role = Role.Tab) { onSelect(tab.key) }
                                 .padding(horizontal = IndicatorSidePadding),
                         ) {
-                            Icon(folderIcon(tab.icon, isSelected), contentDescription = tab.title, tint = content)
+                            FolderIcon(tab, isSelected, tint = content)
                             if (progress > 0f) {
                                 EmojiText(
                                     tab.title,
