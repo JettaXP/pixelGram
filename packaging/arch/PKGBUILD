@@ -8,7 +8,7 @@ pkgdesc="Telegram client with Material 3 Expressive"
 arch=('x86_64')
 url="https://t.me/pixelgramclient"
 license=('GPL-3.0-only')
-depends=('openssl' 'zlib' 'fontconfig' 'libxext' 'libxrender' 'libxtst' 'libxi' 'alsa-lib')
+depends=('openssl' 'zlib' 'fontconfig' 'libxext' 'libxrender' 'libxtst' 'libxi' 'alsa-lib' 'libnotify')
 options=('!strip' '!debug')
 
 package() {

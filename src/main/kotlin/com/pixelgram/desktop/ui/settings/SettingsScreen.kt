@@ -89,7 +89,9 @@ import com.pixelgram.desktop.BuildConfig
 import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.EmojiStyle
+import com.pixelgram.desktop.core.NotificationStyle
 import com.pixelgram.desktop.core.Sounds
+import com.pixelgram.desktop.core.SystemNotifications
 import com.pixelgram.desktop.core.ThemeMode
 import com.pixelgram.desktop.core.ToastSide
 import com.pixelgram.desktop.telegram.ChatListKey
@@ -519,6 +521,16 @@ private fun AppearanceSection(settings: AppSettings) {
     Header("Theme")
     ThemeModeButtons(settings)
 
+    Header("Window")
+    SwitchRow(
+        index = 0,
+        count = 1,
+        title = "pixelGram title bar",
+        subtitle = "Material 3 buttons instead of the system frame. Applies after restarting pixelGram.",
+        checked = settings.customTitleBar.value,
+        onChange = { settings.customTitleBar.value = it },
+    )
+
     Header("Emoji")
     EmojiStyleChoice(settings)
 
@@ -883,14 +895,35 @@ private fun NotificationsSection(settings: AppSettings) {
         checked = settings.notificationPopups.value,
         onChange = { settings.notificationPopups.value = it },
     )
-    Text("Position", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
-    ConnectedChoice(
-        options = ToastSide.entries.map { it to it.name },
-        selected = settings.notificationSide.value,
-        onSelect = { settings.notificationSide.value = it },
-    )
+    val systemStyle = SystemNotifications.available && settings.notificationStyle.value == NotificationStyle.System
+    if (SystemNotifications.available) {
+        Text("Style", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+        ConnectedChoice(
+            options = listOf(NotificationStyle.System to "System", NotificationStyle.PixelGram to "pixelGram"),
+            selected = settings.notificationStyle.value,
+            onSelect = { settings.notificationStyle.value = it },
+        )
+        Description(
+            if (systemStyle) "Shown by your desktop's notification daemon (mako, swaync, dunst…)." else
+                "pixelGram's own Material 3 cards."
+        )
+    }
+    if (!systemStyle) {
+        Text("Position", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+        ConnectedChoice(
+            options = ToastSide.entries.map { it to it.name },
+            selected = settings.notificationSide.value,
+            onSelect = { settings.notificationSide.value = it },
+        )
+    }
     OutlinedButton(
-        onClick = { Notifications.showTest?.invoke() },
+        onClick = {
+            if (systemStyle) {
+                SystemNotifications.show("pixelGram", "This is how new messages will look 🎉", null) {}
+            } else {
+                Notifications.showTest?.invoke()
+            }
+        },
         modifier = Modifier.padding(top = 8.dp),
     ) {
         Text("Show test notification")

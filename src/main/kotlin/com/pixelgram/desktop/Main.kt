@@ -4,51 +4,60 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
+import com.pixelgram.desktop.core.NotificationStyle
+import com.pixelgram.desktop.core.SystemNotifications
 import com.pixelgram.desktop.telegram.Accounts
 import com.pixelgram.desktop.telegram.AuthState
 import com.pixelgram.desktop.telegram.Notifications
+import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.telegram.loadDemo
+import com.pixelgram.desktop.ui.AppIcons
+import com.pixelgram.desktop.ui.ResizeHandles
+import com.pixelgram.desktop.ui.Screen
+import com.pixelgram.desktop.ui.TitleBar
+import com.pixelgram.desktop.ui.auth.AuthScreen
 import com.pixelgram.desktop.ui.main.Attachments
+import com.pixelgram.desktop.ui.main.MainScreen
 import com.pixelgram.desktop.ui.notify.ToastData
+import com.pixelgram.desktop.ui.notify.ToastStack
 import com.pixelgram.desktop.ui.notify.ToastWindow
 import com.pixelgram.desktop.ui.notify.testToast
 import com.pixelgram.desktop.ui.notify.toastFor
-import com.pixelgram.desktop.telegram.loadDemo
-import com.pixelgram.desktop.telegram.Telegram
-import com.pixelgram.desktop.ui.AppIcons
-import com.pixelgram.desktop.ui.Screen
-import com.pixelgram.desktop.ui.profile.ProfileScreen
 import com.pixelgram.desktop.ui.people.CallsScreen
 import com.pixelgram.desktop.ui.people.ContactsScreen
-import com.pixelgram.desktop.ui.auth.AuthScreen
-import com.pixelgram.desktop.ui.main.MainScreen
+import com.pixelgram.desktop.ui.profile.ProfileScreen
 import com.pixelgram.desktop.ui.settings.SettingsScreen
 import com.pixelgram.desktop.ui.theme.Emoji3D
 import com.pixelgram.desktop.ui.theme.EmojiFonts
 import com.pixelgram.desktop.ui.theme.PixelTheme
 import com.pixelgram.desktop.ui.theme.isDarkTheme
-import kotlinx.coroutines.MainScope
+import java.awt.GraphicsEnvironment
 import java.awt.SystemTray
+import kotlinx.coroutines.MainScope
 
 fun main() = application {
     val settings = remember {
@@ -68,8 +77,11 @@ fun main() = application {
     }
     var visible by remember { mutableStateOf(true) }
     val icon = AppIcons.forTheme(isDarkTheme(settings))
-    // Without a system tray (some Linux desktops) closing the window quits.
-    val hasTray = remember { SystemTray.isSupported() }
+    // Without a system tray closing the window quits. Wayland panels show
+    // trays over D-Bus, which Java's tray doesn't use, so there it's off too.
+    val hasTray = remember {
+        SystemTray.isSupported() && !(AppPaths.isLinux && System.getenv("WAYLAND_DISPLAY") != null)
+    }
     if (hasTray && icon != null) {
         Tray(
             icon = icon,
@@ -87,42 +99,62 @@ fun main() = application {
         )
     }
 
-    var toast by remember { mutableStateOf<ToastData?>(null) }
+    val toasts = remember { ToastStack() }
+    val openFromNotification = { card: ToastData ->
+        visible = true
+        if (card.chat.id != 0L) {
+            accounts.switchTo(card.telegram)
+            Notifications.openRequest = card.telegram.account to card.chat.id
+        }
+    }
     LaunchedEffect(Unit) {
         Notifications.onMessage = { telegram, message ->
-            if (settings.notificationPopups.value) toastFor(telegram, message)?.let { toast = it }
+            val card = if (settings.notificationPopups.value) toastFor(telegram, message) else null
+            when {
+                card == null -> Unit
+                settings.notificationStyle.value == NotificationStyle.System && SystemNotifications.available ->
+                    SystemNotifications.show(
+                        title = card.sender?.let { "$it · ${card.title}" } ?: card.title,
+                        body = card.text,
+                        icon = telegram.localPath(card.chat.photo),
+                        onClick = { openFromNotification(card) },
+                    )
+                else -> toasts.push(card)
+            }
         }
-        Notifications.showTest = { toast = testToast(accounts.active) }
+        Notifications.showTest = { toasts.push(testToast(accounts.active)) }
     }
-    toast?.let { current ->
-        ToastWindow(
-            current,
-            settings,
-            onOpen = {
-                visible = true
-                if (current.chat.id != 0L) {
-                    accounts.switchTo(current.telegram)
-                    Notifications.openRequest = current.telegram.account to current.chat.id
-                }
-            },
-            onGone = { if (toast?.id == current.id) toast = null },
-        )
+    if (toasts.entries.isNotEmpty()) {
+        ToastWindow(toasts, settings, onOpen = openFromNotification)
     }
 
+    val close = { if (hasTray) visible = false else quit() }
+    // Read once: a window can't switch between system and own frame while open.
+    val ownTitleBar = remember { settings.customTitleBar.value }
+    val windowState = rememberWindowState(size = DpSize(1180.dp, 760.dp))
     Window(
-        onCloseRequest = { if (hasTray) visible = false else quit() },
+        onCloseRequest = close,
+        undecorated = ownTitleBar,
         visible = visible,
         title = "pixelGram",
         icon = icon,
-        state = rememberWindowState(size = DpSize(1180.dp, 760.dp)),
+        state = windowState,
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
+        // A frameless window would cover the taskbar when maximized.
+        if (ownTitleBar) window.maximizedBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
         LaunchedEffect(visible) { if (visible) window.toFront() }
         val focused = LocalWindowInfo.current.isWindowFocused
         LaunchedEffect(focused) { accounts.list.forEach { it.windowFocused = focused } }
         PixelTheme(settings) {
-            key(accounts.active) {
-                App(accounts, accounts.active, settings)
+            Box(Modifier.fillMaxSize()) {
+                Column {
+                    if (ownTitleBar) TitleBar(windowState, onClose = close)
+                    key(accounts.active) {
+                        App(accounts, accounts.active, settings)
+                    }
+                }
+                if (ownTitleBar) ResizeHandles(windowState)
             }
         }
     }

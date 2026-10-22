@@ -62,13 +62,14 @@ private fun positionFor(side: ToastSide): WindowPosition {
 }
 
 // A frameless, transparent window above everything that never takes focus;
-// as a dialog it gets no taskbar button.
+// as a dialog it gets no taskbar button. Sized for a full stack, the cards
+// sit at the edge nearest the screen corner.
 @Composable
-fun ToastWindow(toast: ToastData, settings: AppSettings, onOpen: () -> Unit, onGone: () -> Unit) {
+fun ToastWindow(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) -> Unit) {
     val side = settings.notificationSide.value
     key(side) {
         DialogWindow(
-            onCloseRequest = onGone,
+            onCloseRequest = stack::dismissAll,
             state = rememberDialogState(
                 position = positionFor(side),
                 size = DpSize(ToastWindowWidth, ToastWindowHeight),
@@ -81,7 +82,7 @@ fun ToastWindow(toast: ToastData, settings: AppSettings, onOpen: () -> Unit, onG
             alwaysOnTop = true,
         ) {
             PixelTheme(settings) {
-                key(toast.id) { Toast(toast, settings, onOpen, onGone) }
+                ToastStackContent(stack, settings, onOpen)
             }
         }
     }

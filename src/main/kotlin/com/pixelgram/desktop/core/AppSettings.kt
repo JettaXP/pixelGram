@@ -11,6 +11,8 @@ enum class EmojiStyle { Noto, Noto3D }
 
 enum class ToastSide { Left, Right, Top, Bottom }
 
+enum class NotificationStyle { System, PixelGram }
+
 class Setting<T>(
     private val owner: AppSettings,
     val key: String,
@@ -54,12 +56,16 @@ class AppSettings private constructor(private val props: Properties) {
     val notificationsMuted = bool("notificationsMuted", false)
     val notificationPopups = bool("notificationPopups", true)
     val notificationSide = enum("notificationSide", ToastSide.Right)
+    // Linux only: the desktop's notifications, or pixelGram's own cards.
+    val notificationStyle = enum("notificationStyle", NotificationStyle.System)
 
     // Folders.
     val materialFolders = bool("materialFolders", true)
     val hideAllChats = bool("hideAllChats", false)
     val capsuleFolders = bool("capsuleFolders", false)
     val chatListWidth = int("chatListWidth", 360)
+    // pixelGram's own title bar; tiling Linux desktops usually want none.
+    val customTitleBar = bool("customTitleBar", !AppPaths.isLinux)
     val capsuleSpacing = int("capsuleSpacing", 4)
     val capsuleHeight = int("capsuleContainerHeight", 64)
 
@@ -81,9 +87,9 @@ class AppSettings private constructor(private val props: Properties) {
 
     private val all: List<Setting<*>> = listOf(
         themeMode, seedColor, matugen, emojiStyle, notificationSound, notificationsMuted,
-        notificationPopups, notificationSide,
+        notificationPopups, notificationSide, notificationStyle,
         materialFolders, hideAllChats,
-        capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth,
+        capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius,
         apiId, apiHash,

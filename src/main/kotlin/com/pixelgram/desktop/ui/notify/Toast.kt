@@ -5,14 +5,17 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -28,11 +31,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ClearAll
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +61,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pixelgram.desktop.core.AppSettings
@@ -56,9 +70,9 @@ import com.pixelgram.desktop.telegram.ChatState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.theme.EmojiText
-import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlinx.coroutines.delay
 
 // Material 3 notification card with a wavy timer, ported from the
 // Alert Notifier tutorial; colors come from the app's color scheme.
@@ -77,9 +91,12 @@ fun toastColors(): ToastColors {
 
 const val ToastDurationMs = 6000
 
-// Window around the card: room for the shadow and for sliding in.
+val ToastCardWidth = 368.dp
+val ToastCardHeight = 118.dp
+
+// Window around the stack: room for three cards, "Close all" and the shadows.
 val ToastWindowWidth = 400.dp
-val ToastWindowHeight = 150.dp
+val ToastWindowHeight = 470.dp
 
 private val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 private val EmphasizedAccelerate = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
@@ -96,38 +113,100 @@ private fun enterFor(side: ToastSide): EnterTransition {
 }
 
 private fun exitFor(side: ToastSide): ExitTransition {
-    val spec = tween<IntOffset>(220, easing = EmphasizedAccelerate)
-    return fadeOut(tween(180)) + when (side) {
-        ToastSide.Left -> slideOutHorizontally(spec) { -it - 32 }
-        ToastSide.Right -> slideOutHorizontally(spec) { it + 32 }
-        ToastSide.Top -> slideOutVertically(spec) { -it - 32 }
-        ToastSide.Bottom -> slideOutVertically(spec) { it + 32 }
+    // WHY: a fast exit curve covers most of the way in the first frame, so the
+    // card seems to vanish; an ease-in-out slide with a fade stays visible, and
+    // shrinking lets the rest of the stack close the gap smoothly.
+    val slide = tween<IntOffset>(ExitMs, easing = FastOutSlowInEasing)
+    val fade = tween<Float>(ExitMs, easing = LinearEasing)
+    val shrink = tween<IntSize>(ExitMs, delayMillis = 150, easing = FastOutSlowInEasing)
+    return fadeOut(fade) + shrinkVertically(shrink) + when (side) {
+        ToastSide.Left -> slideOutHorizontally(slide) { -it - 32 }
+        ToastSide.Right -> slideOutHorizontally(slide) { it + 32 }
+        ToastSide.Top -> slideOutVertically(slide) { -it - 32 }
+        ToastSide.Bottom -> slideOutVertically(slide) { it + 32 }
     }
 }
 
-// One notification: slides in, waits for the timer, slides out, then onGone.
+private const val ExitMs = 450
+
+// Up to MaxToasts cards at once; a new one pushes the oldest out.
+class ToastStack {
+    class Entry(val data: ToastData) {
+        val visible = MutableTransitionState(false).apply { targetState = true }
+    }
+
+    val entries = mutableStateListOf<Entry>()
+
+    val shown: List<Entry> get() = entries.filter { it.visible.targetState }
+
+    fun push(data: ToastData) {
+        val showing = shown
+        if (showing.size >= MaxToasts) showing.first().visible.targetState = false
+        entries.add(Entry(data))
+    }
+
+    fun dismiss(entry: Entry) {
+        entry.visible.targetState = false
+    }
+
+    fun dismissAll() = entries.forEach(::dismiss)
+
+    internal fun removeGone() {
+        entries.removeAll { it.visible.isIdle && !it.visible.currentState && !it.visible.targetState }
+    }
+}
+
+const val MaxToasts = 3
+
+// The stack: newest card nearest the screen corner, "Close all" with three.
 @Composable
-fun Toast(
-    toast: ToastData,
-    settings: AppSettings,
-    onOpen: () -> Unit,
-    onGone: () -> Unit,
-) {
+fun ToastStackContent(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) -> Unit) {
     val side = settings.notificationSide.value
-    val visible = remember(toast.id) { MutableTransitionState(false).apply { targetState = true } }
-    LaunchedEffect(toast.id) {
-        delay(ToastDurationMs.toLong())
-        visible.targetState = false
-    }
-    LaunchedEffect(visible.isIdle, visible.currentState) {
-        if (visible.isIdle && !visible.currentState) onGone()
-    }
-    Box(Modifier.fillMaxSize().padding(16.dp)) {
-        AnimatedVisibility(visible, enter = enterFor(side), exit = exitFor(side)) {
-            ToastCard(toast, settings) {
-                visible.targetState = false
-                onOpen()
+    val newestFirst = side == ToastSide.Top
+    val entries = if (newestFirst) stack.entries.reversed() else stack.entries.toList()
+    val closeAll: @Composable () -> Unit = {
+        AnimatedVisibility(
+            visible = stack.shown.size >= MaxToasts,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+        ) {
+            FilledTonalButton(onClick = stack::dismissAll) {
+                Icon(Icons.Filled.ClearAll, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text("Close all", modifier = Modifier.padding(start = 8.dp))
             }
+        }
+    }
+    Box(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = if (newestFirst) Alignment.TopCenter else Alignment.BottomCenter,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (!newestFirst) closeAll()
+            entries.forEach { entry ->
+                key(entry.data.id) {
+                    LaunchedEffect(Unit) {
+                        delay(ToastDurationMs.toLong())
+                        stack.dismiss(entry)
+                    }
+                    LaunchedEffect(entry.visible.isIdle, entry.visible.currentState) {
+                        stack.removeGone()
+                    }
+                    AnimatedVisibility(entry.visible, enter = enterFor(side), exit = exitFor(side)) {
+                        Box(Modifier.padding(vertical = 4.dp)) {
+                            ToastCard(
+                                entry.data,
+                                settings,
+                                onClick = {
+                                    stack.dismiss(entry)
+                                    onOpen(entry.data)
+                                },
+                                onClose = { stack.dismiss(entry) },
+                            )
+                        }
+                    }
+                }
+            }
+            if (newestFirst) closeAll()
         }
     }
 }
@@ -142,7 +221,7 @@ data class ToastData(
 )
 
 @Composable
-private fun ToastCard(toast: ToastData, settings: AppSettings, onClick: () -> Unit) {
+private fun ToastCard(toast: ToastData, settings: AppSettings, onClick: () -> Unit, onClose: () -> Unit) {
     val colors = toastColors()
     Surface(
         onClick = onClick,
@@ -150,13 +229,13 @@ private fun ToastCard(toast: ToastData, settings: AppSettings, onClick: () -> Un
         color = colors.bg,
         contentColor = colors.fg,
         shadowElevation = 6.dp,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.size(ToastCardWidth, ToastCardHeight),
     ) {
         Box {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(start = 18.dp, end = 22.dp, top = 14.dp, bottom = WaveZone + 6.dp),
+                    .padding(start = 18.dp, end = 40.dp, top = 14.dp, bottom = WaveZone + 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
@@ -203,6 +282,13 @@ private fun ToastCard(toast: ToastData, settings: AppSettings, onClick: () -> Un
                 }
             }
             WaveTimer(colors, toast.id, Modifier.align(Alignment.BottomCenter))
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(32.dp),
+                colors = IconButtonDefaults.iconButtonColors(contentColor = colors.fg),
+            ) {
+                Icon(Icons.Filled.Close, contentDescription = "Close", modifier = Modifier.size(18.dp))
+            }
         }
     }
 }
