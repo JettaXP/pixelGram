@@ -1,5 +1,9 @@
 package com.pixelgram.desktop
 
+import androidx.compose.runtime.DisposableEffect
+import com.pixelgram.desktop.core.UrlScheme
+import com.pixelgram.desktop.ui.main.Links
+import com.pixelgram.desktop.core.InstanceState
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -92,16 +96,24 @@ import java.awt.SystemTray
 import kotlinx.coroutines.MainScope
 
 @OptIn(ExperimentalComposeUiApi::class)
-fun main() {
-    if (!SingleInstance.acquire()) {
-        JOptionPane.showMessageDialog(
+fun main(args: Array<String>) {
+    val link = args.firstOrNull { Links.isTelegram(it) }
+    when (SingleInstance.acquire(link)) {
+        InstanceState.Primary -> Unit
+        InstanceState.Forwarded -> return
+        InstanceState.Stuck -> {
+            JOptionPane.showMessageDialog(
             null,
             "pixelGram is already running but does not respond.\nEnd the pixelGram process in the task manager and start it again.",
             "pixelGram",
             JOptionPane.WARNING_MESSAGE,
-        )
-        return
+            )
+            return
+        }
     }
+    link?.let { Links.pending = it }
+    SingleInstance.onOpen = { Links.pending = it }
+    UrlScheme.register()
     application {
         CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides CrashHandler) {
             PixelApp()
@@ -284,6 +296,20 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
         openChatId = id
         history.clear()
         screen = Screen.Chats
+    }
+    DisposableEffect(telegram) {
+        Links.active = { telegram.takeIf { it.authState == AuthState.Ready } }
+        Links.navigate = { owner, chatId ->
+            if (owner != telegram) accounts.switchTo(owner)
+            openChat(chatId)
+        }
+        onDispose {}
+    }
+    LaunchedEffect(Links.pending, telegram.authState) {
+        val link = Links.pending ?: return@LaunchedEffect
+        if (telegram.authState != AuthState.Ready) return@LaunchedEffect
+        Links.pending = null
+        Links.open(link)
     }
     val saved = rememberSaveableStateHolder()
     LaunchedEffect(Notifications.openRequest) {

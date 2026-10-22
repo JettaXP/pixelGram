@@ -424,6 +424,32 @@ class Telegram(
         }
     }
 
+    fun internalLinkType(url: String, onResult: (TdApi.InternalLinkType?) -> Unit) {
+        send(TdApi.GetInternalLinkType(url)) { result -> onResult(result as? TdApi.InternalLinkType) }
+    }
+
+    fun messageLinkInfo(url: String, onResult: (Long, Long) -> Unit) {
+        send(TdApi.GetMessageLinkInfo(url)) { result ->
+            val info = result as? TdApi.MessageLinkInfo
+            onResult(info?.chatId ?: 0L, info?.message?.id ?: 0L)
+        }
+    }
+
+    fun joinByInvite(link: String, onChat: (Long) -> Unit) {
+        send(TdApi.CheckChatInviteLink(link)) { result ->
+            val info = result as? TdApi.ChatInviteLinkInfo
+            when {
+                info == null -> onChat(0L)
+                info.chatId != 0L -> onChat(info.chatId)
+                else -> send(TdApi.JoinChatByInviteLink(link)) { joined -> onChat((joined as? TdApi.Chat)?.id ?: 0L) }
+            }
+        }
+    }
+
+    fun searchStickerSet(name: String, onResult: (TdApi.StickerSet?) -> Unit) {
+        send(TdApi.SearchStickerSet(name, false)) { result -> onResult(result as? TdApi.StickerSet) }
+    }
+
     fun openPrivateChat(userId: Long, onChat: (Long) -> Unit) {
         send(TdApi.CreatePrivateChat().apply {
             this.userId = userId

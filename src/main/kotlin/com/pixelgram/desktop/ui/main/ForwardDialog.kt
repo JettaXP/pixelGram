@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -57,6 +58,7 @@ fun ForwardDialog(telegram: Telegram, settings: AppSettings, onDismiss: () -> Un
                 Text("Forward to…", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 24.dp))
                 TextField(
                     value = query,
+                    visualTransformation = EmojiVisualTransformation,
                     onValueChange = { query = it },
                     singleLine = true,
                     placeholder = { Text("Search chats") },

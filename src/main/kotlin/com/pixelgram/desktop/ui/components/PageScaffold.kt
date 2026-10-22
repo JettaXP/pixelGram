@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.components
 
+import com.pixelgram.desktop.ui.theme.EmojiText
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -32,7 +33,7 @@ fun PageScaffold(title: String, onBack: () -> Unit, content: @Composable ColumnS
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
-                Text(title, style = MaterialTheme.typography.titleLarge)
+                EmojiText(title, style = MaterialTheme.typography.titleLarge)
             }
             Column(
                 modifier = Modifier
@@ -64,7 +65,7 @@ fun InfoGroup(rows: List<InfoRow>) {
                 leadingContent = { Icon(row.icon, contentDescription = null) },
                 supportingContent = { Text(row.title) },
             ) {
-                if (row.phone) PhoneText(row.value) else Text(row.value)
+                if (row.phone) PhoneText(row.value) else EmojiText(row.value)
             }
         }
     }

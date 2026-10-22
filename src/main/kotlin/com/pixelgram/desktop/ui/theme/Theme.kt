@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.theme
 
+import com.pixelgram.desktop.ui.main.Links
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
@@ -56,8 +59,9 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
         colorScheme = appColorScheme(settings),
         motionScheme = MotionScheme.expressive(),
         typography = PixelTypography,
-        content = content,
-    )
+    ) {
+        CompositionLocalProvider(LocalUriHandler provides Links, content = content)
+    }
 }
 
 fun schemeFromSeed(seed: Int, dark: Boolean): ColorScheme {

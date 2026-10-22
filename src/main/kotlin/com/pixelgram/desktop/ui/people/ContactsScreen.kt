@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.people
 
+import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,6 +44,7 @@ fun ContactsScreen(
         }
         OutlinedTextField(
             value = query,
+            visualTransformation = EmojiVisualTransformation,
             onValueChange = { query = it },
             label = { Text("Search") },
             singleLine = true,

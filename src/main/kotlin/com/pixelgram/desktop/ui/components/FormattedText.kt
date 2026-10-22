@@ -97,7 +97,11 @@ fun formattedString(text: String, entities: List<TdApi.TextEntity>, colors: Form
             is TdApi.TextEntityTypeUrl -> builder.addLink(link(text.substring(start, end).let { if ("://" in it) it else "https://$it" }, colors), start, end)
             is TdApi.TextEntityTypeEmailAddress -> builder.addLink(link("mailto:" + text.substring(start, end), colors), start, end)
             is TdApi.TextEntityTypePhoneNumber -> builder.addLink(link("tel:" + text.substring(start, end), colors), start, end)
-            is TdApi.TextEntityTypeMention, is TdApi.TextEntityTypeMentionName, is TdApi.TextEntityTypeHashtag,
+            is TdApi.TextEntityTypeMention ->
+                builder.addLink(link("tg://resolve?domain=" + text.substring(start, end).removePrefix("@"), colors, underline = false), start, end)
+            is TdApi.TextEntityTypeMentionName ->
+                builder.addLink(link("tg://user?id=${type.userId}", colors, underline = false), start, end)
+            is TdApi.TextEntityTypeHashtag,
             is TdApi.TextEntityTypeCashtag, is TdApi.TextEntityTypeBotCommand, is TdApi.TextEntityTypeDateTime ->
                 builder.addStyle(SpanStyle(color = colors.accent), start, end)
             else -> Unit
@@ -106,9 +110,9 @@ fun formattedString(text: String, entities: List<TdApi.TextEntity>, colors: Form
     return builder.toAnnotatedString()
 }
 
-private fun link(url: String, colors: FormatColors) = LinkAnnotation.Url(
+private fun link(url: String, colors: FormatColors, underline: Boolean = true) = LinkAnnotation.Url(
     url,
-    TextLinkStyles(SpanStyle(color = colors.accent, textDecoration = TextDecoration.Underline)),
+    TextLinkStyles(SpanStyle(color = colors.accent, textDecoration = if (underline) TextDecoration.Underline else null)),
 )
 
 fun formatDateEntity(unixTime: Int): String =

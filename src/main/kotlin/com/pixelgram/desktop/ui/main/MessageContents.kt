@@ -208,11 +208,7 @@ fun openFile(path: String) {
 }
 
 fun openUrl(url: String) {
-    Thread {
-        runCatching { Desktop.getDesktop().browse(URI(url)) }.recoverCatching {
-            ProcessBuilder("xdg-open", url).start()
-        }.onFailure { AppLog.write("Open link failed", it) }
-    }.apply { isDaemon = true }.start()
+    Links.open(url)
 }
 
 @Composable

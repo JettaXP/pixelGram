@@ -81,7 +81,7 @@ jobs:
             install -Dm644 "packaging/icons/hicolor/$size.png" "$appdir/usr/share/icons/hicolor/${size}x${size}/apps/com.pixelgram.desktop.png"
           done
           cp packaging/icons/hicolor/256.png "$appdir/com.pixelgram.desktop.png"
-          sed 's/^Exec=.*/Exec=pixelGram/' packaging/arch/com.pixelgram.desktop.desktop > "$appdir/com.pixelgram.desktop.desktop"
+          sed 's/^Exec=.*/Exec=pixelGram %u/' packaging/arch/com.pixelgram.desktop.desktop > "$appdir/com.pixelgram.desktop.desktop"
           cp "$appdir/com.pixelgram.desktop.desktop" "$appdir/usr/share/applications/"
           printf '#!/bin/sh\nhere="$(dirname "$(readlink -f "$0")")"\nexec "$here/usr/lib/pixelGram/bin/pixelGram" "$@"\n' > "$appdir/AppRun"
           chmod +x "$appdir/AppRun"

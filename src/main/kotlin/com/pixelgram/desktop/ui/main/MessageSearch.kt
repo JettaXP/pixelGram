@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -93,6 +94,7 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
             }
             TextField(
                 value = query,
+                visualTransformation = EmojiVisualTransformation,
                 onValueChange = { query = it },
                 singleLine = true,
                 placeholder = { Text("Search messages") },

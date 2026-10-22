@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
+import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import com.pixelgram.desktop.ui.OnEscape
 import kotlinx.coroutines.launch
 import java.io.File
@@ -300,6 +301,7 @@ fun SettingsScreen(
                     Reveal(searching) {
                         OutlinedTextField(
                             value = query,
+                            visualTransformation = EmojiVisualTransformation,
                             onValueChange = { query = it },
                             label = { Text("Search settings") },
                             singleLine = true,

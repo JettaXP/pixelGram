@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,6 +47,7 @@ fun NewChatDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = title,
+                    visualTransformation = EmojiVisualTransformation,
                     onValueChange = { title = it.take(128) },
                     label = { Text(if (channel) "Channel name" else "Group name") },
                     singleLine = true,
@@ -54,6 +56,7 @@ fun NewChatDialog(
                 )
                 OutlinedTextField(
                     value = description,
+                    visualTransformation = EmojiVisualTransformation,
                     onValueChange = { description = it.take(255) },
                     label = { Text("Description (optional)") },
                     enabled = !creating,
