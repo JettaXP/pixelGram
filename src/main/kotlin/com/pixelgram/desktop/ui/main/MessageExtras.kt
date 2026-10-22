@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.Avatar
+import com.pixelgram.desktop.core.AppSettings
+import com.pixelgram.desktop.telegram.Telegram
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -81,7 +84,14 @@ private fun ReactionCell(emoji: String, onPick: (String) -> Unit) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ReactionChips(reactions: List<TdApi.MessageReaction>, outgoing: Boolean, onToggle: (String) -> Unit) {
+fun ReactionChips(
+    reactions: List<TdApi.MessageReaction>,
+    outgoing: Boolean,
+    onToggle: (String) -> Unit,
+    telegram: Telegram? = null,
+    settings: AppSettings? = null,
+    avatars: Boolean = false,
+) {
     val scheme = MaterialTheme.colorScheme
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -113,12 +123,30 @@ fun ReactionChips(reactions: List<TdApi.MessageReaction>, outgoing: Boolean, onT
                     modifier = Modifier.padding(start = 8.dp, end = 10.dp, top = 3.dp, bottom = 3.dp).animateContentSize(),
                 ) {
                     EmojiText(emoji, fontSize = 15.sp)
-                    Text(reaction.totalCount.toString(), style = MaterialTheme.typography.labelLarge)
+                    val senders = reaction.recentSenderIds.orEmpty()
+                    if (avatars && telegram != null && settings != null && reaction.totalCount <= MaxReactionAvatars && senders.size == reaction.totalCount) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(-ReactionAvatarOverlap)) {
+                            senders.forEach { sender ->
+                                val photo = when (sender) {
+                                    is TdApi.MessageSenderUser -> telegram.users[sender.userId]?.profilePhoto?.small
+                                    is TdApi.MessageSenderChat -> telegram.chats[sender.chatId]?.photo
+                                    else -> null
+                                }
+                                Avatar(telegram.senderTitle(sender), photo, telegram, settings, ReactionAvatarSize)
+                            }
+                        }
+                    } else {
+                        Text(reaction.totalCount.toString(), style = MaterialTheme.typography.labelLarge)
+                    }
                 }
             }
         }
     }
 }
+
+private const val MaxReactionAvatars = 3
+private val ReactionAvatarSize = 20.dp
+private val ReactionAvatarOverlap = 6.dp
 
 @Composable
 fun InlineKeyboard(rows: List<List<TdApi.InlineKeyboardButton>>, onPress: (TdApi.InlineKeyboardButton) -> Unit, modifier: Modifier = Modifier) {

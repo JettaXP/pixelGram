@@ -681,7 +681,14 @@ fun MessageBubble(
                             )
                         }
                         if (message.reactions.isNotEmpty() && onReact != null) {
-                            ReactionChips(message.reactions, outgoing, onReact)
+                            ReactionChips(
+                                message.reactions,
+                                outgoing,
+                                onReact,
+                                telegram,
+                                settings,
+                                avatars = telegram?.chats?.get(message.chatId)?.isChannel == false,
+                            )
                         }
                     }
                 }

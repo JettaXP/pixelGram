@@ -1054,7 +1054,7 @@ class Telegram(
                 this.type = type
                 totalCount = 1
                 isChosen = true
-                recentSenderIds = emptyArray()
+                recentSenderIds = arrayOf(TdApi.MessageSenderUser(myUserId))
             }
         }
         val replace = { reactions: List<TdApi.MessageReaction> ->
