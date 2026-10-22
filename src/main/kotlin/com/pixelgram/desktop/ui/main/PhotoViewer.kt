@@ -159,7 +159,24 @@ private fun ZoomablePhoto(photo: ViewedPhoto, modifier: Modifier) {
     var zoom by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     val shownZoom by animateFloatAsState(zoom)
-    Box(modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 72.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier
+            .fillMaxSize()
+            .padding(horizontal = 48.dp, vertical = 72.dp)
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                            val change = event.changes.first()
+                            change.consume()
+                            menuAt = with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) }
+                        }
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
         val bitmap = full ?: preview
         if (bitmap != null) {
             Image(
@@ -173,18 +190,6 @@ private fun ZoomablePhoto(photo: ViewedPhoto, modifier: Modifier) {
                         scaleY = shownZoom
                         translationX = offset.x
                         translationY = offset.y
-                    }
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
-                                    val change = event.changes.first()
-                                    change.consume()
-                                    menuAt = with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) }
-                                }
-                            }
-                        }
                     }
                     .pointerInput(Unit) {
                         detectTapGestures(onDoubleTap = {

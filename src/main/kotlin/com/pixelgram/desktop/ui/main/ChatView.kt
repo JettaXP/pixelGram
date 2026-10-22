@@ -696,28 +696,31 @@ fun MessageBubble(
                             }
                         }
                         val linkPreview = linkPreviewOf(message.content)
+                        val reacted = message.reactions.isNotEmpty() && onReact != null
+                        val meta = @Composable { MessageMeta(message, status, settings.messageSeconds.value, metaColor, readColor) }
                         if (linkPreview != null && telegram != null) {
                             TextWithMeta(text = message.text, entities = message.entities, meta = { Box(Modifier) })
                             LinkPreviewCard(linkPreview, telegram, outgoing, PhotoMaxWidth - 24.dp)
-                            Box(Modifier.align(Alignment.End).padding(top = 4.dp)) {
-                                MessageMeta(message, status, settings.messageSeconds.value, metaColor, readColor)
-                            }
+                            if (!reacted) Box(Modifier.align(Alignment.End).padding(top = 4.dp)) { meta() }
+                        } else if (reacted) {
+                            TextWithMeta(text = message.text, entities = message.entities, meta = { Box(Modifier) })
                         } else {
-                            TextWithMeta(
-                                text = message.text,
-                                entities = message.entities,
-                                meta = { MessageMeta(message, status, settings.messageSeconds.value, metaColor, readColor) },
-                            )
+                            TextWithMeta(text = message.text, entities = message.entities, meta = meta)
                         }
-                        if (message.reactions.isNotEmpty() && onReact != null) {
-                            ReactionChips(
-                                message.reactions,
-                                outgoing,
-                                onReact,
-                                telegram,
-                                settings,
-                                avatars = telegram?.chats?.get(message.chatId)?.isChannel == false,
-                            )
+                        if (reacted && onReact != null) {
+                            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
+                                Box(Modifier.weight(1f)) {
+                                    ReactionChips(
+                                        message.reactions,
+                                        outgoing,
+                                        onReact,
+                                        telegram,
+                                        settings,
+                                        avatars = telegram?.chats?.get(message.chatId)?.isChannel == false,
+                                    )
+                                }
+                                Box(Modifier.padding(start = 8.dp, bottom = 2.dp)) { meta() }
+                            }
                         }
                     }
                 } else if (message.reactions.isNotEmpty() && onReact != null) {

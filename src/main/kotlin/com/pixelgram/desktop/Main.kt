@@ -1,5 +1,13 @@
 package com.pixelgram.desktop
 
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.KeyEventType
@@ -205,9 +213,6 @@ private fun ApplicationScope.PixelApp() {
         title = "pixelGram",
         icon = icon,
         state = windowState,
-        onKeyEvent = { event ->
-            event.type == KeyEventType.KeyDown && event.key == Key.Escape && EscapeStack.dispatch()
-        },
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
         LaunchedEffect(scheme.primaryContainer, scheme.onPrimaryContainer) {
@@ -227,8 +232,28 @@ private fun ApplicationScope.PixelApp() {
         val focused = LocalWindowInfo.current.isWindowFocused
         LaunchedEffect(focused) { accounts.list.forEach { it.windowFocused = focused } }
         val chrome = rememberWindowChrome()
+        val rootFocus = remember { FocusRequester() }
+        var focusInside by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { rootFocus.requestFocus() }
         PixelTheme(settings) {
-            Box(Modifier.fillMaxSize()) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                if (event.type == PointerEventType.Press && !focusInside) rootFocus.requestFocus()
+                            }
+                        }
+                    }
+                    .focusRequester(rootFocus)
+                    .onFocusChanged { focusInside = it.hasFocus }
+                    .focusable()
+                    .onKeyEvent { event ->
+                        event.type == KeyEventType.KeyDown && event.key == Key.Escape && EscapeStack.dispatch()
+                    },
+            ) {
                 Column {
                     if (ownTitleBar) TitleBar(chrome, onClose = close)
                     key(accounts.active) {
