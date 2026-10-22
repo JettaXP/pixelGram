@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material.icons.filled.Settings
+import com.pixelgram.desktop.core.Backup
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -295,21 +297,30 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
             val document = content.document
             val name = document.fileName.ifBlank { "File" }
             val plugin = name.endsWith(".plugin", ignoreCase = true)
+            val backup = Backup.isBackup(name)
             val (busy, open) = rememberOpener(document.document, telegram) { path ->
-                if (plugin) onPlugin(path) else openFile(path)
+                when {
+                    plugin -> onPlugin(path)
+                    backup -> BackupViewer.path = path
+                    else -> openFile(path)
+                }
             }
             val image = PreviewExtensions.any { name.endsWith(it, ignoreCase = true) }
             val local = telegram.localPath(document.document)?.takeIf { image }
             val thumb = document.thumbnail?.file
             val mini = document.minithumbnail
             val preview: (@Composable (Modifier) -> Unit)? = when {
-                plugin -> null
+                plugin || backup -> null
                 local != null -> { modifier -> FileImage(local, modifier, ContentScale.Crop) }
                 thumb != null || mini != null -> { modifier -> ThumbImage(thumb, mini, telegram, modifier) }
                 else -> null
             }
             FileRow(
-                if (plugin) Icons.Filled.Extension else Icons.Filled.InsertDriveFile,
+                when {
+                    plugin -> Icons.Filled.Extension
+                    backup -> Icons.Filled.Settings
+                    else -> Icons.Filled.InsertDriveFile
+                },
                 name,
                 formatSize(document.document?.let { maxOf(it.size, it.expectedSize) } ?: 0),
                 busy,

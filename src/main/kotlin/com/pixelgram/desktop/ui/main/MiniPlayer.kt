@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Slider
@@ -180,6 +181,7 @@ fun MiniPlayer(telegram: Telegram) {
                     fraction = if (AudioPlayer.duration > 0f) AudioPlayer.position / AudioPlayer.duration else 0f,
                     onSeek = AudioPlayer::seekCurrent,
                     modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                    playing = AudioPlayer.playing,
                 )
             }
         }
@@ -298,10 +300,14 @@ private fun PlayPauseIcon(playing: Boolean) {
 private const val ControlScale = 0.5f
 private val ControlGap = 4.dp
 
+private const val WaveSettleStiffness = 16.5f
+private const val WaveRestThreshold = 0.01f
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = Modifier) {
+fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = Modifier, playing: Boolean = true) {
     var dragging by remember { mutableStateOf<Float?>(null) }
+    val wave by animateFloatAsState(if (playing) 1f else 0f, spring(dampingRatio = 1f, stiffness = WaveSettleStiffness))
     val interaction = remember { MutableInteractionSource() }
     Slider(
         value = dragging ?: fraction.coerceIn(0f, 1f),
@@ -321,6 +327,8 @@ fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = M
             LinearWavyProgressIndicator(
                 progress = { state.value },
                 modifier = Modifier.fillMaxWidth(),
+                amplitude = { progress -> WavyProgressIndicatorDefaults.indicatorAmplitude(progress) * wave },
+                waveSpeed = if (wave > WaveRestThreshold) WavyProgressIndicatorDefaults.LinearDeterminateWavelength else 0.dp,
             )
         },
         modifier = modifier.height(28.dp),

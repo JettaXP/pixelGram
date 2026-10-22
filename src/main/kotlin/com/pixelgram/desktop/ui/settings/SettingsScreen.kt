@@ -1,5 +1,15 @@
 package com.pixelgram.desktop.ui.settings
 
+import kotlinx.coroutines.launch
+import java.io.File
+import com.pixelgram.desktop.ui.main.BackupImportDialog
+import com.pixelgram.desktop.ui.main.Attachments
+import com.pixelgram.desktop.ui.main.ForwardDialog
+import com.pixelgram.desktop.core.Backup
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Upload
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.FilterChip
 import com.pixelgram.desktop.core.AvatarKind
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -162,6 +172,7 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
     Appearance("Appearance", Icons.Outlined.Palette, pixel = true),
     Avatars("Avatars", Icons.Outlined.Face, pixel = true),
     Bubbles("Message bubbles", Icons.Outlined.ChatBubbleOutline, pixel = true),
+    About("About", Icons.Outlined.Info, pixel = true),
 }
 
 private val QrAvatarSize = 80.dp
@@ -169,6 +180,7 @@ private val QrAvatarSize = 80.dp
 private const val PixelPreferencesTitle = "pixelGram Preferences"
 private const val ChannelUsername = "pixelgramclient"
 private const val ChannelUrl = "https://t.me/$ChannelUsername"
+private const val GitHubUrl = "https://github.com/JettaXP/pixelGram"
 
 @Composable
 fun SettingsScreen(
@@ -274,18 +286,6 @@ fun SettingsScreen(
                             }
                         }
                     }
-                    Header("Links")
-                    SegmentedListItem(
-                        onClick = {
-                            telegram.openPublicChat(ChannelUsername, onOpenChat, onFail = { openUrl(ChannelUrl) })
-                        },
-                        shapes = ListItemDefaults.segmentedShapes(0, 1),
-                        leadingContent = { Icon(Icons.Outlined.Campaign, contentDescription = null) },
-                        supportingContent = { Text("@pixelgramclient") },
-                        trailingContent = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) },
-                    ) {
-                        Text("Channel")
-                    }
                 } else {
                     Reveal(searching) {
                         OutlinedTextField(
@@ -366,6 +366,7 @@ fun SettingsScreen(
                         Section.Appearance -> AppearanceSection(settings)
                         Section.Avatars -> AvatarsSection(settings)
                         Section.Bubbles -> BubblesSection(settings)
+                        Section.About -> AboutSection(telegram, settings, onOpenChat)
                         Section.MyAccount -> AccountSection(telegram, onOpenProfile)
                         Section.Privacy -> PrivacySection(telegram)
                         Section.ChatSettings -> ChatSettingsSection(settings) {
@@ -1182,5 +1183,83 @@ private fun AdvancedSection(telegram: Telegram) {
 private fun openUrl(url: String) {
     runCatching {
         if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(URI(url))
+    }
+}
+
+@Composable
+private fun AboutSection(telegram: Telegram, settings: AppSettings, onOpenChat: (Long) -> Unit) {
+    val scope = rememberCoroutineScope()
+    var exporting by remember { mutableStateOf<File?>(null) }
+    var importing by remember { mutableStateOf<File?>(null) }
+    var status by remember { mutableStateOf<String?>(null) }
+
+    Description("pixelGram ${BuildConfig.VERSION}. A Telegram client with Material 3 Expressive, built on TDLib.")
+    Header("Links")
+    SegmentedGroup {
+        LinkItem(0, 2, Icons.Outlined.Campaign, "Channel", "@$ChannelUsername") {
+            telegram.openPublicChat(ChannelUsername, onOpenChat, onFail = { openUrl(ChannelUrl) })
+        }
+        LinkItem(1, 2, Icons.Outlined.Code, "GitHub", "JettaXP/pixelGram") { openUrl(GitHubUrl) }
+    }
+
+    Header("Backup")
+    Description("Save pixelGram Preferences to a .backup file and send it to any chat, or load them from one. Accounts are not included.")
+    SegmentedGroup {
+        LinkItem(0, 2, Icons.Outlined.Upload, "Export settings", "Choose a chat to send the backup to", trailing = false) {
+            exporting = Backup.export(settings)
+            if (exporting == null) status = "Couldn't create the backup."
+        }
+        LinkItem(1, 2, Icons.Outlined.Download, "Import settings", "Pick a .backup file", trailing = false) {
+            scope.launch {
+                val file = Attachments.pick().firstOrNull()
+                when {
+                    file == null -> Unit
+                    Backup.isBackup(file.name) -> importing = file
+                    else -> status = "That's not a pixelGram backup."
+                }
+            }
+        }
+    }
+    Reveal(status != null) {
+        Text(status.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+    }
+
+    exporting?.let { file ->
+        ForwardDialog(telegram, settings, onDismiss = { exporting = null }) { chatId ->
+            exporting = null
+            telegram.sendFiles(chatId, listOf(file), asPhotos = false, caption = "")
+            status = "Sent ${file.name}."
+        }
+    }
+    importing?.let { file ->
+        BackupImportDialog(file, settings) { done ->
+            importing = null
+            if (done != null) status = if (done) "Settings imported." else "Couldn't read ${file.name}."
+        }
+    }
+}
+
+@Composable
+private fun LinkItem(
+    index: Int,
+    count: Int,
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    trailing: Boolean = true,
+    onClick: () -> Unit,
+) {
+    SegmentedListItem(
+        onClick = onClick,
+        shapes = ListItemDefaults.segmentedShapes(index, count),
+        leadingContent = { Icon(icon, contentDescription = null) },
+        supportingContent = { Text(subtitle) },
+        trailingContent = if (trailing) {
+            { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) }
+        } else {
+            null
+        },
+    ) {
+        Text(title)
     }
 }

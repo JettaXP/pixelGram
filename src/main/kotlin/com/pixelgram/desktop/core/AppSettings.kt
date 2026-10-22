@@ -38,6 +38,18 @@ class Setting<T>(
                 owner.save()
             }
         }
+
+    @Suppress("UNCHECKED_CAST")
+    fun load(raw: String) {
+        val parsed: Any? = when (val current = value) {
+            is Boolean -> raw.toBooleanStrictOrNull()
+            is Int -> raw.toIntOrNull()
+            is String -> raw
+            is Enum<*> -> current.declaringJavaClass.enumConstants.firstOrNull { it.name == raw }
+            else -> null
+        }
+        if (parsed != null) value = parsed as T
+    }
 }
 
 class AppSettings private constructor(private val props: Properties) {
@@ -107,6 +119,22 @@ class AppSettings private constructor(private val props: Properties) {
         apiId, apiHash,
         accounts, activeAccount,
     ) + avatarKindShapes.values
+
+    private val localOnly = setOf(apiId, apiHash, accounts, activeAccount)
+
+    fun snapshot(): Properties = Properties().apply {
+        for (setting in all) {
+            if (setting in localOnly) continue
+            val value = setting.value
+            setProperty(setting.key, if (value is Enum<*>) value.name else value.toString())
+        }
+    }
+
+    fun restore(props: Properties): Boolean {
+        val shared = all.filter { it !in localOnly && props.getProperty(it.key) != null }
+        shared.forEach { it.load(props.getProperty(it.key)) }
+        return shared.isNotEmpty()
+    }
 
     fun save() {
         val out = Properties()

@@ -385,6 +385,7 @@ private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
                     fraction = if (total > 0) engine.position.toFloat() / total else 0f,
                     onSeek = { engine.seek((it * total).toLong()) },
                     modifier = Modifier.weight(1f),
+                    playing = engine.playing,
                 )
                 Text(formatDuration((total / 1000).toInt()), style = MaterialTheme.typography.labelLarge)
                 if (!request.loop) {
