@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.settings
 
+import androidx.compose.material3.FilterChip
+import com.pixelgram.desktop.core.AvatarKind
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.core.DoubleClickAction
 import com.pixelgram.desktop.ui.components.PhoneText
@@ -821,14 +823,48 @@ private fun <T> ConnectedChoice(
 
 @Composable
 private fun AvatarsSection(settings: AppSettings) {
-    val current = settings.avatarShape.value
+    var kind by remember { mutableStateOf<AvatarKind?>(null) }
+    val current = settings.avatarShapeFor(kind)
     val corner = settings.avatarCorner.value
+    val pick = { shape: AvatarShape ->
+        val target = kind
+        if (target == null) settings.avatarShape.value = shape else settings.avatarKindShapes.getValue(target).value = shape.name
+    }
+
+    Header("Chat type")
+    Description("Pick a shape for all chats, or a separate one for each kind of chat.")
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(selected = kind == null, onClick = { kind = null }, label = { Text("All chats") })
+        AvatarKind.entries.forEach { entry ->
+            FilterChip(
+                selected = kind == entry,
+                onClick = { kind = entry },
+                label = { Text(entry.title) },
+                leadingIcon = settings.kindShape(entry)?.let { shape ->
+                    { ShapePreview(shape, corner, 16.dp, selected = true) }
+                },
+            )
+        }
+    }
+    Spacer(Modifier.height(8.dp))
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         ShapePreview(current, corner, 96.dp, selected = true)
         Column {
             Text(current.title, style = MaterialTheme.typography.titleMedium)
-            Description("Official Material 3 Expressive shapes.")
+            val override = kind?.let(settings::kindShape)
+            Description(
+                when {
+                    kind == null -> "Official Material 3 Expressive shapes."
+                    override == null -> "Same as all chats."
+                    else -> "Only for ${kind?.title?.lowercase()}."
+                }
+            )
+            Reveal(override != null) {
+                TextButton(onClick = { kind?.let { settings.avatarKindShapes.getValue(it).value = "" } }) {
+                    Text("Use the shape for all chats")
+                }
+            }
         }
     }
 
@@ -849,7 +885,7 @@ private fun AvatarsSection(settings: AppSettings) {
                     .width(88.dp)
                     .clip(MaterialTheme.shapes.large)
                     .background(tile)
-                    .clickable { settings.avatarShape.value = shape }
+                    .clickable { pick(shape) }
                     .padding(8.dp),
             ) {
                 ShapePreview(shape, corner, 48.dp, selected)

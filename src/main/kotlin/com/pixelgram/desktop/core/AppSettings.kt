@@ -15,6 +15,14 @@ enum class NotificationStyle { System, PixelGram }
 
 enum class DoubleClickAction { Nothing, Reply, Reaction }
 
+enum class AvatarKind(val title: String) {
+    Private("Private chats"),
+    Bot("Bots"),
+    Group("Groups"),
+    Forum("Forums"),
+    Channel("Channels"),
+}
+
 class Setting<T>(
     private val owner: AppSettings,
     val key: String,
@@ -72,6 +80,12 @@ class AppSettings private constructor(private val props: Properties) {
 
     val avatarShape = enum("avatarShape", AvatarShape.Circle)
     val avatarCorner = int("avatarCorner", 50)
+    val avatarKindShapes = AvatarKind.entries.associateWith { string("avatarShape${it.name}", "") }
+
+    fun kindShape(kind: AvatarKind): AvatarShape? =
+        avatarKindShapes[kind]?.value?.let { name -> AvatarShape.entries.firstOrNull { it.name == name } }
+
+    fun avatarShapeFor(kind: AvatarKind?): AvatarShape = kind?.let(::kindShape) ?: avatarShape.value
 
     val bubbleRadius = int("bubbleRadius", 18)
     val bubbleTailRadius = int("bubbleTailRadius", 4)
@@ -92,7 +106,7 @@ class AppSettings private constructor(private val props: Properties) {
         bubbleRadius, bubbleTailRadius,
         apiId, apiHash,
         accounts, activeAccount,
-    )
+    ) + avatarKindShapes.values
 
     fun save() {
         val out = Properties()

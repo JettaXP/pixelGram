@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.telegram
 
+import com.pixelgram.desktop.core.AvatarKind
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -95,6 +96,7 @@ class ChatState(val id: Long) {
     var isGroup by mutableStateOf(false)
     var privateUserId = 0L
     var isChannel = false
+    var supergroupId = 0L
     var notifications by mutableStateOf<TdApi.ChatNotificationSettings?>(null)
     val positions = mutableStateMapOf<ChatListKey, Long>()
     val pinned = mutableStateMapOf<ChatListKey, Boolean>()
@@ -642,6 +644,7 @@ class Telegram(
                     )
                 }
             }
+            is TdApi.UpdateSupergroup -> forums[update.supergroup.id] = update.supergroup.isForum
             is TdApi.UpdateMessageIsPinned -> messages[update.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.messageId }
                 if (index >= 0) list[index] = list[index].copy(pinned = update.isPinned)
@@ -720,6 +723,7 @@ class Telegram(
             isGroup = chat.type is TdApi.ChatTypeBasicGroup || chat.type is TdApi.ChatTypeSupergroup
             privateUserId = (chat.type as? TdApi.ChatTypePrivate)?.userId ?: 0L
             isChannel = (chat.type as? TdApi.ChatTypeSupergroup)?.isChannel == true
+            supergroupId = (chat.type as? TdApi.ChatTypeSupergroup)?.supergroupId ?: 0L
             notifications = chat.notificationSettings
         }
         chat.positions?.forEach { applyPosition(state, it) }
@@ -840,6 +844,16 @@ class Telegram(
     }
 
     fun isBot(chat: ChatState): Boolean = users[chat.privateUserId]?.type is TdApi.UserTypeBot
+
+    private val forums = mutableStateMapOf<Long, Boolean>()
+
+    fun avatarKind(chat: ChatState): AvatarKind = when {
+        chat.privateUserId != 0L -> if (isBot(chat)) AvatarKind.Bot else AvatarKind.Private
+        chat.isChannel -> AvatarKind.Channel
+        forums[chat.supergroupId] == true -> AvatarKind.Forum
+        chat.isGroup -> AvatarKind.Group
+        else -> AvatarKind.Private
+    }
 
     fun block(chat: ChatState) {
         if (chat.privateUserId == 0L) return

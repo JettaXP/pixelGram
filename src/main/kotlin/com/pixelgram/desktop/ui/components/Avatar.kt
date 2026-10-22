@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.components
 
+import com.pixelgram.desktop.core.AvatarKind
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -101,8 +102,9 @@ fun Avatar(
     size: Dp,
     modifier: Modifier = Modifier,
     full: TdApi.File? = null,
+    kind: AvatarKind? = null,
 ) {
-    val shape = settings.avatarShape.value.toShape(settings.avatarCorner.value)
+    val shape = settings.avatarShapeFor(kind).toShape(settings.avatarCorner.value)
     AvatarImage(title, photo, telegram, shape, size, modifier, full)
 }
 
@@ -115,7 +117,7 @@ fun ChatAvatar(
     modifier: Modifier = Modifier,
 ) {
     if (!telegram.isSavedMessages(chat.id)) {
-        Avatar(chat.title, chat.photo, telegram, settings, size, modifier)
+        Avatar(chat.title, chat.photo, telegram, settings, size, modifier, kind = telegram.avatarKind(chat))
         return
     }
     val colors = MaterialTheme.colorScheme
