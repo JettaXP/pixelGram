@@ -102,11 +102,12 @@ fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
                                         editingNumber = false
                                         if (state !is AuthState.WaitQr) telegram.requestQr()
                                     },
+                                    onCancel = onCancel,
                                 )
                                 else -> when (state) {
                                 AuthState.Starting, AuthState.Closing -> LoadingIndicator()
                                 AuthState.NeedApiCredentials -> ApiCredentialsStep(telegram)
-                                AuthState.WaitPhone -> PhoneStep(telegram, onQr = telegram::requestQr)
+                                AuthState.WaitPhone -> PhoneStep(telegram, onQr = telegram::requestQr, onCancel = onCancel)
                                 is AuthState.WaitQr -> QrStep(state.link)
                                 is AuthState.WaitCode -> CodeStep(state.info, telegram) { editingNumber = true }
                                 is AuthState.WaitPassword -> PasswordStep(state.hint, telegram)
@@ -129,9 +130,10 @@ fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
                         )
                     }
                     val onQr = state is AuthState.WaitQr && !editingNumber
+                    val onPhone = state is AuthState.WaitPhone || editingNumber
                     val pill: Pair<String, () -> Unit>? = when {
                         onQr -> "Back" to { editingNumber = true }
-                        onCancel != null -> "Cancel" to onCancel
+                        onCancel != null && !onPhone -> "Cancel" to onCancel
                         else -> null
                     }
                     var lastPill by remember { mutableStateOf(pill) }

@@ -58,6 +58,12 @@ fun Telegram.loadDemo() {
             authState = AuthState.WaitQr("tg://login?token=pixelgram-demo")
         }
     }
+    System.getProperty("pixelgram.demo.auth")?.let { step ->
+        kotlinx.coroutines.MainScope().launch {
+            kotlinx.coroutines.delay(4000)
+            authState = if (step == "qr") AuthState.WaitQr("tg://login?token=pixelgram-demo") else AuthState.WaitPhone
+        }
+    }
     if (System.getProperty("pixelgram.demo.password") == "true") {
         kotlinx.coroutines.MainScope().launch {
             kotlinx.coroutines.delay(4000)

@@ -1,5 +1,17 @@
 package com.pixelgram.desktop.ui.auth
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -47,7 +59,7 @@ private const val MinNationalDigits = 5
 private const val MaxCodeDigits = 4
 
 @Composable
-fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
+fun PhoneStep(telegram: Telegram, onQr: () -> Unit, onCancel: (() -> Unit)? = null) {
     val countries = telegram.countries
     var picked by remember { mutableStateOf<Country?>(null) }
     var code by remember { mutableStateOf("") }
@@ -153,7 +165,7 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
     )
     BusyButton("Next", busy, enabled = complete, onClick = submit)
-    TextButton(onClick = onQr, enabled = !busy) { Text("Log in by QR code") }
+    PhoneActions(busy, onQr, onCancel)
 
     if (picking) {
         CountryPicker(
@@ -291,3 +303,44 @@ fun CodeStep(info: CodeInfo, telegram: Telegram, onChangeNumber: () -> Unit) {
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun PhoneActions(busy: Boolean, onQr: () -> Unit, onCancel: (() -> Unit)?) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        val qrSource = remember { MutableInteractionSource() }
+        val qrPressed by qrSource.collectIsPressedAsState()
+        FilledTonalButton(
+            onClick = onQr,
+            enabled = !busy,
+            interactionSource = qrSource,
+            shape = when {
+                onCancel == null -> CircleShape
+                qrPressed -> ButtonGroupDefaults.connectedLeadingButtonPressShape
+                else -> ButtonGroupDefaults.connectedLeadingButtonShape
+            },
+            modifier = Modifier.weight(1f).height(ActionHeight),
+        ) {
+            Icon(Icons.Filled.QrCode2, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text(if (onCancel == null) "Log in by QR code" else "QR code")
+        }
+        if (onCancel != null) {
+            val cancelSource = remember { MutableInteractionSource() }
+            val cancelPressed by cancelSource.collectIsPressedAsState()
+            OutlinedButton(
+                onClick = onCancel,
+                interactionSource = cancelSource,
+                shape = if (cancelPressed) ButtonGroupDefaults.connectedTrailingButtonPressShape else ButtonGroupDefaults.connectedTrailingButtonShape,
+                modifier = Modifier.weight(1f).height(ActionHeight),
+            ) {
+                Text("Cancel")
+            }
+        }
+    }
+}
+
+private val ActionHeight = 48.dp
