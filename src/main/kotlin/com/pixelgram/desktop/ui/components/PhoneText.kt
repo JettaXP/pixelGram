@@ -77,6 +77,7 @@ fun PhoneText(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.height(size * 1.4f),
             ) {
+                Text("+", style = style, color = tint)
                 repeat(CoverShapes) { index ->
                     val shape = PhoneShapes[index % PhoneShapes.size].toShape()
                     Box(Modifier.size(size).background(tint, shape))
