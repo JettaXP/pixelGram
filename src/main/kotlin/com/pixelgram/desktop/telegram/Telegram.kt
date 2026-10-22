@@ -616,7 +616,7 @@ class Telegram(
     var windowFocused = true
 
     private fun shouldNotify(message: TdApi.Message): Boolean {
-        if (message.isOutgoing || !settings.notificationSound.value) return false
+        if (message.isOutgoing || !settings.notificationSound.value || settings.notificationsMuted.value) return false
         if (message.chatId == openChatId && windowFocused) return false
         val chat = chats[message.chatId] ?: return false
         val own = chat.notifications

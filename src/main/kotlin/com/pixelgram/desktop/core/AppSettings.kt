@@ -48,6 +48,8 @@ class AppSettings private constructor(private val props: Properties) {
     val matugen = bool("matugen", false)
     val emojiStyle = enum("emojiStyle", EmojiStyle.Noto)
     val notificationSound = bool("notificationSound", true)
+    // Set from the tray menu; silences all notifications until enabled again.
+    val notificationsMuted = bool("notificationsMuted", false)
 
     // Folders.
     val materialFolders = bool("materialFolders", true)
@@ -74,7 +76,7 @@ class AppSettings private constructor(private val props: Properties) {
     val activeAccount = int("activeAccount", 0)
 
     private val all: List<Setting<*>> = listOf(
-        themeMode, seedColor, matugen, emojiStyle, notificationSound,
+        themeMode, seedColor, matugen, emojiStyle, notificationSound, notificationsMuted,
         materialFolders, hideAllChats,
         capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth,
         avatarShape, avatarCorner,

@@ -886,6 +886,12 @@ private fun ChatSettingsSection(settings: AppSettings, onOpenBubbles: () -> Unit
 
 @Composable
 private fun NotificationsSection(settings: AppSettings) {
+    if (settings.notificationsMuted.value) {
+        Description("Notifications are disabled from the tray menu.")
+        Button(onClick = { settings.notificationsMuted.value = false }, modifier = Modifier.padding(bottom = 8.dp)) {
+            Text("Enable notifications")
+        }
+    }
     SwitchRow(
         index = 0,
         count = 1,

@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -40,6 +41,7 @@ import com.pixelgram.desktop.ui.theme.EmojiFonts
 import com.pixelgram.desktop.ui.theme.PixelTheme
 import com.pixelgram.desktop.ui.theme.isDarkTheme
 import kotlinx.coroutines.MainScope
+import java.awt.SystemTray
 
 fun main() = application {
     val settings = remember { AppSettings.load().also { EmojiFonts.settings = it } }
@@ -49,16 +51,40 @@ fun main() = application {
         if (System.getProperty("pixelgram.demo") == "true") accounts.active.loadDemo()
     }
 
+    val quit = {
+        accounts.closeAll()
+        exitApplication()
+    }
+    var visible by remember { mutableStateOf(true) }
+    val icon = AppIcons.forTheme(isDarkTheme(settings))
+    // Without a system tray (some Linux desktops) closing the window quits.
+    val hasTray = remember { SystemTray.isSupported() }
+    if (hasTray && icon != null) {
+        Tray(
+            icon = icon,
+            tooltip = "pixelGram",
+            onAction = { visible = true },
+            menu = {
+                Item("Open pixelGram", onClick = { visible = true })
+                Item(
+                    if (settings.notificationsMuted.value) "Enable notifications" else "Disable notifications",
+                    onClick = { settings.notificationsMuted.value = !settings.notificationsMuted.value },
+                )
+                Separator()
+                Item("Quit pixelGram", onClick = quit)
+            },
+        )
+    }
+
     Window(
-        onCloseRequest = {
-            accounts.closeAll()
-            exitApplication()
-        },
+        onCloseRequest = { if (hasTray) visible = false else quit() },
+        visible = visible,
         title = "pixelGram",
-        icon = AppIcons.forTheme(isDarkTheme(settings)),
+        icon = icon,
         state = rememberWindowState(size = DpSize(1180.dp, 760.dp)),
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
+        LaunchedEffect(visible) { if (visible) window.toFront() }
         val focused = LocalWindowInfo.current.isWindowFocused
         LaunchedEffect(focused) { accounts.list.forEach { it.windowFocused = focused } }
         PixelTheme(settings) {
