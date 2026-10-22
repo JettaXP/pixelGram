@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.auth
 
+import androidx.compose.runtime.withFrameMillis
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.Canvas
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialShapes
@@ -37,10 +41,9 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
     val accent = if (darkTheme) scheme.tertiaryContainer else scheme.tertiary
     val backShape = MaterialShapes.Cookie4Sided.toShape()
     val eyeShapes = listOf(
-        MaterialShapes.Sunny.toShape(),
-        MaterialShapes.Cookie7Sided.toShape(),
         MaterialShapes.Cookie9Sided.toShape(),
-        MaterialShapes.Cookie4Sided.toShape(),
+        MaterialShapes.Cookie7Sided.toShape(),
+        MaterialShapes.Cookie12Sided.toShape(),
     )
     val blobShapes = listOf(
         MaterialShapes.Circle.toShape(),
@@ -49,7 +52,12 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
         MaterialShapes.Clover4Leaf.toShape(),
         MaterialShapes.Cookie6Sided.toShape(),
         MaterialShapes.Cookie9Sided.toShape(),
+        MaterialShapes.Cookie4Sided.toShape(),
     )
+    val time by produceState(0f) {
+        val start = withFrameMillis { it }
+        while (true) withFrameMillis { value = (it - start) / 1000f }
+    }
     Canvas(modifier) {
         drawShape(backShape, Offset.Zero, size, background)
         val area = size.minDimension * QrArea
@@ -60,7 +68,9 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
                 val center = Offset((ex + 3.5f) * cell, (ey + 3.5f) * cell)
                 drawCircle(main, radius = cell * 3f, center = center, style = Stroke(width = cell))
                 val eye = cell * 3.3f
-                drawShape(eyeShapes[index], center - Offset(eye / 2, eye / 2), Size(eye, eye), main)
+                rotate(EyeSpin[index] * time % 360f, pivot = center) {
+                    drawShape(eyeShapes[index], center - Offset(eye / 2, eye / 2), Size(eye, eye), main)
+                }
             }
             val faint = neutral.copy(alpha = 0.08f)
             for (y in -2 until qr.size + 2) {
@@ -174,3 +184,4 @@ private fun pieces(qr: Qr): List<Piece> {
 
 private const val QrArea = 0.66f
 private const val MaxRun = 4
+private val EyeSpin = floatArrayOf(72f, 84f, 66f)

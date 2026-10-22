@@ -1,5 +1,13 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.IntrinsicMeasureScope
+import androidx.compose.ui.layout.IntrinsicMeasurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasurePolicy
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.material.icons.automirrored.outlined.Reply
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Check
@@ -341,12 +349,13 @@ fun MessageBubble(
             val metaColor = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant).copy(alpha = 0.7f)
             val readColor = if (outgoing) colors.primary else metaColor
             val hasText = message.text.isNotEmpty()
-            Column(Modifier.padding(if (photo != null) PhotoInset else 0.dp)) {
+            Column(Modifier.padding(if (photo != null) PhotoInset else 0.dp).width(IntrinsicSize.Max)) {
                 if (quote != null) {
                     Box(
                         Modifier
-                            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = if (photo != null) 6.dp else 0.dp)
-                            .then(if (photo != null) Modifier.width(PhotoMaxWidth - 16.dp) else Modifier),
+                            .fillMaxWidth()
+                            .widthIn(min = QuoteMinWidth)
+                            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = if (photo != null) 6.dp else 0.dp),
                     ) { quote() }
                 }
                 if (photo != null && telegram != null) {
@@ -421,50 +430,66 @@ private fun MessageMeta(message: UiMessage, status: MessageStatus?, color: Color
 
 @Composable
 private fun TextWithMeta(text: String, meta: @Composable () -> Unit) {
-    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    var textLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
     Layout(
         content = {
             if (text.isNotEmpty()) {
                 SelectionContainer {
-                    EmojiText(text, style = MaterialTheme.typography.bodyLarge, onTextLayout = { layout = it })
+                    EmojiText(text, style = MaterialTheme.typography.bodyLarge, onTextLayout = { textLayout = it })
                 }
             } else {
                 Box {}
             }
             meta()
         },
-    ) { measurables, constraints ->
-        val loose = constraints.copy(minWidth = 0)
-        val textPlaceable = measurables[0].measure(loose)
-        val metaPlaceable = measurables[1].measure(loose)
-        val gap = MetaGap.roundToPx()
-        val lines = layout?.takeIf { text.isNotEmpty() }
-        val lastLineRight = lines?.let { it.getLineRight(it.lineCount - 1).toInt() } ?: 0
-        val sameLine = text.isEmpty() || lastLineRight + gap + metaPlaceable.width <= constraints.maxWidth
-        val width: Int
-        val height: Int
-        val metaX: Int
-        val metaY: Int
-        if (sameLine) {
-            width = maxOf(textPlaceable.width, lastLineRight + gap + metaPlaceable.width)
-                .coerceAtLeast(constraints.minWidth)
-            height = maxOf(textPlaceable.height, metaPlaceable.height)
-            metaX = width - metaPlaceable.width
-            metaY = height - metaPlaceable.height
-        } else {
-            width = maxOf(textPlaceable.width, metaPlaceable.width).coerceAtLeast(constraints.minWidth)
-            height = textPlaceable.height + metaPlaceable.height
-            metaX = width - metaPlaceable.width
-            metaY = textPlaceable.height
-        }
-        layout(width, height) {
-            textPlaceable.place(0, 0)
-            metaPlaceable.place(metaX, metaY)
-        }
-    }
+        measurePolicy = object : MeasurePolicy {
+            override fun MeasureScope.measure(measurables: List<Measurable>, constraints: Constraints): MeasureResult {
+                val loose = constraints.copy(minWidth = 0)
+                val textPlaceable = measurables[0].measure(loose)
+                val metaPlaceable = measurables[1].measure(loose)
+                val gap = MetaGap.roundToPx()
+                val lines = textLayout?.takeIf { text.isNotEmpty() }
+                val lastLineRight = lines?.let { it.getLineRight(it.lineCount - 1).toInt() } ?: 0
+                val sameLine = text.isEmpty() || lastLineRight + gap + metaPlaceable.width <= constraints.maxWidth
+                val width: Int
+                val height: Int
+                val metaX: Int
+                val metaY: Int
+                if (sameLine) {
+                    width = maxOf(textPlaceable.width, lastLineRight + gap + metaPlaceable.width)
+                        .coerceAtLeast(constraints.minWidth)
+                    height = maxOf(textPlaceable.height, metaPlaceable.height)
+                    metaX = width - metaPlaceable.width
+                    metaY = height - metaPlaceable.height
+                } else {
+                    width = maxOf(textPlaceable.width, metaPlaceable.width).coerceAtLeast(constraints.minWidth)
+                    height = textPlaceable.height + metaPlaceable.height
+                    metaX = width - metaPlaceable.width
+                    metaY = textPlaceable.height
+                }
+                return layout(width, height) {
+                    textPlaceable.place(0, 0)
+                    metaPlaceable.place(metaX, metaY)
+                }
+            }
+
+            override fun IntrinsicMeasureScope.maxIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int) =
+                measurables[0].maxIntrinsicWidth(height) + MetaGap.roundToPx() + measurables[1].maxIntrinsicWidth(height)
+
+            override fun IntrinsicMeasureScope.minIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int) =
+                maxOf(measurables[0].minIntrinsicWidth(height), measurables[1].minIntrinsicWidth(height))
+
+            override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int) =
+                measurables[0].maxIntrinsicHeight(width) + measurables[1].maxIntrinsicHeight(width)
+
+            override fun IntrinsicMeasureScope.minIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int) =
+                measurables[0].minIntrinsicHeight(width) + measurables[1].minIntrinsicHeight(width)
+        },
+    )
 }
 
 private val MetaGap = 10.dp
+private val QuoteMinWidth = 160.dp
 private const val EditWindowSeconds = 48 * 3600
 
 @Composable

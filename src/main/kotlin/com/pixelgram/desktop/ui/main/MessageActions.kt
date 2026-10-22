@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -68,6 +71,7 @@ class MessageActions(
     val onQuoteClick: (Long) -> Unit,
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MessageGestures(
     message: UiMessage,
@@ -135,21 +139,23 @@ fun MessageGestures(
             Modifier
                 .align(Alignment.CenterEnd)
                 .padding(end = 8.dp)
-                .size(36.dp)
+                .size(40.dp)
                 .graphicsLayer {
-                    alpha = progress
-                    scaleX = 0.5f + progress / 2
-                    scaleY = 0.5f + progress / 2
-                }
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondaryContainer),
+                    alpha = (progress * 2).coerceAtMost(1f)
+                    scaleX = 0.6f + progress * 0.4f
+                    scaleY = 0.6f + progress * 0.4f
+                },
             contentAlignment = Alignment.Center,
         ) {
+            CircularWavyProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxSize(),
+            )
             Icon(
                 Icons.AutoMirrored.Outlined.Reply,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
             )
         }
         Box(Modifier.offset { IntOffset(shift.value.roundToInt(), 0) }) {
@@ -250,7 +256,7 @@ fun ReplyQuote(name: String, text: String, onClick: () -> Unit, modifier: Modifi
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),
         color = colors.primary.copy(alpha = 0.12f),
-        modifier = modifier.height(IntrinsicSize.Min),
+        modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min),
     ) {
         Row {
             Box(Modifier.width(3.dp).fillMaxHeight().background(colors.primary))

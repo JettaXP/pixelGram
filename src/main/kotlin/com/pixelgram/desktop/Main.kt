@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -37,6 +36,7 @@ import com.pixelgram.desktop.telegram.Notifications
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.loadDemo
 import com.pixelgram.desktop.ui.AppIcons
+import com.pixelgram.desktop.ui.PixelTray
 import com.pixelgram.desktop.ui.ResizeHandles
 import com.pixelgram.desktop.ui.Screen
 import com.pixelgram.desktop.ui.TitleBar
@@ -93,21 +93,9 @@ fun main() = application {
     val hasTray = remember {
         SystemTray.isSupported() && !(AppPaths.isLinux && System.getenv("WAYLAND_DISPLAY") != null)
     }
-    if (hasTray && icon != null) key(icon) {
-        Tray(
-            icon = icon,
-            tooltip = "pixelGram",
-            onAction = { visible = true },
-            menu = {
-                Item("Open pixelGram", onClick = { visible = true })
-                Item(
-                    if (settings.notificationsMuted.value) "Enable notifications" else "Disable notifications",
-                    onClick = { settings.notificationsMuted.value = !settings.notificationsMuted.value },
-                )
-                Separator()
-                Item("Quit pixelGram", onClick = quit)
-            },
-        )
+    if (hasTray) {
+        val trayImages = remember(scheme.primaryContainer, scheme.onPrimaryContainer) { AppIcons.sizes(scheme) }
+        PixelTray(trayImages, settings, onOpen = { visible = true }, onQuit = quit)
     }
 
     val toasts = remember { ToastStack() }
