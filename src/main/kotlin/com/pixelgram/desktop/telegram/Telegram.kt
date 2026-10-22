@@ -105,6 +105,10 @@ data class UiMessage(
     val isOutgoing: Boolean,
     val date: Int,
     val text: String,
+    // Stays the same when a sent message gets its final id, so the list keeps the item.
+    val key: Long = id,
+    // Arrived or was sent while the app runs, not loaded from history.
+    val fresh: Boolean = false,
 )
 
 private const val AUTH_TIMEOUT_MS = 30_000L
@@ -480,7 +484,7 @@ class Telegram(
             is TdApi.UpdateNewMessage -> {
                 messages[update.message.chatId]?.let { list ->
                     if (list.none { it.id == update.message.id }) {
-                        list.add(0, update.message.toUi())
+                        list.add(0, update.message.toUi().copy(fresh = true))
                     }
                 }
                 if (shouldNotify(update.message)) Sounds.newMessage()
@@ -491,7 +495,7 @@ class Telegram(
                 scopeNotifications[update.scope.javaClass] = update.notificationSettings
             is TdApi.UpdateMessageSendSucceeded -> messages[update.message.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.oldMessageId }
-                if (index >= 0) list[index] = update.message.toUi()
+                if (index >= 0) list[index] = update.message.toUi().copy(key = list[index].key, fresh = true)
             }
             is TdApi.UpdateMessageContent -> messages[update.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.messageId }

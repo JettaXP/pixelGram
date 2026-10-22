@@ -7,11 +7,6 @@ Planned features, not started yet.
 - Noto 3D emoji are still cut off in some places.
 - Capsule folder bar: the active pill still isn't a scaled-down copy of the
   whole capsule — the proportions must match.
-- Standard Material folder bar on top looks like a slightly changed capsule;
-  it must use the same Material 3 navigation items as the side rail. Check
-  the official Google Material 3 libraries for the correct component.
-- After sending a message the chat scrolls down to it automatically.
-- New messages slide in smoothly instead of appearing abruptly.
 
 ## Window and system tray
 

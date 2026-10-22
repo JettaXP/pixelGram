@@ -418,8 +418,8 @@ private fun AccountHeader(
     }
 }
 
-// Material 3 Expressive navigation items laid out horizontally, the same
-// style as the rail.
+// The side rail's items laid out horizontally: Material 3 short navigation
+// bar items with the icon in a pill and the label underneath.
 @Composable
 private fun TopFolders(
     tabs: List<FolderTab>,
@@ -439,13 +439,15 @@ private fun TopFolders(
                 selected = isSelected,
                 onClick = { onSelect(tab.key) },
                 icon = { Icon(folderIcon(tab.icon, isSelected), contentDescription = null) },
-                label = { Text(emojiText(tab.title), maxLines = 1) },
-                iconPosition = NavigationItemIconPosition.Start,
+                label = { Text(emojiText(tab.title), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                iconPosition = NavigationItemIconPosition.Top,
+                modifier = Modifier.width(TopFolderWidth),
             )
         }
     }
 }
 
+private val TopFolderWidth = 80.dp
 private val MinChatWidth = 380.dp
 private val RailWidth = 96.dp
 private val CompactWidth = 88.dp

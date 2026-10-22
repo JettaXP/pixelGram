@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +42,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
@@ -61,6 +64,7 @@ import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.profile.PersonalChannelCard
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import com.pixelgram.desktop.ui.theme.emojiText
+import kotlinx.coroutines.launch
 
 @Composable
 fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenChat: (Long) -> Unit) {
@@ -80,6 +84,17 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     LaunchedEffect(nearTop, messages.size) {
         if (nearTop) telegram.loadMoreMessages(chat.id)
     }
+    // Follow the newest message while you are at the bottom, and always after sending.
+    val newest = messages.firstOrNull()?.key
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(newest) {
+        if (newest != null && listState.firstVisibleItemIndex <= 1) listState.animateScrollToItem(0)
+    }
+    val placement = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+    val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val slide = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    // New messages slide in once; scrolling back to them later does not replay it.
+    val slidIn = remember(chat.id) { mutableSetOf<Long>() }
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -112,10 +127,16 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             reverseLayout = true,
             modifier = Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            // Short chats sit at the bottom, next to the composer.
+            verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom),
         ) {
-            items(messages, key = { it.id }) { message ->
+            items(messages, key = { it.key }) { message ->
+                val rise = remember { Animatable(if (message.fresh && slidIn.add(message.key)) 1f else 0f) }
+                LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
                 MessageBubble(
+                    modifier = Modifier
+                        .animateItem(fadeInSpec = fade, placementSpec = placement, fadeOutSpec = fade)
+                        .graphicsLayer { translationY = rise.value * size.height },
                     message = message,
                     senderName = if (chat.isGroup && !message.isOutgoing) {
                         telegram.senderName(message)
@@ -126,7 +147,10 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 )
             }
         }
-        Composer(onSend = { telegram.sendText(chat.id, it) })
+        Composer(onSend = {
+            telegram.sendText(chat.id, it)
+            scope.launch { listState.animateScrollToItem(0) }
+        })
     }
 }
 
@@ -141,11 +165,16 @@ fun bubbleShape(radius: Int, tailRadius: Int, outgoing: Boolean): Shape {
 }
 
 @Composable
-fun MessageBubble(message: UiMessage, senderName: String?, settings: AppSettings) {
+fun MessageBubble(
+    message: UiMessage,
+    senderName: String?,
+    settings: AppSettings,
+    modifier: Modifier = Modifier,
+) {
     val colors = MaterialTheme.colorScheme
     val outgoing = message.isOutgoing
     Box(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         contentAlignment = if (outgoing) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
         Surface(
