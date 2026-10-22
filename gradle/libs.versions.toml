@@ -7,6 +7,7 @@ coroutines = "1.11.0"
 materialColorUtilities = "6.0.0"
 tdlight = "3.5.9+td.1.8.68"
 qrcodegen = "1.8.0"
+jna = "5.15.0"
 
 [libraries]
 material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
@@ -16,6 +17,7 @@ material-color-utilities = { module = "com.materialkolor:material-color-utilitie
 tdlight-bom = { module = "it.tdlight:tdlight-java-bom", version.ref = "tdlight" }
 tdlight-java = { module = "it.tdlight:tdlight-java" }
 qrcodegen = { module = "io.nayuki:qrcodegen", version.ref = "qrcodegen" }
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

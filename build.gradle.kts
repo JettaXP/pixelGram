@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.coroutines.swing)
     implementation(libs.material.color.utilities)
     implementation(libs.qrcodegen)
+    implementation(libs.jna)
 
     implementation(platform(libs.tdlight.bom))
     implementation(libs.tdlight.java)
