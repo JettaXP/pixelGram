@@ -288,6 +288,10 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     }
 
     AudioQueueEffects(telegram)
+    FileDropArea(onDrop = { files, asDocuments ->
+        attach(files)
+        asFiles = asDocuments || files.any { !Attachments.isPhoto(it) }
+    }) {
     Column(Modifier.fillMaxSize()) {
         MiniPlayer(telegram)
         Row(
@@ -506,6 +510,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 }
             },
         )
+    }
     }
 }
 
