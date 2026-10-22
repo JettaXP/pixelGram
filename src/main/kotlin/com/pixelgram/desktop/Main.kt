@@ -27,6 +27,11 @@ import androidx.compose.ui.window.rememberWindowState
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.Accounts
 import com.pixelgram.desktop.telegram.AuthState
+import com.pixelgram.desktop.telegram.Notifications
+import com.pixelgram.desktop.ui.notify.ToastData
+import com.pixelgram.desktop.ui.notify.ToastWindow
+import com.pixelgram.desktop.ui.notify.testToast
+import com.pixelgram.desktop.ui.notify.toastFor
 import com.pixelgram.desktop.telegram.loadDemo
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.AppIcons
@@ -80,6 +85,28 @@ fun main() = application {
         )
     }
 
+    var toast by remember { mutableStateOf<ToastData?>(null) }
+    LaunchedEffect(Unit) {
+        Notifications.onMessage = { telegram, message ->
+            if (settings.notificationPopups.value) toastFor(telegram, message)?.let { toast = it }
+        }
+        Notifications.showTest = { toast = testToast(accounts.active) }
+    }
+    toast?.let { current ->
+        ToastWindow(
+            current,
+            settings,
+            onOpen = {
+                visible = true
+                if (current.chat.id != 0L) {
+                    accounts.switchTo(current.telegram)
+                    Notifications.openRequest = current.telegram.account to current.chat.id
+                }
+            },
+            onGone = { if (toast?.id == current.id) toast = null },
+        )
+    }
+
     Window(
         onCloseRequest = { if (hasTray) visible = false else quit() },
         visible = visible,
@@ -121,6 +148,14 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
         screen = Screen.Chats
     }
     val saved = rememberSaveableStateHolder()
+    // A click on a notification pop-up opens its chat.
+    LaunchedEffect(Notifications.openRequest) {
+        val request = Notifications.openRequest ?: return@LaunchedEffect
+        if (request.first == telegram.account) {
+            Notifications.openRequest = null
+            openChat(request.second)
+        }
+    }
     val ready = telegram.authState == AuthState.Ready || devScreen != null
     // WHY: without a background the window shows through during the
     // crossfade, which looks like a white flash when opening settings.

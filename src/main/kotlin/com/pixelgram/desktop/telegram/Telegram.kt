@@ -487,7 +487,10 @@ class Telegram(
                         list.add(0, update.message.toUi().copy(fresh = true))
                     }
                 }
-                if (shouldNotify(update.message)) Sounds.newMessage()
+                if (shouldNotify(update.message)) {
+                    Sounds.newMessage()
+                    Notifications.onMessage?.invoke(this, update.message)
+                }
             }
             is TdApi.UpdateChatNotificationSettings ->
                 chats[update.chatId]?.notifications = update.notificationSettings

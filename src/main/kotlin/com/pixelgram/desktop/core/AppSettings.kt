@@ -9,6 +9,8 @@ enum class ThemeMode { System, Light, Dark }
 
 enum class EmojiStyle { Noto, Noto3D }
 
+enum class ToastSide { Left, Right, Top, Bottom }
+
 class Setting<T>(
     private val owner: AppSettings,
     val key: String,
@@ -50,6 +52,8 @@ class AppSettings private constructor(private val props: Properties) {
     val notificationSound = bool("notificationSound", true)
     // Set from the tray menu; silences all notifications until enabled again.
     val notificationsMuted = bool("notificationsMuted", false)
+    val notificationPopups = bool("notificationPopups", true)
+    val notificationSide = enum("notificationSide", ToastSide.Right)
 
     // Folders.
     val materialFolders = bool("materialFolders", true)
@@ -77,6 +81,7 @@ class AppSettings private constructor(private val props: Properties) {
 
     private val all: List<Setting<*>> = listOf(
         themeMode, seedColor, matugen, emojiStyle, notificationSound, notificationsMuted,
+        notificationPopups, notificationSide,
         materialFolders, hideAllChats,
         capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth,
         avatarShape, avatarCorner,

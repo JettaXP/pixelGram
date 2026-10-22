@@ -373,7 +373,7 @@ private fun AccountsList(accounts: Accounts, settings: AppSettings) {
     val count = accounts.list.size + 1
     Column(
         modifier = Modifier.width(AccountsWidth).padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+        verticalArrangement = Arrangement.spacedBy(AccountsGap),
     ) {
         accounts.list.forEachIndexed { index, account ->
             val me = account.me
@@ -410,6 +410,7 @@ private fun AccountsList(accounts: Accounts, settings: AppSettings) {
 }
 
 private val AccountsWidth = 280.dp
+private val AccountsGap = 6.dp
 
 @Composable
 private fun AccountHeader(
@@ -420,17 +421,19 @@ private fun AccountHeader(
 ) {
     val me = telegram.me ?: return
     val name = me.fullName()
+    // Same width and corners as the accounts list under it, content centred.
     Row(
         modifier = Modifier
-            .padding(horizontal = 12.dp)
+            .width(AccountsWidth)
+            .padding(start = 12.dp, end = 12.dp, bottom = AccountsGap)
             .clip(MaterialTheme.shapes.large)
             .clickable(onClick = onToggle)
-            .padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 12.dp),
+            .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Avatar(name, me.profilePhoto?.small, telegram, settings, size = 48.dp)
-        Column(Modifier.width(150.dp)) {
+        Column(Modifier.weight(1f)) {
             EmojiText(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
                 Text(

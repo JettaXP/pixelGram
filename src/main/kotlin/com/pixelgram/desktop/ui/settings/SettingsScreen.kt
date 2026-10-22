@@ -91,7 +91,9 @@ import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.EmojiStyle
 import com.pixelgram.desktop.core.Sounds
 import com.pixelgram.desktop.core.ThemeMode
+import com.pixelgram.desktop.core.ToastSide
 import com.pixelgram.desktop.telegram.ChatListKey
+import com.pixelgram.desktop.telegram.Notifications
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.telegram.fullName
@@ -871,7 +873,28 @@ private fun NotificationsSection(settings: AppSettings) {
         onChange = { settings.notificationSound.value = it },
     )
     OutlinedButton(onClick = Sounds::newMessage, modifier = Modifier.padding(top = 8.dp)) { Text("Play sound") }
-    Description("Notification pop-ups are coming later.")
+
+    Header("Pop-ups")
+    SwitchRow(
+        index = 0,
+        count = 1,
+        title = "Show pop-up notifications",
+        subtitle = "A card with the chat and message, closes by itself or on click.",
+        checked = settings.notificationPopups.value,
+        onChange = { settings.notificationPopups.value = it },
+    )
+    Text("Position", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+    ConnectedChoice(
+        options = ToastSide.entries.map { it to it.name },
+        selected = settings.notificationSide.value,
+        onSelect = { settings.notificationSide.value = it },
+    )
+    OutlinedButton(
+        onClick = { Notifications.showTest?.invoke() },
+        modifier = Modifier.padding(top = 8.dp),
+    ) {
+        Text("Show test notification")
+    }
 }
 
 @Composable
