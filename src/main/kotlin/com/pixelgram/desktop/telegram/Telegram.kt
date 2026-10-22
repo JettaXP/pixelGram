@@ -1024,12 +1024,57 @@ class Telegram(
     }
 
     fun toggleReaction(message: UiMessage, emoji: String) {
-        val type = TdApi.ReactionTypeEmoji(emoji)
-        val chosen = message.reactions.any { (it.type as? TdApi.ReactionTypeEmoji)?.emoji == emoji && it.isChosen }
+        val clean = emoji.replace("\uFE0F", "")
+        val type = TdApi.ReactionTypeEmoji(clean)
+        val list = messages(message.chatId)
+        val current = list.firstOrNull { it.id == message.id } ?: message
+        val before = current.reactions
+        val chosen = before.any { it.emoji() == clean && it.isChosen }
+        val after = before.mapNotNull { reaction ->
+            when {
+                reaction.emoji() == clean && chosen -> reaction.withCount(-1, false)
+                reaction.isChosen && !chosen -> reaction.withCount(-1, false)
+                reaction.emoji() == clean -> reaction.withCount(1, true)
+                else -> reaction
+            }
+        }.let { updated ->
+            if (chosen || updated.any { it.emoji() == clean }) updated
+            else updated + TdApi.MessageReaction().apply {
+                this.type = type
+                totalCount = 1
+                isChosen = true
+                recentSenderIds = emptyArray()
+            }
+        }
+        val replace = { reactions: List<TdApi.MessageReaction> ->
+            val index = list.indexOfFirst { it.id == message.id }
+            if (index >= 0) list[index] = list[index].copy(reactions = reactions)
+        }
+        replace(after)
         send(
             if (chosen) TdApi.RemoveMessageReaction(message.chatId, message.id, type)
             else TdApi.AddMessageReaction(message.chatId, message.id, type, false, true)
-        )
+        ) { result ->
+            if (result is TdApi.Error) {
+                AppLog.write("Reaction $clean failed ${result.code}: ${result.message}")
+                scope.launch(Dispatchers.Main) { replace(before) }
+            }
+        }
+    }
+
+    private fun TdApi.MessageReaction.emoji() = (type as? TdApi.ReactionTypeEmoji)?.emoji?.replace("\uFE0F", "")
+
+    private fun TdApi.MessageReaction.withCount(delta: Int, chosen: Boolean): TdApi.MessageReaction? {
+        val count = totalCount + delta
+        if (count <= 0) return null
+        val source = this
+        return TdApi.MessageReaction().apply {
+            type = source.type
+            totalCount = count
+            isChosen = chosen
+            usedSenderId = source.usedSenderId
+            recentSenderIds = source.recentSenderIds
+        }
     }
 
     fun availableReactions(message: UiMessage, onResult: (List<String>) -> Unit) {

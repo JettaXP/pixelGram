@@ -45,7 +45,7 @@ import androidx.compose.ui.unit.sp
 import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
 
-val DefaultReactions = listOf("❤️", "👍", "🙏", "❤️‍🔥", "😭", "🤔", "👎")
+val DefaultReactions = listOf("❤", "👍", "🙏", "❤‍🔥", "😭", "🤔", "👎")
 
 @Composable
 fun ReactionPicker(available: List<String>, onPick: (String) -> Unit) {

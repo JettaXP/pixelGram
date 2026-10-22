@@ -134,7 +134,7 @@ fun emojiRanges(text: String): List<IntRange> {
         val starts = Character.isEmojiPresentation(cp) ||
             isNewEmoji(cp) ||
             isRegional(cp) ||
-            (Character.isExtendedPictographic(cp) && next == VariationSelector) ||
+            (Character.isExtendedPictographic(cp) && (next == VariationSelector || next == Zwj)) ||
             ((cp in '0'.code..'9'.code || cp == '#'.code || cp == '*'.code) &&
                 (next == VariationSelector || next == Keycap))
         if (!starts) {
@@ -161,6 +161,23 @@ fun emojiRanges(text: String): List<IntRange> {
     return ranges
 }
 
+fun qualifyEmoji(text: String): String {
+    if (text.indexOf(Zwj.toChar()) < 0) return text
+    val out = StringBuilder(text.length + 2)
+    var i = 0
+    while (i < text.length) {
+        val cp = text.codePointAt(i)
+        val after = i + Character.charCount(cp)
+        out.appendCodePoint(cp)
+        val next = if (after < text.length) text.codePointAt(after) else -1
+        if (next == Zwj && Character.isExtendedPictographic(cp) && !Character.isEmojiPresentation(cp)) {
+            out.appendCodePoint(VariationSelector)
+        }
+        i = after
+    }
+    return out.toString()
+}
+
 fun emojiText(text: String): AnnotatedString {
     val ranges = emojiRanges(text)
     if (ranges.isEmpty()) return AnnotatedString(text)
@@ -173,7 +190,7 @@ fun emojiText(text: String): AnnotatedString {
 
 @Composable
 fun EmojiText(
-    text: String,
+    raw: String,
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
     fontSize: TextUnit = TextUnit.Unspecified,
@@ -182,6 +199,7 @@ fun EmojiText(
     overflow: TextOverflow = TextOverflow.Clip,
     onTextLayout: (TextLayoutResult) -> Unit = {},
 ) {
+    val text = remember(raw) { qualifyEmoji(raw) }
     val ranges = remember(text) { emojiRanges(text) }
     if (!EmojiFonts.use3D || ranges.isEmpty()) {
         Text(
