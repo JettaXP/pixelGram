@@ -1,5 +1,12 @@
 package com.pixelgram.desktop
 
+import androidx.compose.ui.ExperimentalComposeUiApi
+import javax.swing.JOptionPane
+import com.pixelgram.desktop.ui.CrashHandler
+import com.pixelgram.desktop.core.SingleInstance
+import androidx.compose.ui.window.LocalWindowExceptionHandlerFactory
+import androidx.compose.ui.window.ApplicationScope
+import androidx.compose.runtime.CompositionLocalProvider
 import com.pixelgram.desktop.ui.main.ChatView
 import com.pixelgram.desktop.ui.main.ChatWindows
 import kotlinx.coroutines.delay
@@ -69,7 +76,27 @@ import kotlinx.coroutines.withContext
 import java.awt.SystemTray
 import kotlinx.coroutines.MainScope
 
-fun main() = application {
+@OptIn(ExperimentalComposeUiApi::class)
+fun main() {
+    if (!SingleInstance.acquire()) {
+        JOptionPane.showMessageDialog(
+            null,
+            "pixelGram is already running but does not respond.\nEnd the pixelGram process in the task manager and start it again.",
+            "pixelGram",
+            JOptionPane.WARNING_MESSAGE,
+        )
+        return
+    }
+    application {
+        CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides CrashHandler) {
+            PixelApp()
+        }
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun ApplicationScope.PixelApp() {
     val settings = remember {
         Emoji3D.removeOldFont()
         Attachments.cleanTemp()
@@ -115,6 +142,10 @@ fun main() = application {
         }
     }
     LaunchedEffect(Unit) {
+        SingleInstance.onShow = {
+            visible = true
+            raise++
+        }
         Notifications.onMessage = { telegram, message ->
             val card = if (settings.notificationPopups.value) toastFor(telegram, message) else null
             when {

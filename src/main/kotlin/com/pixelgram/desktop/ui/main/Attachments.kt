@@ -122,9 +122,22 @@ object Attachments {
         }
     }
 
-    fun fromClipboard(): List<File> = runCatching {
+    fun fromClipboard(): List<File> {
+        repeat(ClipboardAttempts) { attempt ->
+            val result = runCatching { readClipboard() }
+            result.getOrNull()?.let { return it }
+            if (attempt == ClipboardAttempts - 1) AppLog.write("Paste failed", result.exceptionOrNull())
+            Thread.sleep(ClipboardRetryMs)
+        }
+        return emptyList()
+    }
+
+    private const val ClipboardAttempts = 5
+    private const val ClipboardRetryMs = 40L
+
+    private fun readClipboard(): List<File> {
         val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-        when {
+        return when {
             clipboard.isDataFlavorAvailable(DataFlavor.javaFileListFlavor) ->
                 (clipboard.getData(DataFlavor.javaFileListFlavor) as List<*>).filterIsInstance<File>().filter { it.isFile }
             clipboard.isDataFlavorAvailable(DataFlavor.imageFlavor) -> {
@@ -133,7 +146,7 @@ object Attachments {
             }
             else -> emptyList()
         }
-    }.onFailure { AppLog.write("Paste failed", it) }.getOrDefault(emptyList())
+    }
 
     private fun savePasted(image: Image): File? {
         val width = image.getWidth(null)
