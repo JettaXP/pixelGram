@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.settings
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.pixelgram.desktop.core.DoubleClickAction
 import com.pixelgram.desktop.ui.components.PhoneText
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -992,7 +994,52 @@ private fun ChatSettingsSection(settings: AppSettings, onOpenBubbles: () -> Unit
     Header("Message bubbles")
     Description("Bubble corners, avatar shapes and colors are in pixelGram Preferences.")
     OutlinedButton(onClick = onOpenBubbles) { Text("Open $PixelPreferencesTitle") }
+    Header("Double click on a message")
+    val options = listOf(
+        DoubleClickAction.Reaction to "Reaction",
+        DoubleClickAction.Reply to "Reply",
+        DoubleClickAction.Nothing to "Nothing",
+    )
+    Text("Your messages", style = MaterialTheme.typography.bodyLarge)
+    ConnectedChoice(options, settings.doubleClickOwn.value, { settings.doubleClickOwn.value = it })
+    Text("Other people's messages", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+    ConnectedChoice(options, settings.doubleClickOther.value, { settings.doubleClickOther.value = it })
+    Reveal(DoubleClickAction.Reaction in listOf(settings.doubleClickOwn.value, settings.doubleClickOther.value)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Reaction", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+            DoubleClickEmoji(settings)
+        }
+    }
 }
+
+@Composable
+private fun DoubleClickEmoji(settings: AppSettings) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        QuickReactions.forEach { emoji ->
+            val selected = settings.doubleClickEmoji.value == emoji
+            val tile by animateColorAsState(
+                if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                MaterialTheme.motionScheme.defaultEffectsSpec(),
+            )
+            val corner by animateDpAsState(if (selected) 14.dp else 24.dp, MaterialTheme.motionScheme.fastSpatialSpec())
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(corner))
+                    .background(tile)
+                    .clickable { settings.doubleClickEmoji.value = emoji },
+            ) {
+                EmojiText(emoji, fontSize = 24.sp)
+            }
+        }
+    }
+}
+
+private val QuickReactions = listOf("❤", "👍", "🔥", "😁", "🥰", "👏", "🎉", "🤩", "😢", "🤔", "🤯", "😱", "🙏", "👌", "🕊", "💯", "⚡", "🏆", "💔", "👀")
 
 @Composable
 private fun NotificationsSection(settings: AppSettings) {

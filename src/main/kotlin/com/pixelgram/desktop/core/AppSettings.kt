@@ -13,6 +13,8 @@ enum class ToastSide { Left, Right, Top, Bottom }
 
 enum class NotificationStyle { System, PixelGram }
 
+enum class DoubleClickAction { Nothing, Reply, Reaction }
+
 class Setting<T>(
     private val owner: AppSettings,
     val key: String,
@@ -62,6 +64,9 @@ class AppSettings private constructor(private val props: Properties) {
     val customTitleBar = bool("customTitleBar", !AppPaths.isLinux)
     val messageSeconds = bool("messageSeconds", false)
     val hidePhone = bool("hidePhone", false)
+    val doubleClickOwn = enum("doubleClickOwn", DoubleClickAction.Reaction)
+    val doubleClickOther = enum("doubleClickOther", DoubleClickAction.Reaction)
+    val doubleClickEmoji = string("doubleClickEmoji", "❤")
     val capsuleSpacing = int("capsuleSpacing", 4)
     val capsuleHeight = int("capsuleContainerHeight", 64)
 
@@ -82,6 +87,7 @@ class AppSettings private constructor(private val props: Properties) {
         notificationPopups, notificationSide, notificationStyle,
         materialFolders, hideAllChats,
         capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone,
+        doubleClickOwn, doubleClickOther, doubleClickEmoji,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius,
         apiId, apiHash,

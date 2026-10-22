@@ -222,14 +222,29 @@ fun formatDuration(seconds: Int): String = "%d:%02d".format(seconds / 60, second
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun FileRow(icon: ImageVector, title: String, subtitle: String, busy: Boolean, onClick: () -> Unit) {
+private fun FileRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    busy: Boolean,
+    preview: (@Composable (Modifier) -> Unit)? = null,
+    onClick: () -> Unit,
+) {
     val scheme = MaterialTheme.colorScheme
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 2.dp),
     ) {
-        Box(Modifier.size(46.dp).clip(CircleShape).background(scheme.primary), contentAlignment = Alignment.Center) {
+        if (preview != null) {
+            Box(
+                Modifier.size(56.dp).clip(RoundedCornerShape(10.dp)).background(scheme.surfaceContainerHighest),
+                contentAlignment = Alignment.Center,
+            ) {
+                preview(Modifier.matchParentSize())
+                if (busy) LoadingIndicator(Modifier.size(30.dp))
+            }
+        } else Box(Modifier.size(46.dp).clip(CircleShape).background(scheme.primary), contentAlignment = Alignment.Center) {
             if (busy) {
                 LoadingIndicator(Modifier.size(30.dp), color = scheme.onPrimary)
             } else {
@@ -248,6 +263,8 @@ private fun FileRow(icon: ImageVector, title: String, subtitle: String, busy: Bo
     }
 }
 
+private val PreviewExtensions = listOf(".png", ".jpg", ".jpeg", ".webp")
+
 @Composable
 private fun LocalContentColorAlpha(): Color = androidx.compose.material3.LocalContentColor.current.copy(alpha = 0.7f)
 
@@ -261,11 +278,22 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
             val (busy, open) = rememberOpener(document.document, telegram) { path ->
                 if (plugin) onPlugin(path) else openFile(path)
             }
+            val image = PreviewExtensions.any { name.endsWith(it, ignoreCase = true) }
+            val local = telegram.localPath(document.document)?.takeIf { image }
+            val thumb = document.thumbnail?.file
+            val mini = document.minithumbnail
+            val preview: (@Composable (Modifier) -> Unit)? = when {
+                plugin -> null
+                local != null -> { modifier -> FileImage(local, modifier, ContentScale.Crop) }
+                thumb != null || mini != null -> { modifier -> ThumbImage(thumb, mini, telegram, modifier) }
+                else -> null
+            }
             FileRow(
                 if (plugin) Icons.Filled.Extension else Icons.Filled.InsertDriveFile,
                 name,
                 formatSize(document.document?.let { maxOf(it.size, it.expectedSize) } ?: 0),
                 busy,
+                preview,
                 open,
             )
         }

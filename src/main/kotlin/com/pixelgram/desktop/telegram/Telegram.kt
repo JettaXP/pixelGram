@@ -597,6 +597,9 @@ class Telegram(
                         list.add(0, update.message.toUi().copy(fresh = true))
                     }
                 }
+                if (update.message.chatId == openChatId && windowFocused && !update.message.isOutgoing) {
+                    markRead(update.message.chatId, listOf(update.message.id))
+                }
                 if (shouldNotify(update.message)) {
                     Sounds.newMessage()
                     Notifications.onMessage?.invoke(this, update.message)
@@ -768,6 +771,16 @@ class Telegram(
     private var openChatId = 0L
 
     var windowFocused = true
+        set(value) {
+            if (value && !field) readOpenChat()
+            field = value
+        }
+
+    private fun readOpenChat() {
+        val chatId = openChatId.takeIf { it != 0L } ?: return
+        val ids = messages(chatId).take(50).filter { !it.isOutgoing }.map { it.id }
+        if (ids.isNotEmpty()) markRead(chatId, ids)
+    }
 
     private fun shouldNotify(message: TdApi.Message): Boolean {
         if (message.isOutgoing || !settings.notificationSound.value || settings.notificationsMuted.value) return false
@@ -845,7 +858,7 @@ class Telegram(
         openChatId = chatId
         send(TdApi.OpenChat().apply { this.chatId = chatId })
         val list = messages(chatId)
-        if (list.isEmpty()) loadMoreMessages(chatId)
+        if (list.isEmpty()) loadMoreMessages(chatId) else readOpenChat()
     }
 
     fun closeChat(chatId: Long) {

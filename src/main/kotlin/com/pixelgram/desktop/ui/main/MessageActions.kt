@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.material.icons.automirrored.outlined.Forward
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.foundation.layout.fillMaxSize
@@ -66,6 +69,8 @@ import java.awt.datatransfer.StringSelection
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+private const val DoubleClickMs = 350L
+
 class MessageActions(
     val onReply: (UiMessage) -> Unit,
     val onEdit: (UiMessage) -> Unit,
@@ -75,6 +80,7 @@ class MessageActions(
     val onForward: (UiMessage) -> Unit,
     val onReact: (UiMessage, String) -> Unit,
     val loadReactions: (UiMessage, (List<String>) -> Unit) -> Unit,
+    val onDoubleClick: (UiMessage) -> Unit = {},
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -91,7 +97,9 @@ fun MessageGestures(
     var fired by remember { mutableStateOf(false) }
     var settle by remember { mutableStateOf<Job?>(null) }
     var menuAt by remember { mutableStateOf<DpOffset?>(null) }
+    var lastPress by remember { mutableStateOf(0L to Offset.Zero) }
     val density = LocalDensity.current
+    val slop = LocalViewConfiguration.current.touchSlop
     val move = { delta: Float ->
         val next = (shift.value + delta).coerceIn(-threshold * 1.4f, 0f)
         scope.launch { shift.snapTo(next) }
@@ -124,6 +132,15 @@ fun MessageGestures(
                         if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
                             change.consume()
                             menuAt = with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) }
+                        } else if (event.type == PointerEventType.Press && event.buttons.isPrimaryPressed) {
+                            val (time, at) = lastPress
+                            val now = change.uptimeMillis
+                            if (now - time < DoubleClickMs && (change.position - at).getDistance() < slop) {
+                                lastPress = 0L to Offset.Zero
+                                actions.onDoubleClick(message)
+                            } else {
+                                lastPress = now to change.position
+                            }
                         } else if (event.type == PointerEventType.Scroll) {
                             val delta = change.scrollDelta
                             if (abs(delta.x) > abs(delta.y) && delta.x != 0f) {

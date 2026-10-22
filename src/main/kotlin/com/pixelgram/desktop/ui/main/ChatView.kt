@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.core.DoubleClickAction
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.outlined.Forward
@@ -209,6 +210,17 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             onForward = { forwarding = it },
             onReact = { message, emoji -> telegram.toggleReaction(message, emoji) },
             loadReactions = { message, done -> telegram.availableReactions(message, done) },
+            onDoubleClick = { message ->
+                val action = if (message.isOutgoing) settings.doubleClickOwn.value else settings.doubleClickOther.value
+                when (action) {
+                    DoubleClickAction.Reply -> {
+                        editing = null
+                        replyTo = message
+                    }
+                    DoubleClickAction.Reaction -> telegram.toggleReaction(message, settings.doubleClickEmoji.value)
+                    DoubleClickAction.Nothing -> Unit
+                }
+            },
             onQuoteClick = { id ->
                 val index = messages.indexOfFirst { it.id == id }
                 if (index >= 0) {

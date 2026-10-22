@@ -149,7 +149,8 @@ fun AvatarImage(
     LaunchedEffect(full?.id) { telegram.download(full) }
     val path = telegram.localPath(full) ?: telegram.localPath(photo)
     val image by produceState<ImageBitmap?>(null, path) {
-        path?.let { loadImage(it) }?.let { value = it }
+        value = null
+        value = path?.let { loadImage(it) }
     }
     val colors = MaterialTheme.colorScheme
     Box(
