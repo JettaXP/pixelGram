@@ -11,7 +11,18 @@ Channel: [@pixelgramclient](https://t.me/pixelgramclient)
 
 ## Screenshots
 
-![Sign in](docs/screenshots/login.png)
+![Chat](docs/screenshots/chat.png)
+
+| | |
+|:-:|:-:|
+| ![Music player](docs/screenshots/player.png) | ![Message menu](docs/screenshots/menu.png) |
+| Music player with Material 3 morphing controls | Reactions and message actions |
+| ![Message types](docs/screenshots/types.png) | ![QR sign in](docs/screenshots/qr.png) |
+| Polls, calls, voice and files | Sign in with a QR code |
+| ![Appearance](docs/screenshots/settings_appearance.png) | ![Avatars](docs/screenshots/settings_avatars.png) |
+| Appearance settings | Every Material 3 Expressive shape for avatars |
+| ![Bubbles](docs/screenshots/settings_bubbles.png) | |
+| Bubble corners with a live preview | |
 
 ## Features
 
