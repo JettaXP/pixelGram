@@ -1,5 +1,12 @@
 package com.pixelgram.desktop.ui.components
 
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.geometry.Rect
@@ -215,9 +222,39 @@ fun FormattedText(
                     if (current != null) strikes.forEach { range -> drawWavyStrike(current, range, textColor, fontPx) }
                 },
         )
-        if (hidden.isNotEmpty()) BlurredCopy(annotated, inline, style, color, spoilerPath, 1f)
+        if (hidden.isNotEmpty()) {
+            BlurredCopy(annotated, inline, style, color, spoilerPath, 1f)
+            SpoilerShimmer(spoilerPath, textColor, Modifier.matchParentSize())
+        }
         if (fading != null) BlurredCopy(annotated, inline, style, color, fadingPath, 1f - fade.value)
     }
+}
+
+@Composable
+private fun SpoilerShimmer(path: Path, tint: Color, modifier: Modifier) {
+    val transition = rememberInfiniteTransition()
+    val sweep by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(ShimmerMs, easing = LinearEasing)),
+    )
+    Spacer(
+        modifier.drawBehind {
+            val bounds = path.getBounds()
+            if (bounds.isEmpty) return@drawBehind
+            val band = maxOf(bounds.width * ShimmerBand, ShimmerMinBand.toPx())
+            val x = bounds.left - band + sweep * (bounds.width + band * 2)
+            clipPath(path) {
+                drawRect(
+                    Brush.linearGradient(
+                        listOf(Color.Transparent, tint.copy(alpha = ShimmerAlpha), Color.Transparent),
+                        start = Offset(x - band, bounds.top),
+                        end = Offset(x + band, bounds.bottom),
+                    ),
+                )
+            }
+        },
+    )
 }
 
 @Composable
@@ -343,6 +380,10 @@ private val PillInset = 1.dp
 private val QuoteGap = 4.dp
 private const val StrikeHeight = 0.3f
 private val SpoilerBlur = 8.dp
+private const val ShimmerMs = 1_800
+private const val ShimmerBand = 0.35f
+private const val ShimmerAlpha = 0.38f
+private val ShimmerMinBand = 28.dp
 private const val RevealMs = 600
 private val WaveAmplitude = 1.6.dp
 private val WaveLength = 7.dp
