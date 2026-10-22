@@ -9,6 +9,8 @@ tdlight = "3.5.9+td.1.8.68"
 qrcodegen = "1.8.0"
 jna = "5.19.1"
 filekit = "0.16.0"
+concentus = "1.0.2"
+jlayer = "1.0.1.4"
 
 [libraries]
 material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
@@ -19,6 +21,8 @@ tdlight-bom = { module = "it.tdlight:tdlight-java-bom", version.ref = "tdlight" 
 tdlight-java = { module = "it.tdlight:tdlight-java" }
 qrcodegen = { module = "io.nayuki:qrcodegen", version.ref = "qrcodegen" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+concentus = { module = "io.github.jaredmdobson:concentus", version.ref = "concentus" }
+jlayer = { module = "com.googlecode.soundlibs:jlayer", version.ref = "jlayer" }
 filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs-jvm", version.ref = "filekit" }
 
 [plugins]

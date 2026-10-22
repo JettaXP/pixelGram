@@ -595,6 +595,18 @@ class Telegram(
                 val index = list.indexOfFirst { it.id == update.oldMessageId }
                 if (index >= 0) list[index] = update.message.toUi().copy(key = list[index].key, fresh = true)
             }
+            is TdApi.UpdatePoll -> messages.values.forEach { list ->
+                list.forEachIndexed { index, message ->
+                    val old = message.content as? TdApi.MessagePoll ?: return@forEachIndexed
+                    if (old.poll.id != update.poll.id) return@forEachIndexed
+                    list[index] = message.copy(content = TdApi.MessagePoll().apply {
+                        poll = update.poll
+                        description = old.description
+                        media = old.media
+                        canAddOption = old.canAddOption
+                    })
+                }
+            }
             is TdApi.UpdateMessageEdited -> messages[update.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.messageId }
                 if (index >= 0) list[index] = list[index].copy(edited = update.editDate > 0)
@@ -853,6 +865,14 @@ class Telegram(
     }
 
     fun photoPath(message: UiMessage): String? = localPath(message.fullPhoto) ?: localPath(message.photo)
+
+    fun votePoll(chatId: Long, messageId: Long, options: IntArray) {
+        send(TdApi.SetPollAnswer().apply {
+            this.chatId = chatId
+            this.messageId = messageId
+            optionIds = options
+        })
+    }
 
     fun editMessage(message: UiMessage, text: String) {
         val formatted = TdApi.FormattedText(text, arrayOf())

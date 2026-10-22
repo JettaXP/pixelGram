@@ -1,5 +1,16 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.filled.ArrowDownward
+import com.pixelgram.desktop.core.AudioPlayer
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Checkbox
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -257,16 +268,10 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
                 open,
             )
         }
-        is TdApi.MessageAudio -> {
-            val audio = content.audio
-            val (busy, open) = rememberOpener(audio.audio, telegram, ::openFile)
-            val title = listOf(audio.performer, audio.title).filter { it.isNotBlank() }.joinToString(" – ")
-                .ifBlank { audio.fileName.ifBlank { "Audio" } }
-            FileRow(Icons.Filled.MusicNote, title, formatDuration(audio.duration) + " • " + formatSize(audio.audio?.size ?: 0), busy, open)
-        }
-        is TdApi.MessageVoiceNote -> VoiceContent(content.voiceNote, telegram)
+        is TdApi.MessageAudio -> AudioContent(message, content.audio, telegram)
+        is TdApi.MessageVoiceNote -> VoiceContent(message, content.voiceNote, telegram)
         is TdApi.MessageCall -> CallContent(content, message.isOutgoing, message.date)
-        is TdApi.MessagePoll -> PollContent(content.poll)
+        is TdApi.MessagePoll -> PollContent(message, content.poll, telegram)
         is TdApi.MessageContact -> {
             val contact = content.contact
             FileRow(
@@ -293,37 +298,122 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun VoiceContent(voice: TdApi.VoiceNote, telegram: Telegram) {
-    val (busy, open) = rememberOpener(voice.voice, telegram, ::openFile)
+private fun PlayButton(key: Long, chatId: Long, title: String, file: TdApi.File?, telegram: Telegram) {
     val scheme = MaterialTheme.colorScheme
-    val bars = remember(voice.waveform) { waveform(voice.waveform) }
-    val barColor = androidx.compose.material3.LocalContentColor.current
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    val (busy, start) = rememberOpener(file, telegram) { path -> AudioPlayer.toggle(key, path, title, chatId) }
+    val active = AudioPlayer.current == key
+    val downloaded = telegram.localPath(file) != null
+    Box(Modifier.size(PlayerButton)) {
         Box(
-            Modifier.size(46.dp).clip(CircleShape).background(scheme.primary).clickable(onClick = open),
+            Modifier.fillMaxSize().clip(CircleShape).background(scheme.primary).clickable(onClick = start),
             contentAlignment = Alignment.Center,
         ) {
-            if (busy) LoadingIndicator(Modifier.size(30.dp), color = scheme.onPrimary) else
-                Icon(Icons.Filled.PlayArrow, contentDescription = "Play", tint = scheme.onPrimary)
+            when {
+                busy || (active && AudioPlayer.loading) -> LoadingIndicator(Modifier.size(32.dp), color = scheme.onPrimary)
+                active && AudioPlayer.playing -> Icon(Icons.Filled.Pause, contentDescription = "Pause", tint = scheme.onPrimary, modifier = Modifier.size(30.dp))
+                else -> Icon(Icons.Filled.PlayArrow, contentDescription = "Play", tint = scheme.onPrimary, modifier = Modifier.size(30.dp))
+            }
         }
-        Column {
-            Canvas(Modifier.width(180.dp).height(26.dp)) {
+        if (!downloaded && !busy) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(scheme.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.ArrowDownward, contentDescription = null, tint = scheme.onPrimaryContainer, modifier = Modifier.size(14.dp))
+            }
+        }
+    }
+}
+
+private fun Modifier.seekable(key: Long, file: TdApi.File?, telegram: Telegram): Modifier = pointerInput(key) {
+    detectTapGestures { offset ->
+        val path = telegram.localPath(file) ?: return@detectTapGestures telegram.download(file)
+        AudioPlayer.seek(key, path, offset.x / size.width)
+    }
+}.pointerInput(key) {
+    detectHorizontalDragGestures { change, _ ->
+        val path = telegram.localPath(file) ?: return@detectHorizontalDragGestures
+        AudioPlayer.seek(key, path, change.position.x / size.width)
+    }
+}
+
+@Composable
+private fun VoiceContent(message: UiMessage, voice: TdApi.VoiceNote, telegram: Telegram) {
+    val key = message.key
+    val bars = remember(voice.waveform) { waveform(voice.waveform) }
+    val color = androidx.compose.material3.LocalContentColor.current
+    val active = AudioPlayer.current == key
+    val progress = AudioPlayer.progress(key)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        PlayButton(key, message.chatId, "Voice message", voice.voice, telegram)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Canvas(Modifier.width(WaveWidth).height(28.dp).seekable(key, voice.voice, telegram)) {
                 val step = size.width / bars.size
-                val width = step * 0.6f
+                val width = step * 0.62f
                 bars.forEachIndexed { index, value ->
                     val height = (value * size.height).coerceAtLeast(width)
+                    val played = (index + 0.5f) / bars.size <= progress
                     drawRoundRect(
-                        barColor.copy(alpha = 0.75f),
+                        if (played) color else color.copy(alpha = 0.35f),
                         topLeft = Offset(index * step, (size.height - height) / 2),
                         size = Size(width, height),
                         cornerRadius = CornerRadius(width / 2),
                     )
                 }
             }
-            Text(formatDuration(voice.duration), style = MaterialTheme.typography.bodySmall, color = LocalContentColorAlpha())
+            Text(
+                if (active) formatDuration(AudioPlayer.position.toInt()) else formatDuration(voice.duration),
+                style = MaterialTheme.typography.bodySmall,
+                color = LocalContentColorAlpha(),
+            )
         }
     }
 }
+
+@Composable
+private fun AudioContent(message: UiMessage, audio: TdApi.Audio, telegram: Telegram) {
+    val key = message.key
+    val active = AudioPlayer.current == key
+    val title = audioTitle(audio)
+    val color = androidx.compose.material3.LocalContentColor.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        PlayButton(key, message.chatId, title, audio.audio, telegram)
+        Column(Modifier.width(WaveWidth)) {
+            EmojiText(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (active) {
+                Canvas(Modifier.fillMaxWidth().height(14.dp).seekable(key, audio.audio, telegram)) {
+                    val y = size.height / 2
+                    val stroke = 4.dp.toPx()
+                    val played = size.width * AudioPlayer.progress(key)
+                    drawLine(color.copy(alpha = 0.25f), Offset(0f, y), Offset(size.width, y), stroke, StrokeCap.Round)
+                    drawLine(color, Offset(0f, y), Offset(played.coerceAtLeast(stroke / 2), y), stroke, StrokeCap.Round)
+                    drawCircle(color, radius = stroke * 1.2f, center = Offset(played, y))
+                }
+                Text(
+                    formatDuration(AudioPlayer.position.toInt()) + " / " + formatDuration(audio.duration),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LocalContentColorAlpha(),
+                )
+            } else {
+                Text(
+                    "%02d:%02d, %s".format(audio.duration / 60, audio.duration % 60, formatSize(audio.audio?.size ?: 0)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LocalContentColorAlpha(),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+fun audioTitle(audio: TdApi.Audio): String =
+    listOf(audio.performer, audio.title).filter { it.isNotBlank() }.joinToString(" – ")
+        .ifBlank { audio.fileName.ifBlank { "Audio" } }
 
 private fun waveform(data: ByteArray?): List<Float> {
     val bits = data ?: return List(Bars) { 0.15f }
@@ -339,6 +429,8 @@ private fun waveform(data: ByteArray?): List<Float> {
 }
 
 private const val Bars = 36
+private val WaveWidth = 190.dp
+private val PlayerButton = 46.dp
 
 @Composable
 private fun CallContent(call: TdApi.MessageCall, outgoing: Boolean, date: Int) {
@@ -383,12 +475,17 @@ private fun callLength(seconds: Int): String = when {
 }
 
 @Composable
-private fun PollContent(poll: TdApi.Poll) {
+private fun PollContent(message: UiMessage, poll: TdApi.Poll, telegram: Telegram) {
     val scheme = MaterialTheme.colorScheme
-    Column(Modifier.widthIn(min = 240.dp, max = 360.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val voted = poll.options.any { it.isChosen }
+    val results = poll.isClosed || voted
+    val multiple = poll.allowsMultipleAnswers && poll.type !is TdApi.PollTypeQuiz
+    val picked = remember(poll.id, voted) { androidx.compose.runtime.mutableStateListOf<Int>() }
+    Column(Modifier.widthIn(min = 260.dp, max = 360.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         EmojiText(poll.question.text, style = MaterialTheme.typography.titleSmall)
         Text(
             when {
+                poll.isClosed -> "Final results"
                 poll.type is TdApi.PollTypeQuiz -> if (poll.isAnonymous) "Anonymous quiz" else "Quiz"
                 poll.isAnonymous -> "Anonymous poll"
                 else -> "Public poll"
@@ -396,35 +493,70 @@ private fun PollContent(poll: TdApi.Poll) {
             style = MaterialTheme.typography.bodySmall,
             color = LocalContentColorAlpha(),
         )
-        val results = poll.isClosed || poll.options.any { it.isChosen } || poll.canSeeResults
-        poll.options.forEach { option ->
-            Column {
-                Row {
-                    if (results) {
+        poll.options.forEachIndexed { index, option ->
+            if (results) {
+                Column(Modifier.padding(vertical = 4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("${option.votePercentage}%", style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(44.dp))
+                        EmojiText(
+                            option.text.text,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = if (option.isChosen) FontWeight.SemiBold else FontWeight.Normal,
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (option.isChosen) {
+                            Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = scheme.primary, modifier = Modifier.size(18.dp))
+                        }
                     }
-                    EmojiText(
-                        option.text.text,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = if (option.isChosen) FontWeight.SemiBold else FontWeight.Normal,
-                        ),
-                    )
-                }
-                if (results) {
                     LinearProgressIndicator(
                         progress = { option.votePercentage / 100f },
                         color = scheme.primary,
                         trackColor = scheme.primary.copy(alpha = 0.15f),
-                        modifier = Modifier.fillMaxWidth().padding(top = 3.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                     )
+                }
+            } else {
+                val selected = index in picked
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            if (multiple) {
+                                if (selected) picked.remove(index) else picked.add(index)
+                            } else {
+                                telegram.votePoll(message.chatId, message.id, intArrayOf(index))
+                            }
+                        },
+                ) {
+                    if (multiple) {
+                        Checkbox(checked = selected, onCheckedChange = null, modifier = Modifier.padding(8.dp))
+                    } else {
+                        RadioButton(selected = false, onClick = null, modifier = Modifier.padding(8.dp))
+                    }
+                    EmojiText(option.text.text, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
-        Text(
-            if (poll.totalVoterCount == 1) "1 vote" else "${poll.totalVoterCount} votes",
-            style = MaterialTheme.typography.bodySmall,
-            color = LocalContentColorAlpha(),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (poll.totalVoterCount == 1) "1 vote" else "${poll.totalVoterCount} votes",
+                style = MaterialTheme.typography.bodySmall,
+                color = LocalContentColorAlpha(),
+                modifier = Modifier.weight(1f),
+            )
+            when {
+                !results && multiple -> TextButton(
+                    onClick = { telegram.votePoll(message.chatId, message.id, picked.sorted().toIntArray()) },
+                    enabled = picked.isNotEmpty(),
+                ) { Text("Vote") }
+                voted && !poll.isClosed && poll.type !is TdApi.PollTypeQuiz -> TextButton(
+                    onClick = { telegram.votePoll(message.chatId, message.id, IntArray(0)) },
+                ) { Text("Retract vote") }
+            }
+        }
     }
 }
 

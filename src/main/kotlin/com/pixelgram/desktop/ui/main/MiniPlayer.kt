@@ -1,0 +1,305 @@
+package com.pixelgram.desktop.ui.main
+
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.ripple
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOn
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.pixelgram.desktop.core.AudioPlayer
+import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.telegram.UiMessage
+import it.tdlight.jni.TdApi
+
+object AudioQueue {
+    var pending by mutableStateOf<UiMessage?>(null)
+
+    fun file(message: UiMessage): TdApi.File? = when (val content = message.content) {
+        is TdApi.MessageAudio -> content.audio.audio
+        is TdApi.MessageVoiceNote -> content.voiceNote.voice
+        else -> null
+    }
+
+    fun title(message: UiMessage): String = when (val content = message.content) {
+        is TdApi.MessageAudio -> audioTitle(content.audio)
+        else -> "Voice message"
+    }
+
+    fun step(telegram: Telegram, key: Long, direction: Int) {
+        val list = telegram.messages(AudioPlayer.chatId).filter { file(it) != null }
+        val index = list.indexOfFirst { it.key == key }
+        if (index < 0) return
+        val next = list.getOrNull(index - direction) ?: return
+        pending = next
+        telegram.download(file(next))
+    }
+}
+
+@Composable
+fun AudioQueueEffects(telegram: Telegram) {
+    val pending = AudioQueue.pending
+    val path = pending?.let { telegram.localPath(AudioQueue.file(it)) }
+    LaunchedEffect(pending?.key, path) {
+        if (pending != null && path != null) {
+            AudioQueue.pending = null
+            AudioPlayer.play(pending.key, path, AudioQueue.title(pending), pending.chatId)
+        }
+    }
+    DisposableEffect(telegram) {
+        AudioPlayer.onFinished = { key -> AudioQueue.step(telegram, key, 1) }
+        onDispose { AudioPlayer.onFinished = null }
+    }
+}
+
+@Composable
+fun MiniPlayer(telegram: Telegram) {
+    AnimatedVisibility(
+        visible = AudioPlayer.current != null || AudioQueue.pending != null,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut(),
+    ) {
+        val hover = remember { MutableInteractionSource() }
+        val hovered by hover.collectIsHoveredAsState()
+        val key = AudioPlayer.current
+        Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().hoverable(hover)) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp).height(BarHeight)) {
+                    MorphControls(
+                        playing = AudioPlayer.playing,
+                        onPrevious = { key?.let { AudioQueue.step(telegram, it, -1) } },
+                        onPlay = AudioPlayer::pauseOrResume,
+                        onNext = { key?.let { AudioQueue.step(telegram, it, 1) } },
+                    )
+                    Text(
+                        AudioPlayer.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                    )
+                    AnimatedVisibility(
+                        visible = hovered,
+                        enter = expandHorizontally(expandFrom = Alignment.End) + fadeIn(),
+                        exit = shrinkHorizontally(shrinkTowards = Alignment.End) + fadeOut(),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                formatDuration(AudioPlayer.position.toInt()),
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                            )
+                            IconButton(onClick = { AudioPlayer.muted = !AudioPlayer.muted }) {
+                                Icon(
+                                    if (AudioPlayer.muted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = "Sound",
+                                )
+                            }
+                            IconButton(onClick = { AudioPlayer.repeat = !AudioPlayer.repeat }) {
+                                Icon(
+                                    if (AudioPlayer.repeat) Icons.Filled.RepeatOn else Icons.Filled.Repeat,
+                                    contentDescription = "Repeat",
+                                    tint = if (AudioPlayer.repeat) MaterialTheme.colorScheme.primary else androidx.compose.material3.LocalContentColor.current,
+                                )
+                            }
+                            TextButton(onClick = AudioPlayer::nextSpeed) {
+                                Text(speedLabel(AudioPlayer.speed), style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                    }
+                    IconButton(onClick = {
+                        AudioQueue.pending = null
+                        AudioPlayer.stop()
+                    }) {
+                        Icon(Icons.Filled.Close, contentDescription = "Close player")
+                    }
+                }
+                val color = MaterialTheme.colorScheme.primary
+                val track = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                Canvas(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(SeekHeight)
+                        .pointerInput(Unit) { detectTapGestures { AudioPlayer.seekCurrent(it.x / size.width) } }
+                        .pointerInput(Unit) {
+                            detectHorizontalDragGestures { change, _ -> AudioPlayer.seekCurrent(change.position.x / size.width) }
+                        },
+                ) {
+                    val y = size.height / 2
+                    val stroke = 3.dp.toPx()
+                    val played = if (AudioPlayer.duration > 0f) size.width * (AudioPlayer.position / AudioPlayer.duration) else 0f
+                    drawLine(track, Offset(0f, y), Offset(size.width, y), stroke, StrokeCap.Round)
+                    drawLine(color, Offset(0f, y), Offset(played.coerceIn(0f, size.width), y), stroke, StrokeCap.Round)
+                }
+            }
+        }
+    }
+}
+
+private fun speedLabel(speed: Float) = when (speed) {
+    1f -> "1X"
+    1.5f -> "1.5X"
+    else -> "2X"
+}
+
+private val SeekHeight = 8.dp
+private val BarHeight = 56.dp
+
+private enum class Control { Previous, Play, Next }
+
+@Composable
+private fun MorphControls(playing: Boolean, onPrevious: () -> Unit, onPlay: () -> Unit, onNext: () -> Unit) {
+    val sources = remember { Control.entries.associateWith { MutableInteractionSource() } }
+    val pressed = Control.entries.firstOrNull { sources.getValue(it).collectIsPressedAsState().value }
+    val sideWidth = { me: Control ->
+        when (pressed) {
+            me -> 76f
+            Control.Play -> 58f
+            else -> 64f
+        }
+    }
+    val playWidth = when (pressed) {
+        Control.Play -> 100f
+        Control.Previous, Control.Next -> 80f
+        else -> 88f
+    }
+    val scheme = MaterialTheme.colorScheme
+    Row(horizontalArrangement = Arrangement.spacedBy(ControlGap), verticalAlignment = Alignment.CenterVertically) {
+        MorphButton(
+            width = sideWidth(Control.Previous),
+            height = 64f,
+            radius = if (pressed == Control.Previous) 18f else 32f,
+            colors = scheme.secondaryContainer to scheme.onSecondaryContainer,
+            source = sources.getValue(Control.Previous),
+            onClick = onPrevious,
+        ) { Icon(Icons.Filled.SkipPrevious, contentDescription = "Previous", modifier = Modifier.size(22.dp)) }
+        MorphButton(
+            width = playWidth,
+            height = 88f,
+            radius = when {
+                pressed == Control.Play -> 20f
+                playing -> 28f
+                else -> 44f
+            },
+            colors = scheme.primary to scheme.onPrimary,
+            source = sources.getValue(Control.Play),
+            onClick = onPlay,
+        ) { PlayPauseIcon(playing) }
+        MorphButton(
+            width = sideWidth(Control.Next),
+            height = 64f,
+            radius = if (pressed == Control.Next) 18f else 32f,
+            colors = scheme.secondaryContainer to scheme.onSecondaryContainer,
+            source = sources.getValue(Control.Next),
+            onClick = onNext,
+        ) { Icon(Icons.Filled.SkipNext, contentDescription = "Next", modifier = Modifier.size(22.dp)) }
+    }
+}
+
+@Composable
+private fun MorphButton(
+    width: Float,
+    height: Float,
+    radius: Float,
+    colors: Pair<Color, Color>,
+    source: MutableInteractionSource,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val shownWidth by animateFloatAsState(width, spring(dampingRatio = 1f, stiffness = 700f))
+    val shownRadius by animateFloatAsState(radius, spring(dampingRatio = 0.55f, stiffness = 520f))
+    Box(
+        Modifier
+            .size((shownWidth * ControlScale).dp, (height * ControlScale).dp)
+            .clip(RoundedCornerShape((shownRadius * ControlScale).coerceAtLeast(0f).dp))
+            .background(colors.first)
+            .clickable(interactionSource = source, indication = ripple(), onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        CompositionLocalProvider(LocalContentColor provides colors.second) { content() }
+    }
+}
+
+@Composable
+private fun PlayPauseIcon(playing: Boolean) {
+    val alt by animateFloatAsState(if (playing) 1f else 0f, spring(dampingRatio = 0.6f, stiffness = 520f))
+    Box(contentAlignment = Alignment.Center) {
+        Icon(
+            Icons.Filled.PlayArrow,
+            contentDescription = if (playing) null else "Play",
+            modifier = Modifier.size(26.dp).graphicsLayer {
+                alpha = (1f - alt).coerceIn(0f, 1f)
+                scaleX = 1f - 0.4f * alt
+                scaleY = 1f - 0.4f * alt
+            },
+        )
+        Icon(
+            Icons.Filled.Pause,
+            contentDescription = if (playing) "Pause" else null,
+            modifier = Modifier.size(26.dp).graphicsLayer {
+                alpha = alt.coerceIn(0f, 1f)
+                scaleX = 0.6f + 0.4f * alt
+                scaleY = 0.6f + 0.4f * alt
+            },
+        )
+    }
+}
+
+private const val ControlScale = 0.5f
+private val ControlGap = 4.dp

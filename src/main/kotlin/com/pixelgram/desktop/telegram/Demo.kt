@@ -139,11 +139,11 @@ private fun Telegram.loadTypesDemo(pluginPath: String, now: Int) {
             caption = TdApi.FormattedText("", emptyArray())
         }),
         msg(29, false, 120, TdApi.MessageAudio().apply {
-            audio = TdApi.Audio().apply { title = "2_5345844024081165008"; performer = ""; fileName = "2_5345844024081165008.mp3"; duration = 187; audio = demoFile(900_002, null, 751_718) }
+            audio = TdApi.Audio().apply { title = ""; performer = ""; fileName = "2_5345844024081165008.mp3"; duration = 31; audio = demoFile(900_002, System.getProperty("pixelgram.demo.audio"), 751_718) }
             caption = TdApi.FormattedText("", emptyArray())
         }),
         msg(28, false, 180, TdApi.MessageVoiceNote().apply {
-            voiceNote = TdApi.VoiceNote().apply { duration = 14; waveform = ByteArray(40) { (it * 37 % 251).toByte() }; voice = demoFile(900_003, null, 40_000) }
+            voiceNote = TdApi.VoiceNote().apply { duration = 14; waveform = ByteArray(40) { (it * 37 % 251).toByte() }; voice = demoFile(900_003, System.getProperty("pixelgram.demo.voice"), 40_000) }
             caption = TdApi.FormattedText("", emptyArray())
         }),
         msg(27, true, 240, TdApi.MessageCall().apply { isVideo = false; discardReason = TdApi.CallDiscardReasonMissed(); duration = 0 }),

@@ -219,7 +219,9 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
         )
     }
 
+    AudioQueueEffects(telegram)
     Column(Modifier.fillMaxSize()) {
+        MiniPlayer(telegram)
         Row(
             modifier = Modifier
                 .fillMaxWidth()

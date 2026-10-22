@@ -40,6 +40,8 @@ dependencies {
     implementation(libs.qrcodegen)
     implementation(libs.jna)
     implementation(libs.filekit.dialogs)
+    implementation(libs.concentus)
+    implementation(libs.jlayer)
 
     implementation(platform(libs.tdlight.bom))
     implementation(libs.tdlight.java)
