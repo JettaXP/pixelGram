@@ -196,15 +196,18 @@ private fun ApiCredentialsStep(telegram: Telegram) {
 }
 
 @Composable
-private fun PasswordStep(hint: String, telegram: Telegram) = SingleField(
-    busy = telegram.authBusy,
-    label = "Password",
-    hint = if (hint.isNotEmpty()) "Two-step verification is on. Hint: $hint" else
-        "Two-step verification is on. Enter your password.",
-    action = "Sign in",
-    password = true,
-    onSubmit = telegram::sendPassword,
-)
+private fun PasswordStep(hint: String, telegram: Telegram) {
+    Hint(
+        if (hint.isNotEmpty()) "Two-step verification is on. Hint: $hint" else
+            "Two-step verification is on. Enter your password."
+    )
+    ShapePasswordBar(
+        busy = telegram.authBusy,
+        error = telegram.authError,
+        onSubmit = telegram::sendPassword,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
 
 @Composable
 private fun QrStep(link: String) {

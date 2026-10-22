@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.AnimatedContent
 import kotlinx.coroutines.delay
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.geometry.CornerRadius
@@ -139,8 +141,12 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     }
     val newest = messages.firstOrNull()?.key
     val scope = rememberCoroutineScope()
-    LaunchedEffect(newest) {
-        if (newest != null && listState.firstVisibleItemIndex <= 1) listState.animateScrollToItem(0)
+    val seenNewest = remember(chat.id) { arrayOf(newest) }
+    if (newest != seenNewest[0]) {
+        seenNewest[0] = newest
+        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < StickToBottomPx) {
+            listState.requestScrollToItem(0)
+        }
     }
     val attachments = remember(chat.id) { mutableStateListOf<File>() }
     var asFiles by remember(chat.id) { mutableStateOf(false) }
@@ -194,7 +200,19 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ChatAvatar(chat, telegram, settings, size = 40.dp)
-            EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
+            Column {
+                EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
+                val status = telegram.presence(chat)
+                AnimatedContent(status, transitionSpec = { fadeIn() togetherWith fadeOut() }) { text ->
+                    if (text != null) {
+                        Text(
+                            text.label,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (text.online) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
         }
         var personalChannel by remember(chat.id) { mutableLongStateOf(0L) }
         LaunchedEffect(chat.id) {
@@ -325,7 +343,9 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 } else {
                     telegram.sendText(chat.id, text, replyId)
                 }
-                scope.launch { listState.animateScrollToItem(0) }
+                if (listState.firstVisibleItemIndex > 0) {
+                    scope.launch { listState.animateScrollToItem(0) }
+                }
             },
         )
     }
@@ -393,7 +413,7 @@ fun MessageBubble(
                         overlay = if (hasText) {
                             null
                         } else {
-                            { MessageMeta(message, status, Color.White, Color.White) }
+                            { MessageMeta(message, status, settings.messageSeconds.value, Color.White, Color.White) }
                         },
                     )
                 }
@@ -412,7 +432,7 @@ fun MessageBubble(
                         }
                         TextWithMeta(
                             text = message.text,
-                            meta = { MessageMeta(message, status, metaColor, readColor) },
+                            meta = { MessageMeta(message, status, settings.messageSeconds.value, metaColor, readColor) },
                         )
                     }
                 }
@@ -439,7 +459,13 @@ private fun ServiceMessage(message: UiMessage, senderName: String?, modifier: Mo
 }
 
 @Composable
-private fun MessageMeta(message: UiMessage, status: MessageStatus?, color: Color, readColor: Color) {
+private fun MessageMeta(
+    message: UiMessage,
+    status: MessageStatus?,
+    seconds: Boolean,
+    color: Color,
+    readColor: Color,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -447,7 +473,7 @@ private fun MessageMeta(message: UiMessage, status: MessageStatus?, color: Color
         if (message.edited) {
             Icon(Icons.Outlined.Edit, contentDescription = "Edited", tint = color, modifier = Modifier.size(13.dp))
         }
-        Text(formatMessageTime(message.date), style = MaterialTheme.typography.labelSmall, color = color)
+        Text(formatMessageTime(message.date, seconds), style = MaterialTheme.typography.labelSmall, color = color)
         if (status != null) {
             MessageStatusIcon(status, color = if (status == MessageStatus.Read) readColor else color, size = 16.dp)
         }
@@ -458,6 +484,7 @@ private fun MessageMeta(message: UiMessage, status: MessageStatus?, color: Color
 private fun TextWithMeta(text: String, meta: @Composable () -> Unit) {
     var textLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
     Layout(
+        modifier = Modifier.fillMaxWidth(),
         content = {
             if (text.isNotEmpty()) {
                 SelectionContainer {
@@ -515,6 +542,7 @@ private fun TextWithMeta(text: String, meta: @Composable () -> Unit) {
 }
 
 private val MetaGap = 10.dp
+private const val StickToBottomPx = 48
 private val HighlightCorner = 12.dp
 private const val HighlightAlpha = 0.22f
 private const val HighlightHoldMs = 500L

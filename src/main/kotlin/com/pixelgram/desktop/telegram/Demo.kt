@@ -46,6 +46,17 @@ fun Telegram.loadDemo() {
         }
     }
     chats[100L]?.lastReadOutbox = 2
+    chats[101L]?.privateUserId = 2
+    statuses[2] = TdApi.UserStatusOnline(0)
+    chats[102L]?.privateUserId = 3
+    statuses[3] = TdApi.UserStatusOffline(now - 300)
+    if (System.getProperty("pixelgram.demo.offline") == "true") connection = ConnectionStatus.Connecting
+    if (System.getProperty("pixelgram.demo.password") == "true") {
+        kotlinx.coroutines.MainScope().launch {
+            kotlinx.coroutines.delay(4000)
+            authState = AuthState.WaitPassword("pixel")
+        }
+    }
     unread[ChatListKey.Main] = UnreadCount(5, 3)
     unread[ChatListKey.Folder(1)] = UnreadCount(2, 0)
     unread[ChatListKey.Folder(2)] = UnreadCount(12, 4)

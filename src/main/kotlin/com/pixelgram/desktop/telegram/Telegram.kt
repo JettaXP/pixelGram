@@ -96,6 +96,16 @@ class ChatState(val id: Long) {
 
 const val SavedMessagesTitle = "Saved Messages"
 
+enum class ConnectionStatus(val label: String?) {
+    WaitingForNetwork("Waiting for network…"),
+    ConnectingToProxy("Connecting to proxy…"),
+    Connecting("Connecting…"),
+    Updating("Updating…"),
+    Ready(null),
+}
+
+data class Presence(val label: String, val online: Boolean)
+
 data class UnreadCount(val chats: Int, val unmuted: Int)
 
 data class FolderInfo(val id: Int, val title: String, val icon: String)
@@ -126,6 +136,7 @@ enum class MessageStatus { Sending, Sent, Read, Failed }
 
 private const val AUTH_TIMEOUT_MS = 30_000L
 private const val ListsInterval = 100L
+private const val ClockTickMs = 20_000L
 private const val AlbumSize = 10
 
 private object Tdlib {
@@ -150,7 +161,7 @@ class Telegram(
     private val onLoggedOut: (Telegram) -> Boolean = { false },
 ) {
     var authState by mutableStateOf<AuthState>(AuthState.Starting)
-        private set
+        internal set
     var authError by mutableStateOf<String?>(null)
     var authBusy by mutableStateOf(false)
         private set
@@ -159,6 +170,20 @@ class Telegram(
     val chats = mutableStateMapOf<Long, ChatState>()
     val users = mutableStateMapOf<Long, TdApi.User>()
     val unread = mutableStateMapOf<ChatListKey, UnreadCount>()
+    val statuses = mutableStateMapOf<Long, TdApi.UserStatus>()
+    var clockMinute by mutableStateOf(System.currentTimeMillis() / 60_000)
+        private set
+
+    init {
+        scope.launch(Dispatchers.Main) {
+            while (true) {
+                delay(ClockTickMs)
+                clockMinute = System.currentTimeMillis() / 60_000
+            }
+        }
+    }
+    var connection by mutableStateOf(ConnectionStatus.Ready)
+        internal set
     val folders = mutableStateListOf<FolderInfo>()
     private val filePaths = mutableStateMapOf<Int, String>()
     private val messages = mutableMapOf<Long, SnapshotStateList<UiMessage>>()
@@ -423,6 +448,42 @@ class Telegram(
         }
     }
 
+    fun isOnline(chat: ChatState): Boolean {
+        val userId = chat.privateUserId
+        if (userId == 0L || isSavedMessages(chat.id) || users[userId]?.type is TdApi.UserTypeBot) return false
+        return statuses[userId] is TdApi.UserStatusOnline
+    }
+
+    fun presence(chat: ChatState): Presence? {
+        val userId = chat.privateUserId
+        if (userId == 0L || isSavedMessages(chat.id)) return null
+        if (users[userId]?.type is TdApi.UserTypeBot) return Presence("bot", false)
+        clockMinute
+        return when (val status = statuses[userId]) {
+            is TdApi.UserStatusOnline -> Presence("online", true)
+            is TdApi.UserStatusOffline -> Presence(lastSeen(status.wasOnline), false)
+            is TdApi.UserStatusRecently -> Presence("last seen recently", false)
+            is TdApi.UserStatusLastWeek -> Presence("last seen within a week", false)
+            is TdApi.UserStatusLastMonth -> Presence("last seen within a month", false)
+            else -> Presence("last seen a long time ago", false)
+        }
+    }
+
+    private fun lastSeen(wasOnline: Int): String {
+        val minutes = (System.currentTimeMillis() / 1000 - wasOnline) / 60
+        val zone = java.time.ZoneId.systemDefault()
+        val then = java.time.Instant.ofEpochSecond(wasOnline.toLong()).atZone(zone)
+        val time = then.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        val today = java.time.LocalDate.now(zone)
+        return when {
+            minutes < 1 -> "last seen just now"
+            minutes < 60 -> "last seen $minutes min ago"
+            then.toLocalDate() == today -> "last seen today at $time"
+            then.toLocalDate() == today.minusDays(1) -> "last seen yesterday at $time"
+            else -> "last seen " + then.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yy")) + " at $time"
+        }
+    }
+
     fun userName(userId: Long): String = users[userId]?.fullName() ?: ""
 
     fun myFullInfo(onResult: (TdApi.UserFullInfo?) -> Unit) {
@@ -481,6 +542,13 @@ class Telegram(
             }
             is TdApi.UpdateChatPosition -> chats[update.chatId]?.let { applyPosition(it, update.position) }
             is TdApi.UpdateChatReadInbox -> chats[update.chatId]?.unreadCount = update.unreadCount
+            is TdApi.UpdateConnectionState -> connection = when (update.state) {
+                is TdApi.ConnectionStateWaitingForNetwork -> ConnectionStatus.WaitingForNetwork
+                is TdApi.ConnectionStateConnectingToProxy -> ConnectionStatus.ConnectingToProxy
+                is TdApi.ConnectionStateConnecting -> ConnectionStatus.Connecting
+                is TdApi.ConnectionStateUpdating -> ConnectionStatus.Updating
+                else -> ConnectionStatus.Ready
+            }
             is TdApi.UpdateUnreadChatCount -> ChatListKey.of(update.chatList)?.let { key ->
                 unread[key] = UnreadCount(update.unreadCount, update.unreadUnmutedCount)
             }
@@ -489,8 +557,10 @@ class Telegram(
                 val index = list.indexOfFirst { it.id == update.oldMessageId }
                 if (index >= 0) list[index] = update.message.toUi().copy(key = list[index].key)
             }
+            is TdApi.UpdateUserStatus -> statuses[update.userId] = update.status
             is TdApi.UpdateUser -> {
                 users[update.user.id] = update.user
+                update.user.status?.let { statuses[update.user.id] = it }
                 if (update.user.id == myUserId) me = update.user
             }
             is TdApi.UpdateFile -> {

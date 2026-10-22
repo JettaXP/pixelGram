@@ -522,6 +522,16 @@ private fun AppearanceSection(settings: AppSettings) {
         onChange = { settings.customTitleBar.value = it },
     )
 
+    Header("Messages")
+    SwitchRow(
+        index = 0,
+        count = 1,
+        title = "Seconds in message time",
+        subtitle = "Show 18:52:33 instead of 18:52 under messages.",
+        checked = settings.messageSeconds.value,
+        onChange = { settings.messageSeconds.value = it },
+    )
+
     Header("Emoji")
     EmojiStyleChoice(settings)
 

@@ -1,5 +1,12 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.fillMaxSize
 import com.pixelgram.desktop.telegram.MessageStatus
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -59,6 +66,36 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun ChatList(
+    listKey: ChatListKey,
+    title: String,
+    chatsFor: (ChatListKey) -> List<ChatState>,
+    order: (ChatListKey) -> Int,
+    vertical: Boolean,
+    compact: Boolean,
+    selectedChatId: Long?,
+    telegram: Telegram,
+    settings: AppSettings,
+    onOpen: (Long) -> Unit,
+    archivedCount: Int,
+    onOpenArchive: () -> Unit,
+    onMenu: (() -> Unit)?,
+    onBack: (() -> Unit)?,
+    menuOpen: Boolean = false,
+) {
+    Box(Modifier.fillMaxSize()) {
+        ChatListBody(
+            listKey, title, chatsFor, order, vertical, compact, selectedChatId, telegram, settings,
+            onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen,
+        )
+        ConnectionPill(
+            status = telegram.connection,
+            modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
+        )
+    }
+}
+
+@Composable
+private fun ChatListBody(
     listKey: ChatListKey,
     title: String,
     chatsFor: (ChatListKey) -> List<ChatState>,
@@ -170,6 +207,32 @@ fun ChatList(
 
 private val GroupGap = 8.dp
 
+@Composable
+private fun OnlineAvatar(chat: ChatState, telegram: Telegram, settings: AppSettings, size: Dp) {
+    val online = telegram.isOnline(chat)
+    val dot by animateFloatAsState(if (online) 1f else 0f, MaterialTheme.motionScheme.fastSpatialSpec())
+    Box {
+        ChatAvatar(chat, telegram, settings, size = size)
+        if (dot > 0f) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(OnlineDot)
+                    .graphicsLayer {
+                        scaleX = dot
+                        scaleY = dot
+                    }
+                    .border(OnlineRing, MaterialTheme.colorScheme.surfaceContainerLow, CircleShape)
+                    .padding(OnlineRing)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape),
+            )
+        }
+    }
+}
+
+private val OnlineDot = 15.dp
+private val OnlineRing = 2.5.dp
+
 private fun menuIcon(open: Boolean) = if (open) Icons.AutoMirrored.Filled.MenuOpen else Icons.Filled.Menu
 
 @Composable
@@ -229,7 +292,7 @@ private fun CompactChatList(
                         .clickable { onOpen(chat.id) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    ChatAvatar(chat, telegram, settings, size = 48.dp)
+                    OnlineAvatar(chat, telegram, settings, 48.dp)
                     if (chat.unreadCount > 0) {
                         Badge(
                             modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 4.dp),
@@ -264,7 +327,7 @@ private fun ChatRow(
         onClick = onClick,
         shapes = ListItemDefaults.segmentedShapes(index, count),
         leadingContent = {
-            ChatAvatar(chat, telegram, settings, size = 48.dp)
+            OnlineAvatar(chat, telegram, settings, 48.dp)
         },
         supportingContent = {
             EmojiText(
@@ -308,8 +371,9 @@ private fun ChatRow(
 private val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
 private val dateFormat = DateTimeFormatter.ofPattern("dd.MM.yy")
 
-fun formatMessageTime(unixSeconds: Int): String =
-    Instant.ofEpochSecond(unixSeconds.toLong()).atZone(ZoneId.systemDefault()).format(messageTimeFormat)
+fun formatMessageTime(unixSeconds: Int, seconds: Boolean): String =
+    Instant.ofEpochSecond(unixSeconds.toLong()).atZone(ZoneId.systemDefault())
+        .format(if (seconds) messageTimeFormat else timeFormat)
 
 private val messageTimeFormat = DateTimeFormatter.ofPattern("HH:mm:ss")
 
