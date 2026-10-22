@@ -39,7 +39,7 @@ fun isDarkTheme(settings: AppSettings): Boolean = when (settings.themeMode.value
 }
 
 @Composable
-fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
+fun appColorScheme(settings: AppSettings): ColorScheme {
     val dark = isDarkTheme(settings)
     val seed = settings.seedColor.value
     val seedScheme = remember(seed, dark) { schemeFromSeed(seed, dark) }
@@ -48,8 +48,13 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     } else {
         null
     }
+    return matugenScheme ?: seedScheme
+}
+
+@Composable
+fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     MaterialExpressiveTheme(
-        colorScheme = matugenScheme ?: seedScheme,
+        colorScheme = appColorScheme(settings),
         motionScheme = MotionScheme.expressive(),
         typography = PixelTypography,
         content = content,

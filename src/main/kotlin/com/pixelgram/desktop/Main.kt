@@ -42,6 +42,8 @@ import com.pixelgram.desktop.ui.TitleBar
 import com.pixelgram.desktop.ui.rememberWindowChrome
 import com.pixelgram.desktop.ui.auth.AuthScreen
 import com.pixelgram.desktop.ui.main.Attachments
+import com.pixelgram.desktop.ui.main.PhotoViewer
+import com.pixelgram.desktop.ui.main.PhotoViewerWindow
 import com.pixelgram.desktop.ui.main.MainScreen
 import com.pixelgram.desktop.ui.notify.ToastData
 import com.pixelgram.desktop.ui.notify.ToastStack
@@ -55,7 +57,9 @@ import com.pixelgram.desktop.ui.settings.SettingsScreen
 import com.pixelgram.desktop.ui.theme.Emoji3D
 import com.pixelgram.desktop.ui.theme.EmojiFonts
 import com.pixelgram.desktop.ui.theme.PixelTheme
-import com.pixelgram.desktop.ui.theme.isDarkTheme
+import com.pixelgram.desktop.ui.theme.appColorScheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.awt.SystemTray
 import kotlinx.coroutines.MainScope
 
@@ -76,7 +80,11 @@ fun main() = application {
         exitApplication()
     }
     var visible by remember { mutableStateOf(true) }
-    val icon = AppIcons.forTheme(isDarkTheme(settings))
+    val scheme = appColorScheme(settings)
+    val icon = remember(scheme.primaryContainer, scheme.onPrimaryContainer) { AppIcons.painter(scheme) }
+    LaunchedEffect(scheme.primaryContainer, scheme.onPrimaryContainer) {
+        withContext(Dispatchers.IO) { SystemNotifications.updateIcon(scheme) }
+    }
     // Without a system tray closing the window quits. Wayland panels show
     // trays over D-Bus, which Java's tray doesn't use, so there it's off too.
     val hasTray = remember {
@@ -123,6 +131,9 @@ fun main() = application {
             }
         }
         Notifications.showTest = { toasts.push(testToast(accounts.active)) }
+    }
+    PhotoViewer.current?.let { photo ->
+        key(photo) { PhotoViewerWindow(photo, settings) }
     }
     if (toasts.entries.isNotEmpty()) {
         ToastWindow(toasts, settings, onOpen = openFromNotification)

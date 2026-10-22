@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.core
 
+import androidx.compose.material3.ColorScheme
+import com.pixelgram.desktop.ui.AppIcons
 import java.awt.EventQueue
 import java.io.File
 
@@ -12,15 +14,13 @@ object SystemNotifications {
         .any { File(it, name).canExecute() }
 
     // The app icon as a file, for notifications from chats without a photo.
-    private val appIcon: String? by lazy {
-        runCatching {
-            val file = File(AppPaths.configDir, "pixelgram-icon.png")
-            if (!file.isFile) {
-                SystemNotifications::class.java.getResourceAsStream("/icon-dark.png")
-                    ?.use { input -> file.outputStream().use { input.copyTo(it) } }
-            }
-            file.absolutePath.takeIf { file.isFile }
-        }.getOrNull()
+    @Volatile
+    private var appIcon: String? = null
+
+    fun updateIcon(scheme: ColorScheme) {
+        val file = File(AppPaths.configDir, "pixelgram-icon.png")
+        AppIcons.writeTo(file, scheme)
+        appIcon = file.absolutePath.takeIf { file.isFile }
     }
 
     fun show(title: String, body: String, icon: String?, onClick: () -> Unit) {

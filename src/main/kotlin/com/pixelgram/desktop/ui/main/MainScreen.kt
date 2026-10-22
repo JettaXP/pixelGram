@@ -2,7 +2,10 @@ package com.pixelgram.desktop.ui.main
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -69,6 +72,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -295,10 +299,19 @@ private fun PixelRail(
             null
         },
     ) {
-        val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+        // WHY: the rail animates its own width; crossfading folders and menu at the
+        // same time overlapped them and spilled text onto the chat list. One fades
+        // out, then the other fades in, clipped to the rail.
         AnimatedContent(
             targetState = expanded,
-            transitionSpec = { fadeIn(fade) togetherWith fadeOut(fade) },
+            transitionSpec = {
+                fadeIn(tween(RailFadeInMs, delayMillis = RailFadeOutMs)) togetherWith
+                    fadeOut(tween(RailFadeOutMs)) using SizeTransform(clip = true) { _, _ ->
+                    tween(RailResizeMs, easing = FastOutSlowInEasing)
+                }
+            },
+            contentAlignment = Alignment.TopStart,
+            modifier = Modifier.clipToBounds(),
         ) { showMenu ->
             when {
                 showMenu -> MainMenu(accounts, telegram, settings, onNavigate, onOpenSaved, onNewChat)
@@ -494,6 +507,9 @@ private fun TopFolders(
 }
 
 private val TopFolderWidth = 80.dp
+private const val RailFadeOutMs = 110
+private const val RailFadeInMs = 180
+private const val RailResizeMs = 280
 private val MinChatWidth = 380.dp
 private val RailWidth = 96.dp
 private val CompactWidth = 88.dp

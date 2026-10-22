@@ -116,6 +116,8 @@ data class UiMessage(
     val photo: TdApi.File? = null,
     val photoWidth: Int = 0,
     val photoHeight: Int = 0,
+    // The biggest size of the photo, for the full screen viewer.
+    val fullPhoto: TdApi.File? = null,
 )
 
 private const val AUTH_TIMEOUT_MS = 30_000L
@@ -816,6 +818,7 @@ fun TdApi.Message.toUi(): UiMessage {
         photo = photo?.photo,
         photoWidth = photo?.width ?: 0,
         photoHeight = photo?.height ?: 0,
+        fullPhoto = (content as? TdApi.MessagePhoto)?.photo?.sizes?.maxByOrNull { it.width }?.photo,
     )
 }
 
