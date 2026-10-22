@@ -5,8 +5,6 @@ Planned features, not started yet.
 ## Bugs to fix next
 
 - Noto 3D emoji are still cut off in some places.
-- Capsule folder bar: the active pill still isn't a scaled-down copy of the
-  whole capsule — the proportions must match.
 
 ## Window and system tray
 
