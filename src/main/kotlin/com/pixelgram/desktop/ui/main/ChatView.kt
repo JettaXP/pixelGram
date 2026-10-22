@@ -1032,6 +1032,7 @@ private fun SenderAvatar(message: UiMessage, telegram: Telegram, settings: AppSe
     )
 }
 private const val DraftSaveDelayMs = 1_500L
+private const val InlineDelayMs = 400L
 
 @Composable
 private fun Composer(
@@ -1087,6 +1088,32 @@ private fun Composer(
             suggestions = it
             suggestionIndex = 0
         }
+    }
+    val inlineMatch = InlineQuery.matchEntire(text.text)
+    val inlineName = inlineMatch?.groupValues?.get(1)
+    val inlineText = inlineMatch?.groupValues?.get(2)
+    var inlineBot by remember(chatId) { mutableStateOf<TdApi.User?>(null) }
+    var inlineResults by remember(chatId) { mutableStateOf<TdApi.InlineQueryResults?>(null) }
+    LaunchedEffect(inlineName, chatId) {
+        if (inlineBot?.usernames?.activeUsernames?.any { it.equals(inlineName, true) } == true) return@LaunchedEffect
+        inlineBot = null
+        val name = inlineName ?: return@LaunchedEffect
+        delay(MentionDelayMs)
+        telegram.inlineBot(name) { inlineBot = it }
+    }
+    LaunchedEffect(inlineBot?.id, inlineText, chatId) {
+        inlineResults = null
+        val bot = inlineBot ?: return@LaunchedEffect
+        val query = inlineText ?: return@LaunchedEffect
+        delay(InlineDelayMs)
+        telegram.inlineResults(bot.id, chatId, query) { inlineResults = it }
+    }
+    val showInline = inlineMatch != null && inlineBot != null
+    val pickInline = { queryId: Long, resultId: String ->
+        telegram.sendInlineResult(chatId, queryId, resultId, replyTo?.id ?: 0)
+        text = TextFieldValue("")
+        spans = emptyList()
+        onCancelReply()
     }
     val showSuggestions = mentionQuery != null && suggestions.isNotEmpty()
     val pickMention = { userId: Long ->
@@ -1199,6 +1226,18 @@ private fun Composer(
             telegram,
             settings,
             onPick = pickMention,
+            modifier = Modifier.fillMaxWidth().padding(start = 64.dp, end = 120.dp, top = 8.dp),
+        )
+    }
+    AnimatedVisibility(
+        visible = showInline,
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+    ) {
+        InlineResultsPanel(
+            inlineResults,
+            telegram,
+            onPick = pickInline,
             modifier = Modifier.fillMaxWidth().padding(start = 64.dp, end = 120.dp, top = 8.dp),
         )
     }

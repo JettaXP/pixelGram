@@ -165,6 +165,7 @@ private const val MentionLimit = 30
 private const val MuteForever = 366 * 24 * 3600
 private const val AlbumSize = 10
 private const val HistoryPageSize = 100
+private const val MentionResolveMin = 4
 private const val HistoryPagesMax = 300
 
 private object Tdlib {
@@ -1127,33 +1128,76 @@ class Telegram(
         else -> ""
     }
 
+    private fun withUsers(ids: List<Long>, done: (List<Long>) -> Unit) {
+        val missing = ids.filter { users[it] == null }
+        if (missing.isEmpty()) return done(ids)
+        var left = missing.size
+        missing.forEach { id ->
+            send(TdApi.GetUser(id)) { result ->
+                if (result is TdApi.User) users[id] = result
+                left--
+                if (left == 0) done(ids)
+            }
+        }
+    }
+
+    private fun TdApi.User.matches(query: String): Boolean =
+        query.isEmpty() || firstName.contains(query, true) || lastName.contains(query, true) ||
+            usernames?.activeUsernames?.any { it.contains(query, true) } == true
+
     fun mentionSuggestions(chatId: Long, inGroup: Boolean, query: String, onResult: (List<Long>) -> Unit) {
         val found = LinkedHashSet<Long>()
-        var pending = if (inGroup) 2 else 1
+        val resolve = query.length >= MentionResolveMin
+        var pending = 1 + (if (inGroup) 1 else 0) + (if (resolve) 1 else 0)
         val done = {
             pending--
             if (pending == 0) onResult(found.filter { it != myUserId }.take(MentionLimit))
         }
-        fun ensure(ids: List<Long>) = ids.forEach { id ->
-            if (users[id] == null) send(TdApi.GetUser(id)) { result -> if (result is TdApi.User) users[id] = result }
-        }
         if (inGroup) {
             send(TdApi.SearchChatMembers(chatId, query, MentionLimit, null)) { result ->
                 val ids = (result as? TdApi.ChatMembers)?.members?.mapNotNull { (it.memberId as? TdApi.MessageSenderUser)?.userId }.orEmpty()
-                ensure(ids)
-                found.addAll(ids)
-                done()
+                withUsers(ids) {
+                    found.addAll(it)
+                    done()
+                }
             }
         }
         send(TdApi.GetRecentInlineBots()) { result ->
             val ids = (result as? TdApi.Users)?.userIds?.toList().orEmpty()
-            ensure(ids)
-            found.addAll(ids.filter { id ->
-                query.isEmpty() || users[id]?.let { user ->
-                    user.firstName.contains(query, true) || user.usernames?.activeUsernames?.any { it.contains(query, true) } == true
-                } == true
-            })
-            done()
+            withUsers(ids) { loaded ->
+                found.addAll(loaded.filter { users[it]?.matches(query) == true })
+                done()
+            }
+        }
+        if (resolve) {
+            send(TdApi.SearchPublicChat(query)) { result ->
+                val userId = ((result as? TdApi.Chat)?.type as? TdApi.ChatTypePrivate)?.userId
+                if (userId == null) done() else withUsers(listOf(userId)) {
+                    found.add(userId)
+                    done()
+                }
+            }
+        }
+    }
+
+    fun inlineBot(username: String, onResult: (TdApi.User?) -> Unit) {
+        send(TdApi.SearchPublicChat(username)) { result ->
+            val userId = ((result as? TdApi.Chat)?.type as? TdApi.ChatTypePrivate)?.userId
+            if (userId == null) onResult(null) else withUsers(listOf(userId)) {
+                onResult(users[userId]?.takeIf { (it.type as? TdApi.UserTypeBot)?.isInline == true })
+            }
+        }
+    }
+
+    fun inlineResults(botId: Long, chatId: Long, query: String, onResult: (TdApi.InlineQueryResults?) -> Unit) {
+        send(TdApi.GetInlineQueryResults(botId, chatId, null, query, "")) { result ->
+            onResult(result as? TdApi.InlineQueryResults)
+        }
+    }
+
+    fun sendInlineResult(chatId: Long, queryId: Long, resultId: String, replyToId: Long = 0) {
+        send(TdApi.SendInlineQueryResultMessage(chatId, null, replyInput(replyToId), null, queryId, resultId, false)) { result ->
+            if (result is TdApi.Error) AppLog.write("Inline send failed ${result.code}: ${result.message}")
         }
     }
 
