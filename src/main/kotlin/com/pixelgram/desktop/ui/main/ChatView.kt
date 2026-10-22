@@ -96,7 +96,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -135,7 +134,6 @@ import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.components.loadImage
-import com.pixelgram.desktop.ui.profile.PersonalChannelCard
 import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
 import java.io.File
@@ -227,6 +225,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             onReact = { message, emoji -> telegram.toggleReaction(message, emoji) },
             loadReactions = { message, done -> telegram.availableReactions(message, done) },
             canReact = canReact,
+            onPin = { message -> telegram.togglePin(message) },
             onDoubleClick = { message ->
                 val action = if (message.isOutgoing) settings.doubleClickOwn.value else settings.doubleClickOther.value
                 when (action) {
@@ -330,33 +329,16 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                     settings,
                     headerMenu,
                     onDismiss = { headerMenu = null },
+                    onOpenChat = onOpenChat,
                     onSearch = { MessageSearch.start(chat.id) },
                     onToBeginning = {
                         scope.launch {
-                            repeat(BeginningPages) {
-                                telegram.loadMoreMessages(chat.id)
-                                delay(JumpPageDelayMs)
-                            }
-                            if (shown.isNotEmpty()) listState.animateScrollToItem(shown.lastIndex)
+                            telegram.loadWholeHistory(chat.id)
+                            if (shown.isNotEmpty()) listState.scrollToItem(shown.lastIndex)
                         }
                     },
                 )
             }
-        }
-        var personalChannel by remember(chat.id) { mutableLongStateOf(0L) }
-        LaunchedEffect(chat.id) {
-            if (chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id)) {
-                telegram.userFullInfo(chat.privateUserId) { personalChannel = it?.personalChatId ?: 0L }
-            }
-        }
-        if (personalChannel != 0L) {
-            PersonalChannelCard(
-                personalChannel,
-                telegram,
-                settings,
-                onOpenChat,
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            )
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             LazyColumn(
@@ -435,7 +417,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                     }
                 }
             }
-            profileChat?.let { ChatInfoDialog(it, telegram, settings) { profileChat = null } }
+            profileChat?.let { ChatInfoDialog(it, telegram, settings, onOpenChat) { profileChat = null } }
             StickerPack.current?.takeIf { it.chatId == chat.id && it.telegram == telegram }?.let { request ->
                 StickerPackDialog(request, settings) { StickerPack.current = null }
             }
@@ -445,6 +427,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 dateAt = { index -> shown.getOrNull(index)?.date },
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
             )
+            ScrollDownButton(listState, Modifier.align(Alignment.BottomEnd).padding(16.dp))
         }
         val panelSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
         val panelFade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -874,7 +857,6 @@ private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @
 }
 
 private val MetaGap = 10.dp
-private const val BeginningPages = 10
 private const val MentionDelayMs = 150L
 private val KeyboardMinWidth = 260.dp
 private const val JumpPages = 40

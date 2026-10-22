@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import com.pixelgram.desktop.ui.profile.PersonalChannelCard
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -77,6 +79,7 @@ fun ChatActions(
     at: DpOffset?,
     onDismiss: () -> Unit,
     listKey: ChatListKey = ChatListKey.Main,
+    onOpenChat: ((Long) -> Unit)? = null,
     onSearch: (() -> Unit)? = null,
     onToBeginning: (() -> Unit)? = null,
 ) {
@@ -188,7 +191,7 @@ fun ChatActions(
             dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } },
         )
     }
-    if (profile) ChatInfoDialog(chat, telegram, settings) { profile = false }
+    if (profile) ChatInfoDialog(chat, telegram, settings, onOpenChat) { profile = false }
 }
 
 @Composable
@@ -202,11 +205,23 @@ private fun Item(icon: ImageVector, label: String, color: Color = Color.Unspecif
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatInfoDialog(chat: ChatState, telegram: Telegram, settings: AppSettings, onDismiss: () -> Unit) {
+fun ChatInfoDialog(
+    chat: ChatState,
+    telegram: Telegram,
+    settings: AppSettings,
+    onOpenChat: ((Long) -> Unit)? = null,
+    onDismiss: () -> Unit,
+) {
     val user = telegram.users[chat.privateUserId]
     var bio by remember(chat.id) { mutableStateOf("") }
+    var personalChannel by remember(chat.id) { mutableStateOf(0L) }
     LaunchedEffect(chat.id) {
-        if (chat.privateUserId != 0L) telegram.userFullInfo(chat.privateUserId) { bio = it?.bio?.text.orEmpty() }
+        if (chat.privateUserId != 0L) {
+            telegram.userFullInfo(chat.privateUserId) {
+                bio = it?.bio?.text.orEmpty()
+                personalChannel = it?.personalChatId ?: 0L
+            }
+        }
     }
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.widthIn(min = 320.dp, max = 420.dp)) {
@@ -228,6 +243,18 @@ fun ChatInfoDialog(chat: ChatState, telegram: Telegram, settings: AppSettings, o
                 }
                 user?.phoneNumber?.takeIf { it.isNotEmpty() }?.let { Text("+$it", style = MaterialTheme.typography.bodyMedium) }
                 if (bio.isNotBlank()) EmojiText(bio, style = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Center))
+                if (personalChannel != 0L) {
+                    PersonalChannelCard(
+                        personalChannel,
+                        telegram,
+                        settings,
+                        onOpen = { id ->
+                            onDismiss()
+                            onOpenChat?.invoke(id)
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                }
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
             }
         }

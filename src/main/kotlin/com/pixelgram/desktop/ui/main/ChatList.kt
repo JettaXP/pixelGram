@@ -179,7 +179,7 @@ private fun ChatListBody(
                     item(key = "archive") {
                         SegmentedListItem(
                             onClick = onOpenArchive,
-                            shapes = ListItemDefaults.segmentedShapes(0, 1),
+                            shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.large),
                             leadingContent = {
                                 Box(
                                     Modifier

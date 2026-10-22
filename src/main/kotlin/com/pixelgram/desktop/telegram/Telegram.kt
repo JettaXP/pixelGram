@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.telegram
 
+import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
 import com.pixelgram.desktop.core.AvatarKind
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -160,6 +162,8 @@ private const val ReactionRow = 8
 private const val MentionLimit = 30
 private const val MuteForever = 366 * 24 * 3600
 private const val AlbumSize = 10
+private const val HistoryPageSize = 100
+private const val HistoryPagesMax = 300
 
 private object Tdlib {
     private var factory: ClientFactory? = null
@@ -891,17 +895,20 @@ class Telegram(
         send(TdApi.CloseChat().apply { this.chatId = chatId })
     }
 
-    fun loadMoreMessages(chatId: Long) {
+    fun loadMoreMessages(chatId: Long, pageSize: Int = 50, onLoaded: (Int) -> Unit = {}) {
         val list = messages(chatId)
         val fromId = list.lastOrNull()?.id ?: 0L
         send(TdApi.GetChatHistory().apply {
             this.chatId = chatId
             fromMessageId = fromId
             offset = 0
-            limit = 50
+            limit = pageSize
             onlyLocal = false
         }) { result ->
-            if (result !is TdApi.Messages) return@send
+            if (result !is TdApi.Messages) {
+                onLoaded(0)
+                return@send
+            }
             val loaded = result.messages?.filterNotNull().orEmpty()
                 .filter { message -> list.none { it.id == message.id } }
                 .map { it.toUi() }
@@ -909,6 +916,16 @@ class Telegram(
             if (loaded.isNotEmpty()) {
                 markRead(chatId, loaded.map { it.id })
             }
+            onLoaded(loaded.size)
+        }
+    }
+
+    suspend fun loadWholeHistory(chatId: Long) {
+        repeat(HistoryPagesMax) {
+            val loaded = suspendCancellableCoroutine { continuation ->
+                loadMoreMessages(chatId, HistoryPageSize) { count -> if (continuation.isActive) continuation.resume(count) }
+            }
+            if (loaded == 0) return
         }
     }
 
@@ -969,6 +986,17 @@ class Telegram(
             }
         }
         return null
+    }
+
+    fun togglePin(message: UiMessage) {
+        val request: TdApi.Function<TdApi.Ok> = if (message.pinned) {
+            TdApi.UnpinChatMessage(message.chatId, message.id)
+        } else {
+            TdApi.PinChatMessage(message.chatId, message.id, false, false)
+        }
+        send(request) { result ->
+            if (result is TdApi.Error) AppLog.write("Pin failed ${result.code}: ${result.message}")
+        }
     }
 
     fun stickerSet(setId: Long, onResult: (TdApi.StickerSet?) -> Unit) {

@@ -1,5 +1,10 @@
 package com.pixelgram.desktop
 
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.Key
+import com.pixelgram.desktop.ui.EscapeStack
 import com.pixelgram.desktop.ui.main.VideoPlayerWindow
 import com.pixelgram.desktop.ui.main.VideoPlayer
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -200,6 +205,9 @@ private fun ApplicationScope.PixelApp() {
         title = "pixelGram",
         icon = icon,
         state = windowState,
+        onKeyEvent = { event ->
+            event.type == KeyEventType.KeyDown && event.key == Key.Escape && EscapeStack.dispatch()
+        },
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
         LaunchedEffect(scheme.primaryContainer, scheme.onPrimaryContainer) {

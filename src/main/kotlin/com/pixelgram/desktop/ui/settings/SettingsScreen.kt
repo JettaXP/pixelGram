@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
+import com.pixelgram.desktop.ui.OnEscape
 import kotlinx.coroutines.launch
 import java.io.File
 import com.pixelgram.desktop.ui.main.BackupImportDialog
@@ -202,6 +203,15 @@ fun SettingsScreen(
     var searching by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var menuOpen by remember { mutableStateOf(false) }
+    OnEscape {
+        if (inPreferences) {
+            inPreferences = false
+            section = Section.MyAccount
+        } else {
+            onBack()
+        }
+        true
+    }
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
         Row {
             Column(

@@ -1,11 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.OnEscape
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.onKeyEvent
 import com.pixelgram.desktop.ui.components.PhoneText
 import com.pixelgram.desktop.telegram.UnreadCount
 import androidx.compose.ui.graphics.Color
@@ -260,20 +256,19 @@ fun MainScreen(
                             },
                         ),
                 )
+                OnEscape {
+                    when {
+                        MessageSearch.open -> MessageSearch.open = false
+                        openChatId != null -> onCloseChat()
+                        else -> return@OnEscape false
+                    }
+                    true
+                }
                 Surface(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .padding(top = 8.dp, end = 8.dp, bottom = 8.dp)
-                        .onKeyEvent { event ->
-                            if (event.type != KeyEventType.KeyDown || event.key != Key.Escape) return@onKeyEvent false
-                            when {
-                                MessageSearch.open -> MessageSearch.open = false
-                                openChatId != null -> onCloseChat()
-                                else -> return@onKeyEvent false
-                            }
-                            true
-                        },
+                        .padding(top = 8.dp, end = 8.dp, bottom = 8.dp),
                     shape = MaterialTheme.shapes.extraLarge,
                     color = MaterialTheme.colorScheme.surface,
                 ) {

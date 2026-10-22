@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material.icons.outlined.PushPin
 import com.pixelgram.desktop.telegram.Telegram
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -83,6 +84,7 @@ class MessageActions(
     val loadReactions: (UiMessage, (List<String>) -> Unit) -> Unit,
     val onDoubleClick: (UiMessage) -> Unit = {},
     val canReact: Boolean = true,
+    val onPin: ((UiMessage) -> Unit)? = null,
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -254,6 +256,16 @@ private fun MessageMenu(message: UiMessage, actions: MessageActions, onDismiss: 
                 onClick = {
                     onDismiss()
                     Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(message.text), null)
+                },
+            )
+        }
+        actions.onPin?.takeIf { !message.service }?.let { pin ->
+            DropdownMenuItem(
+                text = { Text(if (message.pinned) "Unpin" else "Pin") },
+                leadingIcon = { Icon(Icons.Outlined.PushPin, contentDescription = null) },
+                onClick = {
+                    onDismiss()
+                    pin(message)
                 },
             )
         }
