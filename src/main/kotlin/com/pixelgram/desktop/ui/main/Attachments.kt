@@ -1,5 +1,11 @@
 package com.pixelgram.desktop.ui.main
 
+import java.awt.KeyboardFocusManager
+import io.github.vinceglb.filekit.dialogs.openFilePicker
+import io.github.vinceglb.filekit.dialogs.FileKitMode
+import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
+import io.github.vinceglb.filekit.dialogs.FileKitDialogParent
+import io.github.vinceglb.filekit.FileKit
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -66,8 +72,24 @@ object Attachments {
 
     fun isPhoto(file: File) = file.extension.lowercase() in PhotoExtensions && file.length() <= MaxPhotoBytes
 
-    fun pick(): List<File> {
-        val dialog = FileDialog(null as Frame?, "Send files", FileDialog.LOAD).apply { isMultipleMode = true }
+    suspend fun pick(): List<File> {
+        val parent = KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow
+        return runCatching {
+            FileKit.openFilePicker(
+                mode = FileKitMode.Multiple(),
+                dialogSettings = FileKitDialogSettings(
+                    title = "Send files",
+                    parent = parent?.let { FileKitDialogParent.awt(it) },
+                ),
+            ).orEmpty().map { it.file }.filter { it.isFile }
+        }.getOrElse {
+            AppLog.write("System file picker failed", it)
+            awtPick(parent as? Frame)
+        }
+    }
+
+    private fun awtPick(parent: Frame?): List<File> {
+        val dialog = FileDialog(parent, "Send files", FileDialog.LOAD).apply { isMultipleMode = true }
         dialog.isVisible = true
         return dialog.files.orEmpty().filter { it.isFile }
     }

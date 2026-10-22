@@ -39,6 +39,7 @@ dependencies {
     implementation(libs.material.color.utilities)
     implementation(libs.qrcodegen)
     implementation(libs.jna)
+    implementation(libs.filekit.dialogs)
 
     implementation(platform(libs.tdlight.bom))
     implementation(libs.tdlight.java)
@@ -98,7 +99,7 @@ compose.desktop {
             vendor = "jettax"
             licenseFile.set(project.file("LICENSE"))
             appResourcesRootDir.set(project.layout.projectDirectory.dir("appResources"))
-            modules("java.sql", "jdk.unsupported", "java.naming")
+            modules("java.sql", "jdk.unsupported", "java.naming", "jdk.security.auth")
 
             linux {
                 packageName = "pixelgram"

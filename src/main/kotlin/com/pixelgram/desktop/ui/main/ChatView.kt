@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.main
 
+import kotlinx.coroutines.delay
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.layout.IntrinsicMeasureScope
 import androidx.compose.ui.layout.IntrinsicMeasurable
@@ -151,6 +155,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     var editing by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var replyTo by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var deleting by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
+    var highlight by remember(chat.id) { mutableStateOf<Pair<Long, Long>?>(null) }
     val actions = remember(chat.id) {
         MessageActions(
             onReply = { editing = null; replyTo = it },
@@ -158,7 +163,10 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             onDelete = { deleting = it },
             onQuoteClick = { id ->
                 val index = messages.indexOfFirst { it.id == id }
-                if (index >= 0) scope.launch { listState.animateScrollToItem(index) }
+                if (index >= 0) {
+                    scope.launch { listState.animateScrollToItem(index) }
+                    highlight = id to System.nanoTime()
+                }
             },
         )
     }
@@ -213,9 +221,26 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             items(messages, key = { it.key }) { message ->
                 val rise = remember { Animatable(if (message.fresh && slidIn.add(message.key)) 1f else 0f) }
                 LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
+                val flash = remember { Animatable(0f) }
+                LaunchedEffect(highlight) {
+                    if (highlight?.first == message.id) {
+                        flash.snapTo(1f)
+                        delay(HighlightHoldMs)
+                        flash.animateTo(0f, tween(HighlightFadeMs))
+                    }
+                }
+                val flashColor = MaterialTheme.colorScheme.primary
                 val itemModifier = Modifier
                     .animateItem(fadeInSpec = fade, placementSpec = placement, fadeOutSpec = fade)
                     .graphicsLayer { translationY = rise.value * size.height }
+                    .drawBehind {
+                        if (flash.value > 0f) {
+                            drawRoundRect(
+                                flashColor.copy(alpha = HighlightAlpha * flash.value),
+                                cornerRadius = CornerRadius(HighlightCorner.toPx()),
+                            )
+                        }
+                    }
                 val quote: (@Composable () -> Unit)? = if (message.replyToId != 0L) {
                     {
                         val replied = telegram.replyPreview(chat.id, message.replyToId)
@@ -264,12 +289,13 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 asFiles = asFiles,
                 onAsFiles = { asFiles = it },
                 onRemove = { attachments.remove(it) },
-                onAdd = { attach(Attachments.pick()) },
+                onAdd = { scope.launch { attach(Attachments.pick()) } },
                 onClose = { attachments.clear() },
                 modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp),
             )
         }
         Composer(
+            chatId = chat.id,
             hasAttachments = attachments.isNotEmpty(),
             editing = editing,
             replyTo = replyTo,
@@ -489,6 +515,10 @@ private fun TextWithMeta(text: String, meta: @Composable () -> Unit) {
 }
 
 private val MetaGap = 10.dp
+private val HighlightCorner = 12.dp
+private const val HighlightAlpha = 0.22f
+private const val HighlightHoldMs = 500L
+private const val HighlightFadeMs = 1200
 private val QuoteMinWidth = 160.dp
 private const val EditWindowSeconds = 48 * 3600
 
@@ -564,6 +594,7 @@ private const val PhotoPixels = 1024
 
 @Composable
 private fun Composer(
+    chatId: Long,
     hasAttachments: Boolean,
     editing: UiMessage?,
     replyTo: UiMessage?,
@@ -576,6 +607,8 @@ private fun Composer(
     var text by remember { mutableStateOf(TextFieldValue("")) }
     var emojiOpen by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
+    val pickScope = rememberCoroutineScope()
+    LaunchedEffect(chatId) { runCatching { focus.requestFocus() } }
     LaunchedEffect(editing?.key) {
         if (editing != null) {
             text = TextFieldValue(editing.text, TextRange(editing.text.length))
@@ -647,7 +680,7 @@ private fun Composer(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        IconButton(onClick = { onAttach(Attachments.pick()) }) {
+        IconButton(onClick = { pickScope.launch { onAttach(Attachments.pick()) } }) {
             Icon(Icons.Outlined.AttachFile, contentDescription = "Attach files")
         }
         TextField(

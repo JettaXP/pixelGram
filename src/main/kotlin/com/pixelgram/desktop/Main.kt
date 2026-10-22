@@ -1,5 +1,6 @@
 package com.pixelgram.desktop
 
+import io.github.vinceglb.filekit.FileKit
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -68,6 +69,7 @@ fun main() = application {
     val settings = remember {
         Emoji3D.removeOldFont()
         Attachments.cleanTemp()
+        runCatching { FileKit.init("com.pixelgram.desktop") }
         Sounds.warmUp()
         AppSettings.load().also { EmojiFonts.settings = it }
     }
