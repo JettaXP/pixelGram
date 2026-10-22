@@ -142,6 +142,9 @@ data class UiMessage(
     val reactions: List<TdApi.MessageReaction> = emptyList(),
     val keyboard: List<List<TdApi.InlineKeyboardButton>> = emptyList(),
     val viaBot: Long = 0,
+    val views: Int = 0,
+    val pinned: Boolean = false,
+    val albumId: Long = 0,
 )
 
 enum class MessageStatus { Sending, Sent, Read, Failed }
@@ -632,8 +635,15 @@ class Telegram(
             is TdApi.UpdateMessageInteractionInfo -> messages[update.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.messageId }
                 if (index >= 0) {
-                    list[index] = list[index].copy(reactions = update.interactionInfo?.reactions?.reactions?.toList().orEmpty())
+                    list[index] = list[index].copy(
+                        reactions = update.interactionInfo?.reactions?.reactions?.toList().orEmpty(),
+                        views = update.interactionInfo?.viewCount ?: list[index].views,
+                    )
                 }
+            }
+            is TdApi.UpdateMessageIsPinned -> messages[update.chatId]?.let { list ->
+                val index = list.indexOfFirst { it.id == update.messageId }
+                if (index >= 0) list[index] = list[index].copy(pinned = update.isPinned)
             }
             is TdApi.UpdateMessageContent -> messages[update.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.messageId }
@@ -1273,6 +1283,9 @@ fun TdApi.Message.toUi(): UiMessage {
         reactions = interactionInfo?.reactions?.reactions?.toList().orEmpty(),
         keyboard = inlineRows(replyMarkup),
         viaBot = viaBotUserId,
+        views = interactionInfo?.viewCount ?: 0,
+        pinned = isPinned,
+        albumId = mediaAlbumId,
         replyToId = (replyTo as? TdApi.MessageReplyToMessage)?.takeIf { it.chatId == 0L || it.chatId == chatId }?.messageId ?: 0L,
     )
 }

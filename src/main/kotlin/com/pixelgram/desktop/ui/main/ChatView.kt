@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Visibility
 import com.pixelgram.desktop.telegram.contentText
 import com.pixelgram.desktop.core.DoubleClickAction
 import androidx.compose.ui.unit.IntSize
@@ -187,6 +191,15 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     var replyTo by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var deleting by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var forwarding by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
+    var profileChat by remember(chat.id) { mutableStateOf<ChatState?>(null) }
+    val openOrigin = { origin: TdApi.MessageOrigin ->
+        when (origin) {
+            is TdApi.MessageOriginUser -> telegram.openPrivateChat(origin.senderUserId) { id -> profileChat = telegram.chats[id] }
+            is TdApi.MessageOriginChannel -> onOpenChat(origin.chatId)
+            is TdApi.MessageOriginChat -> onOpenChat(origin.senderChatId)
+            else -> Unit
+        }
+    }
     var botAnswer by remember(chat.id) { mutableStateOf<Pair<String, Boolean>?>(null) }
     LaunchedEffect(editing?.key) {
         val message = editing
@@ -409,12 +422,14 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                                     onButton = { button ->
                                         telegram.pressButton(message, button) { text, alert -> botAnswer = text to alert }
                                     },
+                                    onOrigin = openOrigin,
                                 )
                             }
                         }
                     }
                 }
             }
+            profileChat?.let { ChatInfoDialog(it, telegram, settings) { profileChat = null } }
             BotAnswer(botAnswer, onDismiss = { botAnswer = null }, modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
             FloatingDate(
                 listState = listState,
@@ -511,6 +526,7 @@ fun MessageBubble(
     quote: (@Composable () -> Unit)? = null,
     onReact: ((String) -> Unit)? = null,
     onButton: ((TdApi.InlineKeyboardButton) -> Unit)? = null,
+    onOrigin: ((TdApi.MessageOrigin) -> Unit)? = null,
 ) {
     val seconds = settings.messageSeconds.value
     if (message.service) {
@@ -603,7 +619,19 @@ fun MessageBubble(
                         }
                         val origin = message.forwardOrigin
                         if (origin != null && telegram != null) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            val reachable = onOrigin != null && origin !is TdApi.MessageOriginHiddenUser
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = if (reachable) {
+                                    Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .pointerHoverIcon(PointerIcon.Hand)
+                                        .clickable { onOrigin?.invoke(origin) }
+                                } else {
+                                    Modifier
+                                },
+                            ) {
                                 Icon(
                                     Icons.AutoMirrored.Outlined.Forward,
                                     contentDescription = null,
@@ -721,6 +749,13 @@ private fun MessageMeta(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
+        if (message.views > 0) {
+            Icon(Icons.Outlined.Visibility, contentDescription = "Views", tint = color, modifier = Modifier.size(14.dp))
+            Text(formatViews(message.views), style = MaterialTheme.typography.labelSmall, color = color)
+        }
+        if (message.pinned) {
+            Icon(Icons.Outlined.PushPin, contentDescription = "Pinned", tint = color, modifier = Modifier.size(13.dp))
+        }
         if (message.edited) {
             Icon(Icons.Outlined.Edit, contentDescription = "Edited", tint = color, modifier = Modifier.size(13.dp))
         }
@@ -729,6 +764,12 @@ private fun MessageMeta(
             MessageStatusIcon(status, color = if (status == MessageStatus.Read) readColor else color, size = 16.dp)
         }
     }
+}
+
+private fun formatViews(count: Int): String = when {
+    count >= 1_000_000 -> "%.1fM".format(java.util.Locale.US, count / 1_000_000f).replace(".0M", "M")
+    count >= 1_000 -> "%.1fK".format(java.util.Locale.US, count / 1_000f).replace(".0K", "K")
+    else -> count.toString()
 }
 
 @Composable
