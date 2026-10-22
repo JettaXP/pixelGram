@@ -1039,7 +1039,7 @@ private fun DoubleClickEmoji(settings: AppSettings) {
     }
 }
 
-private val QuickReactions = listOf("❤", "👍", "🔥", "😁", "🥰", "👏", "🎉", "🤩", "😢", "🤔", "🤯", "😱", "🙏", "👌", "🕊", "💯", "⚡", "🏆", "💔", "👀")
+private val QuickReactions = listOf("❤", "❤‍🔥", "👍", "🔥", "😁", "🥰", "👏", "🎉", "🤩", "😢", "🤔", "🤯", "😱", "🙏", "👌", "🕊", "💯", "⚡", "🏆", "💔", "👀")
 
 @Composable
 private fun NotificationsSection(settings: AppSettings) {
