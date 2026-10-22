@@ -615,7 +615,14 @@ fun MediaContent(message: UiMessage, telegram: Telegram, width: Dp, corner: Dp) 
         else -> return
     }
     val ratio = if (size.first > 0 && size.second > 0) size.first.toFloat() / size.second else 16f / 9f
-    val (busy, open) = rememberOpener(file, telegram, ::openFile)
+    val busy = false
+    val open = {
+        when (content) {
+            is TdApi.MessageVideo -> VideoPlayer.open(telegram, content.video, message.text)
+            is TdApi.MessageAnimation -> VideoPlayer.open(telegram, content.animation, message.text)
+            else -> Unit
+        }
+    }
     Box(
         Modifier
             .size(width, (width / ratio).coerceIn(120.dp, 420.dp))

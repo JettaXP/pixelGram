@@ -180,7 +180,17 @@ private fun Telegram.loadTypesDemo(pluginPath: String, now: Int) {
         this.photo = photo
         this.caption = TdApi.FormattedText(caption, emptyArray())
     }).copy(photo = photo.sizes[0].photo, photoWidth = 1180, photoHeight = 760, fullPhoto = photo.sizes[0].photo, albumId = 77)
-    list.addAll(listOf(
+    val videoPath = System.getProperty("pixelgram.demo.video")
+    val videoMessage = msg(38, false, 5, TdApi.MessageVideo().apply {
+        video = TdApi.Video().apply {
+            duration = 12; width = 1280; height = 720; fileName = "test.mp4"; mimeType = "video/mp4"
+            thumbnail = TdApi.Thumbnail(TdApi.ThumbnailFormatJpeg(), 320, 180, demoFile(900_021, videoPath?.replace(".mp4", "_thumb.jpg"), 10_000))
+            video = demoFile(900_020, videoPath, 1_000_000)
+        }
+        caption = TdApi.FormattedText("", emptyArray())
+    })
+    list.addAll(listOfNotNull(
+        videoMessage.takeIf { videoPath != null },
         albumPhoto(37, ""),
         albumPhoto(36, ""),
         albumPhoto(35, ""),

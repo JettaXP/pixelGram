@@ -1,18 +1,401 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPosition
+import androidx.compose.ui.window.rememberWindowState
+import com.pixelgram.desktop.core.AppLog
+import com.pixelgram.desktop.core.AppSettings
+import com.pixelgram.desktop.core.AudioPlayer
 import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.ui.theme.EmojiText
+import com.pixelgram.desktop.ui.theme.PixelTheme
 import it.tdlight.jni.TdApi
+import kotlinx.coroutines.delay
+import org.bytedeco.ffmpeg.global.avutil
+import org.bytedeco.javacv.FFmpegFrameGrabber
+import org.bytedeco.javacv.Frame
+import org.bytedeco.javacv.FrameGrabber
+import org.jetbrains.skia.ColorAlphaType
+import org.jetbrains.skia.ColorType
+import org.jetbrains.skia.ImageInfo
+import java.awt.GraphicsEnvironment
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.ShortBuffer
+import javax.sound.sampled.AudioFormat
+import javax.sound.sampled.AudioSystem
+import javax.sound.sampled.SourceDataLine
+import org.jetbrains.skia.Image as SkiaImage
 
-class VideoRequest(val telegram: Telegram, val file: TdApi.File, val thumb: TdApi.File?, val mini: TdApi.Minithumbnail?, val width: Int, val height: Int, val duration: Int, val caption: String)
+class VideoRequest(
+    val telegram: Telegram,
+    val file: TdApi.File,
+    val thumb: TdApi.File?,
+    val mini: TdApi.Minithumbnail?,
+    val duration: Int,
+    val caption: String,
+    val loop: Boolean,
+)
 
 object VideoPlayer {
     var current by mutableStateOf<VideoRequest?>(null)
 
     fun open(telegram: Telegram, video: TdApi.Video, caption: String) {
-        telegram.download(video.video)
-        current = VideoRequest(telegram, video.video, video.thumbnail?.file, video.minithumbnail, video.width, video.height, video.duration, caption)
+        open(VideoRequest(telegram, video.video, video.thumbnail?.file, video.minithumbnail, video.duration, caption, false))
+    }
+
+    fun open(telegram: Telegram, animation: TdApi.Animation, caption: String) {
+        open(VideoRequest(telegram, animation.animation, animation.thumbnail?.file, animation.minithumbnail, animation.duration, caption, true))
+    }
+
+    private fun open(request: VideoRequest) {
+        if (AudioPlayer.playing) AudioPlayer.pauseOrResume()
+        request.telegram.download(request.file)
+        current = request
+    }
+}
+
+private const val SeekStepMs = 5_000L
+private const val ControlsHideMs = 2_500L
+private const val LateFrameUs = 120_000L
+private const val AudioBufferSeconds = 0.4
+
+private class VideoEngine(private val path: String, private val loop: Boolean) {
+    var frame by mutableStateOf<ImageBitmap?>(null)
+    var position by mutableLongStateOf(0L)
+    var duration by mutableLongStateOf(0L)
+    var playing by mutableStateOf(true)
+    var ended by mutableStateOf(false)
+    var failed by mutableStateOf(false)
+    var muted by mutableStateOf(false)
+
+    private val lock = Object()
+    @Volatile private var running = true
+    @Volatile private var seekTo = -1L
+    private var line: SourceDataLine? = null
+    private var pixels = ByteArray(0)
+
+    private val thread = Thread(::run, "pixelgram-video").apply { isDaemon = true }
+
+    fun start() = thread.start()
+
+    fun toggle() {
+        if (ended) {
+            seek(0)
+            ended = false
+        }
+        playing = !playing
+        synchronized(lock) { lock.notifyAll() }
+    }
+
+    fun seek(ms: Long) {
+        seekTo = ms.coerceIn(0, duration.coerceAtLeast(0))
+        ended = false
+        synchronized(lock) { lock.notifyAll() }
+    }
+
+    fun close() {
+        running = false
+        synchronized(lock) { lock.notifyAll() }
+    }
+
+    private fun run() {
+        val grabber = FFmpegFrameGrabber(path).apply {
+            pixelFormat = avutil.AV_PIX_FMT_BGRA
+            sampleMode = FrameGrabber.SampleMode.SHORT
+        }
+        try {
+            grabber.start()
+            duration = grabber.lengthInTime / 1000
+            if (grabber.audioChannels > 0 && !loop) line = openLine(grabber.sampleRate, grabber.audioChannels)
+            var base = System.nanoTime()
+            var baseUs = 0L
+            while (running) {
+                if (!playing && seekTo < 0) {
+                    line?.stop()
+                    synchronized(lock) { while (running && !playing && seekTo < 0) lock.wait() }
+                    if (!running) break
+                    base = System.nanoTime()
+                    baseUs = position * 1000
+                    if (playing) line?.start()
+                }
+                val target = seekTo
+                if (target >= 0) {
+                    seekTo = -1
+                    grabber.setTimestamp(target * 1000, true)
+                    line?.flush()
+                    base = System.nanoTime()
+                    baseUs = target * 1000
+                    position = target
+                    if (!playing) {
+                        grabber.grabImage()?.let { show(it) }
+                        continue
+                    }
+                }
+                val next = grabber.grab()
+                if (next == null) {
+                    if (loop) {
+                        grabber.setTimestamp(0)
+                        base = System.nanoTime()
+                        baseUs = 0
+                        continue
+                    }
+                    line?.drain()
+                    ended = true
+                    playing = false
+                    continue
+                }
+                if (next.image != null) {
+                    val clock = baseUs + (System.nanoTime() - base) / 1000
+                    val wait = next.timestamp - clock
+                    if (wait > 0) Thread.sleep(wait / 1000, ((wait % 1000) * 1000).toInt())
+                    if (wait > -LateFrameUs) show(next)
+                    position = next.timestamp / 1000
+                } else if (next.samples != null) {
+                    writeAudio(next)
+                }
+            }
+        } catch (error: Throwable) {
+            AppLog.write("Video playback failed", error)
+            failed = true
+        } finally {
+            runCatching { line?.close() }
+            runCatching { grabber.stop() }
+            runCatching { grabber.release() }
+        }
+    }
+
+    private fun openLine(rate: Int, channels: Int): SourceDataLine? = runCatching {
+        val format = AudioFormat(rate.toFloat(), 16, channels, true, false)
+        AudioSystem.getSourceDataLine(format).apply {
+            open(format, (rate * channels * 2 * AudioBufferSeconds).toInt())
+            start()
+        }
+    }.onFailure { AppLog.write("Video audio unavailable", it) }.getOrNull()
+
+    private fun writeAudio(frame: Frame) {
+        val output = line ?: return
+        val samples = frame.samples.firstOrNull() as? ShortBuffer ?: return
+        val count = samples.remaining()
+        val bytes = ByteBuffer.allocate(count * 2).order(ByteOrder.LITTLE_ENDIAN)
+        val start = samples.position()
+        for (i in 0 until count) bytes.putShort(if (muted) 0 else samples.get(start + i))
+        output.write(bytes.array(), 0, bytes.capacity())
+    }
+
+    private fun show(frame: Frame) {
+        val buffer = frame.image?.firstOrNull() as? ByteBuffer ?: return
+        val stride = frame.imageStride
+        val size = stride * frame.imageHeight
+        if (pixels.size != size) pixels = ByteArray(size)
+        buffer.duplicate().apply { rewind() }.get(pixels, 0, minOf(size, buffer.capacity()))
+        val info = ImageInfo(frame.imageWidth, frame.imageHeight, ColorType.BGRA_8888, ColorAlphaType.OPAQUE)
+        this.frame = SkiaImage.makeRaster(info, pixels, stride).toComposeImageBitmap()
+    }
+}
+
+@Composable
+fun VideoPlayerWindow(request: VideoRequest, settings: AppSettings) {
+    val shown = remember(request) { MutableTransitionState(false).apply { targetState = true } }
+    val close = { shown.targetState = false }
+    LaunchedEffect(shown.isIdle, shown.currentState) {
+        if (shown.isIdle && !shown.currentState && VideoPlayer.current === request) VideoPlayer.current = null
+    }
+    val path = request.telegram.localPath(request.file)
+    val engine = remember(path) { path?.let { VideoEngine(it, request.loop).apply { start() } } }
+    DisposableEffect(engine) { onDispose { engine?.close() } }
+    val screen = remember { GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration.bounds }
+    Window(
+        onCloseRequest = close,
+        state = rememberWindowState(
+            position = WindowPosition(screen.x.dp, screen.y.dp),
+            size = DpSize(screen.width.dp, screen.height.dp),
+        ),
+        title = "pixelGram video",
+        undecorated = true,
+        transparent = true,
+        resizable = false,
+        alwaysOnTop = true,
+        onKeyEvent = { event ->
+            if (event.type != KeyEventType.KeyDown) return@Window false
+            when (event.key) {
+                Key.Escape -> close()
+                Key.Spacebar, Key.K -> engine?.toggle()
+                Key.DirectionLeft -> engine?.let { it.seek(it.position - SeekStepMs) }
+                Key.DirectionRight -> engine?.let { it.seek(it.position + SeekStepMs) }
+                Key.M -> engine?.let { it.muted = !it.muted }
+                else -> return@Window false
+            }
+            true
+        },
+    ) {
+        PixelTheme(settings) {
+            AnimatedVisibility(shown, enter = fadeIn(), exit = fadeOut()) {
+                VideoSurface(request, engine, close)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun VideoSurface(request: VideoRequest, engine: VideoEngine?, close: () -> Unit) {
+    var lastMove by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var controls by remember { mutableStateOf(true) }
+    LaunchedEffect(lastMove, engine?.playing) {
+        controls = true
+        if (engine?.playing == true) {
+            delay(ControlsHideMs)
+            controls = false
+        }
+    }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.92f))
+            .onPointerEvent(PointerEventType.Move) { lastMove = System.currentTimeMillis() }
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { engine?.toggle() },
+        contentAlignment = Alignment.Center,
+    ) {
+        val frame = engine?.frame
+        if (frame != null) {
+            Image(frame, contentDescription = "Video", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+        } else {
+            ThumbImage(request.thumb, request.mini, request.telegram, Modifier.fillMaxSize(), ContentScale.Fit)
+            if (engine?.failed == true) {
+                Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.errorContainer) {
+                    Text("Can't play this video", modifier = Modifier.padding(16.dp))
+                }
+            } else {
+                LoadingIndicator(Modifier.size(72.dp), color = Color.White)
+            }
+        }
+        AnimatedVisibility(controls, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopEnd)) {
+            FilledTonalIconButton(onClick = close, modifier = Modifier.padding(24.dp)) {
+                Icon(Icons.Rounded.Close, contentDescription = "Close")
+            }
+        }
+        if (engine != null) {
+            AnimatedVisibility(
+                controls,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp),
+            ) {
+                VideoControls(request, engine)
+            }
+        }
+    }
+}
+
+@Composable
+private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+        modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth(0.7f).clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+        ) {},
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            if (request.caption.isNotBlank()) {
+                EmojiText(
+                    request.caption,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    modifier = Modifier.padding(start = 8.dp, bottom = 4.dp),
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                FilledIconButton(
+                    onClick = engine::toggle,
+                    shapes = IconButtonDefaults.shapes(),
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Icon(
+                        when {
+                            engine.ended -> Icons.Rounded.Replay
+                            engine.playing -> Icons.Rounded.Pause
+                            else -> Icons.Rounded.PlayArrow
+                        },
+                        contentDescription = if (engine.playing) "Pause" else "Play",
+                    )
+                }
+                Text(formatDuration((engine.position / 1000).toInt()), style = MaterialTheme.typography.labelLarge)
+                val total = engine.duration.takeIf { it > 0 } ?: (request.duration * 1000L)
+                WavySeekBar(
+                    fraction = if (total > 0) engine.position.toFloat() / total else 0f,
+                    onSeek = { engine.seek((it * total).toLong()) },
+                    modifier = Modifier.weight(1f),
+                )
+                Text(formatDuration((total / 1000).toInt()), style = MaterialTheme.typography.labelLarge)
+                if (!request.loop) {
+                    IconButton(onClick = { engine.muted = !engine.muted }) {
+                        Icon(
+                            if (engine.muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
+                            contentDescription = "Mute",
+                        )
+                    }
+                }
+            }
+        }
     }
 }

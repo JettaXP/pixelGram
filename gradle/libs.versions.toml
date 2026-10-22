@@ -11,6 +11,8 @@ jna = "5.19.1"
 filekit = "0.16.0"
 concentus = "1.0.2"
 jlayer = "1.0.1.4"
+javacv = "1.5.11"
+ffmpeg = "7.1-1.5.11"
 
 [libraries]
 material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
@@ -23,6 +25,9 @@ qrcodegen = { module = "io.nayuki:qrcodegen", version.ref = "qrcodegen" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 concentus = { module = "io.github.jaredmdobson:concentus", version.ref = "concentus" }
 jlayer = { module = "com.googlecode.soundlibs:jlayer", version.ref = "jlayer" }
+javacv = { module = "org.bytedeco:javacv", version.ref = "javacv" }
+javacpp = { module = "org.bytedeco:javacpp", version.ref = "javacv" }
+ffmpeg = { module = "org.bytedeco:ffmpeg", version.ref = "ffmpeg" }
 filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs-jvm", version.ref = "filekit" }
 
 [plugins]

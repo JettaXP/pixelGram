@@ -31,6 +31,15 @@ val tdlightNatives: String = run {
     }
 }
 
+val bytedecoPlatform: String = run {
+    val os = System.getProperty("os.name").lowercase()
+    when {
+        os.contains("win") -> "windows-x86_64"
+        os.contains("mac") -> "macosx-arm64"
+        else -> "linux-x86_64"
+    }
+}
+
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation(libs.material3)
@@ -42,6 +51,11 @@ dependencies {
     implementation(libs.filekit.dialogs)
     implementation(libs.concentus)
     implementation(libs.jlayer)
+    implementation(libs.javacv) { isTransitive = false }
+    implementation(libs.javacpp)
+    implementation(libs.ffmpeg)
+    implementation(variantOf(libs.javacpp) { classifier(bytedecoPlatform) })
+    implementation(variantOf(libs.ffmpeg) { classifier(bytedecoPlatform) })
 
     implementation(platform(libs.tdlight.bom))
     implementation(libs.tdlight.java)

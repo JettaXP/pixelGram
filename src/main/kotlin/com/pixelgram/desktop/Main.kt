@@ -1,5 +1,7 @@
 package com.pixelgram.desktop
 
+import com.pixelgram.desktop.ui.main.VideoPlayerWindow
+import com.pixelgram.desktop.ui.main.VideoPlayer
 import androidx.compose.ui.ExperimentalComposeUiApi
 import javax.swing.JOptionPane
 import com.pixelgram.desktop.ui.CrashHandler
@@ -182,6 +184,9 @@ private fun ApplicationScope.PixelApp() {
     }
     PhotoViewer.current?.let { photo ->
         key(photo) { PhotoViewerWindow(photo, settings) }
+    }
+    VideoPlayer.current?.let { video ->
+        key(video) { VideoPlayerWindow(video, settings) }
     }
     ToastWindow(toasts, settings, onOpen = openFromNotification)
 
