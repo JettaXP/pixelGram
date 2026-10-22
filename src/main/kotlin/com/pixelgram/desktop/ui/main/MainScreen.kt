@@ -2,10 +2,13 @@ package com.pixelgram.desktop.ui.main
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -26,8 +29,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Bookmark
@@ -42,8 +45,10 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationItemIconPosition
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -64,6 +69,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
@@ -317,35 +323,14 @@ private fun MainMenu(
     var accountsOpen by remember { mutableStateOf(false) }
     Column(Modifier.verticalScroll(rememberScrollState())) {
         AccountHeader(telegram, settings, accountsOpen) { accountsOpen = !accountsOpen }
-        if (accountsOpen) {
-            accounts.list.forEach { account ->
-                val me = account.me
-                val name = me?.fullName() ?: "Signing in…"
-                val unread = account.chatList(ChatListKey.Main).sumOf { it.unreadCount }
-                WideNavigationRailItem(
-                    selected = account == accounts.active,
-                    onClick = { accounts.switchTo(account) },
-                    icon = { Avatar(name, me?.profilePhoto?.small, account, settings, size = 24.dp) },
-                    label = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            EmojiText(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (unread > 0 && account != accounts.active) {
-                                Badge(Modifier.padding(start = 8.dp)) { Text(unread.toString()) }
-                            }
-                        }
-                    },
-                    railExpanded = true,
-                )
-            }
-            WideNavigationRailItem(
-                selected = false,
-                onClick = accounts::add,
-                enabled = accounts.canAdd,
-                icon = { Icon(Icons.Outlined.PersonAdd, contentDescription = null) },
-                label = { Text("Add Account") },
-                railExpanded = true,
-            )
-            HorizontalDivider(Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+        val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
+        val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+        AnimatedVisibility(
+            visible = accountsOpen,
+            enter = expandVertically(spatial) + fadeIn(fade),
+            exit = shrinkVertically(spatial) + fadeOut(fade),
+        ) {
+            AccountsList(accounts, settings)
         }
         val items = listOf(
             Triple(Icons.Outlined.AccountCircle, "My Profile") { onNavigate(Screen.Profile) },
@@ -382,6 +367,50 @@ private fun MainMenu(
     }
 }
 
+// Signed-in accounts and "Add Account" as one Material 3 segmented list.
+@Composable
+private fun AccountsList(accounts: Accounts, settings: AppSettings) {
+    val count = accounts.list.size + 1
+    Column(
+        modifier = Modifier.width(AccountsWidth).padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+    ) {
+        accounts.list.forEachIndexed { index, account ->
+            val me = account.me
+            val name = me?.fullName() ?: "Signing in…"
+            val active = account == accounts.active
+            val unread = account.chatList(ChatListKey.Main).sumOf { it.unreadCount }
+            SegmentedListItem(
+                selected = active,
+                onClick = { accounts.switchTo(account) },
+                shapes = ListItemDefaults.segmentedShapes(index, count),
+                leadingContent = { Avatar(name, me?.profilePhoto?.small, account, settings, size = 32.dp) },
+                trailingContent = when {
+                    active -> {
+                        { Icon(Icons.Filled.Check, contentDescription = "Current account") }
+                    }
+                    unread > 0 -> {
+                        { Badge { Text(unread.toString()) } }
+                    }
+                    else -> null
+                },
+            ) {
+                EmojiText(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        SegmentedListItem(
+            onClick = accounts::add,
+            enabled = accounts.canAdd,
+            shapes = ListItemDefaults.segmentedShapes(count - 1, count),
+            leadingContent = { Icon(Icons.Outlined.PersonAdd, contentDescription = null) },
+        ) {
+            Text("Add Account")
+        }
+    }
+}
+
+private val AccountsWidth = 280.dp
+
 @Composable
 private fun AccountHeader(
     telegram: Telegram,
@@ -411,9 +440,14 @@ private fun AccountHeader(
                 )
             }
         }
+        val turn by animateFloatAsState(
+            if (accountsOpen) 180f else 0f,
+            MaterialTheme.motionScheme.defaultSpatialSpec(),
+        )
         Icon(
-            if (accountsOpen) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+            Icons.Filled.KeyboardArrowDown,
             contentDescription = "Accounts",
+            modifier = Modifier.rotate(turn),
         )
     }
 }
