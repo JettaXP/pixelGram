@@ -1,14 +1,16 @@
 package com.pixelgram.desktop.telegram
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.pixelgram.desktop.BuildConfig
-import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppLog
+import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.Sounds
 import com.pixelgram.desktop.core.describe
@@ -18,11 +20,12 @@ import it.tdlight.Init
 import it.tdlight.ResultHandler
 import it.tdlight.TelegramClient
 import it.tdlight.jni.TdApi
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
 
 data class CodeInfo(
     val phoneNumber: String,
@@ -112,6 +115,7 @@ data class UiMessage(
 )
 
 private const val AUTH_TIMEOUT_MS = 30_000L
+private const val ListsInterval = 100L
 
 // One TDLib instance per process, shared by all accounts.
 private object Tdlib {
@@ -545,6 +549,7 @@ class Telegram(
             is TdApi.AuthorizationStateClosing -> AuthState.Closing
             is TdApi.AuthorizationStateClosed -> {
                 chats.clear()
+                chatListsChanged()
                 messages.clear()
                 users.clear()
                 folders.clear()
@@ -577,6 +582,7 @@ class Telegram(
         }
         chat.positions?.forEach { applyPosition(state, it) }
         chats[chat.id] = state
+        chatListsChanged()
     }
 
     private fun applyPosition(chat: ChatState, position: TdApi.ChatPosition) {
@@ -588,11 +594,35 @@ class Telegram(
             chat.positions[key] = position.order
             chat.pinned[key] = position.isPinned
         }
+        chatListsChanged()
     }
 
-    fun chatList(key: ChatListKey): List<ChatState> = chats.values
-        .filter { key in it.positions }
-        .sortedByDescending { it.positions[key] }
+    // WHY: right after sign-in TDLib sends thousands of chat updates; sorting
+    // every list on each recomposition burned gigabytes per second and ran
+    // Windows out of memory. Lists are rebuilt at most every ListsInterval.
+    private val listCache = HashMap<ChatListKey, List<ChatState>>()
+    private var listsVersion by mutableIntStateOf(0)
+    private var listsRefresh: Job? = null
+
+    fun chatList(key: ChatListKey): List<ChatState> {
+        listsVersion
+        return listCache.getOrPut(key) {
+            Snapshot.withoutReadObservation {
+                chats.values
+                    .filter { key in it.positions }
+                    .sortedByDescending { it.positions[key] }
+            }
+        }
+    }
+
+    internal fun chatListsChanged() {
+        if (listsRefresh?.isActive == true) return
+        listsRefresh = scope.launch(Dispatchers.Main) {
+            delay(ListsInterval)
+            listCache.clear()
+            listsVersion++
+        }
+    }
 
     fun loadChats(key: ChatListKey) {
         val list: TdApi.ChatList = when (key) {

@@ -74,7 +74,12 @@ object Emoji3D {
         .toArray()
         .joinToString("_") { "%04x".format(it) } + ".png"
 
-    fun cached(emoji: String): File? = File(dir, fileName(emoji)).takeIf { it.isFile }
+    // Checked once per emoji: composition asks for every emoji on every redraw.
+    private val onDisk = ConcurrentHashMap<String, File>()
+
+    fun cached(emoji: String): File? = onDisk[emoji] ?: File(dir, fileName(emoji)).takeIf { it.isFile }?.also {
+        onDisk[emoji] = it
+    }
 
     suspend fun file(emoji: String): File? {
         cached(emoji)?.let { return it }

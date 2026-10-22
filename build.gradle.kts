@@ -86,6 +86,14 @@ kotlin.sourceSets.named("main") {
 compose.desktop {
     application {
         mainClass = "com.pixelgram.desktop.MainKt"
+        // Keep the heap small and give unused memory back to the system: by
+        // default Java may take a quarter of RAM and holds on to it.
+        jvmArgs += listOf(
+            "-Xmx1g",
+            "-XX:MinHeapFreeRatio=10",
+            "-XX:MaxHeapFreeRatio=30",
+            "-XX:G1PeriodicGCInterval=30000",
+        )
 
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.Msi, TargetFormat.Exe)
