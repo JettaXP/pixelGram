@@ -1,5 +1,23 @@
 package com.pixelgram.desktop.ui.auth
 
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,7 +68,7 @@ fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
                 modifier = Modifier.width(420.dp),
             ) {
                 Column(
-                    modifier = Modifier.padding(32.dp),
+                    modifier = Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()).padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
@@ -59,29 +77,47 @@ fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
                     var editingNumber by remember { mutableStateOf(false) }
                     val state = telegram.authState
                     LaunchedEffect(state) {
-                        if (state !is AuthState.WaitCode) editingNumber = false
+                        if (state !is AuthState.WaitCode && state !is AuthState.WaitQr) editingNumber = false
                     }
-                    when {
-                        editingNumber && state is AuthState.WaitCode -> PhoneStep(
-                            telegram,
-                            onQr = {
-                                editingNumber = false
-                                telegram.requestQr()
-                            },
-                        )
-                        else -> when (state) {
-                        AuthState.Starting, AuthState.Closing -> LoadingIndicator()
-                        AuthState.NeedApiCredentials -> ApiCredentialsStep(telegram)
-                        AuthState.WaitPhone -> PhoneStep(telegram, onQr = telegram::requestQr)
-                        is AuthState.WaitQr -> QrStep(state.link)
-                        is AuthState.WaitCode -> CodeStep(state.info, telegram) { editingNumber = true }
-                        is AuthState.WaitPassword -> PasswordStep(state.hint, telegram)
-                        is AuthState.Unsupported -> Hint(
-                            "This sign-in step (${state.name}) is not supported yet. " +
-                                "Finish it in another Telegram app."
-                        )
-                        is AuthState.Failed -> Hint(state.reason)
-                        AuthState.Ready -> Unit
+                    val step = if (editingNumber && (state is AuthState.WaitCode || state is AuthState.WaitQr)) "phone-edit" else stepName(state)
+                    val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+                    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                    AnimatedContent(
+                        targetState = step,
+                        transitionSpec = {
+                            (slideInHorizontally(spatial) { it / 5 } + fadeIn(effects)) togetherWith
+                                (slideOutHorizontally(spatial) { -it / 5 } + fadeOut(effects)) using
+                                SizeTransform(clip = false)
+                        },
+                        contentAlignment = Alignment.TopCenter,
+                    ) { _ ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            when {
+                                editingNumber && (state is AuthState.WaitCode || state is AuthState.WaitQr) -> PhoneStep(
+                                    telegram,
+                                    onQr = {
+                                        editingNumber = false
+                                        if (state !is AuthState.WaitQr) telegram.requestQr()
+                                    },
+                                )
+                                else -> when (state) {
+                                AuthState.Starting, AuthState.Closing -> LoadingIndicator()
+                                AuthState.NeedApiCredentials -> ApiCredentialsStep(telegram)
+                                AuthState.WaitPhone -> PhoneStep(telegram, onQr = telegram::requestQr)
+                                is AuthState.WaitQr -> QrStep(state.link)
+                                is AuthState.WaitCode -> CodeStep(state.info, telegram) { editingNumber = true }
+                                is AuthState.WaitPassword -> PasswordStep(state.hint, telegram)
+                                is AuthState.Unsupported -> Hint(
+                                    "This sign-in step (${state.name}) is not supported yet. " +
+                                        "Finish it in another Telegram app."
+                                )
+                                is AuthState.Failed -> Hint(state.reason)
+                                AuthState.Ready -> Unit
+                                }
+                            }
                         }
                     }
                     telegram.authError?.let { error ->
@@ -92,8 +128,27 @@ fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
                             textAlign = TextAlign.Center,
                         )
                     }
-                    if (onCancel != null) {
-                        TextButton(onClick = onCancel) { Text("Cancel adding account") }
+                    val back: (() -> Unit)? = when {
+                        editingNumber -> { { editingNumber = false } }
+                        state is AuthState.WaitQr -> { { editingNumber = true } }
+                        else -> onCancel
+                    }
+                    var lastBack by remember { mutableStateOf<(() -> Unit)?>(null) }
+                    if (back != null) lastBack = back
+                    AnimatedVisibility(
+                        visible = back != null,
+                        enter = scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(),
+                        exit = scaleOut() + fadeOut(),
+                    ) {
+                        FilledTonalButton(onClick = { lastBack?.invoke() }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = null,
+                                modifier = Modifier.size(ButtonDefaults.IconSize),
+                            )
+                            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                            Text("Back")
+                        }
                     }
                 }
             }
@@ -213,4 +268,13 @@ private fun PasswordStep(hint: String, telegram: Telegram) {
 private fun QrStep(link: String) {
     Hint("Open Telegram on your phone → Settings → Devices → Link Desktop Device and scan this code.")
     QrCode(link, Modifier.size(220.dp))
+}
+
+private fun stepName(state: AuthState): String = when (state) {
+    is AuthState.WaitQr -> "qr"
+    is AuthState.WaitCode -> "code"
+    is AuthState.WaitPassword -> "password"
+    is AuthState.Unsupported -> "unsupported"
+    is AuthState.Failed -> "failed"
+    else -> state.toString()
 }

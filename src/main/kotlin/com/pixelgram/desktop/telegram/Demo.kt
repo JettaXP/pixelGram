@@ -52,6 +52,12 @@ fun Telegram.loadDemo() {
     chats[102L]?.privateUserId = 3
     statuses[3] = TdApi.UserStatusOffline(now - 300)
     if (System.getProperty("pixelgram.demo.offline") == "true") connection = ConnectionStatus.Connecting
+    if (System.getProperty("pixelgram.demo.qr") == "true") {
+        kotlinx.coroutines.MainScope().launch {
+            kotlinx.coroutines.delay(4000)
+            authState = AuthState.WaitQr("tg://login?token=pixelgram-demo")
+        }
+    }
     if (System.getProperty("pixelgram.demo.password") == "true") {
         kotlinx.coroutines.MainScope().launch {
             kotlinx.coroutines.delay(4000)
