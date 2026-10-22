@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.Avatar
+import com.pixelgram.desktop.core.AvatarKind
+import androidx.compose.ui.graphics.luminance
+import com.materialkolor.hct.Hct
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.material.icons.outlined.PushPin
@@ -394,16 +398,30 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                         if (message.service) {
                             MessageBubble(message = message, senderName = null, settings = settings, modifier = itemModifier)
                         } else {
+                            val groupChat = chat.isGroup && !chat.isChannel && !message.isOutgoing
+                            val firstInRun = !sameSender(shown.getOrNull(index + 1), message)
+                            val lastInRun = !sameSender(shown.getOrNull(index - 1), message)
                             MessageGestures(message, actions, itemModifier) {
+                              Row(verticalAlignment = Alignment.Bottom) {
+                                if (groupChat) {
+                                    Box(Modifier.width(SenderAvatarSlot)) {
+                                        if (lastInRun) {
+                                            SenderAvatar(message, telegram, settings) {
+                                                if (message.senderUserId != 0L) {
+                                                    telegram.openPrivateChat(message.senderUserId) { id -> profileChat = telegram.chats[id] }
+                                                } else {
+                                                    onOpenChat(message.senderChatId)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                                 MessageBubble(
                                     telegram = telegram,
                                     quote = quote,
                                     message = message,
-                                    senderName = if (chat.isGroup && !message.isOutgoing) {
-                                        telegram.senderName(message)
-                                    } else {
-                                        null
-                                    },
+                                    modifier = Modifier.weight(1f),
+                                    senderName = if (groupChat && firstInRun) telegram.senderName(message) else null,
                                     settings = settings,
                                     status = if (message.isOutgoing && !chat.isChannel) telegram.status(chat, message) else null,
                                     onReact = { emoji -> telegram.toggleReaction(message, emoji) },
@@ -412,6 +430,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                                     },
                                     onOrigin = openOrigin,
                                 )
+                              }
                             }
                         }
                     }
@@ -540,7 +559,7 @@ fun MessageBubble(
         return
     }
     if (telegram != null && isBareContent(content)) {
-        BareMessage(message, telegram, status, seconds, quote, modifier)
+        BareMessage(message, telegram, settings, status, seconds, quote, modifier, onReact)
         return
     }
     val colors = MaterialTheme.colorScheme
@@ -568,13 +587,30 @@ fun MessageBubble(
             val metaColor = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant).copy(alpha = 0.7f)
             val readColor = if (outgoing) colors.primary else metaColor
             val hasText = message.text.isNotEmpty()
-            Column(Modifier.padding(if (photo != null || media || album != null) PhotoInset else 0.dp).width(IntrinsicSize.Max)) {
+            val inset = photo != null || media || album != null
+            Column(Modifier.padding(if (inset) PhotoInset else 0.dp).width(IntrinsicSize.Max)) {
+                val named = !senderName.isNullOrEmpty()
+                if (named) {
+                    EmojiText(
+                        senderName.orEmpty(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = senderColor(message.senderUserId.takeIf { it != 0L } ?: message.senderChatId),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(
+                            start = if (inset) 8.dp else 12.dp,
+                            end = 12.dp,
+                            top = if (inset) 4.dp else 7.dp,
+                            bottom = if (inset || quote != null) 4.dp else 0.dp,
+                        ),
+                    )
+                }
                 if (quote != null) {
                     Box(
                         Modifier
                             .fillMaxWidth()
                             .widthIn(min = QuoteMinWidth)
-                            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = if (photo != null || media || album != null) 6.dp else 0.dp),
+                            .padding(start = 8.dp, end = 8.dp, top = if (named) 0.dp else 8.dp, bottom = if (photo != null || media || album != null) 6.dp else 0.dp),
                     ) { quote() }
                 }
                 if (album != null && telegram != null) {
@@ -612,13 +648,6 @@ fun MessageBubble(
                             .padding(horizontal = 12.dp, vertical = 7.dp)
                             .then(if (photo != null || media || album != null) Modifier.width(PhotoMaxWidth - 24.dp) else Modifier),
                     ) {
-                        if (!senderName.isNullOrEmpty()) {
-                            Text(
-                                senderName,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = colors.primary,
-                            )
-                        }
                         if (message.viaBot != 0L && telegram != null && telegram.botName(message.viaBot).isNotBlank()) {
                             Text(
                                 "via " + telegram.botName(message.viaBot),
@@ -691,6 +720,17 @@ fun MessageBubble(
                             )
                         }
                     }
+                } else if (message.reactions.isNotEmpty() && onReact != null) {
+                    Box(Modifier.padding(horizontal = 6.dp).padding(bottom = 4.dp)) {
+                        ReactionChips(
+                            message.reactions,
+                            outgoing,
+                            onReact,
+                            telegram,
+                            settings,
+                            avatars = telegram?.chats?.get(message.chatId)?.isChannel == false,
+                        )
+                    }
                 }
                 if (message.keyboard.isNotEmpty() && onButton != null) {
                     InlineKeyboard(
@@ -734,10 +774,12 @@ private fun ServiceMessage(text: String, date: Int, seconds: Boolean, modifier: 
 private fun BareMessage(
     message: UiMessage,
     telegram: Telegram,
+    settings: AppSettings,
     status: MessageStatus?,
     seconds: Boolean,
     quote: (@Composable () -> Unit)?,
     modifier: Modifier,
+    onReact: ((String) -> Unit)?,
 ) {
     Box(modifier.fillMaxWidth(), contentAlignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart) {
         Column(
@@ -746,6 +788,16 @@ private fun BareMessage(
         ) {
             if (quote != null) Box(Modifier.widthIn(min = QuoteMinWidth, max = 280.dp)) { quote() }
             BareContent(message, telegram)
+            if (message.reactions.isNotEmpty() && onReact != null) {
+                ReactionChips(
+                    message.reactions,
+                    message.isOutgoing,
+                    onReact,
+                    telegram,
+                    settings,
+                    avatars = telegram.chats[message.chatId]?.isChannel == false,
+                )
+            }
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -942,6 +994,41 @@ private fun MessagePhoto(
 }
 
 private const val PhotoPixels = 1024
+private val SenderAvatarSlot = 42.dp
+private val SenderAvatarSize = 34.dp
+
+private fun sameSender(other: UiMessage?, message: UiMessage): Boolean =
+    other != null && !other.service && other.isOutgoing == message.isOutgoing &&
+        other.senderUserId == message.senderUserId && other.senderChatId == message.senderChatId &&
+        sameDay(other.date, message.date)
+
+@Composable
+fun senderColor(id: Long): Color {
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    return remember(id, dark) {
+        val hue = ((id % 360 + 360) % 360 * 37 % 360).toDouble()
+        Color(Hct.from(hue, 50.0, if (dark) 78.0 else 42.0).toInt())
+    }
+}
+
+@Composable
+private fun SenderAvatar(message: UiMessage, telegram: Telegram, settings: AppSettings, onClick: () -> Unit) {
+    val photo = if (message.senderUserId != 0L) {
+        telegram.users[message.senderUserId]?.profilePhoto?.small
+    } else {
+        telegram.chats[message.senderChatId]?.photo
+    }
+    Avatar(
+        telegram.senderName(message),
+        photo,
+        telegram,
+        settings,
+        SenderAvatarSize,
+        Modifier.pointerHoverIcon(PointerIcon.Hand).clickable(onClick = onClick),
+        kind = AvatarKind.Private,
+    )
+}
+private const val DraftSaveDelayMs = 1_500L
 
 @Composable
 private fun Composer(
@@ -958,8 +1045,21 @@ private fun Composer(
     onAttach: (List<File>) -> Unit,
     onSend: (String, Array<TdApi.TextEntity>) -> Unit,
 ) {
-    var text by remember { mutableStateOf(TextFieldValue("")) }
+    var text by remember(chatId) {
+        val draft = telegram.chats[chatId]?.draft.orEmpty()
+        mutableStateOf(TextFieldValue(draft, TextRange(draft.length)))
+    }
     var spans by remember { mutableStateOf(emptyList<FormatSpan>()) }
+    LaunchedEffect(chatId, text.text) {
+        delay(DraftSaveDelayMs)
+        if (editing == null) telegram.saveDraft(chatId, text.text)
+    }
+    val draftHolder = remember(chatId) { arrayOf("") }
+    if (editing == null) draftHolder[0] = text.text
+    DisposableEffect(chatId) {
+        val holder = draftHolder
+        onDispose { telegram.saveDraft(chatId, holder[0]) }
+    }
     var menuAt by remember { mutableStateOf<DpOffset?>(null) }
     var linkFor by remember { mutableStateOf<TextRange?>(null) }
     var dateFor by remember { mutableStateOf<TextRange?>(null) }

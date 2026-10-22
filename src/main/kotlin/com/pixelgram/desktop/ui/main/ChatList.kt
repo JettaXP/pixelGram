@@ -363,11 +363,19 @@ private fun ChatRow(
                 OnlineAvatar(chat, telegram, settings, 48.dp)
             },
             supportingContent = {
-                EmojiText(
-                    last?.let { contentText(it.content).replace('\n', ' ') } ?: "",
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                val draft = chat.draft.takeIf { it.isNotBlank() && !selected }
+                if (draft != null) {
+                    Row {
+                        Text("Draft: ", color = colors.error, maxLines = 1)
+                        EmojiText(draft.replace('\n', ' '), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                } else {
+                    EmojiText(
+                        last?.let { contentText(it.content).replace('\n', ' ') } ?: "",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             },
             trailingContent = {
                 Column(horizontalAlignment = Alignment.End) {

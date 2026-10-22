@@ -46,6 +46,16 @@ fun Telegram.loadDemo() {
         }
     }
     chats[100L]?.lastReadOutbox = 2
+    chats[104L]?.isGroup = true
+    users[2] = TdApi.User().apply { id = 2; firstName = "Alice"; lastName = "" }
+    users[3] = TdApi.User().apply { id = 3; firstName = "Bob"; lastName = "" }
+    messages(104L).addAll(listOf(
+        UiMessage(206, 104, 1, 0, true, now - 60, "Pizza then 🍕"),
+        UiMessage(205, 104, 3, 0, false, now - 120, "I'm in, but after 7"),
+        UiMessage(204, 104, 2, 0, false, now - 180, "Dinner at 7?"),
+        UiMessage(203, 104, 2, 0, false, now - 200, "Who is cooking today?"),
+        UiMessage(202, 104, 2, 0, false, now - 220, "Hi everyone 👋"),
+    ))
     System.getProperty("pixelgram.demo.plugin")?.let { path -> loadTypesDemo(path, now) }
     chats[101L]?.privateUserId = 2
     statuses[2] = TdApi.UserStatusOnline(0)

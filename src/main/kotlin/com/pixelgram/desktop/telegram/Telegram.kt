@@ -99,6 +99,8 @@ class ChatState(val id: Long) {
     var privateUserId = 0L
     var isChannel = false
     var supergroupId = 0L
+    var basicGroupId = 0L
+    var draft by mutableStateOf("")
     var notifications by mutableStateOf<TdApi.ChatNotificationSettings?>(null)
     val positions = mutableStateMapOf<ChatListKey, Long>()
     val pinned = mutableStateMapOf<ChatListKey, Boolean>()
@@ -480,9 +482,29 @@ class Telegram(
         return statuses[userId] is TdApi.UserStatusOnline
     }
 
+    private val supergroupMembers = mutableStateMapOf<Long, Int>()
+    private val basicGroupMembers = mutableStateMapOf<Long, Int>()
+    private val memberRequests = mutableSetOf<Long>()
+
+    private fun memberCount(chat: ChatState): Int? = when {
+        chat.basicGroupId != 0L -> basicGroupMembers[chat.basicGroupId]
+        chat.supergroupId != 0L -> supergroupMembers[chat.supergroupId] ?: run {
+            if (memberRequests.add(chat.supergroupId)) send(TdApi.GetSupergroupFullInfo(chat.supergroupId))
+            null
+        }
+        else -> null
+    }
+
+    private fun membersLabel(chat: ChatState): String? {
+        val count = memberCount(chat) ?: return null
+        val noun = if (chat.isChannel) "subscriber" else "member"
+        return "%,d $noun${if (count == 1) "" else "s"}".format(java.util.Locale.US, count).replace(',', ' ')
+    }
+
     fun presence(chat: ChatState): Presence? {
         val userId = chat.privateUserId
-        if (userId == 0L || isSavedMessages(chat.id)) return null
+        if (isSavedMessages(chat.id)) return null
+        if (userId == 0L) return membersLabel(chat)?.let { Presence(it, false) }
         if (users[userId]?.type is TdApi.UserTypeBot) return Presence("bot", false)
         clockMinute
         return when (val status = statuses[userId]) {
@@ -564,6 +586,10 @@ class Telegram(
             is TdApi.UpdateChatPhoto -> chats[update.chatId]?.photo = update.photo?.small
             is TdApi.UpdateChatLastMessage -> chats[update.chatId]?.let { chat ->
                 chat.lastMessage = update.lastMessage
+                update.positions?.forEach { applyPosition(chat, it) }
+            }
+            is TdApi.UpdateChatDraftMessage -> chats[update.chatId]?.let { chat ->
+                chat.draft = draftText(update.draftMessage)
                 update.positions?.forEach { applyPosition(chat, it) }
             }
             is TdApi.UpdateChatPosition -> chats[update.chatId]?.let { applyPosition(it, update.position) }
@@ -648,7 +674,13 @@ class Telegram(
                     )
                 }
             }
-            is TdApi.UpdateSupergroup -> forums[update.supergroup.id] = update.supergroup.isForum
+            is TdApi.UpdateSupergroup -> {
+                forums[update.supergroup.id] = update.supergroup.isForum
+                if (update.supergroup.memberCount > 0) supergroupMembers[update.supergroup.id] = update.supergroup.memberCount
+            }
+            is TdApi.UpdateBasicGroup -> basicGroupMembers[update.basicGroup.id] = update.basicGroup.memberCount
+            is TdApi.UpdateSupergroupFullInfo ->
+                if (update.supergroupFullInfo.memberCount > 0) supergroupMembers[update.supergroupId] = update.supergroupFullInfo.memberCount
             is TdApi.UpdateMessageIsPinned -> messages[update.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.messageId }
                 if (index >= 0) list[index] = list[index].copy(pinned = update.isPinned)
@@ -728,6 +760,8 @@ class Telegram(
             privateUserId = (chat.type as? TdApi.ChatTypePrivate)?.userId ?: 0L
             isChannel = (chat.type as? TdApi.ChatTypeSupergroup)?.isChannel == true
             supergroupId = (chat.type as? TdApi.ChatTypeSupergroup)?.supergroupId ?: 0L
+            basicGroupId = (chat.type as? TdApi.ChatTypeBasicGroup)?.basicGroupId ?: 0L
+            draft = draftText(chat.draftMessage)
             notifications = chat.notificationSettings
         }
         chat.positions?.forEach { applyPosition(state, it) }
@@ -986,6 +1020,19 @@ class Telegram(
             }
         }
         return null
+    }
+
+    fun saveDraft(chatId: Long, text: String) {
+        val chat = chats[chatId] ?: return
+        if (chat.draft == text) return
+        chat.draft = text
+        val draft = text.takeIf { it.isNotBlank() }?.let {
+            TdApi.DraftMessage().apply {
+                date = (System.currentTimeMillis() / 1000).toInt()
+                content = TdApi.DraftMessageContentText().apply { this.text = TdApi.FormattedText(it, emptyArray()) }
+            }
+        }
+        send(TdApi.SetChatDraftMessage(chatId, null, draft))
     }
 
     fun togglePin(message: UiMessage) {
@@ -1340,6 +1387,9 @@ fun TdApi.Message.toUi(): UiMessage {
         replyToId = (replyTo as? TdApi.MessageReplyToMessage)?.takeIf { it.chatId == 0L || it.chatId == chatId }?.messageId ?: 0L,
     )
 }
+
+fun draftText(draft: TdApi.DraftMessage?): String =
+    (draft?.content as? TdApi.DraftMessageContentText)?.text?.text.orEmpty()
 
 fun isRich(content: TdApi.MessageContent?): Boolean = when (content) {
     is TdApi.MessageDocument, is TdApi.MessageAudio, is TdApi.MessageVoiceNote, is TdApi.MessageCall,
