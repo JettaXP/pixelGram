@@ -132,6 +132,7 @@ data class UiMessage(
     val replyToId: Long = 0,
     val content: TdApi.MessageContent? = null,
     val entities: List<TdApi.TextEntity> = emptyList(),
+    val forwardOrigin: TdApi.MessageOrigin? = null,
 )
 
 enum class MessageStatus { Sending, Sent, Read, Failed }
@@ -891,6 +892,22 @@ class Telegram(
         }
     }
 
+    fun forwardMessages(toChatId: Long, fromChatId: Long, ids: LongArray) {
+        send(TdApi.ForwardMessages().apply {
+            chatId = toChatId
+            this.fromChatId = fromChatId
+            messageIds = ids
+        })
+    }
+
+    fun forwardName(origin: TdApi.MessageOrigin): String = when (origin) {
+        is TdApi.MessageOriginUser -> userName(origin.senderUserId)
+        is TdApi.MessageOriginChat -> chats[origin.senderChatId]?.title.orEmpty()
+        is TdApi.MessageOriginHiddenUser -> origin.senderName
+        is TdApi.MessageOriginChannel -> chats[origin.chatId]?.title.orEmpty()
+        else -> ""
+    }
+
     fun votePoll(chatId: Long, messageId: Long, options: IntArray) {
         send(TdApi.SetPollAnswer().apply {
             this.chatId = chatId
@@ -1044,6 +1061,7 @@ fun TdApi.Message.toUi(): UiMessage {
         editable = isOutgoing && (content is TdApi.MessageText || content is TdApi.MessagePhoto),
         content = content,
         entities = messageEntities(content),
+        forwardOrigin = forwardInfo?.origin,
         replyToId = (replyTo as? TdApi.MessageReplyToMessage)?.takeIf { it.chatId == 0L || it.chatId == chatId }?.messageId ?: 0L,
     )
 }

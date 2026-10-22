@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material.icons.automirrored.outlined.Forward
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -71,6 +72,7 @@ class MessageActions(
     val onDelete: (UiMessage) -> Unit,
     val onQuoteClick: (Long) -> Unit,
     val onCopyPhoto: (UiMessage) -> Unit,
+    val onForward: (UiMessage) -> Unit,
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -185,6 +187,14 @@ private fun MessageMenu(message: UiMessage, actions: MessageActions, onDismiss: 
             onClick = {
                 onDismiss()
                 actions.onReply(message)
+            },
+        )
+        DropdownMenuItem(
+            text = { Text("Forward") },
+            leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Forward, contentDescription = null) },
+            onClick = {
+                onDismiss()
+                actions.onForward(message)
             },
         )
         if (message.isOutgoing && message.editable) {

@@ -1,5 +1,14 @@
 package com.pixelgram.desktop.ui.components
 
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -123,6 +132,16 @@ fun FormattedText(
     var revealed by remember(text, entities) { mutableStateOf(emptySet<Int>()) }
     val spoilers = remember(entities, text) { ranges(entities, text.length) { it is TdApi.TextEntityTypeSpoiler } }
     val hidden = spoilers.filter { it.first !in revealed }
+    var fadingStart by remember(text, entities) { mutableStateOf<Int?>(null) }
+    val fade = remember { Animatable(0f) }
+    LaunchedEffect(fadingStart) {
+        if (fadingStart == null) return@LaunchedEffect
+        fade.snapTo(0f)
+        fade.animateTo(1f, tween(RevealMs, easing = FastOutSlowInEasing))
+        fadingStart = null
+    }
+    val fading = spoilers.firstOrNull { it.first == fadingStart }
+    var overSpoiler by remember { mutableStateOf(false) }
     val strikes = remember(entities, text) { ranges(entities, text.length) { it is TdApi.TextEntityTypeStrikethrough } }
     val quotes = remember(entities, text) {
         ranges(entities, text.length) { it is TdApi.TextEntityTypeBlockQuote || it is TdApi.TextEntityTypeExpandableBlockQuote }
@@ -133,22 +152,28 @@ fun FormattedText(
     val spoilerPath = remember(layout, hidden) {
         Path().apply { layout?.let { l -> hidden.forEach { addPath(pillPath(l, it.first, it.last + 1, density)) } } }
     }
+    val fadingPath = remember(layout, fading) {
+        Path().apply { layout?.let { l -> fading?.let { addPath(pillPath(l, it.first, it.last + 1, density)) } } }
+    }
     Box(
         modifier
             .pointerInput(hidden, layout) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
-                        if (event.type != PointerEventType.Press) continue
                         val current = layout ?: continue
                         val change = event.changes.first()
                         val index = current.getOffsetForPosition(change.position)
-                        val hit = hidden.firstOrNull { index in it } ?: continue
+                        val hit = hidden.firstOrNull { index in it }
+                        overSpoiler = hit != null && event.type != PointerEventType.Exit
+                        if (event.type != PointerEventType.Press || hit == null) continue
                         change.consume()
                         revealed = revealed + hit.first
+                        fadingStart = hit.first
                     }
                 }
-            },
+            }
+            .pointerHoverIcon(if (overSpoiler) PointerIcon.Hand else PointerIcon.Text, overrideDescendants = overSpoiler),
     ) {
         Text(
             annotated,
@@ -165,31 +190,63 @@ fun FormattedText(
                     if (current != null) {
                         quotes.forEach { range -> drawQuote(current, range, colors.quote) }
                         hidden.forEach { range -> drawPath(pillPath(current, range.first, range.last + 1, this), colors.accent.copy(alpha = 0.3f)) }
+                        fading?.let { range ->
+                            drawPath(pillPath(current, range.first, range.last + 1, this), colors.accent.copy(alpha = 0.3f * (1f - fade.value)))
+                        }
                     }
-                    if (hidden.isEmpty()) drawContent() else clipPath(spoilerPath, ClipOp.Difference) { this@drawWithContent.drawContent() }
+                    val covered = Path().apply {
+                        addPath(spoilerPath)
+                        if (fading != null) addPath(fadingPath)
+                    }
+                    if (hidden.isEmpty() && fading == null) {
+                        drawContent()
+                    } else {
+                        clipPath(covered, ClipOp.Difference) { this@drawWithContent.drawContent() }
+                    }
+                    if (fading != null) {
+                        clipPath(fadingPath) {
+                            drawIntoCanvas { canvas ->
+                                canvas.saveLayer(Rect(Offset.Zero, size), Paint().apply { alpha = fade.value })
+                                this@drawWithContent.drawContent()
+                                canvas.restore()
+                            }
+                        }
+                    }
                     if (current != null) strikes.forEach { range -> drawWavyStrike(current, range, textColor, fontPx) }
                 },
         )
-        if (hidden.isNotEmpty()) {
-            val shape = remember(spoilerPath) {
-                object : Shape {
-                    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density) = Outline.Generic(spoilerPath)
-                }
-            }
-            Text(
-                annotated,
-                style = style,
-                color = color,
-                inlineContent = inline,
-                modifier = Modifier
-                    .graphicsLayer {
-                        clip = true
-                        this.shape = shape
-                    }
-                    .blur(SpoilerBlur),
-            )
+        if (hidden.isNotEmpty()) BlurredCopy(annotated, inline, style, color, spoilerPath, 1f)
+        if (fading != null) BlurredCopy(annotated, inline, style, color, fadingPath, 1f - fade.value)
+    }
+}
+
+@Composable
+private fun BlurredCopy(
+    annotated: AnnotatedString,
+    inline: Map<String, androidx.compose.foundation.text.InlineTextContent>,
+    style: TextStyle,
+    color: Color,
+    path: Path,
+    strength: Float,
+) {
+    val shape = remember(path) {
+        object : Shape {
+            override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density) = Outline.Generic(path)
         }
     }
+    Text(
+        annotated,
+        style = style,
+        color = color,
+        inlineContent = inline,
+        modifier = Modifier
+            .graphicsLayer {
+                clip = true
+                this.shape = shape
+                alpha = strength
+            }
+            .blur(SpoilerBlur * strength),
+    )
 }
 
 private fun pillPath(layout: TextLayoutResult, start: Int, end: Int, density: Density): Path {
@@ -286,6 +343,7 @@ private val PillInset = 1.dp
 private val QuoteGap = 4.dp
 private const val StrikeHeight = 0.3f
 private val SpoilerBlur = 8.dp
+private const val RevealMs = 600
 private val WaveAmplitude = 1.6.dp
 private val WaveLength = 7.dp
 private val WaveStroke = 1.6.dp

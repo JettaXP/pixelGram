@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material.icons.automirrored.outlined.Forward
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -181,6 +182,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
     var editing by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var replyTo by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var deleting by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
+    var forwarding by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     LaunchedEffect(editing?.key) {
         val message = editing
         if (message?.photo != null) {
@@ -201,6 +203,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             onEdit = { replyTo = null; editing = it },
             onDelete = { deleting = it },
             onCopyPhoto = { message -> telegram.photoPath(message)?.let(Attachments::copyImage) },
+            onForward = { forwarding = it },
             onQuoteClick = { id ->
                 val index = messages.indexOfFirst { it.id == id }
                 if (index >= 0) {
@@ -226,6 +229,13 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             delay(JumpPageDelayMs)
         }
         MessageSearch.jump = null
+    }
+    forwarding?.let { message ->
+        ForwardDialog(telegram, settings, onDismiss = { forwarding = null }) { target ->
+            telegram.forwardMessages(target, message.chatId, longArrayOf(message.id))
+            forwarding = null
+            onOpenChat(target)
+        }
     }
     PluginViewer.path?.let { path -> PluginDialog(path, telegram) { PluginViewer.path = null } }
     deleting?.let { message ->
@@ -527,6 +537,24 @@ fun MessageBubble(
                                 style = MaterialTheme.typography.labelLarge,
                                 color = colors.primary,
                             )
+                        }
+                        val origin = message.forwardOrigin
+                        if (origin != null && telegram != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(
+                                    Icons.AutoMirrored.Outlined.Forward,
+                                    contentDescription = null,
+                                    tint = colors.primary,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                EmojiText(
+                                    "Forwarded from " + telegram.forwardName(origin).ifBlank { "unknown" },
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = colors.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
                         if (block && telegram != null) {
                             BlockContent(message, telegram, onPlugin = { PluginViewer.path = it })
