@@ -206,3 +206,29 @@ private fun Telegram.loadTypesDemo(pluginPath: String, now: Int) {
         }),
     ))
 }
+
+internal fun Telegram.demoSendFiles(chatId: Long, files: List<java.io.File>, caption: String) {
+    val list = messages(chatId)
+    val now = (System.currentTimeMillis() / 1000).toInt()
+    files.forEachIndexed { index, file ->
+        val (width, height) = imageSize(file)
+        val local = TdApi.File().apply {
+            id = 800_000 + index + now % 1000
+            local = TdApi.LocalFile().apply {
+                path = file.absolutePath
+                isDownloadingCompleted = true
+            }
+        }
+        val pending = UiMessage(
+            -now.toLong() - index, chatId, 1, 0, true, now, if (index == 0) caption else "",
+            fresh = true, photo = local, photoWidth = width, photoHeight = height, sending = true,
+        )
+        list.add(0, pending)
+        kotlinx.coroutines.MainScope().launch {
+            kotlinx.coroutines.delay(1500)
+            val at = list.indexOfFirst { it.key == pending.key }
+            if (at >= 0) list[at] = pending.copy(id = now.toLong() + index, sending = false, fresh = true)
+        }
+    }
+}
+

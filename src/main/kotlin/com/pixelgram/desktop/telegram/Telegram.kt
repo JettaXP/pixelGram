@@ -1113,6 +1113,7 @@ class Telegram(
         replyToId: Long = 0,
         entities: Array<TdApi.TextEntity> = emptyArray(),
     ) {
+        if (System.getProperty("pixelgram.demo") == "true") return demoSendFiles(chatId, files, caption)
         files.chunked(AlbumSize).forEachIndexed { chunkIndex, chunk ->
             val contents = chunk.mapIndexed { index, file ->
                 val first = chunkIndex == 0 && index == 0

@@ -1,5 +1,11 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onKeyEvent
 import com.pixelgram.desktop.ui.components.PhoneText
 import com.pixelgram.desktop.telegram.UnreadCount
 import androidx.compose.ui.graphics.Color
@@ -135,6 +141,7 @@ fun MainScreen(
     openChatId: Long?,
     onOpenChat: (Long) -> Unit,
     onNavigate: (Screen) -> Unit,
+    onCloseChat: () -> Unit = {},
 ) {
     val tabs = buildList {
         if (!settings.hideAllChats.value || telegram.folders.isEmpty()) {
@@ -257,20 +264,41 @@ fun MainScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .padding(top = 8.dp, end = 8.dp, bottom = 8.dp),
+                        .padding(top = 8.dp, end = 8.dp, bottom = 8.dp)
+                        .onKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown || event.key != Key.Escape) return@onKeyEvent false
+                            when {
+                                MessageSearch.open -> MessageSearch.open = false
+                                openChatId != null -> onCloseChat()
+                                else -> return@onKeyEvent false
+                            }
+                            true
+                        },
                     shape = MaterialTheme.shapes.extraLarge,
                     color = MaterialTheme.colorScheme.surface,
                 ) {
                     val chat = openChatId?.let { telegram.chats[it] }
-                    if (chat != null) {
-                        ChatView(chat, telegram, settings, onOpenChat)
-                    } else {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                "Select a chat to start messaging",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                    AnimatedContent(
+                        targetState = chat,
+                        transitionSpec = { fadeIn(tween(EmptyFadeMs)) togetherWith fadeOut(tween(EmptyFadeMs)) },
+                        contentKey = { it?.id },
+                    ) { shown ->
+                        if (shown != null) {
+                            ChatView(shown, telegram, settings, onOpenChat)
+                        } else {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ) {
+                                    Text(
+                                        "Select a chat to start messaging",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -526,6 +554,7 @@ private fun TopFolders(
 
 private val TopFolderWidth = 80.dp
 private const val RailFadeOutMs = 110
+private const val EmptyFadeMs = 180
 private const val RailFadeInMs = 180
 private const val RailResizeMs = 280
 private val MinChatWidth = 380.dp

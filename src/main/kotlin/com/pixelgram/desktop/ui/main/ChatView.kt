@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.outlined.Forward
 import androidx.compose.ui.input.pointer.pointerInput
@@ -406,10 +407,11 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
         }
         val panelSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
         val panelFade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+        val panelSize = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
         AnimatedVisibility(
             visible = attachments.isNotEmpty(),
-            enter = slideInVertically(panelSpec) { it } + fadeIn(panelFade),
-            exit = slideOutVertically(panelSpec) { it } + fadeOut(panelFade),
+            enter = expandVertically(panelSize, expandFrom = Alignment.Top) + fadeIn(panelFade),
+            exit = shrinkVertically(panelSize, shrinkTowards = Alignment.Top) + fadeOut(panelFade),
         ) {
             AttachmentsPanel(
                 files = attachments.toList(),

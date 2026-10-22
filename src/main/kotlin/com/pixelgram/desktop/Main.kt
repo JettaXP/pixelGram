@@ -253,7 +253,15 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
                     current == Screen.Profile -> ProfileScreen(telegram, settings, openChat, onBack = back)
                     current == Screen.Contacts -> ContactsScreen(telegram, settings, openChat, onBack = back)
                     current == Screen.Calls -> CallsScreen(telegram, settings, openChat, onBack = back)
-                    else -> MainScreen(accounts, telegram, settings, openChatId, openChat, onNavigate = navigate)
+                    else -> MainScreen(
+                        accounts,
+                        telegram,
+                        settings,
+                        openChatId,
+                        openChat,
+                        onNavigate = navigate,
+                        onCloseChat = { openChatId = null },
+                    )
                 }
             }
         }
