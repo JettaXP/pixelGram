@@ -815,11 +815,6 @@ class Telegram(
         send(TdApi.AddChatToList(chat.id, if (archived) TdApi.ChatListArchive() else TdApi.ChatListMain()))
     }
 
-    fun markRead(chat: ChatState) {
-        chat.lastMessage?.let { send(TdApi.ViewMessages(chat.id, longArrayOf(it.id), null, true)) }
-        send(TdApi.ToggleChatIsMarkedAsUnread(chat.id, false))
-    }
-
     fun isBot(chat: ChatState): Boolean = users[chat.privateUserId]?.type is TdApi.UserTypeBot
 
     fun block(chat: ChatState) {

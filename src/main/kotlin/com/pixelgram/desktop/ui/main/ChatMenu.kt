@@ -24,7 +24,6 @@ import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.outlined.Notifications
@@ -128,7 +127,6 @@ fun ChatActions(
                             val archived = ChatListKey.Archive in chat.positions
                             Item(if (archived) Icons.Outlined.Unarchive else Icons.Outlined.Archive, if (archived) "Unarchive" else "Archive",
                                 onClick = act { telegram.setArchived(chat, !archived) })
-                            Item(Icons.Outlined.DoneAll, "Mark as read", onClick = act { telegram.markRead(chat) })
                             if (telegram.folders.isNotEmpty()) {
                                 DropdownMenuItem(
                                     text = { Text("Add to folder") },
