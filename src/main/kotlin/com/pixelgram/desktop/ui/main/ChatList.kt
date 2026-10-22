@@ -48,7 +48,7 @@ import com.pixelgram.desktop.telegram.ChatState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.contentText
 import com.pixelgram.desktop.ui.components.ChatAvatar
-import com.pixelgram.desktop.ui.theme.emojiText
+import com.pixelgram.desktop.ui.theme.EmojiText
 import com.pixelgram.desktop.ui.toShape
 import java.time.Instant
 import java.time.LocalDate
@@ -265,8 +265,8 @@ private fun ChatRow(
             ChatAvatar(chat, telegram, settings, size = 48.dp)
         },
         supportingContent = {
-            Text(
-                text = emojiText(last?.let { contentText(it.content).replace('\n', ' ') } ?: ""),
+            EmojiText(
+                last?.let { contentText(it.content).replace('\n', ' ') } ?: "",
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -289,7 +289,7 @@ private fun ChatRow(
             }
         },
     ) {
-        Text(emojiText(telegram.chatTitle(chat)), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

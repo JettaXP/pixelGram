@@ -62,8 +62,8 @@ import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.profile.PersonalChannelCard
+import com.pixelgram.desktop.ui.theme.EmojiText
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
-import com.pixelgram.desktop.ui.theme.emojiText
 import kotlinx.coroutines.launch
 
 @Composable
@@ -105,7 +105,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ChatAvatar(chat, telegram, settings, size = 40.dp)
-            Text(emojiText(telegram.chatTitle(chat)), style = MaterialTheme.typography.titleMedium)
+            EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
         }
         var personalChannel by remember(chat.id) { mutableLongStateOf(0L) }
         LaunchedEffect(chat.id) {
@@ -196,7 +196,7 @@ fun MessageBubble(
                     )
                 }
                 SelectionContainer {
-                    Text(emojiText(message.text), style = MaterialTheme.typography.bodyLarge)
+                    EmojiText(message.text, style = MaterialTheme.typography.bodyLarge)
                 }
                 Text(
                     formatTime(message.date),

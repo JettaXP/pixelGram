@@ -61,7 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.ChatListKey
-import com.pixelgram.desktop.ui.theme.emojiText
+import com.pixelgram.desktop.ui.theme.EmojiText
 import kotlin.math.roundToInt
 
 // Experimental: folders in one capsule. Only the selected folder shows its
@@ -134,12 +134,11 @@ internal fun CapsuleFolders(
                         ) {
                             Icon(folderIcon(tab.icon, isSelected), contentDescription = tab.title, tint = content)
                             if (progress > 0f) {
-                                Text(
-                                    emojiText(tab.title),
+                                EmojiText(
+                                    tab.title,
                                     color = content,
                                     style = MaterialTheme.typography.labelLarge,
                                     maxLines = 1,
-                                    softWrap = false,
                                     modifier = Modifier
                                         .clipToBounds()
                                         .layout { measurable, constraints ->

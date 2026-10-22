@@ -55,7 +55,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
@@ -108,11 +107,9 @@ import com.pixelgram.desktop.ui.main.FolderTab
 import com.pixelgram.desktop.ui.main.MessageBubble
 import com.pixelgram.desktop.ui.main.formatChatDate
 import com.pixelgram.desktop.ui.storage.MemoryContent
-import com.pixelgram.desktop.ui.theme.Emoji3D
-import com.pixelgram.desktop.ui.theme.Emoji3DState
+import com.pixelgram.desktop.ui.theme.EmojiText
 import com.pixelgram.desktop.ui.theme.Matugen
 import com.pixelgram.desktop.ui.theme.SeedColors
-import com.pixelgram.desktop.ui.theme.emojiText
 import com.pixelgram.desktop.ui.themedAppIcon
 import com.pixelgram.desktop.ui.toShape
 import it.tdlight.jni.TdApi
@@ -333,7 +330,7 @@ private fun ProfileCard(telegram: Telegram, settings: AppSettings, onClick: () -
         ) {
             Avatar(me.fullName(), me.profilePhoto?.small, telegram, settings, size = 64.dp)
             Column(Modifier.weight(1f)) {
-                Text(emojiText(me.fullName()), style = MaterialTheme.typography.titleLargeEmphasized, maxLines = 1)
+                EmojiText(me.fullName(), style = MaterialTheme.typography.titleLargeEmphasized, maxLines = 1)
                 me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
                     Text("+$it", style = MaterialTheme.typography.bodyMedium)
                 }
@@ -648,42 +645,15 @@ private fun AppearanceSection(settings: AppSettings) {
 
 @Composable
 private fun EmojiStyleChoice(settings: AppSettings) {
-    val scope = rememberCoroutineScope()
-    val state = Emoji3D.state
     ConnectedChoice(
         options = listOf(EmojiStyle.Noto to "Noto", EmojiStyle.Noto3D to "Noto 3D (experimental)"),
         selected = settings.emojiStyle.value,
-        onSelect = {
-            settings.emojiStyle.value = it
-            if (it == EmojiStyle.Noto3D) Emoji3D.download(scope)
-        },
+        onSelect = { settings.emojiStyle.value = it },
     )
-    Text(emojiText("😀 😍 🥳 🫠 🤔 👍 🎉 ❤️ 🔥 🐱 🍕 🚀"), fontSize = 30.sp, modifier = Modifier.padding(vertical = 4.dp))
-    if (settings.emojiStyle.value == EmojiStyle.Noto3D) {
-        when (state) {
-            is Emoji3DState.Downloading -> {
-                LinearWavyProgressIndicator(progress = { state.progress }, modifier = Modifier.fillMaxWidth())
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Description(
-                        "Downloading Noto 3D: %.0f of %d MB".format(state.progress * Emoji3D.SizeMegabytes, Emoji3D.SizeMegabytes)
-                    )
-                    Spacer(Modifier.weight(1f))
-                    TextButton(onClick = Emoji3D::cancel) { Text("Cancel") }
-                }
-            }
-            is Emoji3DState.Failed -> {
-                Text("Download failed: ${state.reason}", color = MaterialTheme.colorScheme.error)
-                OutlinedButton(onClick = { Emoji3D.download(scope) }) { Text("Try again") }
-            }
-            Emoji3DState.Missing -> OutlinedButton(onClick = { Emoji3D.download(scope) }) {
-                Text("Download Noto 3D (${Emoji3D.SizeMegabytes} MB)")
-            }
-            Emoji3DState.Ready -> Unit
-        }
-    }
+    EmojiText("😀 😍 🥳 🫠 🤔 👍 🎉 ❤️ 🔥 🐱 🍕 🚀", fontSize = 30.sp, modifier = Modifier.padding(vertical = 4.dp))
     Description(
         "Noto is Google's latest emoji set and is built in. Noto 3D is the new style " +
-            "from Android 17, downloaded once from Google (${Emoji3D.SizeMegabytes} MB)."
+            "from Android 17: each emoji is loaded from Google the first time it is shown."
     )
 }
 
@@ -917,7 +887,7 @@ private fun FoldersSection(telegram: Telegram) {
                     shapes = ListItemDefaults.segmentedShapes(index, folders.size),
                     leadingContent = { Icon(Icons.Outlined.Folder, contentDescription = null) },
                 ) {
-                    Text(emojiText(folder.title))
+                    EmojiText(folder.title)
                 }
             }
         }

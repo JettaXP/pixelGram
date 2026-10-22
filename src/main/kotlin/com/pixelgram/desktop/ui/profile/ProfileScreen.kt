@@ -28,7 +28,7 @@ import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.ui.components.InfoGroup
 import com.pixelgram.desktop.ui.components.InfoRow
 import com.pixelgram.desktop.ui.components.PageScaffold
-import com.pixelgram.desktop.ui.theme.emojiText
+import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
 
 @Composable
@@ -59,7 +59,7 @@ fun ProfileScreen(
         }
         val name = me.fullName()
         Avatar(name, me.profilePhoto?.small, telegram, settings, size = 160.dp, full = me.profilePhoto?.big)
-        Text(emojiText(name), style = MaterialTheme.typography.headlineMediumEmphasized)
+        EmojiText(name, style = MaterialTheme.typography.headlineMediumEmphasized)
         val rows = buildList {
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
                 add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it"))

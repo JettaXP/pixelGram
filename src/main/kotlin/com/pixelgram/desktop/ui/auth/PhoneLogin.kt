@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.telegram.CodeInfo
 import com.pixelgram.desktop.telegram.Country
 import com.pixelgram.desktop.telegram.Telegram
-import com.pixelgram.desktop.ui.theme.emojiText
+import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
 import java.util.Locale
 import kotlinx.coroutines.delay
@@ -92,8 +92,8 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit) {
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                emojiText(when {
+            EmojiText(
+                (when {
                     country != null -> "${country.flag}  ${country.name}"
                     countries.isEmpty() -> "Loading countries…"
                     else -> "Invalid country code"
@@ -201,7 +201,7 @@ private fun CountryPicker(
                     items(filtered, key = { it.code + it.callingCode }) { country ->
                         ListItem(
                             modifier = Modifier.clickable { onPick(country) },
-                            leadingContent = { Text(emojiText(country.flag), style = MaterialTheme.typography.titleLarge) },
+                            leadingContent = { EmojiText(country.flag, style = MaterialTheme.typography.titleLarge) },
                             headlineContent = { Text(country.name) },
                             trailingContent = { Text("+${country.callingCode}") },
                         )

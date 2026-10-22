@@ -26,7 +26,7 @@ import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.ui.components.PageScaffold
 import com.pixelgram.desktop.ui.main.formatChatDate
-import com.pixelgram.desktop.ui.theme.emojiText
+import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
 
 @Composable
@@ -85,7 +85,7 @@ fun CallsScreen(
                         )
                     },
                 ) {
-                    Text(emojiText(name))
+                    EmojiText(name)
                 }
             }
         }

@@ -80,7 +80,7 @@ import com.pixelgram.desktop.telegram.fullName
 import com.pixelgram.desktop.ui.Screen
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.ui.settings.PixelSwitch
-import com.pixelgram.desktop.ui.theme.emojiText
+import com.pixelgram.desktop.ui.theme.EmojiText
 import com.pixelgram.desktop.ui.theme.isDarkTheme
 import java.awt.Cursor
 import kotlin.math.roundToInt
@@ -294,7 +294,7 @@ private fun PixelRail(
                             selected = isSelected,
                             onClick = { onSelect(tab.key) },
                             icon = { Icon(folderIcon(tab.icon, isSelected), contentDescription = tab.title) },
-                            label = { Text(emojiText(tab.title), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            label = { EmojiText(tab.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             railExpanded = false,
                         )
                     }
@@ -328,7 +328,7 @@ private fun MainMenu(
                     icon = { Avatar(name, me?.profilePhoto?.small, account, settings, size = 24.dp) },
                     label = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(emojiText(name), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            EmojiText(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             if (unread > 0 && account != accounts.active) {
                                 Badge(Modifier.padding(start = 8.dp)) { Text(unread.toString()) }
                             }
@@ -402,7 +402,7 @@ private fun AccountHeader(
     ) {
         Avatar(name, me.profilePhoto?.small, telegram, settings, size = 48.dp)
         Column(Modifier.width(150.dp)) {
-            Text(emojiText(name), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            EmojiText(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
                 Text(
                     "+$it",
@@ -439,7 +439,7 @@ private fun TopFolders(
                 selected = isSelected,
                 onClick = { onSelect(tab.key) },
                 icon = { Icon(folderIcon(tab.icon, isSelected), contentDescription = null) },
-                label = { Text(emojiText(tab.title), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                label = { EmojiText(tab.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 iconPosition = NavigationItemIconPosition.Top,
                 modifier = Modifier.width(TopFolderWidth),
             )

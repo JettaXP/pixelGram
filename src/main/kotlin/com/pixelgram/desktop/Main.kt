@@ -37,6 +37,7 @@ import com.pixelgram.desktop.ui.people.ContactsScreen
 import com.pixelgram.desktop.ui.auth.AuthScreen
 import com.pixelgram.desktop.ui.main.MainScreen
 import com.pixelgram.desktop.ui.settings.SettingsScreen
+import com.pixelgram.desktop.ui.theme.Emoji3D
 import com.pixelgram.desktop.ui.theme.EmojiFonts
 import com.pixelgram.desktop.ui.theme.PixelTheme
 import com.pixelgram.desktop.ui.theme.isDarkTheme
@@ -44,7 +45,10 @@ import kotlinx.coroutines.MainScope
 import java.awt.SystemTray
 
 fun main() = application {
-    val settings = remember { AppSettings.load().also { EmojiFonts.settings = it } }
+    val settings = remember {
+        Emoji3D.removeOldFont()
+        AppSettings.load().also { EmojiFonts.settings = it }
+    }
     val accounts = remember { Accounts(settings, MainScope()) }
     LaunchedEffect(Unit) {
         accounts.start()
