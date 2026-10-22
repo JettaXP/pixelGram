@@ -201,7 +201,8 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
         }
     }
     var highlight by remember(chat.id) { mutableStateOf<Pair<Long, Long>?>(null) }
-    val actions = remember(chat.id) {
+    val canReact = !telegram.isSavedMessages(chat.id) || telegram.me?.isPremium == true
+    val actions = remember(chat.id, canReact) {
         MessageActions(
             onReply = { editing = null; replyTo = it },
             onEdit = { replyTo = null; editing = it },
@@ -210,6 +211,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             onForward = { forwarding = it },
             onReact = { message, emoji -> telegram.toggleReaction(message, emoji) },
             loadReactions = { message, done -> telegram.availableReactions(message, done) },
+            canReact = canReact,
             onDoubleClick = { message ->
                 val action = if (message.isOutgoing) settings.doubleClickOwn.value else settings.doubleClickOther.value
                 when (action) {
@@ -217,7 +219,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                         editing = null
                         replyTo = message
                     }
-                    DoubleClickAction.Reaction -> telegram.toggleReaction(message, settings.doubleClickEmoji.value)
+                    DoubleClickAction.Reaction -> if (canReact) telegram.toggleReaction(message, settings.doubleClickEmoji.value)
                     DoubleClickAction.Nothing -> Unit
                 }
             },

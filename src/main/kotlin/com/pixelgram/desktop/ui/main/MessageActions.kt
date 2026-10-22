@@ -81,6 +81,7 @@ class MessageActions(
     val onReact: (UiMessage, String) -> Unit,
     val loadReactions: (UiMessage, (List<String>) -> Unit) -> Unit,
     val onDoubleClick: (UiMessage) -> Unit = {},
+    val canReact: Boolean = true,
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -200,7 +201,7 @@ private fun MessageMenu(message: UiMessage, actions: MessageActions, onDismiss: 
         shape = RoundedCornerShape(16.dp),
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
     ) {
-        if (!message.service) {
+        if (!message.service && actions.canReact) {
             var available by remember(message.key) { mutableStateOf(emptyList<String>()) }
             androidx.compose.runtime.LaunchedEffect(message.key) { actions.loadReactions(message) { available = it } }
             ReactionPicker(available) { emoji ->
