@@ -12,6 +12,11 @@ Planned features, not started yet.
 - While the phone number screen is loading, show the Material 3 Expressive
   loading animation: rotating shapes that morph into each other.
 
+## System tray
+
+- The tray menu is the plain white system menu now; make it a Material 3
+  menu in the app's theme (dark/light, accent colors) with dividers.
+
 ## Emoji
 
 - More emoji styles to choose from: Apple (iOS) and Windows (Fluent).
