@@ -46,6 +46,7 @@ fun Telegram.loadDemo() {
         }
     }
     chats[100L]?.lastReadOutbox = 2
+    System.getProperty("pixelgram.demo.plugin")?.let { path -> loadTypesDemo(path, now) }
     chats[101L]?.privateUserId = 2
     statuses[2] = TdApi.UserStatusOnline(0)
     chats[102L]?.privateUserId = 3
@@ -116,4 +117,56 @@ private fun Telegram.loadHeavyDemo(now: Int) {
             tick++
         }
     }
+}
+
+private fun demoFile(id: Int, path: String?, size: Long) = TdApi.File().apply {
+    this.id = id
+    this.size = size
+    expectedSize = size
+    local = TdApi.LocalFile().apply {
+        this.path = path.orEmpty()
+        isDownloadingCompleted = path != null
+    }
+}
+
+private fun Telegram.loadTypesDemo(pluginPath: String, now: Int) {
+    val list = messages(101L)
+    fun msg(id: Long, out: Boolean, ago: Int, content: TdApi.MessageContent) =
+        UiMessage(id, 101, if (out) 1 else 2, 0, out, now - ago, messageText(content), content = content)
+    list.addAll(listOf(
+        msg(30, true, 60, TdApi.MessageDocument().apply {
+            document = TdApi.Document().apply { fileName = "media_glow.plugin"; document = demoFile(900_001, pluginPath, 1006_284) }
+            caption = TdApi.FormattedText("", emptyArray())
+        }),
+        msg(29, false, 120, TdApi.MessageAudio().apply {
+            audio = TdApi.Audio().apply { title = "2_5345844024081165008"; performer = ""; fileName = "2_5345844024081165008.mp3"; duration = 187; audio = demoFile(900_002, null, 751_718) }
+            caption = TdApi.FormattedText("", emptyArray())
+        }),
+        msg(28, false, 180, TdApi.MessageVoiceNote().apply {
+            voiceNote = TdApi.VoiceNote().apply { duration = 14; waveform = ByteArray(40) { (it * 37 % 251).toByte() }; voice = demoFile(900_003, null, 40_000) }
+            caption = TdApi.FormattedText("", emptyArray())
+        }),
+        msg(27, true, 240, TdApi.MessageCall().apply { isVideo = false; discardReason = TdApi.CallDiscardReasonMissed(); duration = 0 }),
+        msg(26, false, 300, TdApi.MessageCall().apply { isVideo = false; discardReason = TdApi.CallDiscardReasonHungUp(); duration = 101 }),
+        msg(25, false, 360, TdApi.MessagePoll().apply {
+            poll = TdApi.Poll().apply {
+                question = TdApi.FormattedText("Which emoji style is the best?", emptyArray())
+                isAnonymous = true
+                type = TdApi.PollTypeRegular()
+                totalVoterCount = 12
+                options = arrayOf(
+                    TdApi.PollOption().apply { text = TdApi.FormattedText("Noto 3D", emptyArray()); votePercentage = 58; isChosen = true },
+                    TdApi.PollOption().apply { text = TdApi.FormattedText("Noto", emptyArray()); votePercentage = 25 },
+                    TdApi.PollOption().apply { text = TdApi.FormattedText("Apple", emptyArray()); votePercentage = 17 },
+                )
+            }
+        }),
+        msg(24, true, 420, TdApi.MessageContact().apply { contact = TdApi.Contact("79990001122", "Bob", "", "", 3) }),
+        msg(23, false, 480, TdApi.MessageLocation().apply { location = TdApi.Location(55.751244, 37.618423, 0.0) }),
+        msg(22, true, 540, TdApi.MessageGift().apply {
+            gift = TdApi.Gift().apply { starCount = 15 }
+            receiverId = TdApi.MessageSenderUser(2)
+            text = TdApi.FormattedText("ЭКСТЕРАГРАМ ✅", emptyArray())
+        }),
+    ))
 }

@@ -130,6 +130,7 @@ data class UiMessage(
     val service: Boolean = false,
     val editable: Boolean = true,
     val replyToId: Long = 0,
+    val content: TdApi.MessageContent? = null,
 )
 
 enum class MessageStatus { Sending, Sent, Read, Failed }
@@ -602,8 +603,7 @@ class Telegram(
                 val index = list.indexOfFirst { it.id == update.messageId }
                 if (index >= 0) {
                     val content = update.newContent
-                    val text = if (content is TdApi.MessagePhoto) content.caption?.text.orEmpty() else contentText(content)
-                    list[index] = list[index].copy(text = text)
+                    list[index] = list[index].copy(text = messageText(content), content = content)
                 }
             }
             is TdApi.UpdateDeleteMessages -> if (update.isPermanent) {
@@ -833,6 +833,25 @@ class Telegram(
         })
     }
 
+    private val stickerSets = mutableStateMapOf<String, TdApi.StickerSet>()
+    private val stickerSetRequests = HashSet<String>()
+
+    fun stickerFromSet(name: String, index: Int): TdApi.Sticker? {
+        stickerSets[name]?.let { return it.stickers.getOrNull(index) }
+        if (stickerSetRequests.add(name)) {
+            send(TdApi.SearchStickerSet(name, false)) { result ->
+                if (result is TdApi.StickerSet) stickerSets[name] = result
+            }
+        }
+        return null
+    }
+
+    fun senderTitle(sender: TdApi.MessageSender?): String = when (sender) {
+        is TdApi.MessageSenderUser -> if (sender.userId == myUserId) "You" else userName(sender.userId)
+        is TdApi.MessageSenderChat -> chats[sender.chatId]?.title ?: ""
+        else -> ""
+    }
+
     fun photoPath(message: UiMessage): String? = localPath(message.fullPhoto) ?: localPath(message.photo)
 
     fun editMessage(message: UiMessage, text: String) {
@@ -963,7 +982,7 @@ fun TdApi.Message.toUi(): UiMessage {
         senderChatId = (sender as? TdApi.MessageSenderChat)?.chatId ?: 0L,
         isOutgoing = isOutgoing,
         date = date,
-        text = if (photo != null) (content as TdApi.MessagePhoto).caption?.text.orEmpty() else contentText(content),
+        text = messageText(content),
         photo = photo?.photo,
         photoWidth = photo?.width ?: 0,
         photoHeight = photo?.height ?: 0,
@@ -973,8 +992,31 @@ fun TdApi.Message.toUi(): UiMessage {
         edited = editDate > 0,
         service = isService(content),
         editable = isOutgoing && (content is TdApi.MessageText || content is TdApi.MessagePhoto),
+        content = content,
         replyToId = (replyTo as? TdApi.MessageReplyToMessage)?.takeIf { it.chatId == 0L || it.chatId == chatId }?.messageId ?: 0L,
     )
+}
+
+fun isRich(content: TdApi.MessageContent?): Boolean = when (content) {
+    is TdApi.MessageDocument, is TdApi.MessageAudio, is TdApi.MessageVoiceNote, is TdApi.MessageCall,
+    is TdApi.MessageSticker, is TdApi.MessageGift, is TdApi.MessageUpgradedGift, is TdApi.MessageGiftedStars,
+    is TdApi.MessageGiftedPremium, is TdApi.MessageAnimation, is TdApi.MessageVideo, is TdApi.MessageVideoNote,
+    is TdApi.MessagePoll, is TdApi.MessageContact, is TdApi.MessageLocation, is TdApi.MessageAnimatedEmoji,
+    is TdApi.MessageDice -> true
+    else -> false
+}
+
+fun messageText(content: TdApi.MessageContent?): String = when (content) {
+    is TdApi.MessagePhoto -> content.caption?.text.orEmpty()
+    is TdApi.MessageDocument -> content.caption?.text.orEmpty()
+    is TdApi.MessageAudio -> content.caption?.text.orEmpty()
+    is TdApi.MessageVoiceNote -> content.caption?.text.orEmpty()
+    is TdApi.MessageAnimation -> content.caption?.text.orEmpty()
+    is TdApi.MessageVideo -> content.caption?.text.orEmpty()
+    is TdApi.MessageGift -> content.text?.text.orEmpty()
+    is TdApi.MessageUpgradedGift -> content.text?.text.orEmpty()
+    is TdApi.MessageGiftedPremium -> content.text?.text.orEmpty()
+    else -> if (isRich(content)) "" else contentText(content)
 }
 
 fun isService(content: TdApi.MessageContent?): Boolean = when (content) {
@@ -1028,6 +1070,12 @@ fun contentText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageVideoChatStarted -> "Started a video chat"
     is TdApi.MessageVideoChatEnded -> "Video chat ended"
     is TdApi.MessageCall -> if (content.isVideo) "📹 Video call" else "📞 Call"
+    is TdApi.MessageGift -> "🎁 Gift"
+    is TdApi.MessageUpgradedGift -> "🎁 ${content.gift.title}"
+    is TdApi.MessageGiftedStars -> "⭐ ${content.starCount} Stars"
+    is TdApi.MessageGiftedPremium -> "⭐ Telegram Premium"
+    is TdApi.MessageAnimatedEmoji -> content.emoji
+    is TdApi.MessageDice -> content.emoji
     null -> ""
     else -> content.javaClass.simpleName.removePrefix("Message")
         .replace(Regex("(?<=[a-z])(?=[A-Z])"), " ").lowercase().replaceFirstChar { it.uppercase() }

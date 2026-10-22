@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.telegram.isRich
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.AnimatedContent
@@ -200,6 +203,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             },
         )
     }
+    PluginViewer.path?.let { path -> PluginDialog(path, telegram) { PluginViewer.path = null } }
     deleting?.let { message ->
         val private = chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id)
         DeleteMessageDialog(
@@ -413,13 +417,33 @@ fun MessageBubble(
     status: MessageStatus? = null,
     quote: (@Composable () -> Unit)? = null,
 ) {
+    val seconds = settings.messageSeconds.value
     if (message.service) {
-        ServiceMessage(message, senderName, modifier)
+        ServiceMessage(
+            listOfNotNull(senderName?.takeIf { it.isNotBlank() }, message.text).joinToString(" · "),
+            message.date,
+            seconds,
+            modifier,
+        )
+        return
+    }
+    val content = message.content
+    if (telegram != null && isGiftContent(content)) {
+        Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            giftServiceText(message, telegram)?.let { ServiceMessage(it, message.date, seconds, Modifier) }
+            GiftCard(message, telegram, Modifier.padding(vertical = 4.dp))
+        }
+        return
+    }
+    if (telegram != null && isBareContent(content)) {
+        BareMessage(message, telegram, status, seconds, quote, modifier)
         return
     }
     val colors = MaterialTheme.colorScheme
     val outgoing = message.isOutgoing
     val photo = message.photo
+    val media = telegram != null && isMediaContent(content)
+    val block = telegram != null && isRich(content) && !media
     Box(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = if (outgoing) Alignment.CenterEnd else Alignment.CenterStart,
@@ -437,13 +461,13 @@ fun MessageBubble(
             val metaColor = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant).copy(alpha = 0.7f)
             val readColor = if (outgoing) colors.primary else metaColor
             val hasText = message.text.isNotEmpty()
-            Column(Modifier.padding(if (photo != null) PhotoInset else 0.dp).width(IntrinsicSize.Max)) {
+            Column(Modifier.padding(if (photo != null || media) PhotoInset else 0.dp).width(IntrinsicSize.Max)) {
                 if (quote != null) {
                     Box(
                         Modifier
                             .fillMaxWidth()
                             .widthIn(min = QuoteMinWidth)
-                            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = if (photo != null) 6.dp else 0.dp),
+                            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = if (photo != null || media) 6.dp else 0.dp),
                     ) { quote() }
                 }
                 if (photo != null && telegram != null) {
@@ -459,11 +483,14 @@ fun MessageBubble(
                         },
                     )
                 }
+                if (media && telegram != null) {
+                    MediaContent(message, telegram, PhotoMaxWidth, (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp))
+                }
                 if (hasText || photo == null) {
                     Column(
                         Modifier
                             .padding(horizontal = 12.dp, vertical = 7.dp)
-                            .then(if (photo != null) Modifier.width(PhotoMaxWidth - 24.dp) else Modifier),
+                            .then(if (photo != null || media) Modifier.width(PhotoMaxWidth - 24.dp) else Modifier),
                     ) {
                         if (!senderName.isNullOrEmpty()) {
                             Text(
@@ -471,6 +498,10 @@ fun MessageBubble(
                                 style = MaterialTheme.typography.labelLarge,
                                 color = colors.primary,
                             )
+                        }
+                        if (block && telegram != null) {
+                            BlockContent(message, telegram, onPlugin = { PluginViewer.path = it })
+                            Spacer(Modifier.height(4.dp))
                         }
                         TextWithMeta(
                             text = message.text,
@@ -484,18 +515,56 @@ fun MessageBubble(
 }
 
 @Composable
-private fun ServiceMessage(message: UiMessage, senderName: String?, modifier: Modifier) {
+private fun ServiceMessage(text: String, date: Int, seconds: Boolean, modifier: Modifier) {
     Box(modifier.fillMaxWidth().padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
         Surface(
             shape = CircleShape,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ) {
-            EmojiText(
-                listOfNotNull(senderName?.takeIf { it.isNotBlank() }, message.text).joinToString(" · "),
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+            ) {
+                EmojiText(text, style = MaterialTheme.typography.labelLarge)
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHighest) {
+                    Text(
+                        formatMessageTime(date, seconds),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BareMessage(
+    message: UiMessage,
+    telegram: Telegram,
+    status: MessageStatus?,
+    seconds: Boolean,
+    quote: (@Composable () -> Unit)?,
+    modifier: Modifier,
+) {
+    Box(modifier.fillMaxWidth(), contentAlignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart) {
+        Column(
+            horizontalAlignment = if (message.isOutgoing) Alignment.End else Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (quote != null) Box(Modifier.widthIn(min = QuoteMinWidth, max = 280.dp)) { quote() }
+            BareContent(message, telegram)
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ) {
+                Box(Modifier.padding(horizontal = 8.dp, vertical = 2.dp)) {
+                    MessageMeta(message, status, seconds, MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.primary)
+                }
+            }
         }
     }
 }
@@ -584,6 +653,10 @@ private fun TextWithMeta(text: String, meta: @Composable () -> Unit) {
 }
 
 private val MetaGap = 10.dp
+
+object PluginViewer {
+    var path by mutableStateOf<String?>(null)
+}
 private const val StickToBottomPx = 48
 private val HighlightCorner = 12.dp
 private const val HighlightAlpha = 0.22f
