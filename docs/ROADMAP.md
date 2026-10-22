@@ -14,8 +14,8 @@ Planned features, not started yet.
 ## Notifications
 
 - Notification pop-ups for new messages (the sound already plays).
-- The pop-ups will most likely be built with Electron; there is already an
-  example of Material 3 notifications to base them on.
+- Build them in Kotlin/Compose (undecorated, always-on-top windows) by
+  porting the existing Electron example of Material 3 notifications.
 
 ## Emoji
 
