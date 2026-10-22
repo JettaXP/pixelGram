@@ -85,6 +85,7 @@ class ChatState(val id: Long) {
     var photo by mutableStateOf<TdApi.File?>(null)
     var lastMessage by mutableStateOf<TdApi.Message?>(null)
     var unreadCount by mutableStateOf(0)
+    var lastReadOutbox by mutableStateOf(0L)
     var isGroup by mutableStateOf(false)
     var privateUserId = 0L
     var isChannel = false
@@ -111,7 +112,11 @@ data class UiMessage(
     val photoWidth: Int = 0,
     val photoHeight: Int = 0,
     val fullPhoto: TdApi.File? = null,
+    val sending: Boolean = false,
+    val failed: Boolean = false,
 )
+
+enum class MessageStatus { Sending, Sent, Read, Failed }
 
 private const val AUTH_TIMEOUT_MS = 30_000L
 private const val ListsInterval = 100L
@@ -330,6 +335,22 @@ class Telegram(
 
     fun isSavedMessages(chatId: Long): Boolean = me?.id == chatId
 
+    fun status(chat: ChatState, id: Long, sending: Boolean, failed: Boolean): MessageStatus = when {
+        failed -> MessageStatus.Failed
+        sending -> MessageStatus.Sending
+        id <= chat.lastReadOutbox || isSavedMessages(chat.id) -> MessageStatus.Read
+        else -> MessageStatus.Sent
+    }
+
+    fun status(chat: ChatState, message: UiMessage) = status(chat, message.id, message.sending, message.failed)
+
+    fun status(chat: ChatState, message: TdApi.Message) = status(
+        chat,
+        message.id,
+        message.sendingState is TdApi.MessageSendingStatePending,
+        message.sendingState is TdApi.MessageSendingStateFailed,
+    )
+
     fun chatTitle(chat: ChatState): String =
         if (isSavedMessages(chat.id)) SavedMessagesTitle else chat.title
 
@@ -453,6 +474,11 @@ class Telegram(
             }
             is TdApi.UpdateChatPosition -> chats[update.chatId]?.let { applyPosition(it, update.position) }
             is TdApi.UpdateChatReadInbox -> chats[update.chatId]?.unreadCount = update.unreadCount
+            is TdApi.UpdateChatReadOutbox -> chats[update.chatId]?.lastReadOutbox = update.lastReadOutboxMessageId
+            is TdApi.UpdateMessageSendFailed -> messages[update.message.chatId]?.let { list ->
+                val index = list.indexOfFirst { it.id == update.oldMessageId }
+                if (index >= 0) list[index] = update.message.toUi().copy(key = list[index].key)
+            }
             is TdApi.UpdateUser -> {
                 users[update.user.id] = update.user
                 if (update.user.id == myUserId) me = update.user
@@ -555,6 +581,7 @@ class Telegram(
             photo = chat.photo?.small
             lastMessage = chat.lastMessage
             unreadCount = chat.unreadCount
+            lastReadOutbox = chat.lastReadOutboxMessageId
             isGroup = chat.type is TdApi.ChatTypeBasicGroup || chat.type is TdApi.ChatTypeSupergroup
             privateUserId = (chat.type as? TdApi.ChatTypePrivate)?.userId ?: 0L
             isChannel = (chat.type as? TdApi.ChatTypeSupergroup)?.isChannel == true
@@ -781,6 +808,8 @@ fun TdApi.Message.toUi(): UiMessage {
         photoWidth = photo?.width ?: 0,
         photoHeight = photo?.height ?: 0,
         fullPhoto = (content as? TdApi.MessagePhoto)?.photo?.sizes?.maxByOrNull { it.width }?.photo,
+        sending = sendingState is TdApi.MessageSendingStatePending,
+        failed = sendingState is TdApi.MessageSendingStateFailed,
     )
 }
 

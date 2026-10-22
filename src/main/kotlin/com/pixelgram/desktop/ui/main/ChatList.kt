@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.telegram.MessageStatus
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -274,10 +275,20 @@ private fun ChatRow(
         },
         trailingContent = {
             Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = last?.let { formatChatDate(it.date) } ?: "",
-                    style = MaterialTheme.typography.labelSmall,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    if (last != null && last.isOutgoing && !chat.isChannel) {
+                        val status = telegram.status(chat, last)
+                        MessageStatusIcon(
+                            status,
+                            color = if (status == MessageStatus.Read) colors.primary else colors.onSurfaceVariant,
+                            size = 16.dp,
+                        )
+                    }
+                    Text(
+                        text = last?.let { formatChatDate(it.date) } ?: "",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
                 if (chat.unreadCount > 0) {
                     Badge(
                         modifier = Modifier.padding(top = 6.dp),

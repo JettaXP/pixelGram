@@ -34,15 +34,18 @@ fun Telegram.loadDemo() {
                 id = 1
                 this.chatId = chatId
                 date = now - index * 3600
+                isOutgoing = index % 4 == 1
                 content = TdApi.MessageText().apply { text = TdApi.FormattedText(texts[index], emptyArray()) }
             }
             unreadCount = if (index % 3 == 0) index + 1 else 0
+            lastReadOutbox = if (index % 8 == 1) 1 else 0
             positions[ChatListKey.Main] = 1000L - index
             pinned[ChatListKey.Main] = index < 2
             if (index % 2 == 0) positions[ChatListKey.Folder(1)] = 1000L - index
             if (index % 3 == 0) positions[ChatListKey.Folder(2)] = 1000L - index
         }
     }
+    chats[100L]?.lastReadOutbox = 2
     chatListsChanged()
     if (System.getProperty("pixelgram.demo.heavy") == "true") loadHeavyDemo(now)
     System.getProperty("pixelgram.demo.photo")?.let { path ->

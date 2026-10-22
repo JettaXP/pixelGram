@@ -1,5 +1,11 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.telegram.MessageStatus
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
@@ -171,6 +177,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                         null
                     },
                     settings = settings,
+                    status = if (message.isOutgoing && !chat.isChannel) telegram.status(chat, message) else null,
                 )
             }
         }
@@ -226,6 +233,7 @@ fun MessageBubble(
     settings: AppSettings,
     modifier: Modifier = Modifier,
     telegram: Telegram? = null,
+    status: MessageStatus? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     val outgoing = message.isOutgoing
@@ -261,16 +269,47 @@ fun MessageBubble(
                             EmojiText(message.text, style = MaterialTheme.typography.bodyLarge)
                         }
                     }
-                    Text(
-                        formatTime(message.date),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant)
-                            .copy(alpha = 0.7f),
+                    val metaColor = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant)
+                        .copy(alpha = 0.7f)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
                         modifier = Modifier.align(Alignment.End),
-                    )
+                    ) {
+                        Text(
+                            formatTime(message.date),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = metaColor,
+                        )
+                        if (status != null) {
+                            MessageStatusIcon(
+                                status,
+                                color = if (status == MessageStatus.Read) colors.primary else metaColor,
+                                size = 16.dp,
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun MessageStatusIcon(status: MessageStatus, color: Color, size: Dp, modifier: Modifier = Modifier) {
+    val icon = when (status) {
+        MessageStatus.Sending -> Icons.Outlined.Schedule
+        MessageStatus.Sent -> Icons.Filled.Done
+        MessageStatus.Read -> Icons.Filled.DoneAll
+        MessageStatus.Failed -> Icons.Outlined.ErrorOutline
+    }
+    Crossfade(status, modifier = modifier) {
+        Icon(
+            icon,
+            contentDescription = status.name,
+            tint = if (it == MessageStatus.Failed) MaterialTheme.colorScheme.error else color,
+            modifier = Modifier.size(size),
+        )
     }
 }
 
