@@ -1033,6 +1033,7 @@ private fun SenderAvatar(message: UiMessage, telegram: Telegram, settings: AppSe
 }
 private const val DraftSaveDelayMs = 1_500L
 private const val InlineDelayMs = 400L
+private const val GifTab = 2
 
 @Composable
 private fun Composer(
@@ -1141,6 +1142,7 @@ private fun Composer(
         }
     }
     var emojiOpen by remember { mutableStateOf(false) }
+    var mediaTab by remember { mutableStateOf(0) }
     val focus = remember { FocusRequester() }
     val pickScope = rememberCoroutineScope()
     LaunchedEffect(chatId) { runCatching { focus.requestFocus() } }
@@ -1395,9 +1397,30 @@ private fun Composer(
                     alignment = Alignment.BottomEnd,
                     offset = IntOffset(0, -with(LocalDensity.current) { 56.dp.roundToPx() }),
                     onDismissRequest = { emojiOpen = false },
-                    properties = PopupProperties(focusable = false),
+                    properties = PopupProperties(focusable = mediaTab == GifTab),
                 ) {
-                    EmojiPanel(onPick = insert)
+                    MediaPanel(
+                        telegram = telegram,
+                        chatId = chatId,
+                        tab = mediaTab,
+                        onTab = { mediaTab = it },
+                        onEmoji = insert,
+                        onSticker = { sticker ->
+                            telegram.sendSticker(chatId, sticker, replyTo?.id ?: 0)
+                            onCancelReply()
+                            emojiOpen = false
+                        },
+                        onGif = { animation ->
+                            telegram.sendAnimation(chatId, animation, replyTo?.id ?: 0)
+                            onCancelReply()
+                            emojiOpen = false
+                        },
+                        onInline = { queryId, resultId ->
+                            telegram.sendInlineResult(chatId, queryId, resultId, replyTo?.id ?: 0)
+                            onCancelReply()
+                            emojiOpen = false
+                        },
+                    )
                 }
             }
         }

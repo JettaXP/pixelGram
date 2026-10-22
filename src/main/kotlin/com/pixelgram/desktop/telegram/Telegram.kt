@@ -1180,6 +1180,54 @@ class Telegram(
         }
     }
 
+    fun installedStickerSets(onResult: (List<TdApi.StickerSetInfo>) -> Unit) {
+        send(TdApi.GetInstalledStickerSets(TdApi.StickerTypeRegular())) { result ->
+            onResult((result as? TdApi.StickerSets)?.sets?.toList().orEmpty())
+        }
+    }
+
+    fun recentStickers(onResult: (List<TdApi.Sticker>) -> Unit) {
+        send(TdApi.GetRecentStickers(false)) { result -> onResult((result as? TdApi.Stickers)?.stickers?.toList().orEmpty()) }
+    }
+
+    fun savedAnimations(onResult: (List<TdApi.Animation>) -> Unit) {
+        send(TdApi.GetSavedAnimations()) { result -> onResult((result as? TdApi.Animations)?.animations?.toList().orEmpty()) }
+    }
+
+    private fun remoteInput(file: TdApi.File): TdApi.InputFile =
+        file.remote?.id?.takeIf { it.isNotEmpty() }?.let { TdApi.InputFileRemote(it) } ?: TdApi.InputFileId(file.id)
+
+    fun sendSticker(chatId: Long, sticker: TdApi.Sticker, replyToId: Long = 0) {
+        send(TdApi.SendMessage().apply {
+            this.chatId = chatId
+            replyTo = replyInput(replyToId)
+            inputMessageContent = TdApi.InputMessageSticker().apply {
+                this.sticker = TdApi.InputSticker().apply {
+                    this.sticker = remoteInput(sticker.sticker)
+                    width = sticker.width
+                    height = sticker.height
+                }
+                emoji = sticker.emoji
+            }
+        })
+    }
+
+    fun sendAnimation(chatId: Long, animation: TdApi.Animation, replyToId: Long = 0) {
+        send(TdApi.SendMessage().apply {
+            this.chatId = chatId
+            replyTo = replyInput(replyToId)
+            inputMessageContent = TdApi.InputMessageAnimation().apply {
+                this.animation = TdApi.InputAnimation().apply {
+                    this.animation = remoteInput(animation.animation)
+                    addedStickerFileIds = IntArray(0)
+                    duration = animation.duration
+                    width = animation.width
+                    height = animation.height
+                }
+            }
+        })
+    }
+
     fun inlineBot(username: String, onResult: (TdApi.User?) -> Unit) {
         send(TdApi.SearchPublicChat(username)) { result ->
             val userId = ((result as? TdApi.Chat)?.type as? TdApi.ChatTypePrivate)?.userId

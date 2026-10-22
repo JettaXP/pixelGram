@@ -77,12 +77,7 @@ fun EmojiPanel(onPick: (String) -> Unit, modifier: Modifier = Modifier) {
     val current by remember {
         derivedStateOf { starts.indexOfLast { it <= grid.firstVisibleItemIndex }.coerceAtLeast(0) }
     }
-    Surface(
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shadowElevation = 6.dp,
-        modifier = modifier.size(width = 360.dp, height = 400.dp),
-    ) {
+    Box(modifier) {
         Column {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
