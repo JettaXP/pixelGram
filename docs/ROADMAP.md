@@ -12,10 +12,13 @@ Planned features, not started yet.
 - While the phone number screen is loading, show the Material 3 Expressive
   loading animation: rotating shapes that morph into each other.
 
-## System tray
+## Connection status
 
-- The tray menu is the plain white system menu now; make it a Material 3
-  menu in the app's theme (dark/light, accent colors) with dividers.
+- When Telegram can't connect, show a small pill at the bottom of the chat
+  list, over the chats: "Connecting…" (and "Waiting for network…",
+  "Updating…") like the official client. Instead of a plain spinner it has
+  the Material 3 Expressive loading indicator, shapes that morph into each
+  other. It slides in when the connection drops and out when it's back.
 
 ## Emoji
 
