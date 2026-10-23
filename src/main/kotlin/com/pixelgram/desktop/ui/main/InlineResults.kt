@@ -49,7 +49,11 @@ private class InlineItem(
     val thumb: TdApi.File?,
     val mini: TdApi.Minithumbnail?,
     val media: Boolean,
+    val sound: TdApi.File? = null,
+    val audio: TdApi.Audio? = null,
 )
+
+private fun duration(seconds: Int) = "%d:%02d".format(seconds / 60, seconds % 60)
 
 private fun TdApi.Photo.closest(): TdApi.File? = sizes?.minByOrNull { abs(it.width - PreferredThumb) }?.photo
 
@@ -60,7 +64,17 @@ private fun TdApi.InlineQueryResult.item(): InlineItem? = when (this) {
     is TdApi.InlineQueryResultSticker -> InlineItem(id, "", "", sticker.thumbnail?.file, null, true)
     is TdApi.InlineQueryResultVideo -> InlineItem(id, title, description, video.thumbnail?.file, video.minithumbnail, false)
     is TdApi.InlineQueryResultDocument -> InlineItem(id, title, description, document.thumbnail?.file, document.minithumbnail, false)
-    is TdApi.InlineQueryResultAudio -> InlineItem(id, audio.title.ifBlank { audio.fileName }, audio.performer, audio.albumCoverThumbnail?.file, null, false)
+    is TdApi.InlineQueryResultAudio -> InlineItem(
+        id,
+        audio.title.ifBlank { audio.fileName },
+        listOf(audio.performer, duration(audio.duration)).filter { it.isNotBlank() }.joinToString(" · "),
+        audio.albumCoverThumbnail?.file,
+        null,
+        false,
+        sound = audio.audio,
+        audio = audio,
+    )
+    is TdApi.InlineQueryResultVoiceNote -> InlineItem(id, title.ifBlank { "Voice message" }, duration(voiceNote.duration), null, null, false, sound = voiceNote.voice)
     is TdApi.InlineQueryResultGame -> InlineItem(id, game.title, game.description, game.photo?.closest(), game.photo?.minithumbnail, false)
     else -> null
 }
@@ -117,7 +131,9 @@ fun InlineResultsPanel(
                             .clickable { onPick(results.inlineQueryId, item.id) }
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                     ) {
-                        Box(
+                        if (item.sound != null) {
+                            PlayButton(item.id.hashCode().toLong(), 0L, item.title, item.sound, telegram, item.audio)
+                        } else Box(
                             Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.secondaryContainer),
                             contentAlignment = Alignment.Center,
                         ) {

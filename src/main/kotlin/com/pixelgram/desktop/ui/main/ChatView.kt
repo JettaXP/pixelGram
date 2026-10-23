@@ -150,6 +150,7 @@ import it.tdlight.jni.TdApi
 import java.io.File
 import kotlinx.coroutines.launch
 import com.pixelgram.desktop.ui.OnEscape
+import com.pixelgram.desktop.ui.components.OfficialBadge
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -393,7 +394,10 @@ fun ChatView(
             ) {
             ChatAvatar(chat, telegram, settings, size = 40.dp)
             Column(Modifier.weight(1f)) {
-                EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
+                    if (telegram.isOfficial(chat)) OfficialBadge()
+                }
                 val status = telegram.presence(chat)
                 AnimatedContent(status, transitionSpec = { fadeIn() togetherWith fadeOut() }) { text ->
                     if (text != null) {
@@ -1155,6 +1159,7 @@ private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @
 }
 
 private val MetaGap = 10.dp
+private val SendSlot = 40.dp
 private const val SelectedAlpha = 0.14f
 private const val SelectEdgePx = 48f
 private const val MentionDelayMs = 150L
@@ -1358,12 +1363,18 @@ private fun Composer(
     val inlineText = inlineMatch?.groupValues?.get(2)
     var inlineBot by remember(chatId) { mutableStateOf<TdApi.User?>(null) }
     var inlineResults by remember(chatId) { mutableStateOf<TdApi.InlineQueryResults?>(null) }
+    var inlineResolving by remember(chatId) { mutableStateOf(false) }
     LaunchedEffect(inlineName, chatId) {
         if (inlineBot?.usernames?.activeUsernames?.any { it.equals(inlineName, true) } == true) return@LaunchedEffect
         inlineBot = null
+        inlineResolving = false
         val name = inlineName ?: return@LaunchedEffect
+        inlineResolving = true
         delay(MentionDelayMs)
-        telegram.inlineBot(name) { inlineBot = it }
+        telegram.inlineBot(name) {
+            inlineBot = it
+            inlineResolving = false
+        }
     }
     LaunchedEffect(inlineBot?.id, inlineText, chatId) {
         inlineResults = null
@@ -1373,6 +1384,7 @@ private fun Composer(
         telegram.inlineResults(bot.id, chatId, query) { inlineResults = it }
     }
     val showInline = inlineMatch != null && inlineBot != null
+    val inlineLoading = inlineMatch != null && (inlineResolving || inlineBot != null && inlineResults == null)
     val pickInline = { queryId: Long, resultId: String ->
         telegram.sendInlineResult(chatId, queryId, resultId, replyTo?.id ?: 0)
         text = TextFieldValue("")
@@ -1750,12 +1762,20 @@ private fun Composer(
                 }
             }
         }
-        FilledIconButton(onClick = send, enabled = canSend) {
-            Crossfade(editing != null) { isEditing ->
-                if (isEditing) {
-                    Icon(Icons.Filled.Check, contentDescription = "Save")
-                } else {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+        Crossfade(inlineLoading) { loading ->
+            if (loading) {
+                Box(Modifier.size(SendSlot), contentAlignment = Alignment.Center) {
+                    LoadingIndicator(Modifier.size(SendSlot))
+                }
+            } else {
+                FilledIconButton(onClick = send, enabled = canSend) {
+                    Crossfade(editing != null) { isEditing ->
+                        if (isEditing) {
+                            Icon(Icons.Filled.Check, contentDescription = "Save")
+                        } else {
+                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                        }
+                    }
                 }
             }
         }

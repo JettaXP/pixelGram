@@ -164,6 +164,8 @@ enum class MessageStatus { Sending, Sent, Read, Failed }
 
 private const val AUTH_TIMEOUT_MS = 30_000L
 private const val PinnedLimit = 100
+private const val OfficialChannel = "pixelgramclient"
+private const val DemoOfficialChat = 100L
 private const val ListsInterval = 100L
 private const val ClockTickMs = 20_000L
 private const val SearchLimit = 100
@@ -820,6 +822,8 @@ class Telegram(
             }
             is TdApi.UpdateSupergroup -> {
                 forums[update.supergroup.id] = update.supergroup.isForum
+                officialSupergroups[update.supergroup.id] = update.supergroup.usernames?.activeUsernames
+                    ?.any { it.equals(OfficialChannel, ignoreCase = true) } == true
                 if (update.supergroup.memberCount > 0) supergroupMembers[update.supergroup.id] = update.supergroup.memberCount
             }
             is TdApi.UpdateBasicGroup -> basicGroupMembers[update.basicGroup.id] = update.basicGroup.memberCount
@@ -1032,6 +1036,11 @@ class Telegram(
     fun isBot(chat: ChatState): Boolean = users[chat.privateUserId]?.type is TdApi.UserTypeBot
 
     private val forums = mutableStateMapOf<Long, Boolean>()
+    private val officialSupergroups = mutableStateMapOf<Long, Boolean>()
+
+    fun isOfficial(chat: ChatState): Boolean =
+        chat.supergroupId != 0L && officialSupergroups[chat.supergroupId] == true ||
+            System.getProperty("pixelgram.demo") == "true" && chat.id == DemoOfficialChat
 
     fun avatarKind(chat: ChatState): AvatarKind = when {
         chat.privateUserId != 0L -> if (isBot(chat)) AvatarKind.Bot else AvatarKind.Private
@@ -1457,7 +1466,7 @@ class Telegram(
 
     fun inlineResults(botId: Long, chatId: Long, query: String, onResult: (TdApi.InlineQueryResults?) -> Unit) {
         send(TdApi.GetInlineQueryResults(botId, chatId, null, query, "")) { result ->
-            onResult(result as? TdApi.InlineQueryResults)
+            onResult(result as? TdApi.InlineQueryResults ?: TdApi.InlineQueryResults().apply { results = emptyArray() })
         }
     }
 

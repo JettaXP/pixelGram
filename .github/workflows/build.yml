@@ -28,16 +28,30 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Changelog for this version.
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' build.gradle.kts)
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          awk -v head="## $version" '$0 == head { found = 1; next } /^## / { found = 0 } found' CHANGELOG.md > changes.md
+
       - name: Nightly pre-release.
         if: github.ref == 'refs/heads/main'
         run: |
+          {
+            echo "Latest build from main (${GITHUB_SHA::7}). Arch: \`sudo pacman -U pixelgram-*.pkg.tar.zst\`. Any Linux: chmod +x and run the .AppImage. Windows: run the .msi or unpack the portable .zip."
+            echo
+            echo "## What's new in $VERSION"
+            cat changes.md
+          } > notes.md
           gh release delete nightly --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
           gh release create nightly \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --prerelease \
             --title "pixelGram nightly" \
-            --notes "Latest build from main (${GITHUB_SHA::7}). Arch: \`sudo pacman -U pixelgram-*.pkg.tar.zst\`. Any Linux: chmod +x and run the .AppImage. Windows: run the .msi or unpack the portable .zip."
+            --notes-file notes.md
 
       - name: Tagged release.
         if: startsWith(github.ref, 'refs/tags/v')
@@ -45,7 +59,7 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \
             --title "pixelGram $GITHUB_REF_NAME" \
-            --generate-notes
+            --notes-file changes.md
 
   linux:
     name: Linux (Arch)

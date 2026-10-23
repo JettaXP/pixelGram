@@ -250,7 +250,10 @@ fun ChatInfoDialog(
                     ChatAvatar(chat, telegram, settings, size = 96.dp)
                 }
                 if (photos) ProfilePhotosDialog(telegram, chat.privateUserId, onDismiss = { photos = false })
-                EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
+                    if (telegram.isOfficial(chat)) com.pixelgram.desktop.ui.components.OfficialBadge(24.dp)
+                }
                 val subtitle = telegram.presence(chat)?.label ?: when {
                     chat.isChannel -> "channel"
                     chat.isGroup -> "group"
