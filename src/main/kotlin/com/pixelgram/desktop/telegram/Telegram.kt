@@ -207,6 +207,7 @@ class Telegram(
     var authState by mutableStateOf<AuthState>(AuthState.Starting)
         internal set
     var authError by mutableStateOf<String?>(null)
+    var authRetryAt by mutableStateOf(0L)
     var authBusy by mutableStateOf(false)
         private set
     private var authRequest = 0
@@ -357,6 +358,7 @@ class Telegram(
                     && result.message != "Request aborted"
                 ) {
                     authError = friendlyError(result.message)
+                    floodSeconds(result.message)?.let { authRetryAt = System.currentTimeMillis() + it * 1000L }
                 }
             }
         }
@@ -1939,6 +1941,9 @@ fun contentText(content: TdApi.MessageContent?): String = when (content) {
 
 private fun List<String?>.filterNotBlank(): String =
     filterNot { it.isNullOrBlank() }.joinToString("\n")
+
+private fun floodSeconds(message: String?): Long? =
+    Regex("""(?:retry after |FLOOD_WAIT_)(\d+)""").find(message.orEmpty())?.groupValues?.get(1)?.toLongOrNull()
 
 private fun friendlyError(message: String?): String {
     val text = message.orEmpty()

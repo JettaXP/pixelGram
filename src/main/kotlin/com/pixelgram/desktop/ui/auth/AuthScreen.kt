@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.auth
 
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.slideOutHorizontally
@@ -121,7 +123,19 @@ fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
                             }
                         }
                     }
-                    telegram.authError?.let { error ->
+                    val now by produceState(System.currentTimeMillis(), telegram.authRetryAt) {
+                        while (value < telegram.authRetryAt) {
+                            delay(RetryTickMs)
+                            value = System.currentTimeMillis()
+                        }
+                    }
+                    val waitSeconds = ((telegram.authRetryAt - now + 999) / 1000).coerceAtLeast(0)
+                    val shownError = if (waitSeconds > 0) {
+                        "Too many attempts. Try again in %d:%02d".format(waitSeconds / 60, waitSeconds % 60)
+                    } else {
+                        telegram.authError?.takeIf { telegram.authRetryAt == 0L || !it.startsWith("Too many attempts") }
+                    }
+                    shownError?.let { error ->
                         Text(
                             text = error,
                             color = MaterialTheme.colorScheme.error,
@@ -277,3 +291,5 @@ private fun stepName(state: AuthState): String = when (state) {
     is AuthState.Failed -> "failed"
     else -> state.toString()
 }
+
+private const val RetryTickMs = 1_000L
