@@ -27,6 +27,8 @@ jobs:
     name: Release
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    outputs:
+      versioned: ${{ steps.versioned.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -52,6 +54,19 @@ jobs:
             --prerelease \
             --title "pixelGram nightly" \
             --notes-file notes.md
+
+      - name: Versioned release for a new version with a changelog.
+        id: versioned
+        if: github.ref == 'refs/heads/main'
+        run: |
+          if [ -s changes.md ] && ! gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "v$VERSION" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "pixelGram v$VERSION" \
+              --notes-file changes.md
+            echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Tagged release.
         if: startsWith(github.ref, 'refs/tags/v')
@@ -139,10 +154,16 @@ jobs:
 
       - name: Upload to release.
         if: env.PUBLISH == 'true'
+        env:
+          VERSIONED: ${{ needs.prepare.outputs.versioned }}
         run: |
           sha256sum *.pkg.tar.zst pixelGram-linux-x86_64.tar.gz pixelGram-x86_64.AppImage > SHA256SUMS-linux.txt
           gh release upload "$RELEASE_TAG" *.pkg.tar.zst pixelGram-linux-x86_64.tar.gz pixelGram-x86_64.AppImage SHA256SUMS-linux.txt \
             --repo "$GITHUB_REPOSITORY" --clobber
+          if [ -n "$VERSIONED" ]; then
+            gh release upload "$VERSIONED" *.pkg.tar.zst pixelGram-linux-x86_64.tar.gz pixelGram-x86_64.AppImage SHA256SUMS-linux.txt \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          fi
 
   windows:
     name: Windows
@@ -185,8 +206,11 @@ jobs:
 
       - name: Upload to release.
         if: env.PUBLISH == 'true'
+        env:
+          VERSIONED: ${{ needs.prepare.outputs.versioned }}
         shell: bash
         run: |
           cd dist
           sha256sum * > SHA256SUMS-windows.txt
           gh release upload "$RELEASE_TAG" * --repo "$GITHUB_REPOSITORY" --clobber
+          if [ -n "$VERSIONED" ]; then gh release upload "$VERSIONED" * --repo "$GITHUB_REPOSITORY" --clobber; fi
