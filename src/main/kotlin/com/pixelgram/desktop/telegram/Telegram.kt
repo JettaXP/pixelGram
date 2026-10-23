@@ -216,6 +216,18 @@ class Telegram(
         internal set
     val folders = mutableStateListOf<FolderInfo>()
     private val filePaths = mutableStateMapOf<Int, String>()
+    private val transfers = mutableStateMapOf<Int, Float>()
+
+    fun progress(file: TdApi.File?): Float? = file?.let { transfers[it.id] }
+
+    fun cancelDownload(file: TdApi.File?) {
+        file ?: return
+        send(TdApi.CancelDownloadFile(file.id, false))
+        transfers.remove(file.id)
+        requestedFiles.remove(file.id)
+    }
+
+    fun cancelSending(message: UiMessage) = deleteMessages(message.chatId, longArrayOf(message.id), true)
     private val messages = mutableMapOf<Long, SnapshotStateList<UiMessage>>()
     private val requestedFiles = mutableSetOf<Int>()
 
@@ -686,9 +698,16 @@ class Telegram(
                 if (update.user.id == myUserId) me = update.user
             }
             is TdApi.UpdateFile -> {
-                val local = update.file.local
+                val file = update.file
+                val local = file.local
                 if (local != null && local.isDownloadingCompleted) {
-                    filePaths[update.file.id] = local.path
+                    filePaths[file.id] = local.path
+                }
+                val total = maxOf(file.size, file.expectedSize).toFloat()
+                when {
+                    total > 0 && local?.isDownloadingActive == true -> transfers[file.id] = local.downloadedSize / total
+                    total > 0 && file.remote?.isUploadingActive == true -> transfers[file.id] = file.remote.uploadedSize / total
+                    else -> transfers.remove(file.id)
                 }
             }
             is TdApi.UpdateChatFolders -> {

@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material.icons.filled.Settings
 import com.pixelgram.desktop.core.Backup
 import androidx.compose.material3.LinearWavyProgressIndicator
@@ -246,8 +249,11 @@ private fun FileRow(
     subtitle: String,
     busy: Boolean,
     preview: (@Composable (Modifier) -> Unit)? = null,
+    progress: Float? = null,
+    onCancel: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
+    val transferring = busy || progress != null
     val scheme = MaterialTheme.colorScheme
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -260,11 +266,11 @@ private fun FileRow(
                 contentAlignment = Alignment.Center,
             ) {
                 preview(Modifier.matchParentSize())
-                if (busy) LoadingIndicator(Modifier.size(30.dp))
+                if (transferring) TransferRing(progress, scheme.primary, onCancel, 40.dp)
             }
         } else Box(Modifier.size(46.dp).clip(CircleShape).background(scheme.primary), contentAlignment = Alignment.Center) {
-            if (busy) {
-                LoadingIndicator(Modifier.size(30.dp), color = scheme.onPrimary)
+            if (transferring) {
+                TransferRing(progress, scheme.onPrimary, onCancel, 40.dp)
             } else {
                 Icon(icon, contentDescription = null, tint = scheme.onPrimary)
             }
@@ -311,6 +317,8 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
                 thumb != null || mini != null -> { modifier -> ThumbImage(thumb, mini, telegram, modifier) }
                 else -> null
             }
+            val total = document.document?.let { maxOf(it.size, it.expectedSize) } ?: 0
+            val progress = telegram.progress(document.document)
             FileRow(
                 when {
                     plugin -> Icons.Filled.Extension
@@ -318,10 +326,14 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
                     else -> Icons.Filled.InsertDriveFile
                 },
                 name,
-                formatSize(document.document?.let { maxOf(it.size, it.expectedSize) } ?: 0),
-                busy,
+                if (progress != null) "${formatSize((total * progress).toLong())} / ${formatSize(total)}" else formatSize(total),
+                busy || message.sending,
                 preview,
-                open,
+                progress,
+                onCancel = {
+                    if (message.sending) telegram.cancelSending(message) else telegram.cancelDownload(document.document)
+                },
+                onClick = open,
             )
         }
         is TdApi.MessageAudio -> AudioContent(message, content.audio, telegram)
@@ -365,7 +377,8 @@ private fun PlayButton(key: Long, chatId: Long, title: String, file: TdApi.File?
             contentAlignment = Alignment.Center,
         ) {
             when {
-                busy || (active && AudioPlayer.loading) -> LoadingIndicator(Modifier.size(32.dp), color = scheme.onPrimary)
+                busy -> TransferRing(telegram.progress(file), scheme.onPrimary, { telegram.cancelDownload(file) }, 40.dp)
+                active && AudioPlayer.loading -> LoadingIndicator(Modifier.size(32.dp), color = scheme.onPrimary)
                 active && AudioPlayer.playing -> Icon(Icons.Rounded.Pause, contentDescription = "Pause", tint = scheme.onPrimary, modifier = Modifier.size(30.dp))
                 else -> Icon(Icons.Rounded.PlayArrow, contentDescription = "Play", tint = scheme.onPrimary, modifier = Modifier.size(30.dp))
             }
@@ -639,7 +652,13 @@ fun MediaContent(message: UiMessage, telegram: Telegram, width: Dp, corner: Dp) 
         contentAlignment = Alignment.Center,
     ) {
         ThumbImage(thumb, mini, telegram, Modifier.fillMaxSize())
-        PlayBadge(busy)
+        if (message.sending) {
+            Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                TransferRing(telegram.progress(file), Color.White, { telegram.cancelSending(message) }, 44.dp)
+            }
+        } else {
+            PlayBadge(busy)
+        }
         Surface(
             shape = CircleShape,
             color = Color.Black.copy(alpha = 0.45f),
@@ -664,6 +683,31 @@ private data class MediaInfo(
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun TransferRing(progress: Float?, color: Color, onCancel: (() -> Unit)?, size: Dp) {
+    Box(
+        Modifier.size(size).then(if (onCancel != null) Modifier.clip(CircleShape).clickable(onClick = onCancel) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (progress == null) {
+            LoadingIndicator(Modifier.size(size * 0.8f), color = color)
+        } else {
+            val shown by animateFloatAsState(progress.coerceIn(MinRingProgress, 1f))
+            CircularWavyProgressIndicator(
+                progress = { shown },
+                modifier = Modifier.size(size),
+                color = color,
+                trackColor = color.copy(alpha = 0.25f),
+            )
+            if (onCancel != null) {
+                Icon(Icons.Rounded.Close, contentDescription = "Cancel", tint = color, modifier = Modifier.size(size * 0.42f))
+            }
+        }
+    }
+}
+
+private const val MinRingProgress = 0.02f
+
 @Composable
 fun PlayBadge(busy: Boolean) {
     Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {

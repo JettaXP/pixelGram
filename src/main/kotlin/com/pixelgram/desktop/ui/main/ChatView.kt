@@ -1011,8 +1011,18 @@ private fun MessagePhoto(
         val bitmap = image
         if (bitmap != null) {
             Image(bitmap, contentDescription = "Photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        } else {
-            LoadingIndicator()
+        } else if (!message.sending) {
+            TransferRing(telegram.progress(file), MaterialTheme.colorScheme.primary, null, 48.dp)
+        }
+        if (message.sending) {
+            Box(Modifier.size(56.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                TransferRing(
+                    telegram.progress(message.fullPhoto) ?: telegram.progress(file),
+                    Color.White,
+                    { telegram.cancelSending(message) },
+                    48.dp,
+                )
+            }
         }
         if (overlay != null) {
             Surface(
