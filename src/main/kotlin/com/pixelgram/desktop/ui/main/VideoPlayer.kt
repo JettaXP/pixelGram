@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material3.Slider
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
@@ -10,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -116,6 +119,9 @@ private const val SeekStepMs = 5_000L
 private const val ControlsHideMs = 2_500L
 private const val LateFrameUs = 120_000L
 private const val AudioBufferSeconds = 0.4
+private const val MaxDecodeWidth = 1920
+private const val MaxFrameGapNs = 100_000_000L
+private val VolumeSliderWidth = 110.dp
 
 private class VideoEngine(private val path: String, private val loop: Boolean) {
     var frame by mutableStateOf<ImageBitmap?>(null)
@@ -125,6 +131,7 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
     var ended by mutableStateOf(false)
     var failed by mutableStateOf(false)
     var muted by mutableStateOf(false)
+    var volume by mutableFloatStateOf(1f)
 
     private val lock = Object()
     @Volatile private var running = true
@@ -160,13 +167,22 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
         val grabber = FFmpegFrameGrabber(path).apply {
             pixelFormat = avutil.AV_PIX_FMT_BGRA
             sampleMode = FrameGrabber.SampleMode.SHORT
+            setVideoOption("threads", "0")
         }
         try {
             grabber.start()
+            if (grabber.imageWidth > MaxDecodeWidth) {
+                val height = (grabber.imageHeight.toLong() * MaxDecodeWidth / grabber.imageWidth).toInt() and 1.inv()
+                grabber.stop()
+                grabber.imageWidth = MaxDecodeWidth
+                grabber.imageHeight = height
+                grabber.start()
+            }
             duration = grabber.lengthInTime / 1000
             if (grabber.audioChannels > 0 && !loop) line = openLine(grabber.sampleRate, grabber.audioChannels)
             var base = System.nanoTime()
             var baseUs = 0L
+            var lastShown = 0L
             while (running) {
                 if (!playing && seekTo < 0) {
                     line?.stop()
@@ -206,7 +222,11 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
                     val clock = baseUs + (System.nanoTime() - base) / 1000
                     val wait = next.timestamp - clock
                     if (wait > 0) Thread.sleep(wait / 1000, ((wait % 1000) * 1000).toInt())
-                    if (wait > -LateFrameUs) show(next)
+                    val now = System.nanoTime()
+                    if (wait > -LateFrameUs || frame == null || now - lastShown > MaxFrameGapNs) {
+                        show(next)
+                        lastShown = now
+                    }
                     position = next.timestamp / 1000
                 } else if (next.samples != null) {
                     writeAudio(next)
@@ -224,7 +244,7 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
 
     private fun openLine(rate: Int, channels: Int): SourceDataLine? = runCatching {
         val format = AudioFormat(rate.toFloat(), 16, channels, true, false)
-        AudioSystem.getSourceDataLine(format).apply {
+        com.pixelgram.desktop.core.AudioDevices.sourceLine(format).apply {
             open(format, (rate * channels * 2 * AudioBufferSeconds).toInt())
             start()
         }
@@ -236,7 +256,8 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
         val count = samples.remaining()
         val bytes = ByteBuffer.allocate(count * 2).order(ByteOrder.LITTLE_ENDIAN)
         val start = samples.position()
-        for (i in 0 until count) bytes.putShort(if (muted) 0 else samples.get(start + i))
+        val gain = if (muted) 0f else volume
+        for (i in 0 until count) bytes.putShort((samples.get(start + i) * gain).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort())
         output.write(bytes.array(), 0, bytes.capacity())
     }
 
@@ -391,10 +412,18 @@ private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
                 if (!request.loop) {
                     IconButton(onClick = { engine.muted = !engine.muted }) {
                         Icon(
-                            if (engine.muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
+                            if (engine.muted || engine.volume == 0f) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
                             contentDescription = "Mute",
                         )
                     }
+                    Slider(
+                        value = if (engine.muted) 0f else engine.volume,
+                        onValueChange = {
+                            engine.volume = it
+                            engine.muted = false
+                        },
+                        modifier = Modifier.width(VolumeSliderWidth),
+                    )
                 }
             }
         }

@@ -132,7 +132,7 @@ object AudioPlayer {
         val format = AudioFormat(pcm.rate.toFloat(), 16, pcm.channels, true, false)
         val frameBytes = 2 * pcm.channels
         val line = runCatching {
-            AudioSystem.getSourceDataLine(format).apply {
+            AudioDevices.sourceLine(format).apply {
                 open(format, pcm.rate / 5 * frameBytes)
                 start()
             }

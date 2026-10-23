@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.AlternateEmail
 import com.pixelgram.desktop.ui.components.InfoRow
+import com.pixelgram.desktop.ui.components.UsernameQrButton
 import com.pixelgram.desktop.ui.components.InfoGroup
 import com.pixelgram.desktop.ui.profile.ProfilePhotosDialog
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -299,7 +300,16 @@ fun ChatInfoDialog(
                     }
                 }
                 val rows = buildList {
-                    user?.usernames?.activeUsernames?.firstOrNull()?.let { add(InfoRow(Icons.Outlined.AlternateEmail, "Username", "@$it")) }
+                    user?.usernames?.activeUsernames?.firstOrNull()?.let { username ->
+                        add(
+                            InfoRow(
+                                Icons.Outlined.AlternateEmail,
+                                "Username",
+                                "@$username",
+                                trailing = { UsernameQrButton(username, telegram.chatTitle(chat), user.profilePhoto, telegram) },
+                            )
+                        )
+                    }
                     user?.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it")) }
                     if (bio.isNotBlank()) add(InfoRow(Icons.Outlined.Info, "Bio", bio))
                     add(InfoRow(Icons.Outlined.Numbers, "ID", (if (chat.privateUserId != 0L) chat.privateUserId else chat.id).toString()))
@@ -347,8 +357,19 @@ private fun ProfileAction(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(vertical = 10.dp),
         ) {
-            Icon(icon, contentDescription = null)
-            Text(label, style = MaterialTheme.typography.labelMedium)
+            androidx.compose.animation.AnimatedContent(
+                targetState = icon to label,
+                transitionSpec = {
+                    (androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = 0.7f)) togetherWith
+                        (androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = 0.7f))
+                },
+                contentAlignment = Alignment.Center,
+            ) { (shownIcon, shownLabel) ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(shownIcon, contentDescription = null)
+                    Text(shownLabel, style = MaterialTheme.typography.labelMedium)
+                }
+            }
         }
     }
 }

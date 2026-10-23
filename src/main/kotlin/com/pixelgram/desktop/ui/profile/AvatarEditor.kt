@@ -136,7 +136,7 @@ fun AvatarEditor(size: Dp, onPicked: (File) -> Unit, modifier: Modifier = Modifi
 private fun CameraDialog(onDismiss: () -> Unit, onCaptured: (File) -> Unit) {
     var frame by remember { mutableStateOf<ImageBitmap?>(null) }
     var failed by remember { mutableStateOf(false) }
-    val session = remember { CameraSession.open() }
+    val session = remember { CameraSession.open(com.pixelgram.desktop.core.AudioDevices.settings?.cameraDevice?.value.orEmpty()) }
     DisposableEffect(session) {
         if (session == null) {
             failed = true

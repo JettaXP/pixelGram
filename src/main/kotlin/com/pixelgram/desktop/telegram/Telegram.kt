@@ -72,9 +72,11 @@ sealed interface ChatListKey {
     data object Main : ChatListKey
     data object Archive : ChatListKey
     data class Folder(val id: Int) : ChatListKey
+    data object Unread : ChatListKey
+    data object Mentions : ChatListKey
 
     fun toTd(): TdApi.ChatList = when (this) {
-        Main -> TdApi.ChatListMain()
+        Main, Unread, Mentions -> TdApi.ChatListMain()
         Archive -> TdApi.ChatListArchive()
         is Folder -> TdApi.ChatListFolder(id)
     }
@@ -94,6 +96,8 @@ class ChatState(val id: Long) {
     var photo by mutableStateOf<TdApi.File?>(null)
     var lastMessage by mutableStateOf<TdApi.Message?>(null)
     var unreadCount by mutableStateOf(0)
+    var unreadMentions by mutableStateOf(0)
+    var markedUnread by mutableStateOf(false)
     var lastReadOutbox by mutableStateOf(0L)
     var isGroup by mutableStateOf(false)
     var privateUserId = 0L
@@ -158,12 +162,15 @@ data class UiMessage(
     val views: Int = 0,
     val pinned: Boolean = false,
     val albumId: Long = 0,
+    val comments: Int = -1,
 )
 
 enum class MessageStatus { Sending, Sent, Read, Failed }
 
 private const val AUTH_TIMEOUT_MS = 30_000L
 private const val PinnedLimit = 100
+private const val JumpPageSize = 60
+private const val ThreadPageSize = 100
 private const val CustomEmojiBatchMs = 40L
 private const val CustomEmojiChunk = 200
 private const val OfficialChannel = "pixelgramclient"
@@ -790,7 +797,22 @@ class Telegram(
                 update.positions?.forEach { applyPosition(chat, it) }
             }
             is TdApi.UpdateChatPosition -> chats[update.chatId]?.let { applyPosition(it, update.position) }
-            is TdApi.UpdateChatReadInbox -> chats[update.chatId]?.unreadCount = update.unreadCount
+            is TdApi.UpdateChatReadInbox -> chats[update.chatId]?.let { chat ->
+                chat.unreadCount = update.unreadCount
+                chatListsChanged()
+            }
+            is TdApi.UpdateChatUnreadMentionCount -> chats[update.chatId]?.let { chat ->
+                chat.unreadMentions = update.unreadMentionCount
+                chatListsChanged()
+            }
+            is TdApi.UpdateMessageMentionRead -> chats[update.chatId]?.let { chat ->
+                chat.unreadMentions = update.unreadMentionCount
+                chatListsChanged()
+            }
+            is TdApi.UpdateChatIsMarkedAsUnread -> chats[update.chatId]?.let { chat ->
+                chat.markedUnread = update.isMarkedAsUnread
+                chatListsChanged()
+            }
             is TdApi.UpdateConnectionState -> connection = when (update.state) {
                 is TdApi.ConnectionStateWaitingForNetwork -> ConnectionStatus.WaitingForNetwork
                 is TdApi.ConnectionStateConnectingToProxy -> ConnectionStatus.ConnectingToProxy
@@ -832,7 +854,13 @@ class Telegram(
                 }
             }
             is TdApi.UpdateNewMessage -> {
-                messages[update.message.chatId]?.let { list ->
+                activeThread?.let { (threadChat, threadId) ->
+                    val topic = update.message.topicId as? TdApi.MessageTopicThread
+                    if (update.message.chatId == threadChat && topic?.messageThreadId == threadId && threadMessages.none { it.id == update.message.id }) {
+                        threadMessages.add(0, update.message.toUi().copy(fresh = true))
+                    }
+                }
+                messages[update.message.chatId]?.takeIf { detached[update.message.chatId] != true }?.let { list ->
                     if (list.none { it.id == update.message.id }) {
                         list.add(0, update.message.toUi().copy(fresh = true))
                     }
@@ -845,8 +873,10 @@ class Telegram(
                     Notifications.onMessage?.invoke(this, update.message)
                 }
             }
-            is TdApi.UpdateChatNotificationSettings ->
+            is TdApi.UpdateChatNotificationSettings -> {
+                muteOverrides.remove(update.chatId)
                 chats[update.chatId]?.notifications = update.notificationSettings
+            }
             is TdApi.UpdateScopeNotificationSettings ->
                 scopeNotifications[update.scope.javaClass] = update.notificationSettings
             is TdApi.UpdateMessageSendSucceeded -> messages[update.message.chatId]?.let { list ->
@@ -875,11 +905,13 @@ class Telegram(
                     list[index] = list[index].copy(
                         reactions = update.interactionInfo?.reactions?.reactions?.toList().orEmpty(),
                         views = update.interactionInfo?.viewCount ?: list[index].views,
+                        comments = update.interactionInfo?.replyInfo?.replyCount ?: list[index].comments,
                     )
                 }
             }
             is TdApi.UpdateSupergroup -> {
                 forums[update.supergroup.id] = update.supergroup.isForum
+                supergroupInfo[update.supergroup.id] = update.supergroup
                 officialSupergroups[update.supergroup.id] = update.supergroup.usernames?.activeUsernames
                     ?.any { it.equals(OfficialChannel, ignoreCase = true) } == true
                 if (update.supergroup.memberCount > 0) supergroupMembers[update.supergroup.id] = update.supergroup.memberCount
@@ -976,6 +1008,8 @@ class Telegram(
             photo = chat.photo?.small
             lastMessage = chat.lastMessage
             unreadCount = chat.unreadCount
+            unreadMentions = chat.unreadMentionCount
+            markedUnread = chat.isMarkedAsUnread
             lastReadOutbox = chat.lastReadOutboxMessageId
             isGroup = chat.type is TdApi.ChatTypeBasicGroup || chat.type is TdApi.ChatTypeSupergroup
             privateUserId = (chat.type as? TdApi.ChatTypePrivate)?.userId ?: 0L
@@ -1011,9 +1045,17 @@ class Telegram(
         listsVersion
         return listCache.getOrPut(key) {
             Snapshot.withoutReadObservation {
-                chats.values
-                    .filter { key in it.positions }
-                    .sortedByDescending { it.positions[key] }
+                when (key) {
+                    ChatListKey.Unread -> chats.values
+                        .filter { ChatListKey.Main in it.positions && (it.unreadCount > 0 || it.markedUnread) }
+                        .sortedByDescending { it.positions[ChatListKey.Main] }
+                    ChatListKey.Mentions -> chats.values
+                        .filter { ChatListKey.Main in it.positions && it.unreadMentions > 0 }
+                        .sortedByDescending { it.positions[ChatListKey.Main] }
+                    else -> chats.values
+                        .filter { key in it.positions }
+                        .sortedByDescending { it.positions[key] }
+                }
             }
         }
     }
@@ -1029,7 +1071,7 @@ class Telegram(
 
     fun loadChats(key: ChatListKey) {
         val list: TdApi.ChatList = when (key) {
-            ChatListKey.Main -> TdApi.ChatListMain()
+            ChatListKey.Main, ChatListKey.Unread, ChatListKey.Mentions -> TdApi.ChatListMain()
             ChatListKey.Archive -> TdApi.ChatListArchive()
             is ChatListKey.Folder -> TdApi.ChatListFolder().apply { chatFolderId = key.id }
         }
@@ -1064,7 +1106,10 @@ class Telegram(
         return !isMuted(chat)
     }
 
+    private val muteOverrides = mutableStateMapOf<Long, Boolean>()
+
     fun isMuted(chat: ChatState): Boolean {
+        muteOverrides[chat.id]?.let { return it }
         val own = chat.notifications
         val muteFor = if (own == null || own.useDefaultMuteFor) {
             val scope = when {
@@ -1092,7 +1137,10 @@ class Telegram(
             useDefaultMuteFor = false
             muteFor = if (muted) MuteForever else 0
         }
-        send(TdApi.SetChatNotificationSettings(chat.id, settings))
+        muteOverrides[chat.id] = muted
+        send(TdApi.SetChatNotificationSettings(chat.id, settings)) { result ->
+            if (result is TdApi.Error) muteOverrides.remove(chat.id)
+        }
     }
 
     fun setPinned(chat: ChatState, key: ChatListKey, pinned: Boolean) {
@@ -1106,6 +1154,7 @@ class Telegram(
     fun isBot(chat: ChatState): Boolean = users[chat.privateUserId]?.type is TdApi.UserTypeBot
 
     private val forums = mutableStateMapOf<Long, Boolean>()
+    private val supergroupInfo = mutableStateMapOf<Long, TdApi.Supergroup>()
     private val officialSupergroups = mutableStateMapOf<Long, Boolean>()
 
     fun isOfficial(chat: ChatState): Boolean =
@@ -1134,6 +1183,33 @@ class Telegram(
         if (chat.privateUserId != 0L) send(TdApi.DeleteChatHistory(chat.id, true, false)) else send(TdApi.LeaveChat(chat.id))
     }
 
+    fun animatedEmoji(emoji: String, done: (TdApi.Sticker?) -> Unit) {
+        send(TdApi.GetAnimatedEmoji(emoji)) { result -> done((result as? TdApi.AnimatedEmoji)?.sticker) }
+    }
+
+    fun loadFolder(folderId: Int, done: (TdApi.ChatFolder?) -> Unit) {
+        send(TdApi.GetChatFolder(folderId)) { result -> done(result as? TdApi.ChatFolder) }
+    }
+
+    fun saveFolder(folderId: Int?, folder: TdApi.ChatFolder, done: (String?) -> Unit) {
+        val request = if (folderId == null) TdApi.CreateChatFolder(folder) else TdApi.EditChatFolder(folderId, folder)
+        send(request) { result -> done((result as? TdApi.Error)?.message) }
+    }
+
+    fun deleteFolder(folderId: Int) {
+        send(TdApi.DeleteChatFolder(folderId, longArrayOf()))
+    }
+
+    fun reorderFolders(ids: List<Int>) {
+        val byId = folders.associateBy { it.id }
+        val reordered = ids.mapNotNull { byId[it] }
+        if (reordered.size == folders.size) {
+            folders.clear()
+            folders.addAll(reordered)
+        }
+        send(TdApi.ReorderChatFolders(ids.toIntArray(), 0))
+    }
+
     fun addToFolder(chat: ChatState, folderId: Int) {
         send(TdApi.GetChatFolder(folderId)) { result ->
             val folder = result as? TdApi.ChatFolder ?: return@send
@@ -1153,6 +1229,7 @@ class Telegram(
 
     fun closeChat(chatId: Long) {
         if (openChatId == chatId) openChatId = 0L
+        if (detached.remove(chatId) == true) messages[chatId]?.clear()
         send(TdApi.CloseChat().apply { this.chatId = chatId })
     }
 
@@ -1179,6 +1256,110 @@ class Telegram(
             }
             onLoaded(loaded.size)
         }
+    }
+
+    var activeThread by mutableStateOf<Pair<Long, Long>?>(null)
+        private set
+    val threadMessages = mutableStateListOf<UiMessage>()
+    var threadRoot by mutableStateOf<UiMessage?>(null)
+        private set
+
+    fun openThread(channelId: Long, messageId: Long, onFail: (String) -> Unit) {
+        threadMessages.clear()
+        threadRoot = null
+        activeThread = null
+        send(TdApi.GetMessageThread(channelId, messageId)) { result ->
+            if (result !is TdApi.MessageThreadInfo) return@send onFail((result as? TdApi.Error)?.message?.let(::friendlyError) ?: "Comments are unavailable")
+            activeThread = result.chatId to result.messageThreadId
+            threadRoot = result.messages?.lastOrNull()?.toUi()
+            send(TdApi.GetChat(result.chatId))
+            send(TdApi.GetMessageThreadHistory(channelId, messageId, 0, 0, ThreadPageSize)) { history ->
+                val loaded = (history as? TdApi.Messages)?.messages?.filterNotNull().orEmpty()
+                    .filter { it.id != threadRoot?.id }
+                    .map { it.toUi() }
+                threadMessages.addAll(loaded.filter { message -> threadMessages.none { it.id == message.id } })
+            }
+        }
+    }
+
+    fun closeThread() {
+        activeThread = null
+        threadRoot = null
+        threadMessages.clear()
+    }
+
+    fun mustJoin(chatId: Long): Boolean {
+        val chat = chats[chatId] ?: return false
+        val group = supergroupInfo[chat.supergroupId] ?: return false
+        val member = group.status !is TdApi.ChatMemberStatusLeft && group.status !is TdApi.ChatMemberStatusBanned
+        return group.joinToSendMessages && !member
+    }
+
+    fun joinChat(chatId: Long, done: (String?) -> Unit) {
+        send(TdApi.JoinChat(chatId)) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+    }
+
+    fun sendComment(text: String) {
+        val (chatId, threadId) = activeThread ?: return
+        if (text.isBlank()) return
+        send(TdApi.SendMessage().apply {
+            this.chatId = chatId
+            topicId = TdApi.MessageTopicThread(threadId)
+            inputMessageContent = TdApi.InputMessageText().apply { this.text = TdApi.FormattedText(text, emptyArray()) }
+        }) { result -> if (result is TdApi.Error) AppLog.write("Comment failed ${result.code}: ${result.message}") }
+    }
+
+    val detached = mutableStateMapOf<Long, Boolean>()
+
+    fun jumpToStart(chatId: Long, done: () -> Unit) {
+        send(TdApi.GetChatHistory().apply {
+            this.chatId = chatId
+            fromMessageId = 1
+            offset = -(JumpPageSize - 1)
+            limit = JumpPageSize
+            onlyLocal = false
+        }) { result ->
+            val loaded = (result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty()
+            if (loaded.isEmpty()) return@send done()
+            val list = messages(chatId)
+            list.clear()
+            list.addAll(loaded.sortedByDescending { it.id }.map { it.toUi() })
+            detached[chatId] = true
+            done()
+        }
+    }
+
+    private val loadingNewer = HashSet<Long>()
+
+    fun loadNewer(chatId: Long) {
+        if (detached[chatId] != true || !loadingNewer.add(chatId)) return
+        val list = messages(chatId)
+        val newest = list.firstOrNull()?.id ?: return run { loadingNewer.remove(chatId) }
+        send(TdApi.GetChatHistory().apply {
+            this.chatId = chatId
+            fromMessageId = newest
+            offset = -JumpPageSize
+            limit = JumpPageSize + 1
+            onlyLocal = false
+        }) { result ->
+            loadingNewer.remove(chatId)
+            val known = list.mapTo(HashSet()) { it.id }
+            val newer = (result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty()
+                .filter { it.id > newest && it.id !in known }
+                .sortedByDescending { it.id }
+            if (newer.isEmpty()) {
+                detached[chatId] = false
+                return@send
+            }
+            list.addAll(0, newer.map { it.toUi() })
+        }
+    }
+
+    fun returnToLatest(chatId: Long, done: () -> Unit) {
+        val list = messages(chatId)
+        list.clear()
+        detached[chatId] = false
+        loadMoreMessages(chatId) { done() }
     }
 
     suspend fun loadWholeHistory(chatId: Long) {
@@ -1523,10 +1704,18 @@ class Telegram(
     private fun remoteInput(file: TdApi.File): TdApi.InputFile =
         file.remote?.id?.takeIf { it.isNotEmpty() }?.let { TdApi.InputFileRemote(it) } ?: TdApi.InputFileId(file.id)
 
-    fun sendSticker(chatId: Long, sticker: TdApi.Sticker, replyToId: Long = 0) {
+    fun removeRecentSticker(sticker: TdApi.Sticker, done: () -> Unit) {
+        send(TdApi.RemoveRecentSticker(false, remoteInput(sticker.sticker))) { done() }
+    }
+
+    fun sendSticker(chatId: Long, sticker: TdApi.Sticker, replyToId: Long = 0, silent: Boolean = false, schedule: TdApi.MessageSchedulingState? = null) {
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
             replyTo = replyInput(replyToId)
+            options = TdApi.MessageSendOptions().apply {
+                disableNotification = silent
+                schedulingState = schedule
+            }
             inputMessageContent = TdApi.InputMessageSticker().apply {
                 this.sticker = TdApi.InputSticker().apply {
                     this.sticker = remoteInput(sticker.sticker)
@@ -1534,6 +1723,17 @@ class Telegram(
                     height = sticker.height
                 }
                 emoji = sticker.emoji
+            }
+        })
+    }
+
+    fun sendVoice(chatId: Long, voice: com.pixelgram.desktop.core.VoiceNote, replyToId: Long = 0) {
+        send(TdApi.SendMessage().apply {
+            this.chatId = chatId
+            replyTo = replyInput(replyToId)
+            inputMessageContent = TdApi.InputMessageVoiceNote().apply {
+                voiceNote = TdApi.InputVoiceNote(TdApi.InputFileLocal(voice.file.absolutePath), voice.duration, voice.waveform)
+                caption = TdApi.FormattedText("", arrayOf())
             }
         })
     }
@@ -1828,6 +2028,7 @@ fun TdApi.Message.toUi(): UiMessage {
         keyboard = inlineRows(replyMarkup),
         viaBot = viaBotUserId,
         views = interactionInfo?.viewCount ?: 0,
+        comments = interactionInfo?.replyInfo?.replyCount ?: -1,
         pinned = isPinned,
         albumId = mediaAlbumId,
         signature = authorSignature.orEmpty(),

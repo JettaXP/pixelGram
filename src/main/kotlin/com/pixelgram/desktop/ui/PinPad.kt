@@ -26,6 +26,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,28 +72,37 @@ const val EnterKey = "enter"
 
 @Composable
 fun PinDots(count: Int, modifier: Modifier = Modifier) {
+    val shapes = remember { mutableStateListOf<Int>() }
+    val last = remember { intArrayOf(-1) }
+    while (shapes.size > count) shapes.removeAt(shapes.lastIndex)
+    while (shapes.size < count) {
+        val avoid = setOf(shapes.lastOrNull(), last[0])
+        val next = DotShapes.indices.filter { it !in avoid }.random()
+        shapes.add(next)
+        last[0] = next
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier.height(DotSize * 1.6f),
     ) {
-        repeat(count) { index -> PinDot(index) }
+        shapes.forEachIndexed { index, shape -> key(index, shape) { PinDot(index, shape) } }
     }
 }
 
 @Composable
-private fun PinDot(index: Int) {
+private fun PinDot(index: Int, shape: Int) {
     val color = MaterialTheme.colorScheme.onSurface
-    val morph = remember(index) { Morph(DotShapes[index % DotShapes.size], MaterialShapes.Circle) }
-    val progress = remember(index) { Animatable(0f) }
-    val grow = remember(index) { Animatable(0f) }
-    val slot = remember(index) { Animatable(0f) }
-    LaunchedEffect(index) {
+    val morph = remember(shape) { Morph(DotShapes[shape], MaterialShapes.Circle) }
+    val progress = remember { Animatable(0f) }
+    val grow = remember { Animatable(0f) }
+    val slot = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
         grow.animateTo(1f, spring(dampingRatio = GrowDamping, stiffness = GrowStiffness))
     }
-    LaunchedEffect(index) {
+    LaunchedEffect(Unit) {
         slot.animateTo(1f, tween(SlotMs, easing = FastOutSlowInEasing))
     }
-    LaunchedEffect(index) {
+    LaunchedEffect(Unit) {
         delay(ShapeHoldMs)
         progress.animateTo(1f, tween(MorphMs))
     }

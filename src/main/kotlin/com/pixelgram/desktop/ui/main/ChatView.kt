@@ -150,6 +150,15 @@ import it.tdlight.jni.TdApi
 import java.io.File
 import kotlinx.coroutines.launch
 import com.pixelgram.desktop.ui.OnEscape
+import androidx.compose.material3.toShape
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.AlertDialog
@@ -188,6 +197,11 @@ fun ChatView(
     }
     LaunchedEffect(nearTop, messages.size) {
         if (nearTop) telegram.loadMoreMessages(chat.id)
+    }
+    val nearBottom by remember { derivedStateOf { listState.firstVisibleItemIndex < NewerThreshold } }
+    val detached = telegram.detached[chat.id] == true
+    LaunchedEffect(nearBottom, detached, messages.size) {
+        if (nearBottom && detached) telegram.loadNewer(chat.id)
     }
     val newest = messages.firstOrNull()?.key
     val scope = rememberCoroutineScope()
@@ -252,6 +266,7 @@ fun ChatView(
     }
     var highlight by remember(chat.id) { mutableStateOf<Pair<Long, Long>?>(null) }
     var pinning by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
+    var commentsFor by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     val selected = remember(chat.id) { mutableStateListOf<Long>() }
     val selecting = selected.isNotEmpty()
     var deletingSelected by remember(chat.id) { mutableStateOf(false) }
@@ -405,6 +420,7 @@ fun ChatView(
         attach(files)
         asFiles = asDocuments || files.any { !Attachments.isPhoto(it) }
     }) {
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
         MiniPlayer(telegram)
         Row(
@@ -468,9 +484,11 @@ fun ChatView(
                     onOpenChat = onOpenChat,
                     onSearch = { MessageSearch.start(chat.id) },
                     onToBeginning = {
-                        scope.launch {
-                            telegram.loadWholeHistory(chat.id)
-                            if (shown.isNotEmpty()) listState.scrollToItem(shown.lastIndex)
+                        telegram.jumpToStart(chat.id) {
+                            scope.launch {
+                                withFrameNanos { }
+                                if (shown.isNotEmpty()) listState.scrollToItem(shown.lastIndex)
+                            }
                         }
                     },
                 )
@@ -673,6 +691,11 @@ fun ChatView(
                                     },
                                     onOrigin = openOrigin,
                                     onVia = { bot -> ComposerInsert.request = chat.id to "$bot " },
+                                    onComments = if (chat.isChannel) {
+                                        { commentsFor = message }
+                                    } else {
+                                        null
+                                    },
                                 )
                               }
                             }
@@ -692,7 +715,16 @@ fun ChatView(
                 dateAt = { index -> shown.getOrNull(index)?.date },
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
             )
-            ScrollDownButton(listState, Modifier.align(Alignment.BottomEnd).padding(16.dp))
+            ScrollDownButton(
+                listState,
+                Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                forceVisible = detached,
+                onLatest = if (detached) {
+                    { telegram.returnToLatest(chat.id) { scope.launch { listState.scrollToItem(0) } } }
+                } else {
+                    null
+                },
+            )
             if (chat.privateUserId != 0L && telegram.isBot(chat)) {
                 var welcome by remember(chat.id) { mutableStateOf(false) }
                 val empty = shown.isEmpty()
@@ -786,6 +818,16 @@ fun ChatView(
             },
         )
     }
+    AnimatedVisibility(
+        visible = commentsFor != null,
+        enter = slideInHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 3 } + fadeIn(),
+        exit = slideOutHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 3 } + fadeOut(),
+    ) {
+        var shownPost by remember { mutableStateOf(commentsFor) }
+        commentsFor?.let { shownPost = it }
+        shownPost?.let { post -> CommentsView(post, telegram, settings) { commentsFor = null } }
+    }
+    }
     }
 }
 
@@ -812,6 +854,7 @@ fun MessageBubble(
     onButton: ((TdApi.InlineKeyboardButton) -> Unit)? = null,
     onOrigin: ((TdApi.MessageOrigin) -> Unit)? = null,
     onVia: ((String) -> Unit)? = null,
+    onComments: (() -> Unit)? = null,
 ) {
     val seconds = settings.messageSeconds.value
     if (message.service) {
@@ -1033,6 +1076,7 @@ fun MessageBubble(
                         Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp).widthIn(min = KeyboardMinWidth),
                     )
                 }
+                if (message.comments >= 0 && onComments != null) CommentsBar(message.comments, onComments)
             }
         }
     }
@@ -1206,7 +1250,12 @@ private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @
 }
 
 private val MetaGap = 10.dp
+private const val NewerThreshold = 5
+private const val PanelScaleFrom = 0.9f
 private val SendSlot = 40.dp
+object VoiceButton {
+    var preferred by mutableStateOf(true)
+}
 private const val SelectedAlpha = 0.14f
 private const val SelectEdgePx = 48f
 private const val MentionDelayMs = 150L
@@ -1618,6 +1667,21 @@ private fun Composer(
             dateFor = null
         }
     }
+    val voice = remember(chatId) { VoiceRecording() }
+    val voiceScope = rememberCoroutineScope()
+    val releaseVoice: (Boolean) -> Unit = { cancel ->
+        if (cancel) {
+            voice.cancel()
+        } else {
+            voiceScope.launch {
+                voice.finish()?.let { note ->
+                    telegram.sendVoice(chatId, note, replyTo?.id ?: 0)
+                    onCancelReply()
+                }
+            }
+        }
+    }
+    Box(Modifier.fillMaxWidth()) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1777,21 +1841,31 @@ private fun Composer(
             IconToggleButton(checked = emojiOpen, onCheckedChange = { emojiOpen = it }) {
                 Icon(Icons.Outlined.EmojiEmotions, contentDescription = "Emoji")
             }
-            if (emojiOpen) {
+            val panelVisible = remember { MutableTransitionState(false) }
+            panelVisible.targetState = emojiOpen
+            if (panelVisible.currentState || panelVisible.targetState) {
                 Popup(
                     alignment = Alignment.BottomEnd,
                     offset = IntOffset(0, -with(LocalDensity.current) { 56.dp.roundToPx() }),
                     onDismissRequest = { emojiOpen = false },
                     properties = PopupProperties(focusable = mediaTab == GifTab),
                 ) {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visibleState = panelVisible,
+                        enter = fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                            scaleIn(MaterialTheme.motionScheme.defaultSpatialSpec(), initialScale = PanelScaleFrom, transformOrigin = TransformOrigin(1f, 1f)),
+                        exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                            scaleOut(MaterialTheme.motionScheme.fastSpatialSpec(), targetScale = PanelScaleFrom, transformOrigin = TransformOrigin(1f, 1f)),
+                    ) {
                     MediaPanel(
                         telegram = telegram,
                         chatId = chatId,
                         tab = mediaTab,
                         onTab = { mediaTab = it },
                         onEmoji = insert,
-                        onSticker = { sticker ->
-                            telegram.sendSticker(chatId, sticker, replyTo?.id ?: 0)
+                        whenOnline = telegram.chats[chatId]?.let { it.privateUserId != 0L && !telegram.isSavedMessages(chatId) && !telegram.isBot(it) } == true,
+                        onSticker = { sticker, how ->
+                            telegram.sendSticker(chatId, sticker, replyTo?.id ?: 0, how.silent, how.schedule)
                             onCancelReply()
                             emojiOpen = false
                         },
@@ -1806,6 +1880,7 @@ private fun Composer(
                             emojiOpen = false
                         },
                     )
+                    }
                 }
             }
         }
@@ -1815,17 +1890,61 @@ private fun Composer(
                     LoadingIndicator(Modifier.size(SendSlot))
                 }
             } else {
-                FilledIconButton(onClick = send, enabled = canSend) {
-                    Crossfade(editing != null) { isEditing ->
-                        if (isEditing) {
-                            Icon(Icons.Filled.Check, contentDescription = "Save")
+                val showMic = voice.active || (VoiceButton.preferred && !canSend && editing == null)
+                val swapFade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+                val swapSlide = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+                Box(
+                    Modifier.pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed && !voice.active) {
+                                    event.changes.forEach { it.consume() }
+                                    VoiceButton.preferred = !VoiceButton.preferred
+                                }
+                            }
+                        }
+                    },
+                ) {
+                    AnimatedContent(
+                        targetState = showMic,
+                        transitionSpec = {
+                            val direction = if (targetState) 1 else -1
+                            ((slideInHorizontally(swapSlide) { it * direction } + fadeIn(swapFade)) togetherWith
+                                (slideOutHorizontally(swapSlide) { -it * direction } + fadeOut(swapFade))) using SizeTransform(clip = false)
+                        },
+                    ) { mic ->
+                        if (mic) {
+                            MicButton(voice, onRelease = releaseVoice)
                         } else {
-                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                            FilledIconButton(onClick = send, enabled = canSend, shape = MaterialShapes.Cookie12Sided.toShape()) {
+                                Crossfade(editing != null) { isEditing ->
+                                    if (isEditing) {
+                                        Icon(Icons.Filled.Check, contentDescription = "Save")
+                                    } else {
+                                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+    }
+    AnimatedVisibility(
+        visible = voice.active,
+        enter = fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()) +
+            expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), expandFrom = Alignment.End),
+        exit = if (voice.cancelled) {
+            slideOutHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { -it / 3 } + fadeOut(MaterialTheme.motionScheme.fastEffectsSpec())
+        } else {
+            fadeOut(MaterialTheme.motionScheme.fastEffectsSpec())
+        },
+        modifier = Modifier.matchParentSize().padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 12.dp + SendSlot + 8.dp),
+    ) {
+        RecordingBar(voice, Modifier.fillMaxSize())
+    }
     }
     AnimatedVisibility(
         visible = keyboard != null && keyboardOpen,

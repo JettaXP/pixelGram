@@ -4,6 +4,7 @@ import com.pixelgram.desktop.core.AppLock
 import com.pixelgram.desktop.ui.LockScreen
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
+import com.pixelgram.desktop.ui.EasterEggOverlay
 import com.pixelgram.desktop.ui.main.BotAnswer
 import com.pixelgram.desktop.ui.main.TopNotice
 import com.pixelgram.desktop.ui.main.AudioQueueEffects
@@ -422,6 +423,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
             exit = androidx.compose.animation.fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec()) +
                 androidx.compose.animation.scaleOut(MaterialTheme.motionScheme.defaultSpatialSpec(), targetScale = LockScaleFrom),
         ) { LockScreen() }
+        EasterEggOverlay()
         BotAnswer(
             TopNotice.text?.let { it to false },
             onDismiss = { TopNotice.text = null },

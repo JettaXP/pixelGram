@@ -28,7 +28,7 @@ private const val SnapCloserItems = 20
 private const val SnapToItem = 6
 
 @Composable
-fun ScrollDownButton(listState: LazyListState, modifier: Modifier = Modifier) {
+fun ScrollDownButton(listState: LazyListState, modifier: Modifier = Modifier, forceVisible: Boolean = false, onLatest: (() -> Unit)? = null) {
     var visible by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(listState) {
@@ -45,7 +45,7 @@ fun ScrollDownButton(listState: LazyListState, modifier: Modifier = Modifier) {
             }
     }
     AnimatedVisibility(
-        visible = visible,
+        visible = visible || forceVisible,
         enter = scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()),
         exit = scaleOut(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
         modifier = modifier,
@@ -53,6 +53,7 @@ fun ScrollDownButton(listState: LazyListState, modifier: Modifier = Modifier) {
         SmallFloatingActionButton(
             onClick = {
                 visible = false
+                if (onLatest != null) return@SmallFloatingActionButton onLatest()
                 scope.launch {
                     if (listState.firstVisibleItemIndex > SnapCloserItems) listState.scrollToItem(SnapToItem)
                     listState.animateScrollToItem(0)

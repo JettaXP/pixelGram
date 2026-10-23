@@ -33,7 +33,7 @@ object Sounds {
     private fun play(data: ByteArray) {
         Thread {
             runCatching {
-                val clip = AudioSystem.getClip()
+                val clip = AudioDevices.clip()
                 AudioSystem.getAudioInputStream(ByteArrayInputStream(data)).use { clip.open(it) }
                 clip.addLineListener { if (it.type == LineEvent.Type.STOP) clip.close() }
                 clip.start()

@@ -63,30 +63,39 @@ class CameraSession private constructor(private val grabber: FFmpegFrameGrabber)
     companion object {
         private const val JpegQuality = 92
 
-        fun open(): CameraSession? = runCatching {
+        fun devices(): List<String> = runCatching {
             avdevice.avdevice_register_all()
+            when {
+                AppPaths.isWindows -> windowsDevices()
+                AppPaths.isMac -> listOf("0")
+                else -> File("/dev").listFiles { file -> file.name.startsWith("video") }
+                    ?.map { it.absolutePath }?.sorted().orEmpty()
+            }
+        }.getOrDefault(emptyList())
+
+        fun open(device: String = ""): CameraSession? = runCatching {
+            avdevice.avdevice_register_all()
+            val chosen = device.takeIf { it.isNotEmpty() && it in devices() } ?: devices().firstOrNull() ?: return null
             val grabber = when {
-                AppPaths.isWindows -> FFmpegFrameGrabber("video=${windowsDevice() ?: return null}").apply { format = "dshow" }
-                AppPaths.isMac -> FFmpegFrameGrabber("0").apply { format = "avfoundation" }
-                else -> FFmpegFrameGrabber(linuxDevice() ?: return null).apply { format = "video4linux2" }
+                AppPaths.isWindows -> FFmpegFrameGrabber("video=$chosen").apply { format = "dshow" }
+                AppPaths.isMac -> FFmpegFrameGrabber(chosen).apply { format = "avfoundation" }
+                else -> FFmpegFrameGrabber(chosen).apply { format = "video4linux2" }
             }
             grabber.pixelFormat = avutil.AV_PIX_FMT_BGRA
             CameraSession(grabber)
         }.onFailure { AppLog.write("Camera unavailable", it) }.getOrNull()
 
-        private fun linuxDevice(): String? =
-            File("/dev").listFiles { file -> file.name.startsWith("video") }?.minByOrNull { it.name }?.absolutePath
-
-        private fun windowsDevice(): String? {
-            val format = avformat.av_find_input_format("dshow") ?: return null
+        private fun windowsDevices(): List<String> {
+            val format = avformat.av_find_input_format("dshow") ?: return emptyList()
             val holder = PointerPointer<AVDeviceInfoList>(1L)
             return try {
-                if (avdevice.avdevice_list_input_sources(format, null as BytePointer?, null as AVDictionary?, holder) <= 0) return null
+                if (avdevice.avdevice_list_input_sources(format, null as BytePointer?, null as AVDictionary?, holder) <= 0) return emptyList()
                 val list = AVDeviceInfoList(holder.get(0))
                 (0 until list.nb_devices())
                     .map { list.devices(it) }
-                    .firstOrNull { device -> device.device_name()?.string?.isNotBlank() == true }
-                    ?.device_description()?.string
+                    .filter { device -> device.device_name()?.string?.isNotBlank() == true }
+                    .mapNotNull { it.device_description()?.string }
+                    .distinct()
             } finally {
                 avdevice.avdevice_free_list_devices(holder)
             }

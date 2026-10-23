@@ -38,6 +38,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -83,6 +84,7 @@ data class InfoRow(
     val value: String,
     val phone: Boolean = false,
     val onEdit: (() -> Unit)? = null,
+    val trailing: (@Composable () -> Unit)? = null,
 )
 
 @Composable
@@ -110,8 +112,31 @@ fun InfoGroup(rows: List<InfoRow>) {
                     onClick = { row.onEdit?.invoke() ?: copy() },
                     shapes = ListItemDefaults.segmentedShapes(index, rows.size),
                     leadingContent = { Icon(row.icon, contentDescription = null) },
-                    supportingContent = { Text(row.title) },
-                    trailingContent = row.onEdit?.let { { Icon(Icons.Outlined.Edit, contentDescription = "Edit") } },
+                    supportingContent = {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            modifier = Modifier.padding(top = 4.dp),
+                        ) {
+                            Text(
+                                row.title,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            )
+                        }
+                    },
+                    trailingContent = when {
+                        row.trailing != null || row.onEdit != null -> {
+                            {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    row.trailing?.invoke()
+                                    if (row.onEdit != null) Icon(Icons.Outlined.Edit, contentDescription = "Edit")
+                                }
+                            }
+                        }
+                        else -> null
+                    },
                 ) {
                     if (row.phone) PhoneText(row.value) else EmojiText(row.value)
                 }

@@ -14,6 +14,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Forum
@@ -161,15 +167,42 @@ internal fun CapsuleFolders(
 private val LabelGap = 4.dp
 private val CapsuleInset = 12.dp
 private val IndicatorSidePadding = 16.dp
-internal fun folderIcon(name: String, filled: Boolean): ImageVector = when (name) {
-    "All" -> if (filled) Icons.Filled.Forum else Icons.Outlined.Forum
-    "Unread" -> if (filled) Icons.Filled.MarkChatUnread else Icons.Outlined.MarkChatUnread
-    "Private" -> if (filled) Icons.Filled.Person else Icons.Outlined.Person
-    "Groups" -> if (filled) Icons.Filled.Groups else Icons.Outlined.Groups
-    "Channels" -> if (filled) Icons.Filled.Campaign else Icons.Outlined.Campaign
-    "Bots" -> if (filled) Icons.Filled.SmartToy else Icons.Outlined.SmartToy
-    "Favorite" -> if (filled) Icons.Filled.Star else Icons.Outlined.StarOutline
-    "Home" -> if (filled) Icons.Filled.Home else Icons.Outlined.Home
-    "Work" -> if (filled) Icons.Filled.Work else Icons.Outlined.Work
-    else -> if (filled) Icons.Filled.Folder else Icons.Outlined.Folder
+internal fun folderIcon(name: String, filled: Boolean): ImageVector {
+    val pair = FolderIcons[name] ?: FolderIcons.getValue("Custom")
+    return if (filled) pair.first else pair.second
 }
+
+internal val FolderIcons: Map<String, Pair<ImageVector, ImageVector>> = linkedMapOf(
+    "All" to (Icons.Filled.Forum to Icons.Outlined.Forum),
+    "Unread" to (Icons.Filled.MarkChatUnread to Icons.Outlined.MarkChatUnread),
+    "Mention" to (Icons.Filled.AlternateEmail to Icons.Outlined.AlternateEmail),
+    "Unmuted" to (Icons.Filled.NotificationsActive to Icons.Outlined.NotificationsActive),
+    "Private" to (Icons.Filled.Person to Icons.Outlined.Person),
+    "Groups" to (Icons.Filled.Groups to Icons.Outlined.Groups),
+    "Channels" to (Icons.Filled.Campaign to Icons.Outlined.Campaign),
+    "Bots" to (Icons.Filled.SmartToy to Icons.Outlined.SmartToy),
+    "Flag" to (Icons.Filled.Flag to Icons.Outlined.Flag),
+    "Favorite" to (Icons.Filled.Star to Icons.Outlined.StarOutline),
+    "Love" to (Icons.Filled.Favorite to Icons.Outlined.FavoriteBorder),
+    "Home" to (Icons.Filled.Home to Icons.Outlined.Home),
+    "Work" to (Icons.Filled.Work to Icons.Outlined.Work),
+    "Study" to (Icons.Filled.School to Icons.Outlined.School),
+    "Book" to (Icons.AutoMirrored.Filled.MenuBook to Icons.AutoMirrored.Outlined.MenuBook),
+    "Trade" to (Icons.AutoMirrored.Filled.TrendingUp to Icons.AutoMirrored.Outlined.TrendingUp),
+    "Money" to (Icons.Filled.Payments to Icons.Outlined.Payments),
+    "Travel" to (Icons.Filled.Luggage to Icons.Outlined.Luggage),
+    "Airplane" to (Icons.Filled.Flight to Icons.Outlined.Flight),
+    "Game" to (Icons.Filled.SportsEsports to Icons.Outlined.SportsEsports),
+    "Sport" to (Icons.Filled.SportsSoccer to Icons.Outlined.SportsSoccer),
+    "Party" to (Icons.Filled.Celebration to Icons.Outlined.Celebration),
+    "Mask" to (Icons.Filled.TheaterComedy to Icons.Outlined.TheaterComedy),
+    "Crown" to (Icons.Filled.WorkspacePremium to Icons.Outlined.WorkspacePremium),
+    "Cat" to (Icons.Filled.Pets to Icons.Outlined.Pets),
+    "Flower" to (Icons.Filled.LocalFlorist to Icons.Outlined.LocalFlorist),
+    "Note" to (Icons.Filled.MusicNote to Icons.Outlined.MusicNote),
+    "Palette" to (Icons.Filled.Palette to Icons.Outlined.Palette),
+    "Light" to (Icons.Filled.Lightbulb to Icons.Outlined.Lightbulb),
+    "Like" to (Icons.Filled.ThumbUp to Icons.Outlined.ThumbUp),
+    "Setup" to (Icons.Filled.Settings to Icons.Outlined.Settings),
+    "Custom" to (Icons.Filled.Folder to Icons.Outlined.Folder),
+)

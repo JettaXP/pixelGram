@@ -1,5 +1,12 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.material.icons.outlined.NotificationsOff
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Alarm
+import androidx.compose.material.icons.outlined.Collections
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -90,9 +97,10 @@ fun MediaPanel(
     tab: Int,
     onTab: (Int) -> Unit,
     onEmoji: (String) -> Unit,
-    onSticker: (TdApi.Sticker) -> Unit,
+    onSticker: (TdApi.Sticker, StickerSend) -> Unit,
     onGif: (TdApi.Animation) -> Unit,
     onInline: (Long, String) -> Unit,
+    whenOnline: Boolean = false,
 ) {
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
@@ -108,25 +116,36 @@ fun MediaPanel(
             }
             when (tab) {
                 0 -> EmojiPanel(onPick = onEmoji, modifier = Modifier.weight(1f))
-                1 -> StickersTab(telegram, onSticker, Modifier.weight(1f))
+                1 -> StickersTab(telegram, chatId, whenOnline, onSticker, Modifier.weight(1f))
                 else -> GifsTab(telegram, chatId, onGif, onInline, Modifier.weight(1f))
             }
         }
     }
 }
 
+class StickerSend(val silent: Boolean = false, val schedule: TdApi.MessageSchedulingState? = null)
+
 private class StickerSection(val id: Long, val title: String, val icon: TdApi.Sticker?, val thumb: TdApi.Thumbnail?)
 
 @Composable
-private fun StickersTab(telegram: Telegram, onSticker: (TdApi.Sticker) -> Unit, modifier: Modifier) {
+private fun StickersTab(
+    telegram: Telegram,
+    chatId: Long,
+    whenOnline: Boolean,
+    onSticker: (TdApi.Sticker, StickerSend) -> Unit,
+    modifier: Modifier,
+) {
+    var preview by remember { mutableStateOf<TdApi.Sticker?>(null) }
+    var scheduling by remember { mutableStateOf<TdApi.Sticker?>(null) }
     var recent by remember { mutableStateOf<List<TdApi.Sticker>?>(null) }
+    val reloadRecent = { telegram.recentStickers { recent = it } }
     var favorites by remember { mutableStateOf<List<TdApi.Sticker>>(emptyList()) }
     var menuFor by remember { mutableStateOf<TdApi.Sticker?>(null) }
     val reloadFavorites = { telegram.favoriteStickers { favorites = it } }
     var sets by remember { mutableStateOf<List<TdApi.StickerSetInfo>>(emptyList()) }
     val loaded = remember { mutableStateMapOf<Long, List<TdApi.Sticker>>() }
     LaunchedEffect(Unit) {
-        telegram.recentStickers { recent = it }
+        reloadRecent()
         reloadFavorites()
         telegram.installedStickerSets { list ->
             sets = list
@@ -142,7 +161,8 @@ private fun StickersTab(telegram: Telegram, onSticker: (TdApi.Sticker) -> Unit, 
     val grid = rememberLazyGridState()
     val scope = rememberCoroutineScope()
     val current by remember(starts) { derivedStateOf { starts.indexOfLast { it <= grid.firstVisibleItemIndex }.coerceAtLeast(0) } }
-    Column(modifier) {
+    Box(modifier) {
+    Column(Modifier.fillMaxSize()) {
         if (recent == null && sets.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
         } else {
@@ -166,30 +186,51 @@ private fun StickersTab(telegram: Telegram, onSticker: (TdApi.Sticker) -> Unit, 
                                 .size(StickerCell)
                                 .clip(RoundedCornerShape(12.dp))
                                 .onSecondaryClick { menuFor = sticker }
-                                .clickable { onSticker(sticker) }
+                                .pointerInput(sticker.sticker.id) {
+                                    detectTapGestures(
+                                        onTap = { onSticker(sticker, StickerSend()) },
+                                        onLongPress = { preview = sticker },
+                                        onPress = {
+                                            tryAwaitRelease()
+                                            preview = null
+                                        },
+                                    )
+                                }
                                 .padding(4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             StickerThumb(sticker, telegram)
                             if (menuFor === sticker) {
                                 val favorite = favorites.any { it.sticker.id == sticker.sticker.id }
+                                val item = @Composable { label: String, icon: ImageVector, action: () -> Unit ->
+                                    DropdownMenuItem(
+                                        text = { Text(label) },
+                                        leadingIcon = { Icon(icon, contentDescription = null) },
+                                        onClick = {
+                                            menuFor = null
+                                            action()
+                                        },
+                                    )
+                                }
                                 DropdownMenu(expanded = true, onDismissRequest = { menuFor = null }, shape = RoundedCornerShape(16.dp)) {
-                                    DropdownMenuItem(
-                                        text = { Text(if (favorite) "Remove from favorites" else "Add to favorites") },
-                                        leadingIcon = { Icon(if (favorite) Icons.Outlined.StarOutline else Icons.Outlined.Star, contentDescription = null) },
-                                        onClick = {
-                                            menuFor = null
-                                            telegram.setStickerFavorite(sticker, !favorite) { reloadFavorites() }
-                                        },
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Send") },
-                                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = null) },
-                                        onClick = {
-                                            menuFor = null
-                                            onSticker(sticker)
-                                        },
-                                    )
+                                    item("Send without sound", Icons.Outlined.NotificationsOff) { onSticker(sticker, StickerSend(silent = true)) }
+                                    item("Schedule message", Icons.Outlined.CalendarMonth) { scheduling = sticker }
+                                    if (whenOnline) {
+                                        item("Send when online", Icons.Outlined.Alarm) {
+                                            onSticker(sticker, StickerSend(schedule = TdApi.MessageSchedulingStateSendWhenOnline()))
+                                        }
+                                    }
+                                    item(if (favorite) "Remove from Favorites" else "Add to Favorites", if (favorite) Icons.Outlined.StarOutline else Icons.Outlined.Star) {
+                                        telegram.setStickerFavorite(sticker, !favorite) { reloadFavorites() }
+                                    }
+                                    if (sticker.setId != 0L) {
+                                        item("View Sticker Set", Icons.Outlined.Collections) {
+                                            StickerPack.current = StickerPackRequest(telegram, chatId, sticker.setId)
+                                        }
+                                    }
+                                    if (section.id == 0L) {
+                                        item("Remove from Recent", Icons.Outlined.Delete) { telegram.removeRecentSticker(sticker) { reloadRecent() } }
+                                    }
                                 }
                             }
                         }
@@ -215,6 +256,33 @@ private fun StickersTab(telegram: Telegram, onSticker: (TdApi.Sticker) -> Unit, 
                     }
                 }
             }
+        }
+    }
+    androidx.compose.animation.AnimatedVisibility(
+        visible = preview != null,
+        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = 0.6f),
+        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = 0.6f),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        var shown by remember { mutableStateOf(preview) }
+        preview?.let { shown = it }
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.scrim.copy(alpha = PreviewScrim)),
+        ) {
+            shown?.let { sticker ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    EmojiText(sticker.emoji, style = MaterialTheme.typography.headlineMedium)
+                    StickerView(sticker, telegram, PreviewSize)
+                }
+            }
+        }
+    }
+    }
+    scheduling?.let { sticker ->
+        ScheduleDialog(onDismiss = { scheduling = null }) { date ->
+            scheduling = null
+            onSticker(sticker, StickerSend(schedule = TdApi.MessageSchedulingStateSendAtDate(date, 0)))
         }
     }
 }
@@ -304,3 +372,44 @@ private fun GifCellView(animation: TdApi.Animation, telegram: Telegram, onClick:
             .clickable(onClick = onClick),
     )
 }
+
+private val PreviewSize = 200.dp
+private const val PreviewScrim = 0.45f
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun ScheduleDialog(onDismiss: () -> Unit, onPick: (Int) -> Unit) {
+    var day by remember { mutableStateOf<Long?>(null) }
+    val dateState = androidx.compose.material3.rememberDatePickerState(initialSelectedDateMillis = System.currentTimeMillis())
+    val now = java.time.LocalTime.now().plusMinutes(ScheduleLeadMinutes)
+    val timeState = androidx.compose.material3.rememberTimePickerState(initialHour = now.hour, initialMinute = now.minute, is24Hour = true)
+    val pickedDay = day
+    if (pickedDay == null) {
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = { day = dateState.selectedDateMillis },
+                    enabled = dateState.selectedDateMillis != null,
+                ) { Text("Next") }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") } },
+        ) { androidx.compose.material3.DatePicker(dateState) }
+    } else {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Send at") },
+            text = { androidx.compose.material3.TimePicker(timeState) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    val date = java.time.Instant.ofEpochMilli(pickedDay).atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                    val at = date.atTime(timeState.hour, timeState.minute).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+                    onPick(at.toInt())
+                }) { Text("Schedule") }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") } },
+        )
+    }
+}
+
+private const val ScheduleLeadMinutes = 10L

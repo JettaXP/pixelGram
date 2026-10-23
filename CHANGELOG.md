@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.25.0 יִשְׂרָאֵל
+
+### Voice messages
+- Hold the microphone button to record a voice message. The message bar smoothly turns into a recording strip whose wave follows how loud you speak.
+- Release to send: the wave folds into a voice bubble that floats into the chat. Slide left or press Escape to cancel.
+- Right-click the send or microphone button to swap them; one slides away as the other slides in. The microphone button is a 4-sided cookie, and the send button is a 12-sided cookie.
+
+### Speakers and Camera
+- New settings section: choose the output device, microphone and camera, with a live microphone level and a camera preview.
+- Voice messages record from the chosen microphone, and sounds and video play through the chosen output device.
+
+### Folders
+- Create, edit and delete chat folders right in Settings, including name, icon, chat types and chats.
+- Drag folders to change their order.
+- Many more folder icons, including a flag.
+- New special folders, Unread and Mentions, with their own names and icons; turn them on in Settings → Folders.
+
+### Channels
+- "Leave a comment" bar under channel posts opens the discussion. In groups that require it, you are asked to join before commenting.
+
+### Chats
+- Hold a sticker to preview it with its emoji. Right-click a sticker for more options: send without sound, schedule, send when online, favorites, view the pack, and remove from recent (in Recent only).
+- The emoji, sticker and GIF panel now closes with an animation.
+- Link previews span the full width of the message.
+- "To beginning" now jumps instantly.
+- Video: no more stuck loader, smoother playback and better quality, plus a volume slider.
+
+### Profiles
+- Every username, your own and other people's, has a QR code button.
+- Profile details show their label (Username, Bio, ID…) in a small pill.
+- Muting from a profile is instant and animated.
+- The avatar hover glow follows your avatar shape.
+
+### Other
+- Passcode dots use a different shape each time, never the same twice in a row.
+- Escape closes the side menu first and also leaves the archive.
+- The version in pixelGram Preferences now sits in a capsule. Try clicking it a few times.
+
 ## 0.22.1 Pass
 
 - Passcode dots appear smoothly: the row makes room for each new digit and the dot fades and grows in instead of popping up.

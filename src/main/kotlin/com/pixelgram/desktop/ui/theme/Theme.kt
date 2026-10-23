@@ -58,6 +58,7 @@ fun appColorScheme(settings: AppSettings): ColorScheme {
 @Composable
 fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     PowerSaving.settings = settings
+    com.pixelgram.desktop.core.AudioDevices.settings = settings
     MaterialExpressiveTheme(
         colorScheme = appColorScheme(settings),
         motionScheme = if (settings.interfaceAnimations.value) MotionScheme.expressive() else InstantMotion,

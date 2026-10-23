@@ -80,6 +80,14 @@ class AppSettings private constructor(private val props: Properties) {
     val materialFolders = bool("materialFolders", true)
     val hideAllChats = bool("hideAllChats", false)
     val capsuleFolders = bool("capsuleFolders", false)
+    val folderOrder = string("folderOrder", "")
+    val folderIcons = string("folderIcons", "")
+    val unreadFolder = bool("unreadFolder", false)
+    val unreadFolderName = string("unreadFolderName", "Unread")
+    val unreadFolderIcon = string("unreadFolderIcon", "Unread")
+    val mentionsFolder = bool("mentionsFolder", false)
+    val mentionsFolderName = string("mentionsFolderName", "Mentions")
+    val mentionsFolderIcon = string("mentionsFolderIcon", "Mention")
     val chatListWidth = int("chatListWidth", 360)
     val customTitleBar = bool("customTitleBar", !AppPaths.isLinux)
     val messageSeconds = bool("messageSeconds", false)
@@ -101,6 +109,11 @@ class AppSettings private constructor(private val props: Properties) {
     fun avatarShapeFor(kind: AvatarKind?): AvatarShape = kind?.let(::kindShape) ?: avatarShape.value
 
     val deviceName = string("deviceName", "")
+    val outputDevice = string("outputDevice", "")
+    val inputDevice = string("inputDevice", "")
+    val cameraDevice = string("cameraDevice", "")
+    val callsSameDevices = bool("callsSameDevices", true)
+    val acceptCalls = bool("acceptCalls", true)
     val passcodeHash = string("passcodeHash", "")
     val passcodeSalt = string("passcodeSalt", "")
     val autoLockMinutes = int("autoLockMinutes", 0)
@@ -124,18 +137,19 @@ class AppSettings private constructor(private val props: Properties) {
     private val all: List<Setting<*>> = listOf(
         themeMode, seedColor, matugen, emojiStyle, notificationSound, notificationsMuted,
         notificationPopups, notificationSide, notificationStyle,
-        materialFolders, hideAllChats,
+        materialFolders, hideAllChats, folderOrder, folderIcons,
+        unreadFolder, unreadFolderName, unreadFolderIcon, mentionsFolder, mentionsFolderName, mentionsFolderIcon,
         capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, checkUpdates,
         doubleClickOwn, doubleClickOther, doubleClickEmoji,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius,
-        deviceName, passcodeHash, passcodeSalt, autoLockMinutes,
+        deviceName, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
         stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations,
         apiId, apiHash,
         accounts, activeAccount,
     ) + avatarKindShapes.values
 
-    private val localOnly = setOf(apiId, apiHash, accounts, activeAccount)
+    private val localOnly = setOf(apiId, apiHash, accounts, activeAccount, outputDevice, inputDevice, cameraDevice)
 
     fun snapshot(): Properties = Properties().apply {
         for (setting in all) {

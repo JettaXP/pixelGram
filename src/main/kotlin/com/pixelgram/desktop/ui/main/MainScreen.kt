@@ -144,15 +144,7 @@ fun MainScreen(
     onOpenChatInside: (Long) -> Unit = onOpenChat,
     onChatBack: (() -> Unit)? = null,
 ) {
-    val tabs = buildList {
-        if (!settings.hideAllChats.value || telegram.folders.isEmpty()) {
-            add(FolderTab(ChatListKey.Main, "All chats", "All", telegram.unread[ChatListKey.Main]))
-        }
-        telegram.folders.forEach {
-            val key = ChatListKey.Folder(it.id)
-            add(FolderTab(key, it.title, it.icon, telegram.unread[key]))
-        }
-    }
+    val tabs = FolderLayout.tabs(telegram, settings)
     var selectedKey by rememberSaveable { mutableStateOf<ChatListKey>(ChatListKey.Main) }
     if (selectedKey != ChatListKey.Archive && tabs.none { it.key == selectedKey } && tabs.isNotEmpty()) {
         selectedKey = tabs.first().key
@@ -281,9 +273,11 @@ fun MainScreen(
                 )
                 OnEscape {
                     when {
+                        menuOpen -> scope.launch { railState.collapse() }
                         MessageSearch.open -> MessageSearch.open = false
                         onChatBack != null -> onChatBack()
                         openChatId != null -> onCloseChat()
+                        selectedKey == ChatListKey.Archive -> selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main
                         else -> return@OnEscape false
                     }
                     true

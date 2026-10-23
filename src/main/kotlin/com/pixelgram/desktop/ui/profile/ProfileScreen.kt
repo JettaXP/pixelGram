@@ -39,6 +39,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.pixelgram.desktop.ui.toShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppSettings
@@ -47,6 +49,7 @@ import com.pixelgram.desktop.telegram.fullName
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.ui.components.InfoGroup
 import com.pixelgram.desktop.ui.components.InfoRow
+import com.pixelgram.desktop.ui.components.UsernameQrButton
 import com.pixelgram.desktop.ui.components.PageScaffold
 import com.pixelgram.desktop.ui.main.Attachments
 import com.pixelgram.desktop.ui.theme.EmojiText
@@ -110,7 +113,11 @@ fun ProfileScreen(
                 editable = true,
             )
             AvatarEditor(160.dp, onPicked = pickPhoto, modifier = Modifier.align(Alignment.BottomCenter)) {
-                Box(Modifier.clickable(enabled = me.profilePhoto != null) { gallery = true }) {
+                Box(
+                    Modifier
+                        .clip(settings.avatarShapeFor(null).toShape(settings.avatarCorner.value))
+                        .clickable(enabled = me.profilePhoto != null) { gallery = true },
+                ) {
                     Avatar(name, me.profilePhoto?.small, telegram, settings, size = 160.dp, full = me.profilePhoto?.big)
                 }
             }
@@ -127,6 +134,9 @@ fun ProfileScreen(
                     "Username",
                     me.usernames?.activeUsernames?.firstOrNull()?.let { "@$it" } ?: "Not set",
                     onEdit = { editing = ProfileField.Username },
+                    trailing = me.usernames?.activeUsernames?.firstOrNull()?.let { username ->
+                        { UsernameQrButton(username, name, me.profilePhoto, telegram) }
+                    },
                 )
             )
             add(

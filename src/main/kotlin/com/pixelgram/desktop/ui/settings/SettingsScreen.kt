@@ -141,6 +141,8 @@ import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.telegram.fullName
 import com.pixelgram.desktop.ui.AvatarShape
 import com.pixelgram.desktop.ui.auth.QrCode
+import com.pixelgram.desktop.ui.EasterEgg
+import com.pixelgram.desktop.ui.components.UsernameQrDialog
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.ui.components.AvatarImage
 import com.pixelgram.desktop.ui.components.InfoGroup
@@ -291,7 +293,7 @@ fun SettingsScreen(
                 ) { preferencesPane ->
                   Column {
                 if (preferencesPane) {
-                    PreferencesHeader()
+                    PreferencesHeader(telegram)
                     Header("Categories")
                     val items = Section.entries.filter { it.pixel }
                     SegmentedGroup {
@@ -389,12 +391,12 @@ fun SettingsScreen(
                             inPreferences = true
                             section = Section.Bubbles
                         }
-                        Section.Folders -> FoldersSection(telegram)
+                        Section.Folders -> FoldersSection(telegram, settings)
                         Section.Advanced -> AdvancedSection(telegram)
                         Section.Language -> Description("pixelGram is in English for now. More languages are coming.")
                         Section.Notifications -> NotificationsSection(settings)
                         Section.Battery -> BatterySection(settings)
-                        Section.SpeakersCamera -> Description("Not available in pixelGram yet.")
+                        Section.SpeakersCamera -> DevicesSection(settings)
                     }
                 }
                 }
@@ -437,44 +439,31 @@ private fun ProfileCard(telegram: Telegram, settings: AppSettings, onClick: () -
         }
     }
     if (showQr && username != null) {
-        AlertDialog(
-            onDismissRequest = { showQr = false },
-            text = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    AvatarImage(
-                        me.fullName(),
-                        me.profilePhoto?.small,
-                        telegram,
-                        AvatarShape.Cookie12Sided.toShape(0),
-                        size = QrAvatarSize,
-                        full = me.profilePhoto?.big,
-                    )
-                    QrCode("https://t.me/$username", Modifier.padding(top = 16.dp).size(260.dp))
-                    Text(
-                        "@$username",
-                        style = MaterialTheme.typography.titleMediumEmphasized,
-                        modifier = Modifier.padding(top = 12.dp),
-                    )
-                }
-            },
-            confirmButton = { TextButton(onClick = { showQr = false }) { Text("Close") } },
-        )
+        UsernameQrDialog(username, me.fullName(), me.profilePhoto, telegram) { showQr = false }
     }
 }
 
 @Composable
-private fun PreferencesHeader() {
+private fun PreferencesHeader(telegram: Telegram) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
     ) {
         themedAppIcon()?.let { Image(it, contentDescription = null, modifier = Modifier.size(96.dp)) }
         Text("pixelGram Desktop", style = MaterialTheme.typography.titleLargeEmphasized)
-        Text(
-            listOf("v${BuildConfig.VERSION}", BuildConfig.CODENAME).filter { it.isNotBlank() }.joinToString(" · "),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Surface(
+            onClick = { EasterEgg.tap(telegram) },
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.padding(top = 6.dp),
+        ) {
+            Text(
+                listOf("v${BuildConfig.VERSION}", BuildConfig.CODENAME).filter { it.isNotBlank() }.joinToString(" · "),
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+            )
+        }
     }
 }
 
@@ -1114,27 +1103,6 @@ private fun NotificationsSection(settings: AppSettings) {
     ) {
         Text("Show test notification")
     }
-}
-
-@Composable
-private fun FoldersSection(telegram: Telegram) {
-    val folders = telegram.folders
-    if (folders.isEmpty()) {
-        Description("You have no chat folders.")
-    } else {
-        SegmentedGroup {
-            folders.forEachIndexed { index, folder ->
-                SegmentedListItem(
-                    onClick = {},
-                    shapes = ListItemDefaults.segmentedShapes(index, folders.size),
-                    leadingContent = { Icon(Icons.Outlined.Folder, contentDescription = null) },
-                ) {
-                    EmojiText(folder.title)
-                }
-            }
-        }
-    }
-    Description("Create and edit folders in another Telegram app for now; changes appear here automatically.")
 }
 
 @Composable

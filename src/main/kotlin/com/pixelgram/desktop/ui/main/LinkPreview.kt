@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -116,7 +117,7 @@ fun LinkPreviewCard(preview: TdApi.LinkPreview, telegram: Telegram, outgoing: Bo
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = if (outgoing) colors.primary.copy(alpha = 0.16f) else colors.surfaceContainerHighest,
-        modifier = Modifier.padding(top = 6.dp).width(maxWidth),
+        modifier = Modifier.padding(top = 6.dp).fillMaxWidth().widthIn(max = maxWidth),
     ) {
         Column(Modifier.clickable(onClick = open).padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (large && preview.showMediaAboveDescription) LargeMedia(media, telegram)
