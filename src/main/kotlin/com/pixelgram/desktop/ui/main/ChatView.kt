@@ -180,7 +180,13 @@ fun ChatView(
     val seenNewest = remember(chat.id) { arrayOf(newest) }
     if (newest != seenNewest[0]) {
         seenNewest[0] = newest
-        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < StickToBottomPx) {
+        val own = messages.firstOrNull()?.let { it.isOutgoing && !it.service } == true
+        if (own && listState.firstVisibleItemIndex > 0) {
+            scope.launch {
+                if (listState.firstVisibleItemIndex > JumpCloserItems) listState.scrollToItem(JumpLandingItem)
+                listState.animateScrollToItem(0)
+            }
+        } else if (own || listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < StickToBottomPx) {
             listState.requestScrollToItem(0)
         }
     }
@@ -304,7 +310,6 @@ fun ChatView(
         )
     }
 
-    AudioQueueEffects(telegram)
     FileDropArea(onDrop = { files, asDocuments ->
         attach(files)
         asFiles = asDocuments || files.any { !Attachments.isPhoto(it) }
@@ -1126,6 +1131,8 @@ private const val DraftSaveDelayMs = 1_500L
 private const val InlineDelayMs = 400L
 private const val GifTab = 2
 private const val CommandLimit = 30
+private const val JumpCloserItems = 20
+private const val JumpLandingItem = 6
 private const val WelcomeDelayMs = 700L
 
 @Composable

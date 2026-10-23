@@ -80,6 +80,19 @@ import it.tdlight.jni.TdApi
 
 object AudioQueue {
     var pending by mutableStateOf<UiMessage?>(null)
+    var pendingTrack by mutableStateOf<TdApi.Audio?>(null)
+    var playlist: List<TdApi.Audio> = emptyList()
+
+    fun trackTitle(audio: TdApi.Audio): String =
+        listOf(audio.performer, audio.title).filter { it.isNotBlank() }.joinToString(" – ").ifBlank { audio.fileName }
+
+    fun move(telegram: Telegram, key: Long, direction: Int) {
+        val index = playlist.indexOfFirst { it.audio.id.toLong() == key }
+        if (index < 0) return step(telegram, key, direction)
+        val next = playlist.getOrNull(index + direction) ?: return
+        pendingTrack = next
+        telegram.download(next.audio)
+    }
 
     fun file(message: UiMessage): TdApi.File? = when (val content = message.content) {
         is TdApi.MessageAudio -> content.audio.audio
@@ -93,7 +106,9 @@ object AudioQueue {
     }
 
     fun step(telegram: Telegram, key: Long, direction: Int) {
-        val list = telegram.messages(AudioPlayer.chatId).filter { file(it) != null }
+        val all = telegram.messages(AudioPlayer.chatId)
+        val kind = all.firstOrNull { it.key == key }?.content?.javaClass ?: return
+        val list = all.filter { it.content?.javaClass == kind && file(it) != null }
         val index = list.indexOfFirst { it.key == key }
         if (index < 0) return
         val next = list.getOrNull(index - direction) ?: return
@@ -112,8 +127,16 @@ fun AudioQueueEffects(telegram: Telegram) {
             AudioPlayer.play(pending.key, path, AudioQueue.title(pending), pending.chatId, (pending.content as? TdApi.MessageAudio)?.audio)
         }
     }
+    val track = AudioQueue.pendingTrack
+    val trackPath = track?.let { telegram.localPath(it.audio) }
+    LaunchedEffect(track?.audio?.id, trackPath) {
+        if (track != null && trackPath != null) {
+            AudioQueue.pendingTrack = null
+            AudioPlayer.play(track.audio.id.toLong(), trackPath, AudioQueue.trackTitle(track), 0L, track)
+        }
+    }
     DisposableEffect(telegram) {
-        AudioPlayer.onFinished = { key -> AudioQueue.step(telegram, key, 1) }
+        AudioPlayer.onFinished = { key -> AudioQueue.move(telegram, key, 1) }
         onDispose { AudioPlayer.onFinished = null }
     }
 }
@@ -134,9 +157,9 @@ fun MiniPlayer(telegram: Telegram) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp).height(BarHeight)) {
                     MorphControls(
                         playing = AudioPlayer.playing,
-                        onPrevious = { key?.let { AudioQueue.step(telegram, it, -1) } },
+                        onPrevious = { key?.let { AudioQueue.move(telegram, it, -1) } },
                         onPlay = AudioPlayer::pauseOrResume,
-                        onNext = { key?.let { AudioQueue.step(telegram, it, 1) } },
+                        onNext = { key?.let { AudioQueue.move(telegram, it, 1) } },
                     )
                     Text(
                         AudioPlayer.title,

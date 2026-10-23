@@ -1,5 +1,6 @@
 package com.pixelgram.desktop
 
+import com.pixelgram.desktop.ui.main.AudioQueueEffects
 import com.pixelgram.desktop.core.Updater
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.DisposableEffect
@@ -306,6 +307,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
     }
     val back = { screen = history.removeLastOrNull() ?: Screen.Chats }
     var openChatId by remember { mutableStateOf<Long?>(null) }
+    AudioQueueEffects(telegram)
     val chatTrail = remember { mutableStateListOf<Long>() }
     val openChat = { id: Long ->
         chatTrail.clear()

@@ -102,6 +102,17 @@ object Attachments {
         }.onFailure { AppLog.write("Copy image failed", it) }
     }
 
+    suspend fun saveFile(path: String, name: String) {
+        val source = File(path)
+        runCatching {
+            val target = FileKit.openFileSaver(
+                suggestedName = name.substringBeforeLast('.').ifBlank { source.nameWithoutExtension },
+                extension = name.substringAfterLast('.', source.extension).ifBlank { source.extension },
+            ) ?: return
+            source.copyTo(target.file, overwrite = true)
+        }.onFailure { AppLog.write("Save file failed", it) }
+    }
+
     suspend fun saveImage(path: String) {
         val source = File(path)
         runCatching {

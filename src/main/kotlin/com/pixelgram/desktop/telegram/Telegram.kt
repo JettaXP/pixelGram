@@ -173,6 +173,8 @@ private const val AlbumSize = 10
 private const val HistoryPageSize = 100
 private const val ProfilePhotosLimit = 100
 private const val ProfileAudiosLimit = 50
+private const val DownloadWaitSteps = 600
+private const val DownloadWaitMs = 200L
 private const val MentionResolveMin = 4
 private const val HistoryPagesMax = 300
 
@@ -615,6 +617,33 @@ class Telegram(
 
     fun setProfilePhoto(path: String, done: (String?) -> Unit) =
         send(TdApi.SetProfilePhoto(TdApi.InputChatPhotoStatic(TdApi.InputFileLocal(path)), false), okOrError(done))
+
+    fun moveProfileAudio(fileId: Int, afterFileId: Int) {
+        send(TdApi.SetProfileAudioPosition(fileId, afterFileId)) { loadMyProfileAudios() }
+    }
+
+    fun sendAudio(chatId: Long, audio: TdApi.Audio) {
+        send(TdApi.SendMessage().apply {
+            this.chatId = chatId
+            inputMessageContent = TdApi.InputMessageAudio().apply {
+                this.audio = TdApi.InputAudio().apply {
+                    this.audio = remoteInput(audio.audio)
+                    duration = audio.duration
+                    title = audio.title
+                    performer = audio.performer
+                }
+            }
+        })
+    }
+
+    suspend fun downloaded(file: TdApi.File): String? {
+        download(file)
+        repeat(DownloadWaitSteps) {
+            localPath(file)?.let { return it }
+            kotlinx.coroutines.delay(DownloadWaitMs)
+        }
+        return localPath(file)
+    }
 
     fun setProfileVideo(path: String, done: (String?) -> Unit) =
         send(TdApi.SetProfilePhoto(TdApi.InputChatPhotoAnimation(TdApi.InputFileLocal(path), 0.0), false), okOrError(done))
