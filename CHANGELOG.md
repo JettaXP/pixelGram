@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.27.1 Cookie
+
+- The official pixelGram channel always has a 12-sided cookie avatar, whatever avatar shape you picked: in the chat list, the chat header and its profile.
+- The Message, Mute and More buttons in a profile become rounder while you press them.
+
 ## 0.27.0
 
 ### Performance

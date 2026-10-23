@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.components
 
+import androidx.compose.material3.toShape
+import androidx.compose.material3.MaterialShapes
 import com.pixelgram.desktop.core.AvatarKind
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -116,6 +118,10 @@ fun ChatAvatar(
     size: Dp,
     modifier: Modifier = Modifier,
 ) {
+    if (telegram.isOfficial(chat)) {
+        AvatarImage(chat.title, chat.photo, telegram, MaterialShapes.Cookie12Sided.toShape(), size, modifier)
+        return
+    }
     if (!telegram.isSavedMessages(chat.id)) {
         Avatar(chat.title, chat.photo, telegram, settings, size, modifier, kind = telegram.avatarKind(chat))
         return

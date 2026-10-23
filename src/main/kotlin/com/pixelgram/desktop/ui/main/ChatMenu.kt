@@ -1,5 +1,10 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateDpAsState
 import com.pixelgram.desktop.core.Banners
 import com.pixelgram.desktop.ui.profile.ProfileBanner
 import androidx.compose.foundation.layout.Row
@@ -345,9 +350,16 @@ private fun ProfileAction(
 ) {
     val colors = MaterialTheme.colorScheme
     val container by animateColorAsState(if (checked) colors.secondaryContainer else colors.surfaceContainerHighest)
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val corner by animateDpAsState(
+        if (pressed) ActionPressedCorner else ActionCorner,
+        spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+    )
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(18.dp),
+        interactionSource = interaction,
+        shape = RoundedCornerShape(corner),
         color = container,
         contentColor = if (checked) colors.onSecondaryContainer else colors.onSurface,
         modifier = modifier,
@@ -375,5 +387,7 @@ private fun ProfileAction(
 }
 
 private val MenuWidth = 260.dp
+private val ActionCorner = 18.dp
+private val ActionPressedCorner = 32.dp
 
 private val DialogBannerHeight = 140.dp
