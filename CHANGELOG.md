@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.22.0 Core
+
+- Fixed blank or half-drawn windows on tiling window managers (niri, Hyprland, sway, river, i3 and others): the Linux launcher now turns on Java's non-reparenting mode by itself.
+- Adding an account that is already in pixelGram is refused with a notice, both by phone number and by QR code.
+- After too many login attempts the login screen counts down until you can try again.
+
 ## 0.21.2
 
 - Escape goes one level back in Settings: from Active sessions to Privacy and Security, then out of Settings. It also closes the settings search.
