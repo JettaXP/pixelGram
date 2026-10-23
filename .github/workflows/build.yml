@@ -61,12 +61,19 @@ jobs:
         id: versioned
         if: github.ref == 'refs/heads/main'
         run: |
-          if [ -s changes.md ] && ! gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            gh release create "v$VERSION" \
-              --repo "$GITHUB_REPOSITORY" \
-              --target "$GITHUB_SHA" \
-              --title "pixelGram v$VERSION${CODENAME:+ $CODENAME}" \
-              --notes-file changes.md
+          if [ -s changes.md ]; then
+            if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+              gh release edit "v$VERSION" \
+                --repo "$GITHUB_REPOSITORY" \
+                --title "pixelGram v$VERSION${CODENAME:+ $CODENAME}" \
+                --notes-file changes.md
+            else
+              gh release create "v$VERSION" \
+                --repo "$GITHUB_REPOSITORY" \
+                --target "$GITHUB_SHA" \
+                --title "pixelGram v$VERSION${CODENAME:+ $CODENAME}" \
+                --notes-file changes.md
+            fi
             echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
           fi
 

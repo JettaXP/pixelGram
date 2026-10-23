@@ -8,7 +8,7 @@ plugins {
 
 group = "com.pixelgram.desktop"
 version = "0.26.0"
-val codename = ""
+val codename = "Iron Dome"
 
 kotlin {
     jvmToolchain(21)

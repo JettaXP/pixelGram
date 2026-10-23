@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.26.0
+## 0.26.0 Iron Dome
 
 ### Photo viewer
 - Browse photos in a chat without closing the viewer: arrows on the sides, Left and Right keys, or the mouse wheel. An arrow disappears when there are no more photos that way.
