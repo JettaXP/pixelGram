@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.2
+
+- While a new version is still being built, update checks offer the latest finished release instead of saying updates are unavailable.
+- If you already have that release, pixelGram says a new version is being built and to try again in a few minutes.
+
 ## 0.20.1
 
 - The update window shows which pixelGram version you're downloading.
