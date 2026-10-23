@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.1 Banners
+
+- Custom emoji no longer swap places with regular emoji in the same message. Fixes pieces and name emoji mixing up in checkers.
+- The More menu in a profile no longer has a View profile item.
+
 ## 0.15.0 Banners
 
 ### Banners
