@@ -13,7 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -108,7 +108,7 @@ private fun TrackRow(telegram: Telegram, track: TdApi.Audio, featured: Boolean, 
         }
         if (own) {
             IconButton(onClick = { telegram.toggleProfileAudio(track) }) {
-                Icon(Icons.Outlined.FavoriteBorder, contentDescription = "Remove from profile")
+                Icon(Icons.Filled.Favorite, contentDescription = "Remove from profile", tint = MaterialTheme.colorScheme.primary)
             }
         }
         PlayButton(

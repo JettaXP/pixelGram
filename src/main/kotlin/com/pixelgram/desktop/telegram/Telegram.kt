@@ -1168,14 +1168,15 @@ class Telegram(
     val myProfileAudios = mutableStateListOf<Int>()
 
     fun profileAudios(userId: Long, onResult: (List<TdApi.Audio>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(demoProfileAudios(userId))
         send(TdApi.GetUserProfileAudios(userId, 0, ProfileAudiosLimit)) { result ->
             onResult((result as? TdApi.Audios)?.audios?.toList().orEmpty())
         }
     }
 
     fun loadMyProfileAudios() {
-        if (myUserId == 0L) return
-        profileAudios(myUserId) { list ->
+        val userId = myUserId.takeIf { it != 0L } ?: me?.id ?: return
+        profileAudios(userId) { list ->
             myProfileAudios.clear()
             myProfileAudios.addAll(list.map { it.audio.id })
         }

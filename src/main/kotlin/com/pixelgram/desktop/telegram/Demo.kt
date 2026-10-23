@@ -294,3 +294,35 @@ internal fun Telegram.demoSendFiles(chatId: Long, files: List<java.io.File>, cap
     }
 }
 
+
+private class DemoTrack(val title: String, val performer: String, val duration: Int, val cover: String)
+
+private val DemoTracks = mapOf(
+    1L to listOf(
+        DemoTrack("Midnight Shapes", "Expressive Hours", 214, "c1"),
+        DemoTrack("Tonal Palette", "Material Waves", 187, "c2"),
+        DemoTrack("Squircle", "The Corners", 242, "c3"),
+        DemoTrack("Cookie 9", "Shape Morph", 199, "c4"),
+    ),
+    2L to listOf(
+        DemoTrack("Ocean Blue", "Alice & the Pixels", 231, "c2"),
+        DemoTrack("Sunny Side", "Alice & the Pixels", 176, "c3"),
+    ),
+)
+
+fun Telegram.demoProfileAudios(userId: Long): List<TdApi.Audio> {
+    val covers = System.getProperty("pixelgram.demo.covers")
+    val audioPath = System.getProperty("pixelgram.demo.audio")
+    return DemoTracks[userId].orEmpty().mapIndexed { index, track ->
+        val coverPath = covers?.let { "$it/${track.cover}.jpg" }
+        TdApi.Audio().apply {
+            title = track.title
+            performer = track.performer
+            duration = track.duration
+            fileName = "${track.title}.mp3"
+            mimeType = "audio/mpeg"
+            albumCoverThumbnail = TdApi.Thumbnail(TdApi.ThumbnailFormatJpeg(), 320, 320, demoFile(910_000 + userId.toInt() * 10 + index, coverPath, 20_000))
+            audio = demoFile(920_000 + userId.toInt() * 10 + index, audioPath, 3_000_000)
+        }
+    }
+}
