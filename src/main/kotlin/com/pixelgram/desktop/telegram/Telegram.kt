@@ -911,6 +911,12 @@ class Telegram(
     private fun handleAuthState(state: TdApi.AuthorizationState) {
         authBusy = false
         authRequest++
+        AppLog.write(
+            "Auth state: " + state.javaClass.simpleName.removePrefix("AuthorizationState") +
+                ((state as? TdApi.AuthorizationStateWaitCode)?.codeInfo?.let { info ->
+                    ", code ${info.type?.javaClass?.simpleName?.removePrefix("AuthenticationCodeType")}, next ${info.nextType?.javaClass?.simpleName?.removePrefix("AuthenticationCodeType")}, timeout ${info.timeout}"
+                } ?: "")
+        )
         authState = when (state) {
             is TdApi.AuthorizationStateWaitTdlibParameters -> {
                 sendTdlibParameters()
