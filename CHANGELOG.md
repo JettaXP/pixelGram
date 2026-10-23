@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.0 Update
+
+- One-click updates for the Windows portable build and the Linux tar.gz: press Update when the download finishes, pixelGram closes, unpacks the new version into the same folder, keeps your sessions and settings, and starts again.
+- The install button for the msi and AppImage is now called Update too.
+- After an update pixelGram shows "pixelGram Updated!" at the top of the window.
+
 ## 0.16.0 Battery
 
 ### Battery and Animations

@@ -7,8 +7,8 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.16.0"
-val codename = "Battery"
+version = "0.17.0"
+val codename = "Update"
 
 kotlin {
     jvmToolchain(21)
