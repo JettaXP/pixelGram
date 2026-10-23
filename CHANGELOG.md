@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.18.0 Privacy
+
+### Privacy
+- Every privacy setting: phone number, last seen, profile photos, forwarded messages, calls, voice messages, messages, birthday, gifts, bio, saved music and invites.
+- Choose Everybody, My contacts or Nobody, and add users or groups as exceptions.
+
+### Active sessions
+- See every device logged in to your account, with details for each one.
+- Terminate a single session or all other sessions at once.
+- Rename this device.
+- pixelGram sessions show the pixelGram logo in your theme color.
+- Fixed the doubled "pixelGram pixelGram" in the session's app name.
+
+### Local passcode
+- Lock pixelGram with a 4-digit PIN when it starts, after you've been away, or right away with Lock now.
+- A Pixel-style PIN pad: keys turn into rounded squares when pressed and each digit appears as an expressive shape before settling into a dot. Typing on the keyboard works too.
+
 ## 0.17.0 Update
 
 - One-click updates for the Windows portable build and the Linux tar.gz: press Update when the download finishes, pixelGram closes, unpacks the new version into the same folder, keeps your sessions and settings, and starts again.
