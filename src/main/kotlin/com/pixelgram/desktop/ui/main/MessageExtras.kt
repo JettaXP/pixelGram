@@ -226,6 +226,10 @@ private val ButtonGap = 4.dp
 private val ButtonHeight = 42.dp
 private val ButtonIcon = 22.dp
 
+object TopNotice {
+    var text by mutableStateOf<String?>(null)
+}
+
 @Composable
 fun BotAnswer(answer: Pair<String, Boolean>?, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val (text, alert) = answer ?: (null to false)

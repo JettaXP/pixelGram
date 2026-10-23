@@ -52,7 +52,7 @@ fun UpdatePanel(onBeforeExit: () -> Unit, modifier: Modifier = Modifier) {
                 is UpdateState.Available -> Button(onClick = Updater::download) { Text("Download") }
                 is UpdateState.Ready -> {
                     if (state.manual == null) {
-                        Button(onClick = { Updater.install(onBeforeExit) }) { Text("Install and restart") }
+                        Button(onClick = { Updater.install(onBeforeExit) }) { Text("Update") }
                     } else {
                         Button(onClick = { Updater.openFolder(state.file.parentFile) }) { Text("Show file") }
                         if (state.manual.startsWith("sudo")) {

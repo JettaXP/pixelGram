@@ -11,7 +11,7 @@ object AppPaths {
 
     private val home = File(System.getProperty("user.home"))
 
-    private val appDir: File? by lazy {
+    val appDir: File? by lazy {
         val launcher = System.getProperty("jpackage.app-path")?.let { File(it).absoluteFile }
         when {
             launcher == null -> null

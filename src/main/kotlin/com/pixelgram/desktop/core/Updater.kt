@@ -127,7 +127,37 @@ object Updater {
     private fun manualStep(file: File): String? = when {
         file.name.endsWith(".msi") || file.name.endsWith(".AppImage", ignoreCase = true) -> null
         file.name.endsWith(".pkg.tar.zst") -> "sudo pacman -U \"${file.absolutePath}\""
+        isArchive(file) && launcher() != null && AppPaths.appDir != null -> null
         else -> "Unpack ${file.name} over the current pixelGram folder."
+    }
+
+    private fun isArchive(file: File) = file.name.endsWith(".zip") || file.name.endsWith(".tar.gz")
+
+    private fun launcher(): File? = System.getProperty("jpackage.app-path")?.let(::File)?.takeIf { it.isFile }
+
+    private val marker: File get() = File(AppPaths.dataDir, "just-updated")
+
+    fun consumeUpdated(): Boolean = marker.isFile && marker.delete()
+
+    private fun applyArchive(file: File) {
+        val exe = launcher() ?: error("Unknown launcher")
+        val target = AppPaths.appDir ?: error("Unknown install folder")
+        val pid = ProcessHandle.current().pid().toString()
+        val dir = file.parentFile
+        if (AppPaths.isWindows) {
+            val script = File(dir, "apply-update.ps1").apply { writeText(WindowsScript) }
+            ProcessBuilder(
+                "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", script.absolutePath,
+                "-ProcessId", pid, "-Archive", file.absolutePath, "-Target", target.absolutePath,
+                "-Exe", exe.absolutePath, "-Marker", marker.absolutePath,
+            ).start()
+        } else {
+            val script = File(dir, "apply-update.sh").apply { writeText(LinuxScript) }
+            ProcessBuilder("nohup", "sh", script.absolutePath, pid, file.absolutePath, target.absolutePath, exe.absolutePath, marker.absolutePath)
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start()
+        }
     }
 
     fun install(beforeExit: () -> Unit) {
@@ -136,13 +166,16 @@ object Updater {
         runCatching {
             when {
                 file.name.endsWith(".msi") -> {
+                    marker.writeText("updated")
                     val exe = System.getProperty("jpackage.app-path").orEmpty()
                     val relaunch = if (exe.isNotEmpty()) " && start \"\" \"$exe\"" else ""
                     ProcessBuilder("cmd", "/c", "msiexec /i \"${file.absolutePath}\" /passive$relaunch").start()
                 }
+                isArchive(file) -> applyArchive(file)
                 file.name.endsWith(".AppImage", ignoreCase = true) -> {
                     val current = File(System.getenv("APPIMAGE") ?: error("Not running from an AppImage"))
                     file.setExecutable(true)
+                    marker.writeText("updated")
                     if (!file.renameTo(current)) file.copyTo(current, overwrite = true).setExecutable(true)
                     ProcessBuilder(current.absolutePath).start()
                 }
@@ -166,3 +199,36 @@ object Updater {
         }
     }
 }
+
+private val WindowsScript = """
+param([int]${'$'}ProcessId, [string]${'$'}Archive, [string]${'$'}Target, [string]${'$'}Exe, [string]${'$'}Marker)
+Wait-Process -Id ${'$'}ProcessId -Timeout 60 -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 500
+${'$'}temp = Join-Path ([IO.Path]::GetTempPath()) ("pixelgram-update-" + [guid]::NewGuid())
+try {
+    Expand-Archive -LiteralPath ${'$'}Archive -DestinationPath ${'$'}temp -Force
+    ${'$'}source = Join-Path ${'$'}temp 'pixelGram'
+    if (-not (Test-Path ${'$'}source)) { ${'$'}source = ${'$'}temp }
+    robocopy ${'$'}source ${'$'}Target /E /R:5 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+    if (${'$'}LASTEXITCODE -lt 8) { Set-Content -LiteralPath ${'$'}Marker -Value 'updated' }
+    else { Add-Content -LiteralPath (Join-Path (Split-Path ${'$'}Marker) 'update-error.log') -Value "robocopy exit ${'$'}LASTEXITCODE" }
+} catch {
+    Add-Content -LiteralPath (Join-Path (Split-Path ${'$'}Marker) 'update-error.log') -Value ${'$'}_
+} finally {
+    Remove-Item -LiteralPath ${'$'}temp -Recurse -Force -ErrorAction SilentlyContinue
+}
+Start-Process -FilePath ${'$'}Exe
+""".trimStart()
+
+private val LinuxScript = """
+pid="${'$'}1"; archive="${'$'}2"; target="${'$'}3"; exe="${'$'}4"; marker="${'$'}5"
+while kill -0 "${'$'}pid" 2>/dev/null; do sleep 0.3; done
+temp="${'$'}(mktemp -d)"
+if tar -xzf "${'$'}archive" -C "${'$'}temp" && cp -a "${'$'}temp/pixelGram/." "${'$'}target/"; then
+    echo updated > "${'$'}marker"
+else
+    echo "update failed" >> "${'$'}(dirname "${'$'}marker")/update-error.log"
+fi
+rm -rf "${'$'}temp"
+"${'$'}exe" > /dev/null 2>&1 &
+""".trimStart()

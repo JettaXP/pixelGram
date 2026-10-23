@@ -1,5 +1,9 @@
 package com.pixelgram.desktop
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
+import com.pixelgram.desktop.ui.main.BotAnswer
+import com.pixelgram.desktop.ui.main.TopNotice
 import com.pixelgram.desktop.ui.main.AudioQueueEffects
 import com.pixelgram.desktop.core.Updater
 import androidx.compose.ui.graphics.toArgb
@@ -345,7 +349,14 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
         }
     }
     val ready = telegram.authState == AuthState.Ready || devScreen != null
+    LaunchedEffect(ready) {
+        if (ready && Updater.consumeUpdated()) {
+            delay(UpdatedNoticeDelayMs)
+            TopNotice.text = "pixelGram Updated!"
+        }
+    }
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
+      Box(Modifier.fillMaxSize()) {
         val enter = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
         val exit = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
         AnimatedContent(
@@ -390,7 +401,14 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
                 }
             }
         }
+        BotAnswer(
+            TopNotice.text?.let { it to false },
+            onDismiss = { TopNotice.text = null },
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
+        )
+      }
     }
 }
 
 private const val RaiseHoldMs = 150L
+private const val UpdatedNoticeDelayMs = 1500L
