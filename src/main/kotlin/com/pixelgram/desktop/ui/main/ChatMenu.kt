@@ -46,6 +46,7 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.Delete
@@ -84,6 +85,7 @@ import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.ChatListKey
 import com.pixelgram.desktop.telegram.ChatState
+import it.tdlight.jni.TdApi
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.theme.EmojiText
@@ -109,6 +111,9 @@ fun ChatActions(
 ) {
     var confirm by remember(chat.id) { mutableStateOf<Confirm?>(null) }
     var profile by remember(chat.id) { mutableStateOf(false) }
+    LaunchedEffect(chat.id, at != null) {
+        if (at != null && chat.privateUserId != 0L) telegram.userFullInfo(chat.privateUserId) {}
+    }
     if (at != null) {
         var folders by remember { mutableStateOf(false) }
         Box(Modifier.offset(at.x, at.y)) {
@@ -163,8 +168,13 @@ fun ChatActions(
                                 )
                             }
                             if (chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id)) {
-                                Item(Icons.Outlined.Block, if (telegram.isBot(chat)) "Stop and block bot" else "Block user",
-                                    onClick = act { confirm = Confirm.Block })
+                                if (telegram.isBlocked(chat)) {
+                                    Item(Icons.Outlined.LockOpen, if (telegram.isBot(chat)) "Unblock bot" else "Unblock user",
+                                        onClick = act { telegram.unblock(chat) })
+                                } else {
+                                    Item(Icons.Outlined.Block, if (telegram.isBot(chat)) "Stop and block bot" else "Block user",
+                                        onClick = act { confirm = Confirm.Block })
+                                }
                             }
                             HorizontalDivider(Modifier.padding(vertical = 4.dp))
                             Item(Icons.Outlined.CleaningServices, "Clear history", onClick = act { confirm = Confirm.Clear })
@@ -238,15 +248,19 @@ fun ChatInfoDialog(
 ) {
     val user = telegram.users[chat.privateUserId]
     var bio by remember(chat.id) { mutableStateOf("") }
+    var bioEntities by remember(chat.id) { mutableStateOf(emptyList<TdApi.TextEntity>()) }
+    var mentioned by remember(chat.id) { mutableStateOf<ChatState?>(null) }
     var personalChannel by remember(chat.id) { mutableStateOf(0L) }
     LaunchedEffect(chat.id) {
         if (chat.privateUserId != 0L) {
             telegram.userFullInfo(chat.privateUserId) {
                 bio = it?.bio?.text.orEmpty()
+                bioEntities = it?.bio?.entities?.toList().orEmpty()
                 personalChannel = it?.personalChatId ?: 0L
             }
         }
     }
+    mentioned?.let { other -> ChatInfoDialog(other, telegram, settings, onOpenChat) { mentioned = null } }
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.widthIn(min = 320.dp, max = 420.dp)) {
           Box {
@@ -316,7 +330,19 @@ fun ChatInfoDialog(
                         )
                     }
                     user?.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it")) }
-                    if (bio.isNotBlank()) add(InfoRow(Icons.Outlined.Info, "Bio", bio))
+                    if (bio.isNotBlank()) {
+                        add(
+                            InfoRow(
+                                Icons.Outlined.Info,
+                                "Bio",
+                                bio,
+                                entities = bioEntities,
+                                onMention = { username ->
+                                    telegram.openPublicChat(username, { id -> telegram.chats[id]?.let { mentioned = it } }, {})
+                                },
+                            )
+                        )
+                    }
                     add(InfoRow(Icons.Outlined.Numbers, "ID", (if (chat.privateUserId != 0L) chat.privateUserId else chat.id).toString()))
                 }
                 if (chat.privateUserId != 0L) ProfileMusic(telegram, settings, chat.privateUserId, own = false, modifier = Modifier.padding(top = 8.dp))

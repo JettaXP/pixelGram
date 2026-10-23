@@ -741,6 +741,7 @@ class Telegram(
 
     fun userFullInfo(userId: Long, onResult: (TdApi.UserFullInfo?) -> Unit) {
         send(TdApi.GetUserFullInfo().apply { this.userId = userId }) { result ->
+            (result as? TdApi.UserFullInfo)?.let { blockedUsers[userId] = it.blockList != null }
             onResult(result as? TdApi.UserFullInfo)
         }
     }
@@ -1157,6 +1158,15 @@ class Telegram(
 
     private val forums = mutableStateMapOf<Long, Boolean>()
     private val supergroupInfo = mutableStateMapOf<Long, TdApi.Supergroup>()
+
+    fun canPost(chat: ChatState): Boolean {
+        if (!chat.isChannel) return true
+        return when (val status = supergroupInfo[chat.supergroupId]?.status) {
+            is TdApi.ChatMemberStatusCreator -> true
+            is TdApi.ChatMemberStatusAdministrator -> status.rights?.canPostMessages == true
+            else -> false
+        }
+    }
     private val officialSupergroups = mutableStateMapOf<Long, Boolean>()
 
     fun isOfficial(chat: ChatState): Boolean =
@@ -1171,9 +1181,24 @@ class Telegram(
         else -> AvatarKind.Private
     }
 
-    fun block(chat: ChatState) {
-        if (chat.privateUserId == 0L) return
-        send(TdApi.SetMessageSenderBlockList(TdApi.MessageSenderUser(chat.privateUserId), TdApi.BlockListMain()))
+    private val blockedUsers = mutableStateMapOf<Long, Boolean>()
+
+    fun isBlocked(chat: ChatState): Boolean = chat.privateUserId != 0L && blockedUsers[chat.privateUserId] == true
+
+    fun block(chat: ChatState) = setBlocked(chat, true)
+
+    fun unblock(chat: ChatState) = setBlocked(chat, false)
+
+    private fun setBlocked(chat: ChatState, blocked: Boolean) {
+        val userId = chat.privateUserId
+        if (userId == 0L) return
+        val before = blockedUsers[userId]
+        blockedUsers[userId] = blocked
+        send(TdApi.SetMessageSenderBlockList(TdApi.MessageSenderUser(userId), if (blocked) TdApi.BlockListMain() else null)) { result ->
+            if (result is TdApi.Error) {
+                if (before == null) blockedUsers.remove(userId) else blockedUsers[userId] = before
+            }
+        }
     }
 
     fun clearHistory(chat: ChatState) {

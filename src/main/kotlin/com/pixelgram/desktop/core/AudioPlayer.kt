@@ -38,6 +38,7 @@ object AudioPlayer {
         private set
     var repeat by mutableStateOf(false)
     var muted by mutableStateOf(false)
+    var volume by mutableFloatStateOf(1f)
     var speed by mutableFloatStateOf(1f)
     var onFinished: ((Long) -> Unit)? = null
     private var path: String? = null
@@ -172,14 +173,14 @@ object AudioPlayer {
                     break
                 }
                 val step = speed
-                val silent = muted
+                val gain = if (muted) 0f else volume
                 var o = 0
                 var source = index.toFloat()
                 var written = 0
                 while (written < chunk && source < frames) {
                     val frame = source.toInt()
                     for (c in 0 until pcm.channels) {
-                        val sample = if (silent) 0 else pcm.samples[frame * pcm.channels + c].toInt()
+                        val sample = (pcm.samples[frame * pcm.channels + c] * gain).toInt()
                         bytes[o++] = sample.toByte()
                         bytes[o++] = (sample shr 8).toByte()
                     }

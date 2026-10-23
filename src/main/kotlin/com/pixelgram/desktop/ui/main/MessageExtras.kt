@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.runtime.key
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.Telegram
@@ -103,7 +104,8 @@ fun ReactionChips(
     ) {
         reactions.forEach { reaction ->
             val emoji = (reaction.type as? TdApi.ReactionTypeEmoji)?.emoji ?: return@forEach
-            val pop = remember(emoji) { Animatable(0.6f) }
+            key(emoji) {
+            val pop = remember { Animatable(0.6f) }
             LaunchedEffect(reaction.totalCount, reaction.isChosen) { pop.snapTo(0.85f); pop.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 500f)) }
             val chosen = reaction.isChosen
             Surface(
@@ -142,6 +144,7 @@ fun ReactionChips(
                         Text(reaction.totalCount.toString(), style = MaterialTheme.typography.labelLarge)
                     }
                 }
+            }
             }
         }
     }

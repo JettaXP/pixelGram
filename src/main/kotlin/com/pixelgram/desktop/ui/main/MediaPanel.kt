@@ -258,22 +258,50 @@ private fun StickersTab(
             }
         }
     }
-    androidx.compose.animation.AnimatedVisibility(
-        visible = preview != null,
-        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = 0.6f),
-        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = 0.6f),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        var shown by remember { mutableStateOf(preview) }
-        preview?.let { shown = it }
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.scrim.copy(alpha = PreviewScrim)),
+    val previewState = remember { androidx.compose.animation.core.MutableTransitionState(false) }
+    previewState.targetState = preview != null
+    if (previewState.currentState || previewState.targetState) {
+        androidx.compose.ui.window.Popup(
+            popupPositionProvider = FullWindow,
+            properties = androidx.compose.ui.window.PopupProperties(focusable = false),
         ) {
-            shown?.let { sticker ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    EmojiText(sticker.emoji, style = MaterialTheme.typography.headlineMedium)
-                    StickerView(sticker, telegram, PreviewSize)
+            val window = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.animation.AnimatedVisibility(
+                visibleState = previewState,
+                enter = androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.fadeOut(),
+                modifier = with(density) { Modifier.size(window.width.toDp(), window.height.toDp()) },
+            ) {
+                var shown by remember { mutableStateOf(preview) }
+                preview?.let { shown = it }
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = PreviewScrim))
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Release) preview = null
+                                }
+                            }
+                        },
+                ) {
+                    shown?.let { sticker ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.animateEnterExit(
+                                enter = androidx.compose.animation.scaleIn(MaterialTheme.motionScheme.defaultSpatialSpec(), initialScale = 0.6f),
+                                exit = androidx.compose.animation.scaleOut(MaterialTheme.motionScheme.fastSpatialSpec(), targetScale = 0.6f),
+                            ),
+                        ) {
+                            EmojiText(sticker.emoji, style = MaterialTheme.typography.displaySmall)
+                            StickerView(sticker, telegram, PreviewSize)
+                        }
+                    }
                 }
             }
         }
@@ -285,6 +313,15 @@ private fun StickersTab(
             onSticker(sticker, StickerSend(schedule = TdApi.MessageSchedulingStateSendAtDate(date, 0)))
         }
     }
+}
+
+private object FullWindow : androidx.compose.ui.window.PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: androidx.compose.ui.unit.IntRect,
+        windowSize: androidx.compose.ui.unit.IntSize,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        popupContentSize: androidx.compose.ui.unit.IntSize,
+    ) = androidx.compose.ui.unit.IntOffset.Zero
 }
 
 @Composable
@@ -373,7 +410,7 @@ private fun GifCellView(animation: TdApi.Animation, telegram: Telegram, onClick:
     )
 }
 
-private val PreviewSize = 200.dp
+private val PreviewSize = 320.dp
 private const val PreviewScrim = 0.45f
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)

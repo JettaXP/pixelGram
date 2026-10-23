@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.components
 
+import it.tdlight.jni.TdApi
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.UriHandler
+import androidx.compose.ui.platform.LocalUriHandler
 import com.pixelgram.desktop.ui.OnEscape
 import java.awt.datatransfer.StringSelection
 import java.awt.Toolkit
@@ -85,7 +89,17 @@ data class InfoRow(
     val phone: Boolean = false,
     val onEdit: (() -> Unit)? = null,
     val trailing: (@Composable () -> Unit)? = null,
+    val entities: List<TdApi.TextEntity> = emptyList(),
+    val onMention: ((String) -> Unit)? = null,
 )
+
+private val MentionPattern = Regex("""(?<![\w@])@[A-Za-z][A-Za-z0-9_]{3,31}""")
+private const val ResolvePrefix = "tg://resolve?domain="
+
+private fun withMentions(text: String, entities: List<TdApi.TextEntity>): List<TdApi.TextEntity> {
+    if (entities.any { it.type is TdApi.TextEntityTypeMention }) return entities
+    return entities + MentionPattern.findAll(text).map { TdApi.TextEntity(it.range.first, it.value.length, TdApi.TextEntityTypeMention()) }
+}
 
 @Composable
 fun InfoGroup(rows: List<InfoRow>) {
@@ -138,7 +152,24 @@ fun InfoGroup(rows: List<InfoRow>) {
                         else -> null
                     },
                 ) {
-                    if (row.phone) PhoneText(row.value) else EmojiText(row.value)
+                    val mention = row.onMention
+                    when {
+                        row.phone -> PhoneText(row.value)
+                        mention != null || row.entities.isNotEmpty() -> {
+                            val fallback = LocalUriHandler.current
+                            val handler = remember(mention, fallback) {
+                                object : UriHandler {
+                                    override fun openUri(uri: String) {
+                                        if (mention != null && uri.startsWith(ResolvePrefix)) mention(uri.removePrefix(ResolvePrefix)) else fallback.openUri(uri)
+                                    }
+                                }
+                            }
+                            CompositionLocalProvider(LocalUriHandler provides handler) {
+                                FormattedText(row.value, withMentions(row.value, row.entities))
+                            }
+                        }
+                        else -> EmojiText(row.value)
+                    }
                 }
                 menuAt?.let { at ->
                     Box(Modifier.offset(at.x, at.y)) {

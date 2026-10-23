@@ -770,6 +770,8 @@ fun ChatView(
                 onShot = { shot = true },
                 onCancel = { selected.clear() },
             )
+        } else if (!telegram.canPost(chat)) {
+            ChannelMuteBar(chat, telegram)
         } else Composer(
             chatId = chat.id,
             inGroup = chat.isGroup,
@@ -830,6 +832,30 @@ fun ChatView(
         shownPost?.let { post -> CommentsView(post, telegram, settings) { commentsFor = null } }
     }
     }
+    }
+}
+
+@Composable
+private fun ChannelMuteBar(chat: ChatState, telegram: Telegram) {
+    val muted = telegram.isMuted(chat)
+    Surface(
+        onClick = { telegram.setMuted(chat, !muted) },
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth().padding(12.dp).height(SendSlot + 16.dp).clip(RoundedCornerShape(28.dp)),
+        shape = RoundedCornerShape(28.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            AnimatedContent(
+                targetState = muted,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+            ) { isMuted ->
+                Text(
+                    if (isMuted) "UNMUTE" else "MUTE",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
 

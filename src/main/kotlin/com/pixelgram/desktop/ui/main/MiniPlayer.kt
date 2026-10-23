@@ -7,6 +7,7 @@ import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Slider
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -185,6 +186,14 @@ fun MiniPlayer(telegram: Telegram) {
                                     contentDescription = "Sound",
                                 )
                             }
+                            Slider(
+                                value = if (AudioPlayer.muted) 0f else AudioPlayer.volume,
+                                onValueChange = {
+                                    AudioPlayer.volume = it
+                                    AudioPlayer.muted = it == 0f
+                                },
+                                modifier = Modifier.width(MiniVolumeWidth).padding(end = 4.dp),
+                            )
                             IconButton(onClick = { AudioPlayer.repeat = !AudioPlayer.repeat }) {
                                 Icon(
                                     if (AudioPlayer.repeat) Icons.Filled.RepeatOn else Icons.Filled.Repeat,
@@ -343,6 +352,7 @@ private const val ControlScale = 0.5f
 private val ControlGap = 4.dp
 
 private const val WaveSettleStiffness = 16.5f
+private val MiniVolumeWidth = 96.dp
 private const val WaveRestThreshold = 0.01f
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.30.0 Bye...
+
+### Forwarding
+- Forwarding now works like in Telegram: pick a chat, and a forward bar appears above the message field. Send it with the send button, with or without a comment.
+- Click the bar to open the forward options: hide the sender's name so the message comes from you, hide the caption of a photo or file, change the recipient, or don't forward at all.
+
+### Other
+- Volume slider in the mini player.
+- Sticker preview (hold a sticker) now covers the whole window instead of just the sticker panel.
+- @usernames in a bio are clickable and open that person's profile.
+- In channels where you can't post, the message field is replaced by a Mute/Unmute bar.
+- Block and unblock people from the More menu in their profile.
+- Fixed reactions that stayed small after the reaction list changed.
+
 ## 0.28.0 IL
 
 ### Easter egg
