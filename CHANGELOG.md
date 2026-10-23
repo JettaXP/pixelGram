@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.1
+
+- The update window shows which pixelGram version you're downloading.
+- Download and Update sit next to Close at the bottom of the update window.
+
 ## 0.20.0 Upd
 
 - Fixed portable updates failing with "There is not enough space on the disk": the update is now downloaded and unpacked inside the pixelGram folder, on the same drive, and moved into place instead of copied.
