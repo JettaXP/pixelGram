@@ -306,16 +306,25 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
     }
     val back = { screen = history.removeLastOrNull() ?: Screen.Chats }
     var openChatId by remember { mutableStateOf<Long?>(null) }
+    val chatTrail = remember { mutableStateListOf<Long>() }
     val openChat = { id: Long ->
+        chatTrail.clear()
         openChatId = id
         history.clear()
         screen = Screen.Chats
     }
+    val openChatInside = { id: Long ->
+        openChatId?.takeIf { it != id }?.let { chatTrail.add(it) }
+        openChatId = id
+        history.clear()
+        screen = Screen.Chats
+    }
+    val chatBack = { openChatId = chatTrail.removeLastOrNull() }
     DisposableEffect(telegram) {
         Links.active = { telegram.takeIf { it.authState == AuthState.Ready } }
         Links.navigate = { owner, chatId ->
             if (owner != telegram) accounts.switchTo(owner)
-            openChat(chatId)
+            openChatInside(chatId)
         }
         onDispose {}
     }
@@ -369,7 +378,12 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
                         openChatId,
                         openChat,
                         onNavigate = navigate,
-                        onCloseChat = { openChatId = null },
+                        onCloseChat = {
+                            chatTrail.clear()
+                            openChatId = null
+                        },
+                        onOpenChatInside = openChatInside,
+                        onChatBack = if (chatTrail.isNotEmpty()) chatBack else null,
                     )
                 }
             }

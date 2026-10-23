@@ -138,6 +138,8 @@ fun MainScreen(
     onOpenChat: (Long) -> Unit,
     onNavigate: (Screen) -> Unit,
     onCloseChat: () -> Unit = {},
+    onOpenChatInside: (Long) -> Unit = onOpenChat,
+    onChatBack: (() -> Unit)? = null,
 ) {
     val tabs = buildList {
         if (!settings.hideAllChats.value || telegram.folders.isEmpty()) {
@@ -263,6 +265,7 @@ fun MainScreen(
                 OnEscape {
                     when {
                         MessageSearch.open -> MessageSearch.open = false
+                        onChatBack != null -> onChatBack()
                         openChatId != null -> onCloseChat()
                         else -> return@OnEscape false
                     }
@@ -283,7 +286,7 @@ fun MainScreen(
                         contentKey = { it?.id },
                     ) { shown ->
                         if (shown != null) {
-                            ChatView(shown, telegram, settings, onOpenChat)
+                            ChatView(shown, telegram, settings, onOpenChatInside, onChatBack)
                         } else {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                                 Surface(

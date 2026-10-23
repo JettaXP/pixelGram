@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,10 +44,12 @@ private const val CollapsedTracks = 1
 
 @Composable
 fun ProfileMusic(telegram: Telegram, userId: Long, own: Boolean, modifier: Modifier = Modifier) {
+    val mine = own || userId == telegram.me?.id
     var tracks by remember(userId) { mutableStateOf<List<TdApi.Audio>>(emptyList()) }
     var expanded by remember(userId) { mutableStateOf(false) }
-    val changes = if (own) telegram.myProfileAudios.toList() else emptyList()
+    val changes = if (mine) telegram.myProfileAudios.toList() else emptyList()
     LaunchedEffect(userId, changes) { telegram.profileAudios(userId) { tracks = it } }
+    LaunchedEffect(telegram) { telegram.loadMyProfileAudios() }
     if (tracks.isEmpty()) return
     Surface(
         shape = RoundedCornerShape(24.dp),
@@ -66,14 +69,14 @@ fun ProfileMusic(telegram: Telegram, userId: Long, own: Boolean, modifier: Modif
             }
             val shown = if (expanded) tracks else tracks.take(CollapsedTracks)
             shown.forEachIndexed { index, track ->
-                TrackRow(telegram, track, featured = index == 0, own = own)
+                TrackRow(telegram, track, featured = index == 0)
             }
         }
     }
 }
 
 @Composable
-private fun TrackRow(telegram: Telegram, track: TdApi.Audio, featured: Boolean, own: Boolean) {
+private fun TrackRow(telegram: Telegram, track: TdApi.Audio, featured: Boolean) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -106,10 +109,13 @@ private fun TrackRow(telegram: Telegram, track: TdApi.Audio, featured: Boolean, 
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (own) {
-            IconButton(onClick = { telegram.toggleProfileAudio(track) }) {
-                Icon(Icons.Filled.Favorite, contentDescription = "Remove from profile", tint = MaterialTheme.colorScheme.primary)
-            }
+        val saved = telegram.isInProfile(track)
+        IconButton(onClick = { telegram.toggleProfileAudio(track) }) {
+            Icon(
+                if (saved) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                contentDescription = if (saved) "Remove from profile" else "Add to profile",
+                tint = if (saved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         PlayButton(
             track.audio.id.toLong(),

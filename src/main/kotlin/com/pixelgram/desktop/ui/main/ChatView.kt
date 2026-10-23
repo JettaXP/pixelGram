@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.material.icons.outlined.KeyboardHide
 import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material3.FilledTonalButton
@@ -148,7 +151,13 @@ import java.io.File
 import kotlinx.coroutines.launch
 
 @Composable
-fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenChat: (Long) -> Unit) {
+fun ChatView(
+    chat: ChatState,
+    telegram: Telegram,
+    settings: AppSettings,
+    onOpenChat: (Long) -> Unit,
+    onBack: (() -> Unit)? = null,
+) {
     DisposableEffect(chat.id) {
         telegram.openChat(chat.id)
         onDispose { telegram.closeChat(chat.id) }
@@ -309,6 +318,15 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            AnimatedVisibility(
+                visible = onBack != null,
+                enter = expandHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(),
+                exit = shrinkHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(),
+            ) {
+                IconButton(onClick = { onBack?.invoke() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
