@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.core.Banners
+import com.pixelgram.desktop.ui.profile.ProfileBanner
 import androidx.compose.foundation.layout.Row
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.material.icons.outlined.MoreHoriz
@@ -240,6 +242,16 @@ fun ChatInfoDialog(
     }
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.widthIn(min = 320.dp, max = 420.dp)) {
+          Box {
+            if (chat.privateUserId != 0L && Banners.banner(chat.privateUserId) != null) {
+                ProfileBanner(
+                    chat.privateUserId,
+                    telegram,
+                    DialogBannerHeight,
+                    RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                )
+            }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -308,7 +320,8 @@ fun ChatInfoDialog(
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
             }
         }
-    }
+      }
+        }
 }
 
 @Composable
@@ -340,3 +353,5 @@ private fun ProfileAction(
 }
 
 private val MenuWidth = 260.dp
+
+private val DialogBannerHeight = 140.dp

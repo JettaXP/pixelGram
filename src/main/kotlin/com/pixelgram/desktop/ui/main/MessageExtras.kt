@@ -170,8 +170,18 @@ fun InlineKeyboard(rows: List<List<TdApi.InlineKeyboardButton>>, onPress: (TdApi
                             bottomStart = if (last && index == 0) big else small,
                             bottomEnd = if (last && index == row.lastIndex) big else small,
                         ),
-                        color = scheme.secondaryContainer,
-                        contentColor = scheme.onSecondaryContainer,
+                        color = when (button.style) {
+                            is TdApi.ButtonStylePrimary -> scheme.primary
+                            is TdApi.ButtonStyleSuccess -> scheme.tertiaryContainer
+                            is TdApi.ButtonStyleDanger -> scheme.errorContainer
+                            else -> scheme.secondaryContainer
+                        },
+                        contentColor = when (button.style) {
+                            is TdApi.ButtonStylePrimary -> scheme.onPrimary
+                            is TdApi.ButtonStyleSuccess -> scheme.onTertiaryContainer
+                            is TdApi.ButtonStyleDanger -> scheme.onErrorContainer
+                            else -> scheme.onSecondaryContainer
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .height(ButtonHeight)
@@ -179,12 +189,19 @@ fun InlineKeyboard(rows: List<List<TdApi.InlineKeyboardButton>>, onPress: (TdApi
                             .onPointerEvent(PointerEventType.Exit) { if (HoverTarget.button === button) HoverTarget.button = null },
                     ) {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 8.dp)) {
-                            EmojiText(
-                                button.text,
-                                style = MaterialTheme.typography.labelLarge.copy(textAlign = TextAlign.Center),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (button.iconCustomEmojiId != 0L) {
+                                    CustomEmojiView(button.iconCustomEmojiId, "", Modifier.size(ButtonIcon))
+                                }
+                                if (button.text.isNotBlank()) {
+                                    EmojiText(
+                                        button.text,
+                                        style = MaterialTheme.typography.labelLarge.copy(textAlign = TextAlign.Center),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
                             if (button.type is TdApi.InlineKeyboardButtonTypeUrl || button.type is TdApi.InlineKeyboardButtonTypeLoginUrl) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.OpenInNew,
@@ -207,6 +224,7 @@ private val PickerWidth = 340.dp
 private val GridHeight = 200.dp
 private val ButtonGap = 4.dp
 private val ButtonHeight = 42.dp
+private val ButtonIcon = 22.dp
 
 @Composable
 fun BotAnswer(answer: Pair<String, Boolean>?, onDismiss: () -> Unit, modifier: Modifier = Modifier) {

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.15.0 Banners
+
+### Banners
+- Profile banners: a Banner pill in the top right corner of your profile sets one from your computer or the clipboard, or removes it.
+- Banners are cropped to 3:1, compressed and sent to @pixelGramCI_bot, which publishes them to the repository under your user ID.
+- Other people's banners load from the repository, fade in behind their avatar and are cached on disk.
+
+### Chats
+- Custom emoji in messages, including animated ones.
+- Inline buttons show their custom emoji icons and colors. Fixes games like checkers that draw the board with custom emoji.
+
 ## 0.13.0
 
 ### Chats

@@ -7,7 +7,8 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.13.0"
+version = "0.15.0"
+val codename = "Banners"
 
 kotlin {
     jvmToolchain(21)
@@ -70,11 +71,13 @@ val generateBuildConfig by tasks.registering {
         .orElse(providers.gradleProperty("pixelgram.apiHash"))
         .orElse("")
     val appVersion = project.version.toString()
+    val appCodename = codename
     val commit = providers.environmentVariable("GITHUB_SHA").filter { it.isNotBlank() }.orElse("dev")
     val outputDir = layout.buildDirectory.dir("generated/buildconfig")
     inputs.property("apiId", apiId)
     inputs.property("apiHash", apiHash)
     inputs.property("version", appVersion)
+    inputs.property("codename", appCodename)
     inputs.property("commit", commit)
     outputs.dir(outputDir)
     doLast {
@@ -87,6 +90,7 @@ val generateBuildConfig by tasks.registering {
             |
             |object BuildConfig {
             |    const val VERSION = "$appVersion"
+            |    const val CODENAME = "$appCodename"
             |    const val COMMIT = "${commit.get()}"
             |    const val API_ID = $id
             |    const val API_HASH = "${apiHash.get().trim()}"

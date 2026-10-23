@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.theme
 
+import com.pixelgram.desktop.ui.main.CustomEmojiView
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -248,13 +249,20 @@ fun EmojiText(
 
 fun withEmoji(text: AnnotatedString): Pair<AnnotatedString, Map<String, InlineTextContent>> {
     val plain = text.text
-    val ranges = emojiRanges(plain)
-    if (ranges.isEmpty()) return text to emptyMap()
+    val custom = text.getStringAnnotations(InlineContentTag, 0, plain.length).filter { it.item.startsWith(CustomEmojiPrefix) }
+    val ranges = emojiRanges(plain).filter { range -> custom.none { range.first < it.end && range.last + 1 > it.start } }
+    if (ranges.isEmpty() && custom.isEmpty()) return text to emptyMap()
     val builder = AnnotatedString.Builder(text)
+    val customInline = custom.associate { annotation ->
+        val fallback = plain.substring(annotation.start, annotation.end)
+        annotation.item to InlineTextContent(Placeholder(EmojiSize, EmojiSize, PlaceholderVerticalAlign.TextCenter)) {
+            CustomEmojiView(annotation.item.removePrefix(CustomEmojiPrefix).toLong(), fallback)
+        }
+    }
     if (!EmojiFonts.use3D) {
         val style = SpanStyle(fontFamily = FlatEmoji)
         ranges.forEach { builder.addStyle(style, it.first, it.last + 1) }
-        return builder.toAnnotatedString() to emptyMap()
+        return builder.toAnnotatedString() to customInline
     }
     ranges.forEach { builder.addStringAnnotation(InlineContentTag, plain.substring(it.first, it.last + 1), it.first, it.last + 1) }
     val inline = ranges.map { plain.substring(it.first, it.last + 1) }.distinct().associateWith { emoji ->
@@ -262,10 +270,12 @@ fun withEmoji(text: AnnotatedString): Pair<AnnotatedString, Map<String, InlineTe
             Emoji3DImage(emoji)
         }
     }
-    return builder.toAnnotatedString() to inline
+    return builder.toAnnotatedString() to inline + customInline
 }
 
-private const val InlineContentTag = "androidx.compose.foundation.text.inlineContent"
+const val CustomEmojiPrefix = "ce:"
+
+const val InlineContentTag = "androidx.compose.foundation.text.inlineContent"
 
 private val EmojiSize = 1.2.em
 

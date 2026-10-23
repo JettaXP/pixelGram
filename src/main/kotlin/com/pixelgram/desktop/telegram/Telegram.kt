@@ -164,6 +164,8 @@ enum class MessageStatus { Sending, Sent, Read, Failed }
 
 private const val AUTH_TIMEOUT_MS = 30_000L
 private const val PinnedLimit = 100
+private const val CustomEmojiBatchMs = 40L
+private const val CustomEmojiChunk = 200
 private const val OfficialChannel = "pixelgramclient"
 private const val DemoOfficialChat = 100L
 private const val ListsInterval = 100L
@@ -458,6 +460,25 @@ class Telegram(
             send(TdApi.SendBotStartMessage(botId, chat.id, parameter)) { sent ->
                 if (sent is TdApi.Error) AppLog.write("Bot start failed ${sent.code}: ${sent.message}")
             }
+        }
+    }
+
+    fun sendBanner(path: String?, done: (String?) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return done(null)
+        send(TdApi.SearchPublicChat().apply { username = com.pixelgram.desktop.core.Banners.Bot }) { chat ->
+            if (chat !is TdApi.Chat) return@send done("Couldn't reach @${com.pixelgram.desktop.core.Banners.Bot}")
+            val content: TdApi.InputMessageContent = if (path != null) {
+                TdApi.InputMessageDocument().apply {
+                    document = TdApi.InputDocument(TdApi.InputFileLocal(path), null, true)
+                    caption = TdApi.FormattedText("/banner", emptyArray())
+                }
+            } else {
+                TdApi.InputMessageText().apply { text = TdApi.FormattedText("/remove", emptyArray()) }
+            }
+            send(TdApi.SendMessage().apply {
+                chatId = chat.id
+                inputMessageContent = content
+            }) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
         }
     }
 
@@ -1258,6 +1279,35 @@ class Telegram(
     }
 
     val pinnedMessages = mutableStateMapOf<Long, List<UiMessage>>()
+
+    private val customEmojiStickers = mutableStateMapOf<Long, TdApi.Sticker>()
+    private val customEmojiQueue = LinkedHashSet<Long>()
+    private val customEmojiRequested = HashSet<Long>()
+
+    fun customEmoji(id: Long): TdApi.Sticker? {
+        customEmojiStickers[id]?.let { return it }
+        if (customEmojiRequested.add(id)) {
+            val first = customEmojiQueue.isEmpty()
+            customEmojiQueue.add(id)
+            if (first) scope.launch(Dispatchers.Main) {
+                delay(CustomEmojiBatchMs)
+                val ids = customEmojiQueue.toLongArray()
+                customEmojiQueue.clear()
+                ids.toList().chunked(CustomEmojiChunk).forEach { chunk ->
+                    send(TdApi.GetCustomEmojiStickers(chunk.toLongArray())) { result ->
+                        if (result is TdApi.Stickers) {
+                            result.stickers.forEach { sticker ->
+                                (sticker.fullType as? TdApi.StickerFullTypeCustomEmoji)?.let { customEmojiStickers[it.customEmojiId] = sticker }
+                            }
+                        } else {
+                            customEmojiRequested.removeAll(chunk.toSet())
+                        }
+                    }
+                }
+            }
+        }
+        return null
+    }
 
     fun loadPinned(chatId: Long) {
         if (System.getProperty("pixelgram.demo") == "true") {

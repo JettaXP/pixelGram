@@ -1,0 +1,8 @@
+name = "pixelgram-banners"
+main = "banners.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+REPO = "JettaXP/pixelGram"
+BRANCH = "main"
+BANNED = ""

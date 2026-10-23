@@ -44,6 +44,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -186,7 +189,14 @@ private fun ChatListBody(
             },
         ) { key ->
             val (pinned, rest) = chatsFor(key).partition { it.pinned[key] == true }
+            val listState = rememberLazyListState()
+            val topChat = rest.firstOrNull()?.id
+            LaunchedEffect(topChat) {
+                withFrameNanos { }
+                if (listState.firstVisibleItemIndex in 1..FollowTopItems) listState.animateScrollToItem(0)
+            }
             LazyColumn(
+                state = listState,
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
@@ -236,6 +246,7 @@ private fun ChatListBody(
 }
 
 private val GroupGap = 8.dp
+private const val FollowTopItems = 4
 
 @Composable
 private fun OnlineAvatar(chat: ChatState, telegram: Telegram, settings: AppSettings, size: Dp) {

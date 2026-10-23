@@ -11,6 +11,10 @@ fun Telegram.loadDemo() {
         phoneNumber = "79990000000"
         usernames = TdApi.Usernames(arrayOf("pixelgramclient"), emptyArray<String>(), "pixelgramclient", emptyArray<String>(), "")
     }
+    System.getProperty("pixelgram.demo.banner")?.let { path ->
+        com.pixelgram.desktop.core.Banners.setOwn(1, java.io.File(path))
+        com.pixelgram.desktop.core.Banners.setOwn(2, java.io.File(path))
+    }
     folders.addAll(listOf(
         FolderInfo(1, "Personal", "Private"),
         FolderInfo(2, "Work 💼", "Work"),

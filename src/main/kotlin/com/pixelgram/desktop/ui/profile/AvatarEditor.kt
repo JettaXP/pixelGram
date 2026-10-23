@@ -64,13 +64,13 @@ private val CameraWidth = 520.dp
 fun isVideoFile(file: File) = file.extension.lowercase() in VideoExtensions
 
 @Composable
-fun AvatarEditor(size: Dp, onPicked: (File) -> Unit, avatar: @Composable () -> Unit) {
+fun AvatarEditor(size: Dp, onPicked: (File) -> Unit, modifier: Modifier = Modifier, avatar: @Composable () -> Unit) {
     val hover = remember { MutableInteractionSource() }
     val hovered by hover.collectIsHoveredAsState()
     var menu by remember { mutableStateOf(false) }
     var camera by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    Box(Modifier.size(size).hoverable(hover), contentAlignment = Alignment.Center) {
+    Box(modifier.size(size).hoverable(hover), contentAlignment = Alignment.Center) {
         avatar()
         AnimatedVisibility(
             visible = hovered || menu,

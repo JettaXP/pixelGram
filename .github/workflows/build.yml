@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    paths-ignore: ['Banners/**']
   pull_request:
   workflow_dispatch:
 
@@ -36,7 +37,8 @@ jobs:
         run: |
           version=$(sed -n 's/^version = "\(.*\)"/\1/p' build.gradle.kts)
           echo "VERSION=$version" >> "$GITHUB_ENV"
-          awk -v head="## $version" '$0 == head { found = 1; next } /^## / { found = 0 } found' CHANGELOG.md > changes.md
+          echo "CODENAME=$(sed -n 's/^val codename = "\(.*\)"/\1/p' build.gradle.kts)" >> "$GITHUB_ENV"
+          awk -v head="## $version" '$0 == head || index($0, head " ") == 1 { found = 1; next } /^## / { found = 0 } found' CHANGELOG.md > changes.md
 
       - name: Nightly pre-release.
         if: github.ref == 'refs/heads/main'
@@ -63,7 +65,7 @@ jobs:
             gh release create "v$VERSION" \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
-              --title "pixelGram v$VERSION" \
+              --title "pixelGram v$VERSION $CODENAME" \
               --notes-file changes.md
             echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
           fi

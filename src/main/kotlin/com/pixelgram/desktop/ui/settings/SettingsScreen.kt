@@ -468,7 +468,7 @@ private fun PreferencesHeader() {
         themedAppIcon()?.let { Image(it, contentDescription = null, modifier = Modifier.size(96.dp)) }
         Text("pixelGram Desktop", style = MaterialTheme.typography.titleLargeEmphasized)
         Text(
-            "v${BuildConfig.VERSION}",
+            "v${BuildConfig.VERSION} · ${BuildConfig.CODENAME}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

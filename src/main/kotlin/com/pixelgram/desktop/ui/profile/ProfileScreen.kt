@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -58,6 +60,8 @@ import java.util.Locale
 private enum class ProfileField { Name, Username, Bio, Birthday }
 
 private const val BioLimit = 70
+private val BannerHeight = 200.dp
+private val AvatarOverlap = 60.dp
 
 @Composable
 fun ProfileScreen(
@@ -96,9 +100,19 @@ fun ProfileScreen(
             return@PageScaffold
         }
         val name = me.fullName()
-        AvatarEditor(160.dp, onPicked = pickPhoto) {
-            Box(Modifier.clickable(enabled = me.profilePhoto != null) { gallery = true }) {
-                Avatar(name, me.profilePhoto?.small, telegram, settings, size = 160.dp, full = me.profilePhoto?.big)
+        Box(Modifier.fillMaxWidth().height(BannerHeight + AvatarOverlap)) {
+            ProfileBanner(
+                me.id,
+                telegram,
+                BannerHeight,
+                RoundedCornerShape(28.dp),
+                MaterialTheme.colorScheme.surfaceContainer,
+                editable = true,
+            )
+            AvatarEditor(160.dp, onPicked = pickPhoto, modifier = Modifier.align(Alignment.BottomCenter)) {
+                Box(Modifier.clickable(enabled = me.profilePhoto != null) { gallery = true }) {
+                    Avatar(name, me.profilePhoto?.small, telegram, settings, size = 160.dp, full = me.profilePhoto?.big)
+                }
             }
         }
         EmojiText(name, style = MaterialTheme.typography.headlineMediumEmphasized)
