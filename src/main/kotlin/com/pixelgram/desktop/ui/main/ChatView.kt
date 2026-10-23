@@ -149,6 +149,15 @@ import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
 import java.io.File
 import kotlinx.coroutines.launch
+import com.pixelgram.desktop.ui.OnEscape
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.Circle
 
 @Composable
 fun ChatView(
@@ -237,6 +246,21 @@ fun ChatView(
         }
     }
     var highlight by remember(chat.id) { mutableStateOf<Pair<Long, Long>?>(null) }
+    val selected = remember(chat.id) { mutableStateListOf<Long>() }
+    val selecting = selected.isNotEmpty()
+    var deletingSelected by remember(chat.id) { mutableStateOf(false) }
+    var forwardingSelected by remember(chat.id) { mutableStateOf(false) }
+    var shot by remember(chat.id) { mutableStateOf(false) }
+    val selectedMessages = { shown.filter { it.key in selected } }
+    val selectedIds = { selectedMessages().flatMap { message -> message.album.takeIf { it.isNotEmpty() }?.map { it.id } ?: listOf(message.id) }.toLongArray() }
+    val itemBounds = remember(chat.id) { HashMap<Long, androidx.compose.ui.geometry.Rect>() }
+    var listOrigin by remember(chat.id) { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    if (selecting) OnEscape {
+        selected.clear()
+        true
+    }
+    LaunchedEffect(chat.id) { telegram.loadPinned(chat.id) }
+    var pinIndex by remember(chat.id) { mutableStateOf(0) }
     val canReact = !telegram.isSavedMessages(chat.id) || telegram.me?.isPremium == true
     val actions = remember(chat.id, canReact) {
         MessageActions(
@@ -249,6 +273,7 @@ fun ChatView(
             loadReactions = { message, done -> telegram.availableReactions(message, done) },
             canReact = canReact,
             onPin = { message -> telegram.togglePin(message) },
+            onSelect = { message -> if (selected.size < SelectionLimit && message.key !in selected) selected.add(message.key) },
             onDoubleClick = { message ->
                 val action = if (message.isOutgoing) settings.doubleClickOwn.value else settings.doubleClickOther.value
                 when (action) {
@@ -292,6 +317,30 @@ fun ChatView(
             forwarding = null
             onOpenChat(target)
         }
+    }
+    if (forwardingSelected) {
+        ForwardDialog(telegram, settings, onDismiss = { forwardingSelected = false }) { target ->
+            telegram.forwardMessages(target, chat.id, selectedIds())
+            forwardingSelected = false
+            selected.clear()
+            onOpenChat(target)
+        }
+    }
+    if (deletingSelected) {
+        val private = chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id)
+        DeleteMessageDialog(
+            canRevoke = private || (selectedMessages().all { it.isOutgoing } && !telegram.isSavedMessages(chat.id)),
+            revokeLabel = if (private) "Also delete for ${telegram.chatTitle(chat)}" else "Delete for everyone",
+            onDismiss = { deletingSelected = false },
+            onConfirm = { revoke ->
+                telegram.deleteMessages(chat.id, selectedIds(), revoke)
+                deletingSelected = false
+                selected.clear()
+            },
+        )
+    }
+    if (shot) {
+        ShotDialog(selectedMessages().reversed(), chat, telegram, settings, onDismiss = { shot = false })
     }
     PluginViewer.path?.let { path -> PluginDialog(path, telegram) { PluginViewer.path = null } }
     BackupViewer.path?.let { path -> BackupImportDialog(java.io.File(path), settings) { BackupViewer.path = null } }
@@ -382,7 +431,72 @@ fun ChatView(
                 )
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+        val pins = telegram.pinnedMessages[chat.id].orEmpty()
+        AnimatedVisibility(
+            visible = pins.isNotEmpty(),
+            enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
+            exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+        ) {
+            val index = pinIndex.coerceIn(0, (pins.size - 1).coerceAtLeast(0))
+            PinnedBar(
+                pins,
+                index,
+                onClick = {
+                    pins.getOrNull(index)?.let { MessageSearch.jump = chat.id to it.id }
+                    pinIndex = if (pins.isEmpty()) 0 else (index + 1) % pins.size
+                },
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+            )
+        }
+        Box(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .onGloballyPositioned { listOrigin = it.positionInWindow() }
+                .pointerInput(selecting) {
+                    if (!selecting) return@pointerInput
+                    val keyAt = { position: androidx.compose.ui.geometry.Offset ->
+                        val point = position + listOrigin
+                        shown.firstOrNull { message -> !message.service && itemBounds[message.key]?.let { point.y >= it.top && point.y < it.bottom } == true }?.key
+                    }
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                        if (!currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
+                        val start = keyAt(down.position) ?: return@awaitEachGesture
+                        down.consume()
+                        val base = selected.toList()
+                        val wasSelected = start in base
+                        var moved = false
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val change = event.changes.firstOrNull() ?: break
+                            if (!change.pressed) {
+                                change.consume()
+                                break
+                            }
+                            change.consume()
+                            if (change.position.y < SelectEdgePx) listState.dispatchRawDelta(SelectEdgePx - change.position.y)
+                            if (change.position.y > size.height - SelectEdgePx) listState.dispatchRawDelta(size.height - SelectEdgePx - change.position.y)
+                            val current = keyAt(change.position) ?: continue
+                            if (current == start && !moved) continue
+                            moved = true
+                            val from = shown.indexOfFirst { it.key == start }
+                            val to = shown.indexOfFirst { it.key == current }
+                            if (from < 0 || to < 0) continue
+                            val range = shown.subList(minOf(from, to), maxOf(from, to) + 1).filter { !it.service }.map { it.key }
+                            selected.clear()
+                            selected.addAll((base + range).distinct().take(SelectionLimit))
+                        }
+                        if (!moved) {
+                            if (wasSelected) {
+                                selected.remove(start)
+                            } else if (selected.size < SelectionLimit) {
+                                selected.add(start)
+                            }
+                        }
+                    }
+                },
+        ) {
             LazyColumn(
                 state = listState,
                 reverseLayout = true,
@@ -431,11 +545,48 @@ fun ChatView(
                     } else {
                         null
                     }
-                    Column(Modifier.animateItem(fadeInSpec = fade, placementSpec = placement, fadeOutSpec = fade)) {
+                    Column(Modifier.animateItem(fadeInSpec = fade, placementSpec = if (listState.isScrollInProgress) null else placement, fadeOutSpec = fade)) {
                         if (newDay) DateDivider(message.date)
                         if (message.service) {
-                            MessageBubble(message = message, senderName = null, settings = settings, modifier = itemModifier)
+                            val pin = message.content as? TdApi.MessagePinMessage
+                            if (pin != null) {
+                                val target = telegram.replyPreview(chat.id, pin.messageId)
+                                val who = if (message.isOutgoing) "You" else telegram.senderName(message)
+                                val what = target?.let { "\"${pinPreview(it)}\"" } ?: "a message"
+                                MessageBubble(
+                                    message = message.copy(text = "$who pinned $what"),
+                                    senderName = null,
+                                    settings = settings,
+                                    modifier = itemModifier
+                                        .pointerHoverIcon(PointerIcon.Hand)
+                                        .clickable { actions.onQuoteClick(pin.messageId) },
+                                )
+                            } else {
+                                MessageBubble(message = message, senderName = null, settings = settings, modifier = itemModifier)
+                            }
                         } else {
+                            val isSelected = message.key in selected
+                            val selectTint = MaterialTheme.colorScheme.primary
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .onGloballyPositioned { itemBounds[message.key] = it.boundsInWindow() }
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .drawBehind { if (isSelected) drawRect(selectTint.copy(alpha = SelectedAlpha)) },
+                            ) {
+                            AnimatedVisibility(
+                                visible = selecting,
+                                enter = expandHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(),
+                                exit = shrinkHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(),
+                            ) {
+                                Icon(
+                                    if (isSelected) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+                                    contentDescription = null,
+                                    tint = if (isSelected) selectTint else MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.padding(horizontal = 8.dp).size(22.dp),
+                                )
+                            }
+                            Box(Modifier.weight(1f)) {
                             val groupChat = chat.isGroup && !chat.isChannel && !message.isOutgoing
                             val sentAsChat = chat.isGroup && !chat.isChannel && message.isOutgoing &&
                                 message.senderChatId != 0L && message.senderChatId != chat.id ||
@@ -473,6 +624,8 @@ fun ChatView(
                                     onVia = { bot -> ComposerInsert.request = chat.id to "$bot " },
                                 )
                               }
+                            }
+                            }
                             }
                         }
                     }
@@ -526,7 +679,15 @@ fun ChatView(
                 modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp),
             )
         }
-        Composer(
+        if (selecting) {
+            SelectionBar(
+                count = selected.size,
+                onForward = { forwardingSelected = true },
+                onDelete = { deletingSelected = true },
+                onShot = { shot = true },
+                onCancel = { selected.clear() },
+            )
+        } else Composer(
             chatId = chat.id,
             inGroup = chat.isGroup,
             telegram = telegram,
@@ -994,6 +1155,8 @@ private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @
 }
 
 private val MetaGap = 10.dp
+private const val SelectedAlpha = 0.14f
+private const val SelectEdgePx = 48f
 private const val MentionDelayMs = 150L
 private val KeyboardMinWidth = 260.dp
 private const val JumpPages = 40
@@ -1093,10 +1256,10 @@ private fun MessagePhoto(
 }
 
 private const val PhotoPixels = 1024
-private val SenderAvatarSlot = 42.dp
+internal val SenderAvatarSlot = 42.dp
 private val SenderAvatarSize = 34.dp
 
-private fun sameSender(other: UiMessage?, message: UiMessage): Boolean =
+internal fun sameSender(other: UiMessage?, message: UiMessage): Boolean =
     other != null && !other.service && other.isOutgoing == message.isOutgoing &&
         other.senderUserId == message.senderUserId && other.senderChatId == message.senderChatId &&
         sameDay(other.date, message.date)
@@ -1111,7 +1274,7 @@ fun senderColor(id: Long): Color {
 }
 
 @Composable
-private fun SenderAvatar(message: UiMessage, telegram: Telegram, settings: AppSettings, onClick: () -> Unit) {
+internal fun SenderAvatar(message: UiMessage, telegram: Telegram, settings: AppSettings, onClick: () -> Unit) {
     val photo = if (message.senderUserId != 0L) {
         telegram.users[message.senderUserId]?.profilePhoto?.small
     } else {

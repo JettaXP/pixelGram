@@ -163,6 +163,7 @@ data class UiMessage(
 enum class MessageStatus { Sending, Sent, Read, Failed }
 
 private const val AUTH_TIMEOUT_MS = 30_000L
+private const val PinnedLimit = 100
 private const val ListsInterval = 100L
 private const val ClockTickMs = 20_000L
 private const val SearchLimit = 100
@@ -444,6 +445,17 @@ class Telegram(
     fun openPublicChat(username: String, onChat: (Long) -> Unit, onFail: () -> Unit) {
         send(TdApi.SearchPublicChat().apply { this.username = username }) { result ->
             if (result is TdApi.Chat) onChat(result.id) else onFail()
+        }
+    }
+
+    fun startBot(username: String, parameter: String, onChat: (Long) -> Unit, onFail: () -> Unit) {
+        send(TdApi.SearchPublicChat().apply { this.username = username }) { result ->
+            val chat = result as? TdApi.Chat ?: return@send onFail()
+            val botId = (chat.type as? TdApi.ChatTypePrivate)?.userId ?: return@send onFail()
+            onChat(chat.id)
+            send(TdApi.SendBotStartMessage(botId, chat.id, parameter)) { sent ->
+                if (sent is TdApi.Error) AppLog.write("Bot start failed ${sent.code}: ${sent.message}")
+            }
         }
     }
 
@@ -813,9 +825,12 @@ class Telegram(
             is TdApi.UpdateBasicGroup -> basicGroupMembers[update.basicGroup.id] = update.basicGroup.memberCount
             is TdApi.UpdateSupergroupFullInfo ->
                 if (update.supergroupFullInfo.memberCount > 0) supergroupMembers[update.supergroupId] = update.supergroupFullInfo.memberCount
-            is TdApi.UpdateMessageIsPinned -> messages[update.chatId]?.let { list ->
-                val index = list.indexOfFirst { it.id == update.messageId }
-                if (index >= 0) list[index] = list[index].copy(pinned = update.isPinned)
+            is TdApi.UpdateMessageIsPinned -> {
+                messages[update.chatId]?.let { list ->
+                    val index = list.indexOfFirst { it.id == update.messageId }
+                    if (index >= 0) list[index] = list[index].copy(pinned = update.isPinned)
+                }
+                if (pinnedMessages.containsKey(update.chatId)) loadPinned(update.chatId)
             }
             is TdApi.UpdateMessageContent -> messages[update.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.messageId }
@@ -1233,7 +1248,30 @@ class Telegram(
         }
     }
 
+    val pinnedMessages = mutableStateMapOf<Long, List<UiMessage>>()
+
+    fun loadPinned(chatId: Long) {
+        if (System.getProperty("pixelgram.demo") == "true") {
+            pinnedMessages[chatId] = messages(chatId).filter { it.pinned }
+            return
+        }
+        send(TdApi.SearchChatMessages().apply {
+            this.chatId = chatId
+            query = ""
+            limit = PinnedLimit
+            filter = TdApi.SearchMessagesFilterPinned()
+        }) { result ->
+            if (result is TdApi.FoundChatMessages) pinnedMessages[chatId] = result.messages.map { it.toUi() }
+        }
+    }
+
     fun togglePin(message: UiMessage) {
+        if (System.getProperty("pixelgram.demo") == "true") {
+            val list = messages(message.chatId)
+            val index = list.indexOfFirst { it.id == message.id }
+            if (index >= 0) list[index] = list[index].copy(pinned = !message.pinned)
+            return loadPinned(message.chatId)
+        }
         val request: TdApi.Function<TdApi.Ok> = if (message.pinned) {
             TdApi.UnpinChatMessage(message.chatId, message.id)
         } else {

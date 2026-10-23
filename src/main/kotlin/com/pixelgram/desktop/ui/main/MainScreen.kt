@@ -9,6 +9,8 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.BadgedBox
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -85,6 +87,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppSettings
@@ -218,32 +221,46 @@ fun MainScreen(
                             }
                         }
                     }
-                    if (MessageSearch.open && !compact) topFolders()
-                    if (MessageSearch.open && !compact) {
-                        MessageSearchPanel(telegram, settings, onOpen = onOpenChat)
-                    } else ChatList(
-                        listKey = selectedKey,
-                        title = if (selectedKey == ChatListKey.Archive) "Archived chats" else "pixelGram",
-                        chatsFor = telegram::chatList,
-                        order = { key -> if (key == ChatListKey.Archive) -1 else tabs.indexOfFirst { it.key == key } },
-                        vertical = foldersLeft,
-                        compact = compact,
-                        selectedChatId = openChatId,
-                        telegram = telegram,
-                        settings = settings,
-                        onOpen = onOpenChat,
-                        archivedCount = telegram.chatList(ChatListKey.Archive).size,
-                        onOpenArchive = { selectedKey = ChatListKey.Archive },
-                        onMenu = if (foldersLeft) null else toggleMenu,
-                        onSearch = { MessageSearch.start(null) },
-                        menuOpen = menuOpen,
-                        belowHeader = topFolders,
-                        onBack = if (selectedKey == ChatListKey.Archive) {
-                            { selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main }
-                        } else {
-                            null
+                    val searchSlide = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+                    AnimatedContent(
+                        targetState = MessageSearch.open && !compact,
+                        transitionSpec = {
+                            (fadeIn(fade) + slideInVertically(searchSlide) { it / SearchSlideDivisor }) togetherWith
+                                (fadeOut(fade) + slideOutVertically(searchSlide) { -it / SearchSlideDivisor })
                         },
-                    )
+                        modifier = Modifier.weight(1f),
+                    ) { searching ->
+                        if (searching) {
+                            Column {
+                                topFolders()
+                                MessageSearchPanel(telegram, settings, onOpen = onOpenChat)
+                            }
+                        } else {
+                            ChatList(
+                                listKey = selectedKey,
+                                title = if (selectedKey == ChatListKey.Archive) "Archived chats" else "pixelGram",
+                                chatsFor = telegram::chatList,
+                                order = { key -> if (key == ChatListKey.Archive) -1 else tabs.indexOfFirst { it.key == key } },
+                                vertical = foldersLeft,
+                                compact = compact,
+                                selectedChatId = openChatId,
+                                telegram = telegram,
+                                settings = settings,
+                                onOpen = onOpenChat,
+                                archivedCount = telegram.chatList(ChatListKey.Archive).size,
+                                onOpenArchive = { selectedKey = ChatListKey.Archive },
+                                onMenu = if (foldersLeft) null else toggleMenu,
+                                onSearch = { MessageSearch.start(null) },
+                                menuOpen = menuOpen,
+                                belowHeader = topFolders,
+                                onBack = if (selectedKey == ChatListKey.Archive) {
+                                    { selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main }
+                                } else {
+                                    null
+                                },
+                            )
+                        }
+                    }
                 }
                 Box(
                     Modifier
@@ -564,3 +581,5 @@ private val RailWidth = 96.dp
 private val CompactWidth = 88.dp
 private val CompactThreshold = 220.dp
 private val DividerWidth = 8.dp
+
+private const val SearchSlideDivisor = 12

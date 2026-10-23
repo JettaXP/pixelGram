@@ -3,6 +3,9 @@ package com.pixelgram.desktop.ui.main
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.ui.components.HoverTarget
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -149,6 +152,7 @@ private val ReactionAvatarSize = 20.dp
 private val ReactionAvatarOverlap = 6.dp
 
 @Composable
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 fun InlineKeyboard(rows: List<List<TdApi.InlineKeyboardButton>>, onPress: (TdApi.InlineKeyboardButton) -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(ButtonGap), modifier = modifier) {
@@ -168,7 +172,11 @@ fun InlineKeyboard(rows: List<List<TdApi.InlineKeyboardButton>>, onPress: (TdApi
                         ),
                         color = scheme.secondaryContainer,
                         contentColor = scheme.onSecondaryContainer,
-                        modifier = Modifier.weight(1f).height(ButtonHeight),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(ButtonHeight)
+                            .onPointerEvent(PointerEventType.Enter) { HoverTarget.button = button }
+                            .onPointerEvent(PointerEventType.Exit) { if (HoverTarget.button === button) HoverTarget.button = null },
                     ) {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 8.dp)) {
                             EmojiText(

@@ -95,6 +95,12 @@ object Attachments {
         return dialog.files.orEmpty().filter { it.isFile }
     }
 
+    fun copyImage(image: java.awt.Image) {
+        runCatching {
+            Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageSelection(image), null)
+        }.onFailure { AppLog.write("Copy image failed", it) }
+    }
+
     fun copyImage(path: String) {
         runCatching {
             val image = ImageIO.read(File(path)) ?: return

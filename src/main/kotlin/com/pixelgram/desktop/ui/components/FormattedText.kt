@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
@@ -68,6 +69,11 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.sin
+
+object HoverTarget {
+    var link: String? = null
+    var button: TdApi.InlineKeyboardButton? = null
+}
 
 data class FormatColors(val accent: Color, val code: Color, val quote: Color)
 
@@ -176,8 +182,16 @@ fun FormattedText(
                         val change = event.changes.first()
                         val index = current.getOffsetForPosition(change.position)
                         val hit = hidden.firstOrNull { index in it }
+                        val onText = event.type != PointerEventType.Exit && current.getBoundingBox(index.coerceAtMost(annotated.length - 1).coerceAtLeast(0)).let {
+                            change.position.y in it.top..it.bottom
+                        }
+                        HoverTarget.link = if (onText) {
+                            (annotated.getLinkAnnotations(index, index + 1).firstOrNull()?.item as? LinkAnnotation.Url)?.url
+                        } else {
+                            null
+                        }
                         overSpoiler = hit != null && event.type != PointerEventType.Exit
-                        if (event.type != PointerEventType.Press || hit == null) continue
+                        if (event.type != PointerEventType.Press || hit == null || !event.buttons.isPrimaryPressed) continue
                         change.consume()
                         revealed = revealed + hit.first
                         fadingStart = hit.first

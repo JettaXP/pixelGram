@@ -105,7 +105,8 @@ fun Telegram.loadDemo() {
     }
     messages(100L).addAll(listOf(
         UiMessage(3, 100, 2, 0, false, now - 60, "Did the new emoji arrive? 😀🥳🫠👍"),
-        UiMessage(2, 100, 1, 0, true, now - 120, "Yes! 🎉🔥❤️ and flags 🇷🇺🇺🇦", edited = true),
+        UiMessage(60, 100, 1, 0, true, now - 100, "", service = true, content = TdApi.MessagePinMessage(2)),
+        UiMessage(2, 100, 1, 0, true, now - 120, "Yes! 🎉🔥❤️ and flags 🇷🇺🇺🇦", edited = true, pinned = true),
         UiMessage(1, 100, 2, 0, false, now - 180, "Hi there 👋"),
         UiMessage(0, 100, 2, 0, false, now - 240, "Created «pixelGram 🎨»", service = true),
     ))

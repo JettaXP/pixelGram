@@ -51,9 +51,14 @@ object Links : UriHandler {
         telegram.internalLinkType(url) { type ->
             when (type) {
                 is TdApi.InternalLinkTypePublicChat ->
-                    telegram.openPublicChat(type.chatUsername, { go(telegram, it) }, { openBrowser(url) })
+                    telegram.openPublicChat(type.chatUsername, { chatId ->
+                        go(telegram, chatId)
+                        type.draftText?.takeIf { it.isNotEmpty() }?.let { text ->
+                            SwingUtilities.invokeLater { ComposerInsert.request = chatId to text }
+                        }
+                    }, { openBrowser(url) })
                 is TdApi.InternalLinkTypeBotStart ->
-                    telegram.openPublicChat(type.botUsername, { go(telegram, it) }, { openBrowser(url) })
+                    telegram.startBot(type.botUsername, type.startParameter, { go(telegram, it) }, { openBrowser(url) })
                 is TdApi.InternalLinkTypeMessage ->
                     telegram.messageLinkInfo(type.url) { chatId, messageId ->
                         if (chatId != 0L) go(telegram, chatId, messageId) else openBrowser(url)

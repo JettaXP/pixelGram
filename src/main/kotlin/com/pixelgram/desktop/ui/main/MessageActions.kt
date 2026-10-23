@@ -1,6 +1,12 @@
 package com.pixelgram.desktop.ui.main
 
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.DataObject
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.pixelgram.desktop.ui.components.HoverTarget
+import it.tdlight.jni.TdApi
 import com.pixelgram.desktop.telegram.Telegram
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -85,7 +91,10 @@ class MessageActions(
     val onDoubleClick: (UiMessage) -> Unit = {},
     val canReact: Boolean = true,
     val onPin: ((UiMessage) -> Unit)? = null,
+    val onSelect: ((UiMessage) -> Unit)? = null,
 )
+
+private class MenuTarget(val at: DpOffset, val link: String?, val button: TdApi.InlineKeyboardButton?)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -100,7 +109,7 @@ fun MessageGestures(
     val threshold = with(LocalDensity.current) { SwipeThreshold.toPx() }
     var fired by remember { mutableStateOf(false) }
     var settle by remember { mutableStateOf<Job?>(null) }
-    var menuAt by remember { mutableStateOf<DpOffset?>(null) }
+    var menuAt by remember { mutableStateOf<MenuTarget?>(null) }
     var lastPress by remember { mutableStateOf(0L to Offset.Zero) }
     val density = LocalDensity.current
     val slop = LocalViewConfiguration.current.touchSlop
@@ -135,7 +144,11 @@ fun MessageGestures(
                         val change = event.changes.firstOrNull() ?: continue
                         if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
                             change.consume()
-                            menuAt = with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) }
+                            menuAt = MenuTarget(
+                                with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) },
+                                HoverTarget.link,
+                                HoverTarget.button,
+                            )
                         } else if (event.type == PointerEventType.Press && event.buttons.isPrimaryPressed) {
                             val (time, at) = lastPress
                             val now = change.uptimeMillis
@@ -147,7 +160,7 @@ fun MessageGestures(
                             }
                         } else if (event.type == PointerEventType.Scroll) {
                             val delta = change.scrollDelta
-                            if (abs(delta.x) > abs(delta.y) && delta.x != 0f) {
+                            if (abs(delta.x) > abs(delta.y) * HorizontalDominance && abs(delta.x) >= MinHorizontalScroll) {
                                 change.consume()
                                 move(-delta.x * TouchpadFactor)
                                 settle?.cancel()
@@ -188,16 +201,33 @@ fun MessageGestures(
         Box(Modifier.offset { IntOffset(shift.value.roundToInt(), 0) }) {
             content()
         }
-        menuAt?.let { at ->
-            Box(Modifier.offset(at.x, at.y)) {
-                MessageMenu(message, actions, onDismiss = { menuAt = null })
+        menuAt?.let { target ->
+            Box(Modifier.offset(target.at.x, target.at.y)) {
+                MessageMenu(message, actions, target.link, target.button, onDismiss = { menuAt = null })
             }
         }
     }
 }
 
 @Composable
-private fun MessageMenu(message: UiMessage, actions: MessageActions, onDismiss: () -> Unit) {
+private fun MessageMenu(
+    message: UiMessage,
+    actions: MessageActions,
+    link: String?,
+    button: TdApi.InlineKeyboardButton?,
+    onDismiss: () -> Unit,
+) {
+    val item = @Composable { label: String, icon: ImageVector, action: () -> Unit ->
+        DropdownMenuItem(
+            text = { Text(label) },
+            leadingIcon = { Icon(icon, contentDescription = null) },
+            onClick = {
+                onDismiss()
+                action()
+            },
+        )
+    }
+    val copy = { value: String -> Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(value), null) }
     DropdownMenu(
         expanded = true,
         onDismissRequest = onDismiss,
@@ -213,63 +243,29 @@ private fun MessageMenu(message: UiMessage, actions: MessageActions, onDismiss: 
             }
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
         }
-        DropdownMenuItem(
-            text = { Text("Reply") },
-            leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Reply, contentDescription = null) },
-            onClick = {
-                onDismiss()
-                actions.onReply(message)
-            },
-        )
-        DropdownMenuItem(
-            text = { Text("Forward") },
-            leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Forward, contentDescription = null) },
-            onClick = {
-                onDismiss()
-                actions.onForward(message)
-            },
-        )
+        item("Reply", Icons.AutoMirrored.Outlined.Reply) { actions.onReply(message) }
+        actions.onPin?.takeIf { !message.service }?.let { pin ->
+            item(if (message.pinned) "Unpin" else "Pin", Icons.Outlined.PushPin) { pin(message) }
+        }
         if (message.isOutgoing && message.editable) {
-            DropdownMenuItem(
-                text = { Text("Edit") },
-                leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null) },
-                onClick = {
-                    onDismiss()
-                    actions.onEdit(message)
-                },
-            )
+            item("Edit", Icons.Outlined.Edit) { actions.onEdit(message) }
+        }
+        val buttonUrl = (button?.type as? TdApi.InlineKeyboardButtonTypeUrl)?.url
+            ?: (button?.type as? TdApi.InlineKeyboardButtonTypeLoginUrl)?.url
+        val copyLink = link ?: buttonUrl
+        if (copyLink != null) {
+            item("Copy Link", Icons.Outlined.Link) { copy(copyLink) }
+        }
+        (button?.type as? TdApi.InlineKeyboardButtonTypeCallback)?.let { callback ->
+            item("Copy Callback Data", Icons.Outlined.DataObject) { copy(String(callback.data, Charsets.UTF_8)) }
         }
         if (message.photo != null) {
-            DropdownMenuItem(
-                text = { Text("Copy photo") },
-                leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
-                onClick = {
-                    onDismiss()
-                    actions.onCopyPhoto(message)
-                },
-            )
+            item("Copy photo", Icons.Outlined.Image) { actions.onCopyPhoto(message) }
         }
         if (message.text.isNotEmpty()) {
-            DropdownMenuItem(
-                text = { Text("Copy text") },
-                leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) },
-                onClick = {
-                    onDismiss()
-                    Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(message.text), null)
-                },
-            )
+            item("Copy text", Icons.Outlined.ContentCopy) { copy(message.text) }
         }
-        actions.onPin?.takeIf { !message.service }?.let { pin ->
-            DropdownMenuItem(
-                text = { Text(if (message.pinned) "Unpin" else "Pin") },
-                leadingIcon = { Icon(Icons.Outlined.PushPin, contentDescription = null) },
-                onClick = {
-                    onDismiss()
-                    pin(message)
-                },
-            )
-        }
-        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        item("Forward", Icons.AutoMirrored.Outlined.Forward) { actions.onForward(message) }
         DropdownMenuItem(
             text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
             leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
@@ -278,6 +274,9 @@ private fun MessageMenu(message: UiMessage, actions: MessageActions, onDismiss: 
                 actions.onDelete(message)
             },
         )
+        actions.onSelect?.takeIf { !message.service }?.let { select ->
+            item("Select", Icons.Outlined.CheckCircle) { select(message) }
+        }
     }
 }
 
@@ -321,16 +320,18 @@ fun ReplyQuote(
     modifier: Modifier = Modifier,
     replied: UiMessage? = null,
     telegram: Telegram? = null,
+    accent: androidx.compose.ui.graphics.Color? = null,
 ) {
     val colors = MaterialTheme.colorScheme
+    val tint = accent ?: colors.primary
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),
-        color = colors.primary.copy(alpha = 0.12f),
+        color = tint.copy(alpha = 0.12f),
         modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min),
     ) {
         Row {
-            Box(Modifier.width(3.dp).fillMaxHeight().background(colors.primary))
+            Box(Modifier.width(3.dp).fillMaxHeight().background(tint))
             if (telegram != null && replied?.let(::replyThumb) != null) {
                 Box(Modifier.padding(start = 6.dp).align(Alignment.CenterVertically)) {
                     ReplyThumb(replied, telegram, ReplyThumbSize)
@@ -340,7 +341,7 @@ fun ReplyQuote(
                 EmojiText(
                     name,
                     style = MaterialTheme.typography.labelLarge,
-                    color = colors.primary,
+                    color = tint,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -359,3 +360,5 @@ private val ReplyThumbSize = 32.dp
 private val SwipeThreshold = 64.dp
 private const val TouchpadFactor = 1.6f
 private const val SettleMs = 140L
+private const val HorizontalDominance = 2f
+private const val MinHorizontalScroll = 0.5f
