@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.1 Pill
+
+- The "official pixelGram resource" pill now shows at the top of the window, where "pixelGram Updated!" appears, and slides away smoothly.
+
 ## 0.21.0 Locked
 
 ### Local passcode
