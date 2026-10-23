@@ -150,6 +150,9 @@ import it.tdlight.jni.TdApi
 import java.io.File
 import kotlinx.coroutines.launch
 import com.pixelgram.desktop.ui.OnEscape
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.AlertDialog
 import com.pixelgram.desktop.core.PowerSaving
 import com.pixelgram.desktop.ui.components.OfficialBadge
 import androidx.compose.ui.input.pointer.isPrimaryPressed
@@ -248,6 +251,7 @@ fun ChatView(
         }
     }
     var highlight by remember(chat.id) { mutableStateOf<Pair<Long, Long>?>(null) }
+    var pinning by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     val selected = remember(chat.id) { mutableStateListOf<Long>() }
     val selecting = selected.isNotEmpty()
     var deletingSelected by remember(chat.id) { mutableStateOf(false) }
@@ -274,7 +278,7 @@ fun ChatView(
             onReact = { message, emoji -> telegram.toggleReaction(message, emoji) },
             loadReactions = { message, done -> telegram.availableReactions(message, done) },
             canReact = canReact,
-            onPin = { message -> telegram.togglePin(message) },
+            onPin = { message -> if (message.pinned) telegram.togglePin(message) else pinning = message },
             onSelect = { message -> if (selected.size < SelectionLimit && message.key !in selected) selected.add(message.key) },
             onDoubleClick = { message ->
                 val action = if (message.isOutgoing) settings.doubleClickOwn.value else settings.doubleClickOther.value
@@ -319,6 +323,42 @@ fun ChatView(
             forwarding = null
             onOpenChat(target)
         }
+    }
+    pinning?.let { message ->
+        val saved = telegram.isSavedMessages(chat.id)
+        val private = chat.privateUserId != 0L && !saved
+        var also by remember(message.key) { mutableStateOf(true) }
+        AlertDialog(
+            onDismissRequest = { pinning = null },
+            icon = { Icon(Icons.Outlined.PushPin, contentDescription = null) },
+            title = { Text("Pin message") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Would you like to pin this message?")
+                    if (!saved) {
+                        val label = when {
+                            private -> "Also pin for ${telegram.chatTitle(chat)}"
+                            chat.isChannel -> "Notify all subscribers"
+                            else -> "Notify all members"
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable { also = !also },
+                        ) {
+                            Checkbox(checked = also, onCheckedChange = { also = it })
+                            EmojiText(label, modifier = Modifier.padding(end = 12.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (private) telegram.togglePin(message, notify = true, onlyForSelf = !also) else telegram.togglePin(message, notify = also)
+                    pinning = null
+                }) { Text("Pin") }
+            },
+            dismissButton = { TextButton(onClick = { pinning = null }) { Text("Cancel") } },
+        )
     }
     if (forwardingSelected) {
         ForwardDialog(telegram, settings, onDismiss = { forwardingSelected = false }) { target ->

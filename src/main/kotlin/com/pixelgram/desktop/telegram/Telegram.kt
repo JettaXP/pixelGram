@@ -391,7 +391,7 @@ class Telegram(
             apiId = this@Telegram.apiId
             apiHash = this@Telegram.apiHash
             systemLanguageCode = System.getProperty("user.language") ?: "en"
-            deviceModel = settings.deviceName.value.ifBlank { "Desktop" }
+            deviceModel = settings.deviceName.value.ifBlank { com.pixelgram.desktop.core.DeviceInfo.model }
             systemVersion = "${System.getProperty("os.name")} ${System.getProperty("os.version")}"
             applicationVersion = BuildConfig.VERSION
         }
@@ -1349,7 +1349,7 @@ class Telegram(
         }
     }
 
-    fun togglePin(message: UiMessage) {
+    fun togglePin(message: UiMessage, notify: Boolean = true, onlyForSelf: Boolean = false) {
         if (System.getProperty("pixelgram.demo") == "true") {
             val list = messages(message.chatId)
             val index = list.indexOfFirst { it.id == message.id }
@@ -1359,7 +1359,7 @@ class Telegram(
         val request: TdApi.Function<TdApi.Ok> = if (message.pinned) {
             TdApi.UnpinChatMessage(message.chatId, message.id)
         } else {
-            TdApi.PinChatMessage(message.chatId, message.id, false, false)
+            TdApi.PinChatMessage(message.chatId, message.id, !notify, onlyForSelf)
         }
         send(request) { result ->
             if (result is TdApi.Error) AppLog.write("Pin failed ${result.code}: ${result.message}")

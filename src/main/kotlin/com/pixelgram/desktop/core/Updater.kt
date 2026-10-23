@@ -171,6 +171,7 @@ object Updater {
     private fun applyArchive(file: File) {
         val exe = launcher() ?: error("Unknown launcher")
         val target = AppPaths.appDir ?: error("Unknown install folder")
+        File(AppPaths.dataDir, "update-error.log").delete()
         val pid = ProcessHandle.current().pid().toString()
         val dir = file.parentFile
         if (AppPaths.isWindows) {

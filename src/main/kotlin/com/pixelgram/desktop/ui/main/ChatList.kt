@@ -43,6 +43,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
@@ -169,6 +171,7 @@ private fun ChatListBody(
                 if (updateOpen) UpdateDialog(onBeforeExit = {}, onDismiss = { updateOpen = false })
             }
             if (onSearch != null) {
+                if (com.pixelgram.desktop.core.AppLock.enabled) LockButton()
                 IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Search messages") }
             }
         }
@@ -455,3 +458,31 @@ fun formatChatDate(unixSeconds: Int): String {
     val time = Instant.ofEpochSecond(unixSeconds.toLong()).atZone(ZoneId.systemDefault())
     return if (time.toLocalDate() == LocalDate.now()) time.format(timeFormat) else time.format(dateFormat)
 }
+
+@Composable
+private fun LockButton() {
+    var closing by remember { mutableStateOf(false) }
+    LaunchedEffect(closing) {
+        if (closing) {
+            kotlinx.coroutines.delay(LockAnimationMs)
+            com.pixelgram.desktop.core.AppLock.lock()
+            closing = false
+        }
+    }
+    IconButton(onClick = { closing = true }) {
+        androidx.compose.animation.AnimatedContent(
+            targetState = closing,
+            transitionSpec = {
+                (androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = 0.6f)) togetherWith
+                    (androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = 1.3f))
+            },
+        ) { locked ->
+            Icon(
+                if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
+                contentDescription = "Lock pixelGram",
+            )
+        }
+    }
+}
+
+private const val LockAnimationMs = 260L

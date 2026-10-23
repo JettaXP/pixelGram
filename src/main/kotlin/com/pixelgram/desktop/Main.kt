@@ -364,7 +364,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
         val failure = Updater.consumeFailure()
         if (updated || failure != null) {
             delay(UpdatedNoticeDelayMs)
-            TopNotice.text = if (failure != null) "Update failed: $failure" else "pixelGram Updated!"
+            TopNotice.text = if (updated) "pixelGram Updated!" else "Update failed: $failure"
         }
     }
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
@@ -415,8 +415,10 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
         }
         androidx.compose.animation.AnimatedVisibility(
             visible = AppLock.locked,
-            enter = androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.fadeOut(),
+            enter = androidx.compose.animation.fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                androidx.compose.animation.scaleIn(MaterialTheme.motionScheme.defaultSpatialSpec(), initialScale = LockScaleFrom),
+            exit = androidx.compose.animation.fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                androidx.compose.animation.scaleOut(MaterialTheme.motionScheme.defaultSpatialSpec(), targetScale = LockScaleFrom),
         ) { LockScreen() }
         BotAnswer(
             TopNotice.text?.let { it to false },
@@ -430,3 +432,4 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
 private const val RaiseHoldMs = 150L
 private const val UpdatedNoticeDelayMs = 1500L
 private const val LockCheckMs = 10_000L
+private const val LockScaleFrom = 1.08f

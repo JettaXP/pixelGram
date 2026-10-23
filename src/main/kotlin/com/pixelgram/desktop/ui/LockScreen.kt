@@ -1,5 +1,12 @@
 package com.pixelgram.desktop.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.foundation.focusable
@@ -52,6 +59,7 @@ import kotlin.math.roundToInt
 
 private const val ShakeMs = 400
 private const val ShakePx = 14f
+private const val MaxTyped = 64
 
 @Composable
 fun LockScreen() {
@@ -79,11 +87,10 @@ fun LockScreen() {
     val press: (String) -> Unit = { key ->
         when (key) {
             BackspaceKey -> passcode = passcode.dropLast(1)
-            EnterKey -> if (passcode.length == AppLock.PinLength) attempt(passcode)
-            else -> if (passcode.length < AppLock.PinLength) {
+            EnterKey -> if (passcode.isNotEmpty()) attempt(passcode)
+            else -> if (passcode.length < MaxTyped) {
                 passcode += key
                 wrong = false
-                if (passcode.length == AppLock.PinLength) attempt(passcode)
             }
         }
     }
@@ -116,11 +123,26 @@ fun LockScreen() {
                 ) {
                     rememberPixelgramLogo()?.let { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(42.dp)) }
                 }
-                Text(
-                    if (wrong) "Wrong passcode" else "Enter passcode",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (wrong) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                val titleColor by animateColorAsState(
+                    if (wrong) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                    MaterialTheme.motionScheme.defaultEffectsSpec(),
                 )
+                val fadeSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                val fastFade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+                val slideSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+                AnimatedContent(
+                    targetState = wrong,
+                    transitionSpec = {
+                        (fadeIn(fadeSpec) + slideInVertically(slideSpec) { it / 2 }) togetherWith
+                            (fadeOut(fastFade) + slideOutVertically(slideSpec) { -it / 2 })
+                    },
+                ) { isWrong ->
+                    Text(
+                        if (isWrong) "Wrong passcode" else "Enter passcode",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = titleColor,
+                    )
+                }
                 PinDots(passcode.length, Modifier.offset { IntOffset(shake.value.roundToInt(), 0) })
                 PinPad(onKey = press, modifier = Modifier.padding(top = 12.dp))
             }

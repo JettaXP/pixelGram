@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.21.0 Locked
+
+### Local passcode
+- A lock button next to search locks pixelGram right away with an animation.
+- The lock screen fades and scales in and out.
+- "Wrong passcode" now animates in instead of popping up.
+- The passcode is checked only when you press Enter or the enter key on the pad, so you can type as many digits as you like.
+- A more compact passcode setup dialog.
+
+### Chats
+- Pinning a message asks first: "Also pin for <name>" in private chats, "Notify all members" in groups.
+
+### Sessions
+- pixelGram sessions are named after your motherboard, like Telegram Desktop, instead of "Desktop".
+
+### Updates
+- No more false "Update failed" after a successful update.
+
 ## 0.20.2
 
 - While a new version is still being built, update checks offer the latest finished release instead of saying updates are unavailable.

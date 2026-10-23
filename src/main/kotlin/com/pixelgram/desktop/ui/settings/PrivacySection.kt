@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -66,6 +67,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppLock
 import com.pixelgram.desktop.core.AppSettings
@@ -433,7 +435,7 @@ private fun PasscodeDialog(settings: AppSettings, onDismiss: () -> Unit) {
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            modifier = Modifier.width(280.dp),
+            modifier = Modifier.width(PasscodeFieldWidth),
         )
     }
     val setNew = {
@@ -448,13 +450,22 @@ private fun PasscodeDialog(settings: AppSettings, onDismiss: () -> Unit) {
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
-        title = { Text("Local passcode") },
+        title = { Text("Local passcode", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+        modifier = Modifier.widthIn(max = PasscodeDialogWidth),
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 when (step) {
                     PasscodeStep.Set -> {
-                        Text("A ${AppLock.PinLength}-digit PIN. pixelGram will ask for it when it starts and after you've been away.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "A ${AppLock.PinLength}-digit PIN. pixelGram will ask for it when it starts and after you've been away.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 4.dp),
+                        )
                         field(first, "New passcode") { first = it }
                         field(second, "Repeat passcode") { second = it }
                     }
@@ -465,7 +476,7 @@ private fun PasscodeDialog(settings: AppSettings, onDismiss: () -> Unit) {
                     }
                     PasscodeStep.Off -> field(current, "Current passcode") { current = it }
                     PasscodeStep.Manage -> {
-                        Text("Auto-lock if away for", style = MaterialTheme.typography.titleSmall)
+                        Text("Auto-lock if away for", style = MaterialTheme.typography.titleSmall, modifier = Modifier.fillMaxWidth())
                         AutoLockOptions.forEach { (minutes, label) ->
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -514,6 +525,8 @@ private fun PasscodeDialog(settings: AppSettings, onDismiss: () -> Unit) {
 }
 
 private const val MaxPasscode = AppLock.PinLength
+private val PasscodeFieldWidth = 200.dp
+private val PasscodeDialogWidth = 300.dp
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

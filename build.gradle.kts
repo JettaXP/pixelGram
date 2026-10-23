@@ -7,8 +7,8 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.20.2"
-val codename = ""
+version = "0.21.0"
+val codename = "Locked"
 
 kotlin {
     jvmToolchain(21)
