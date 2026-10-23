@@ -74,7 +74,7 @@ fun UpdateDialog(onBeforeExit: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Outlined.SystemUpdate, contentDescription = null) },
-        title = { Text("Update (beta)") },
+        title = { Text("Update") },
         text = { UpdatePanel(onBeforeExit) },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
         shape = RoundedCornerShape(28.dp),

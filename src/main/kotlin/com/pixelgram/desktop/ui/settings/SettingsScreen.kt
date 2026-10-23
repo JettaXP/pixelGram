@@ -740,7 +740,7 @@ private fun AppearanceSection(settings: AppSettings) {
     )
     Text("Style on top", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
     ConnectedChoice(
-        options = listOf(false to "Tabs", true to "Capsule (experimental)"),
+        options = listOf(false to "Tabs", true to "Capsule"),
         selected = settings.capsuleFolders.value,
         onSelect = {
             settings.capsuleFolders.value = it
@@ -757,7 +757,7 @@ private fun AppearanceSection(settings: AppSettings) {
         onChange = { settings.hideAllChats.value = it },
     )
 
-    Header("Capsule (experimental)")
+    Header("Capsule")
     Description("The selected folder shows its name, the others only their icon. Try it here:")
     CapsuleFolders(
         tabs = CapsulePreviewTabs,
@@ -792,7 +792,7 @@ private fun AppearanceSection(settings: AppSettings) {
 @Composable
 private fun EmojiStyleChoice(settings: AppSettings) {
     ConnectedChoice(
-        options = listOf(EmojiStyle.Noto to "Noto", EmojiStyle.Noto3D to "Noto 3D (experimental)"),
+        options = listOf(EmojiStyle.Noto to "Noto", EmojiStyle.Noto3D to "Noto 3D"),
         selected = settings.emojiStyle.value,
         onSelect = { settings.emojiStyle.value = it },
     )
@@ -1193,7 +1193,7 @@ private fun AboutSection(telegram: Telegram, settings: AppSettings, onOpenChat: 
         Text(status.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
     }
 
-    Header("Updates (beta)")
+    Header("Updates")
     SwitchRow(
         index = 0,
         count = 1,
