@@ -16,4 +16,15 @@ while IFS= read -r line || [ -n "$line" ]; do
     esac
 done < "$APPDIR/pixelGram.cfg"
 joined="$(IFS=:; echo "${classpath[*]}")"
+# Java draws blank or partial windows on tiling window managers unless told they don't reparent.
+if [ -z "${_JAVA_AWT_WM_NONREPARENTING+x}" ]; then
+    desktop="${XDG_CURRENT_DESKTOP:-}:${XDG_SESSION_DESKTOP:-}:${DESKTOP_SESSION:-}"
+    case "${desktop,,}" in
+        *niri*|*hyprland*|*sway*|*river*|*wayfire*|*i3*|*bspwm*|*dwm*|*qtile*|*awesome*|*xmonad*|*herbstluft*|*spectrwm*|*leftwm*)
+            export _JAVA_AWT_WM_NONREPARENTING=1 ;;
+    esac
+    if [ -n "${NIRI_SOCKET:-}${HYPRLAND_INSTANCE_SIGNATURE:-}${SWAYSOCK:-}" ]; then
+        export _JAVA_AWT_WM_NONREPARENTING=1
+    fi
+fi
 exec "$root/lib/runtime/bin/java" "-Djpackage.app-path=$launcher" "${options[@]}" -cp "$joined" "$main" "$@"
