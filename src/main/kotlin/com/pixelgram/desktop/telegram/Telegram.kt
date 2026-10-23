@@ -149,6 +149,8 @@ data class UiMessage(
     val keyboard: List<List<TdApi.InlineKeyboardButton>> = emptyList(),
     val viaBot: Long = 0,
     val album: List<UiMessage> = emptyList(),
+    val signature: String = "",
+    val captionAbove: Boolean = false,
     val views: Int = 0,
     val pinned: Boolean = false,
     val albumId: Long = 0,
@@ -1575,6 +1577,13 @@ fun TdApi.Message.toUi(): UiMessage {
         views = interactionInfo?.viewCount ?: 0,
         pinned = isPinned,
         albumId = mediaAlbumId,
+        signature = authorSignature.orEmpty(),
+        captionAbove = when (val media = content) {
+            is TdApi.MessagePhoto -> media.showCaptionAboveMedia
+            is TdApi.MessageVideo -> media.showCaptionAboveMedia
+            is TdApi.MessageAnimation -> media.showCaptionAboveMedia
+            else -> false
+        },
         replyToId = (replyTo as? TdApi.MessageReplyToMessage)?.takeIf { it.chatId == 0L || it.chatId == chatId }?.messageId ?: 0L,
     )
 }

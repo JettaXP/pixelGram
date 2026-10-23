@@ -410,6 +410,9 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                             MessageBubble(message = message, senderName = null, settings = settings, modifier = itemModifier)
                         } else {
                             val groupChat = chat.isGroup && !chat.isChannel && !message.isOutgoing
+                            val sentAsChat = chat.isGroup && !chat.isChannel && message.isOutgoing &&
+                                message.senderChatId != 0L && message.senderChatId != chat.id ||
+                                chat.isChannel && message.senderUserId != 0L
                             val firstInRun = !sameSender(shown.getOrNull(index + 1), message)
                             val lastInRun = !sameSender(shown.getOrNull(index - 1), message)
                             MessageGestures(message, actions, itemModifier) {
@@ -432,7 +435,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                                     quote = quote,
                                     message = message,
                                     modifier = Modifier.weight(1f),
-                                    senderName = if (groupChat && firstInRun) telegram.senderName(message) else null,
+                                    senderName = if ((groupChat || sentAsChat) && firstInRun) telegram.senderName(message) else null,
                                     settings = settings,
                                     status = if (message.isOutgoing && !chat.isChannel) telegram.status(chat, message) else null,
                                     onReact = { emoji -> telegram.toggleReaction(message, emoji) },
@@ -647,35 +650,38 @@ fun MessageBubble(
                             .padding(start = 8.dp, end = 8.dp, top = if (named) 0.dp else 8.dp, bottom = if (photo != null || media || album != null) 6.dp else 0.dp),
                     ) { quote() }
                 }
-                if (album != null && telegram != null) {
-                    AlbumGrid(
-                        album,
-                        telegram,
-                        PhotoMaxWidth,
-                        (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp),
-                        overlay = if (hasText) {
-                            null
-                        } else {
-                            { MessageMeta(message, status, settings.messageSeconds.value, Color.White, Color.White) }
-                        },
-                    )
+                val mediaBlock = @Composable {
+                    if (album != null && telegram != null) {
+                        AlbumGrid(
+                            album,
+                            telegram,
+                            PhotoMaxWidth,
+                            (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp),
+                            overlay = if (hasText) {
+                                null
+                            } else {
+                                { MessageMeta(message, status, settings.messageSeconds.value, Color.White, Color.White) }
+                            },
+                        )
+                    }
+                    if (photo != null && telegram != null) {
+                        MessagePhoto(
+                            message,
+                            photo,
+                            telegram,
+                            (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp),
+                            overlay = if (hasText) {
+                                null
+                            } else {
+                                { MessageMeta(message, status, settings.messageSeconds.value, Color.White, Color.White) }
+                            },
+                        )
+                    }
+                    if (media && telegram != null) {
+                        MediaContent(message, telegram, PhotoMaxWidth, (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp))
+                    }
                 }
-                if (photo != null && telegram != null) {
-                    MessagePhoto(
-                        message,
-                        photo,
-                        telegram,
-                        (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp),
-                        overlay = if (hasText) {
-                            null
-                        } else {
-                            { MessageMeta(message, status, settings.messageSeconds.value, Color.White, Color.White) }
-                        },
-                    )
-                }
-                if (media && telegram != null) {
-                    MediaContent(message, telegram, PhotoMaxWidth, (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp))
-                }
+                if (!(message.captionAbove && hasText)) mediaBlock()
                 if (hasText || (photo == null && album == null)) {
                     Column(
                         Modifier
@@ -762,6 +768,7 @@ fun MessageBubble(
                         )
                     }
                 }
+                if (message.captionAbove && hasText) mediaBlock()
                 if (message.keyboard.isNotEmpty() && onButton != null) {
                     InlineKeyboard(
                         message.keyboard,
@@ -853,6 +860,9 @@ private fun MessageMeta(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
+        if (message.signature.isNotBlank()) {
+            Text(message.signature, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1)
+        }
         if (message.views > 0) {
             Icon(Icons.Outlined.Visibility, contentDescription = "Views", tint = color, modifier = Modifier.size(14.dp))
             Text(formatViews(message.views), style = MaterialTheme.typography.labelSmall, color = color)
