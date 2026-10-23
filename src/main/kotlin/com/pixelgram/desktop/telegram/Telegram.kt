@@ -1233,6 +1233,15 @@ class Telegram(
         send(TdApi.GetRecentStickers(false)) { result -> onResult((result as? TdApi.Stickers)?.stickers?.toList().orEmpty()) }
     }
 
+    fun favoriteStickers(onResult: (List<TdApi.Sticker>) -> Unit) {
+        send(TdApi.GetFavoriteStickers()) { result -> onResult((result as? TdApi.Stickers)?.stickers?.toList().orEmpty()) }
+    }
+
+    fun setStickerFavorite(sticker: TdApi.Sticker, favorite: Boolean, done: () -> Unit) {
+        val input = remoteInput(sticker.sticker)
+        send(if (favorite) TdApi.AddFavoriteSticker(input) else TdApi.RemoveFavoriteSticker(input)) { done() }
+    }
+
     fun savedAnimations(onResult: (List<TdApi.Animation>) -> Unit) {
         send(TdApi.GetSavedAnimations()) { result -> onResult((result as? TdApi.Animations)?.animations?.toList().orEmpty()) }
     }

@@ -1,5 +1,14 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +69,19 @@ private val StickerCell = 68.dp
 private val GifCell = 112.dp
 private const val GifSearchDelayMs = 400L
 private const val GifBot = "gif"
+private const val FavoritesId = -1L
+
+private fun Modifier.onSecondaryClick(action: () -> Unit): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                event.changes.first().consume()
+                action()
+            }
+        }
+    }
+}
 
 @Composable
 fun MediaPanel(
@@ -98,16 +120,21 @@ private class StickerSection(val id: Long, val title: String, val icon: TdApi.St
 @Composable
 private fun StickersTab(telegram: Telegram, onSticker: (TdApi.Sticker) -> Unit, modifier: Modifier) {
     var recent by remember { mutableStateOf<List<TdApi.Sticker>?>(null) }
+    var favorites by remember { mutableStateOf<List<TdApi.Sticker>>(emptyList()) }
+    var menuFor by remember { mutableStateOf<TdApi.Sticker?>(null) }
+    val reloadFavorites = { telegram.favoriteStickers { favorites = it } }
     var sets by remember { mutableStateOf<List<TdApi.StickerSetInfo>>(emptyList()) }
     val loaded = remember { mutableStateMapOf<Long, List<TdApi.Sticker>>() }
     LaunchedEffect(Unit) {
         telegram.recentStickers { recent = it }
+        reloadFavorites()
         telegram.installedStickerSets { list ->
             sets = list
             list.forEach { info -> telegram.stickerSet(info.id) { set -> set?.let { loaded[info.id] = it.stickers.toList() } } }
         }
     }
     val sections = buildList {
+        if (favorites.isNotEmpty()) add(StickerSection(FavoritesId, "Favorites", null, null) to favorites)
         if (!recent.isNullOrEmpty()) add(StickerSection(0L, "Recently used", null, null) to recent.orEmpty())
         sets.forEach { info -> add(StickerSection(info.id, info.title, info.covers?.firstOrNull(), info.thumbnail) to loaded[info.id].orEmpty()) }
     }
@@ -135,10 +162,36 @@ private fun StickersTab(telegram: Telegram, onSticker: (TdApi.Sticker) -> Unit, 
                     }
                     items(stickers, key = { "${section.id}-${it.sticker.id}" }) { sticker ->
                         Box(
-                            Modifier.size(StickerCell).clip(RoundedCornerShape(12.dp)).clickable { onSticker(sticker) }.padding(4.dp),
+                            Modifier
+                                .size(StickerCell)
+                                .clip(RoundedCornerShape(12.dp))
+                                .onSecondaryClick { menuFor = sticker }
+                                .clickable { onSticker(sticker) }
+                                .padding(4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             StickerThumb(sticker, telegram)
+                            if (menuFor === sticker) {
+                                val favorite = favorites.any { it.sticker.id == sticker.sticker.id }
+                                DropdownMenu(expanded = true, onDismissRequest = { menuFor = null }, shape = RoundedCornerShape(16.dp)) {
+                                    DropdownMenuItem(
+                                        text = { Text(if (favorite) "Remove from favorites" else "Add to favorites") },
+                                        leadingIcon = { Icon(if (favorite) Icons.Outlined.StarOutline else Icons.Outlined.Star, contentDescription = null) },
+                                        onClick = {
+                                            menuFor = null
+                                            telegram.setStickerFavorite(sticker, !favorite) { reloadFavorites() }
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Send") },
+                                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = null) },
+                                        onClick = {
+                                            menuFor = null
+                                            onSticker(sticker)
+                                        },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -156,6 +209,7 @@ private fun StickersTab(telegram: Telegram, onSticker: (TdApi.Sticker) -> Unit, 
                 ) {
                     when {
                         section.id == 0L -> Icon(Icons.Outlined.Schedule, contentDescription = section.title)
+                        section.id == FavoritesId -> Icon(Icons.Outlined.Star, contentDescription = section.title)
                         section.icon != null -> Box(Modifier.size(28.dp)) { StickerThumb(section.icon, telegram) }
                         else -> ThumbImage(section.thumb?.file, null, telegram, Modifier.size(28.dp), ContentScale.Fit)
                     }
