@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.1
+
+- Updates, capsule folders and Noto 3D emoji are no longer marked as beta or experimental.
+
 ## 0.18.0 Privacy
 
 ### Privacy
