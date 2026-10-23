@@ -25,7 +25,7 @@ import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 
 @Composable
-fun UpdatePanel(onBeforeExit: () -> Unit, modifier: Modifier = Modifier) {
+fun UpdatePanel(onBeforeExit: () -> Unit, modifier: Modifier = Modifier, showActions: Boolean = true) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val build = if (Updater.enabled) "${BuildConfig.VERSION} (${BuildConfig.COMMIT.take(7)})" else "${BuildConfig.VERSION} (dev build)"
         Text("Installed: $build", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -34,9 +34,12 @@ fun UpdatePanel(onBeforeExit: () -> Unit, modifier: Modifier = Modifier) {
             UpdateState.Checking -> Text("Checking…")
             UpdateState.UpToDate -> Text("You have the latest nightly.")
             UpdateState.Unavailable -> Text("Updates are unavailable right now.")
-            is UpdateState.Available -> Text("New nightly ${state.commit} is out: ${state.asset.name}")
+            is UpdateState.Available -> Text(
+                state.version?.let { "pixelGram $it is out (${state.commit})" } ?: "New nightly ${state.commit} is out",
+                style = MaterialTheme.typography.titleMedium,
+            )
             is UpdateState.Downloading -> {
-                Text("Downloading ${state.asset.name}… ${(Updater.progress * 100).toInt()}%")
+                Text("Downloading ${state.version?.let { "pixelGram $it" } ?: state.asset.name}… ${(Updater.progress * 100).toInt()}%")
                 LinearWavyProgressIndicator(progress = { Updater.progress }, modifier = Modifier.fillMaxWidth())
             }
             is UpdateState.Ready -> {
@@ -47,25 +50,28 @@ fun UpdatePanel(onBeforeExit: () -> Unit, modifier: Modifier = Modifier) {
             }
             is UpdateState.Failed -> Text(state.message, color = MaterialTheme.colorScheme.error)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            when (val state = Updater.state) {
-                is UpdateState.Available -> Button(onClick = Updater::download) { Text("Download") }
-                is UpdateState.Ready -> {
-                    if (state.manual == null) {
-                        Button(onClick = { Updater.install(onBeforeExit) }) { Text("Update") }
-                    } else {
-                        Button(onClick = { Updater.openFolder(state.file.parentFile) }) { Text("Show file") }
-                        if (state.manual.startsWith("sudo")) {
-                            OutlinedButton(onClick = {
-                                Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(state.manual), null)
-                            }) { Text("Copy command") }
-                        }
-                    }
+        if (showActions) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { UpdateActions(onBeforeExit) }
+    }
+}
+
+@Composable
+fun UpdateActions(onBeforeExit: () -> Unit) {
+    when (val state = Updater.state) {
+        is UpdateState.Available -> Button(onClick = Updater::download) { Text("Download") }
+        is UpdateState.Ready -> {
+            if (state.manual == null) {
+                Button(onClick = { Updater.install(onBeforeExit) }) { Text("Update") }
+            } else {
+                Button(onClick = { Updater.openFolder(state.file.parentFile) }) { Text("Show file") }
+                if (state.manual.startsWith("sudo")) {
+                    OutlinedButton(onClick = {
+                        Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(state.manual), null)
+                    }) { Text("Copy command") }
                 }
-                is UpdateState.Downloading, UpdateState.Checking -> Unit
-                else -> OutlinedButton(onClick = Updater::check, enabled = Updater.enabled) { Text("Check for updates") }
             }
         }
+        is UpdateState.Downloading, UpdateState.Checking -> Unit
+        else -> OutlinedButton(onClick = Updater::check, enabled = Updater.enabled) { Text("Check for updates") }
     }
 }
 
@@ -75,8 +81,9 @@ fun UpdateDialog(onBeforeExit: () -> Unit, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Outlined.SystemUpdate, contentDescription = null) },
         title = { Text("Update") },
-        text = { UpdatePanel(onBeforeExit) },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        text = { UpdatePanel(onBeforeExit, showActions = false) },
+        confirmButton = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { UpdateActions(onBeforeExit) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
         shape = RoundedCornerShape(28.dp),
     )
 }

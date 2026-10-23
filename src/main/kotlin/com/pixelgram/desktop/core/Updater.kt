@@ -18,8 +18,8 @@ sealed interface UpdateState {
     data object Checking : UpdateState
     data object UpToDate : UpdateState
     data object Unavailable : UpdateState
-    data class Available(val commit: String, val asset: UpdateAsset) : UpdateState
-    data class Downloading(val asset: UpdateAsset) : UpdateState
+    data class Available(val commit: String, val asset: UpdateAsset, val version: String?) : UpdateState
+    data class Downloading(val asset: UpdateAsset, val version: String?) : UpdateState
     data class Ready(val file: File, val manual: String?) : UpdateState
     data class Failed(val message: String) : UpdateState
 }
@@ -68,7 +68,9 @@ object Updater {
             }
             .toList()
         val asset = pickAsset(assets) ?: return UpdateState.Unavailable
-        return UpdateState.Available(commit.take(7), asset)
+        val version = Regex("""pixel[Gg]ram-(\d+\.\d+\.\d+)""").find(asset.name)?.groupValues?.get(1)
+            ?: Regex("""What's new in (\d+\.\d+\.\d+)""").find(json)?.groupValues?.get(1)
+        return UpdateState.Available(commit.take(7), asset, version)
     }
 
     private fun pickAsset(assets: List<UpdateAsset>): UpdateAsset? {
@@ -88,7 +90,7 @@ object Updater {
 
     fun download() {
         val available = state as? UpdateState.Available ?: return
-        state = UpdateState.Downloading(available.asset)
+        state = UpdateState.Downloading(available.asset, available.version)
         progress = 0f
         Thread {
             state = runCatching { save(available.asset) }.getOrElse {
