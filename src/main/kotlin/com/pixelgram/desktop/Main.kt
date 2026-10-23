@@ -141,7 +141,9 @@ private fun ApplicationScope.PixelApp() {
         Sounds.warmUp()
         AppSettings.load().also { EmojiFonts.settings = it }
     }
-    val accounts = remember { Accounts(settings, MainScope()) }
+    val accounts = remember {
+        Accounts(settings, MainScope()).apply { onDuplicate = { TopNotice.text = "This account is already added to pixelGram" } }
+    }
     LaunchedEffect(Unit) {
         Updater.shutdown = {
             accounts.closeAll()

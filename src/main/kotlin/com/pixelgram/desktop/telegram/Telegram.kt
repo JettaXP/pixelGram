@@ -403,9 +403,19 @@ class Telegram(
         }
     }
 
-    fun sendPhone(phone: String) = sendAuth(TdApi.SetAuthenticationPhoneNumber().apply {
-        phoneNumber = phone.filter { it.isDigit() || it == '+' }
-    })
+    var findDuplicate: (phone: String?, userId: Long) -> Telegram? = { _, _ -> null }
+    var onDuplicate: (existing: Telegram) -> Unit = {}
+
+    fun sendPhone(phone: String) {
+        val digits = phone.filter { it.isDigit() }
+        findDuplicate(digits, 0L)?.let { existing ->
+            onDuplicate(existing)
+            return
+        }
+        sendAuth(TdApi.SetAuthenticationPhoneNumber().apply {
+            phoneNumber = phone.filter { it.isDigit() || it == '+' }
+        })
+    }
 
     fun requestQr() = sendAuth(TdApi.RequestQrCodeAuthentication().apply {
         otherUserIds = LongArray(0)
@@ -916,6 +926,12 @@ class Telegram(
             is TdApi.AuthorizationStateReady -> {
                 send(TdApi.GetMe()) { result ->
                     if (result is TdApi.User) {
+                        val existing = findDuplicate(null, result.id)
+                        if (existing != null) {
+                            onDuplicate(existing)
+                            logOut()
+                            return@send
+                        }
                         myUserId = result.id
                         me = result
                     }

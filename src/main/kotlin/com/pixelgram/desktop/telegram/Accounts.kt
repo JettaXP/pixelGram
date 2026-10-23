@@ -22,7 +22,21 @@ class Accounts(private val settings: AppSettings, private val scope: CoroutineSc
         return list.firstOrNull { it.account == settings.activeAccount.value } ?: list.first()
     }
 
-    private fun create(account: Int) = Telegram(account, settings, scope, onLoggedOut = ::onLoggedOut)
+    var onDuplicate: () -> Unit = {}
+
+    private fun create(account: Int) = Telegram(account, settings, scope, onLoggedOut = ::onLoggedOut).also { telegram ->
+        telegram.findDuplicate = { phone, userId ->
+            list.firstOrNull { other ->
+                val user = other.me
+                other !== telegram && user != null &&
+                    (userId != 0L && user.id == userId || !phone.isNullOrEmpty() && user.phoneNumber?.filter(Char::isDigit) == phone)
+            }
+        }
+        telegram.onDuplicate = { existing ->
+            switchTo(existing)
+            onDuplicate()
+        }
+    }
 
     val canAdd: Boolean get() = list.size < MaxAccounts
 
