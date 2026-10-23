@@ -2102,16 +2102,19 @@ private fun chatPhotoSize(photo: TdApi.Photo?): TdApi.PhotoSize? {
 
 private const val ChatPhotoMinWidth = 640
 
+private fun mediaPreview(emoji: String, label: String, caption: String?): String =
+    if (caption.isNullOrBlank()) "$emoji $label" else "$emoji $caption"
+
 fun contentText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageText -> content.text?.text ?: ""
-    is TdApi.MessagePhoto -> listOf("🖼 Photo", content.caption?.text).filterNotBlank()
-    is TdApi.MessageVideo -> listOf("🎬 Video", content.caption?.text).filterNotBlank()
+    is TdApi.MessagePhoto -> mediaPreview("🖼", "Photo", content.caption?.text)
+    is TdApi.MessageVideo -> mediaPreview("🎬", "Video", content.caption?.text)
     is TdApi.MessageDocument -> listOf("📄 ${content.document?.fileName ?: "File"}", content.caption?.text).filterNotBlank()
     is TdApi.MessageAudio -> "🎵 ${content.audio?.title ?: "Audio"}"
     is TdApi.MessageVoiceNote -> "🎤 Voice message"
     is TdApi.MessageVideoNote -> "⏺ Video message"
     is TdApi.MessageSticker -> "${content.sticker?.emoji ?: ""} Sticker".trim()
-    is TdApi.MessageAnimation -> listOf("GIF", content.caption?.text).filterNotBlank()
+    is TdApi.MessageAnimation -> mediaPreview("🎞", "GIF", content.caption?.text)
     is TdApi.MessageContact -> "👤 Contact"
     is TdApi.MessageLocation -> "📍 Location"
     is TdApi.MessagePoll -> "📊 Poll"

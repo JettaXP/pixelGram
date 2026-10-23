@@ -1841,6 +1841,10 @@ private fun Composer(
             IconToggleButton(checked = emojiOpen, onCheckedChange = { emojiOpen = it }) {
                 Icon(Icons.Outlined.EmojiEmotions, contentDescription = "Emoji")
             }
+            if (emojiOpen) OnEscape {
+                emojiOpen = false
+                true
+            }
             val panelVisible = remember { MutableTransitionState(false) }
             panelVisible.targetState = emojiOpen
             if (panelVisible.currentState || panelVisible.targetState) {

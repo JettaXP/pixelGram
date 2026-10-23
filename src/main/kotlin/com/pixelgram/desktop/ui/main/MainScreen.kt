@@ -245,6 +245,7 @@ fun MainScreen(
                                 onSearch = { MessageSearch.start(null) },
                                 menuOpen = menuOpen,
                                 belowHeader = topFolders,
+                                archiveOn = if (tabs.any { it.key == ChatListKey.Main }) ChatListKey.Main else tabs.firstOrNull()?.key ?: ChatListKey.Main,
                                 onBack = if (selectedKey == ChatListKey.Archive) {
                                     { selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main }
                                 } else {

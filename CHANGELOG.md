@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.25.5 יהודה
+
+- Profile music and other audio in M4A, FLAC and other formats now play, not just MP3 and OGG.
+- Escape leaves the archive again: focus is no longer lost when the "Archived chats" row disappears.
+- Escape closes the emoji, sticker and GIF panel first instead of closing the whole chat.
+- When All chats is hidden, Archived chats appear at the top of your first folder.
+- Photos, videos and GIFs with a caption show just an emoji before the text in the chat list, without the "Photo" or "Video" label.
+
 ## 0.25.0 יִשְׂרָאֵל
 
 ### Voice messages

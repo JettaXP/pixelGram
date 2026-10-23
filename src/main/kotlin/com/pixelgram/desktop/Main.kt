@@ -27,6 +27,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.Key
 import com.pixelgram.desktop.ui.EscapeStack
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import com.pixelgram.desktop.ui.main.VideoPlayerWindow
 import com.pixelgram.desktop.ui.main.VideoPlayer
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -269,6 +271,7 @@ private fun ApplicationScope.PixelApp() {
         val chrome = rememberWindowChrome()
         val rootFocus = remember { FocusRequester() }
         var focusInside by remember { mutableStateOf(false) }
+        val focusScope = rememberCoroutineScope()
         LaunchedEffect(Unit) { rootFocus.requestFocus() }
         PixelTheme(settings) {
             Box(
@@ -283,7 +286,10 @@ private fun ApplicationScope.PixelApp() {
                         }
                     }
                     .focusRequester(rootFocus)
-                    .onFocusChanged { focusInside = it.hasFocus }
+                    .onFocusChanged {
+                        focusInside = it.hasFocus
+                        if (!it.hasFocus) focusScope.launch { runCatching { rootFocus.requestFocus() } }
+                    }
                     .focusable()
                     .onKeyEvent { event ->
                         event.type == KeyEventType.KeyDown && event.key == Key.Escape && EscapeStack.dispatch()

@@ -103,11 +103,12 @@ fun ChatList(
     menuOpen: Boolean = false,
     onSearch: (() -> Unit)? = null,
     belowHeader: @Composable () -> Unit = {},
+    archiveOn: ChatListKey = ChatListKey.Main,
 ) {
     Box(Modifier.fillMaxSize()) {
         ChatListBody(
             listKey, title, chatsFor, order, vertical, compact, selectedChatId, telegram, settings,
-            onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen, onSearch, belowHeader,
+            onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen, onSearch, belowHeader, archiveOn,
         )
         ConnectionPill(
             status = telegram.connection,
@@ -135,11 +136,12 @@ private fun ChatListBody(
     menuOpen: Boolean = false,
     onSearch: (() -> Unit)? = null,
     belowHeader: @Composable () -> Unit = {},
+    archiveOn: ChatListKey = ChatListKey.Main,
 ) {
     if (compact) {
         CompactChatList(
             listKey, chatsFor, selectedChatId, telegram, settings,
-            onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen,
+            onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen, archiveOn,
         )
         return
     }
@@ -203,7 +205,7 @@ private fun ChatListBody(
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
-                if (archivedCount > 0 && key == ChatListKey.Main) {
+                if (archivedCount > 0 && key == archiveOn) {
                     item(key = "archive") {
                         SegmentedListItem(
                             onClick = onOpenArchive,
@@ -292,6 +294,7 @@ private fun CompactChatList(
     onMenu: (() -> Unit)?,
     onBack: (() -> Unit)?,
     menuOpen: Boolean,
+    archiveOn: ChatListKey,
 ) {
     val colors = MaterialTheme.colorScheme
     val shape = settings.avatarShape.value.toShape(settings.avatarCorner.value)
@@ -309,7 +312,7 @@ private fun CompactChatList(
             contentPadding = PaddingValues(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            if (archivedCount > 0 && listKey == ChatListKey.Main) {
+            if (archivedCount > 0 && listKey == archiveOn) {
                 item(key = "archive") {
                     Box(
                         Modifier

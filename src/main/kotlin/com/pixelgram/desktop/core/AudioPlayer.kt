@@ -10,6 +10,10 @@ import javazoom.jl.decoder.Bitstream
 import javazoom.jl.decoder.Decoder
 import javazoom.jl.decoder.SampleBuffer
 import java.awt.EventQueue
+import java.nio.ShortBuffer
+import org.bytedeco.ffmpeg.global.avutil
+import org.bytedeco.javacv.FFmpegFrameGrabber
+import org.bytedeco.javacv.FrameGrabber
 import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.sound.sampled.AudioFormat
@@ -236,7 +240,50 @@ object AudioPlayer {
 
     private fun decode(file: File): Pcm {
         val bytes = file.readBytes()
-        return if (bytes.size > 4 && String(bytes, 0, 4, Charsets.US_ASCII) == "OggS") decodeOpus(bytes) else decodeMp3(file)
+        return when {
+            bytes.size > 4 && String(bytes, 0, 4, Charsets.US_ASCII) == "OggS" -> runCatching { decodeOpus(bytes) }.getOrElse { decodeFfmpeg(file) }
+            isMp3(bytes) -> decodeMp3(file).takeIf { it.samples.isNotEmpty() } ?: decodeFfmpeg(file)
+            else -> decodeFfmpeg(file)
+        }
+    }
+
+    private fun isMp3(bytes: ByteArray): Boolean = bytes.size > 3 && (
+        String(bytes, 0, 3, Charsets.US_ASCII) == "ID3" ||
+            ((bytes[0].toInt() and 0xFF) == 0xFF && (bytes[1].toInt() and 0xE0) == 0xE0)
+        )
+
+    private fun decodeFfmpeg(file: File): Pcm {
+        val grabber = FFmpegFrameGrabber(file).apply {
+            sampleMode = FrameGrabber.SampleMode.SHORT
+            sampleFormat = avutil.AV_SAMPLE_FMT_S16
+        }
+        val samples = Samples()
+        try {
+            grabber.start()
+            val channels = grabber.audioChannels.coerceAtLeast(1)
+            while (true) {
+                val frame = grabber.grabSamples() ?: break
+                val planes = frame.samples ?: continue
+                val first = planes.firstOrNull() as? ShortBuffer ?: continue
+                if (planes.size == 1) {
+                    val chunk = ShortArray(first.remaining())
+                    first.duplicate().get(chunk)
+                    samples.add(chunk, chunk.size)
+                } else {
+                    val count = first.remaining()
+                    val chunk = ShortArray(count * planes.size)
+                    planes.forEachIndexed { c, plane ->
+                        val buffer = (plane as ShortBuffer).duplicate()
+                        for (i in 0 until count) chunk[i * planes.size + c] = buffer.get()
+                    }
+                    samples.add(chunk, chunk.size)
+                }
+            }
+            return Pcm(samples.data.copyOf(samples.size), grabber.sampleRate, channels)
+        } finally {
+            runCatching { grabber.stop() }
+            runCatching { grabber.release() }
+        }
     }
 
     private fun decodeOpus(bytes: ByteArray): Pcm {
