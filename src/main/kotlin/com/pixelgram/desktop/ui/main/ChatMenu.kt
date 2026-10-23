@@ -99,6 +99,7 @@ fun ChatActions(
     onOpenChat: ((Long) -> Unit)? = null,
     onSearch: (() -> Unit)? = null,
     onToBeginning: (() -> Unit)? = null,
+    showProfile: Boolean = true,
 ) {
     var confirm by remember(chat.id) { mutableStateOf<Confirm?>(null) }
     var profile by remember(chat.id) { mutableStateOf(false) }
@@ -137,7 +138,7 @@ fun ChatActions(
                             val muted = telegram.isMuted(chat)
                             Item(if (muted) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff, if (muted) "Unmute" else "Mute",
                                 onClick = act { telegram.setMuted(chat, !muted) })
-                            Item(Icons.Outlined.AccountCircle, "View profile", onClick = act { profile = true })
+                            if (showProfile) Item(Icons.Outlined.AccountCircle, "View profile", onClick = act { profile = true })
                             onSearch?.let { Item(Icons.Outlined.Search, "Search", onClick = act(it)) }
                             onToBeginning?.let { Item(Icons.Outlined.KeyboardDoubleArrowUp, "To beginning", onClick = act(it)) }
                             if (onSearch == null) {
@@ -293,7 +294,7 @@ fun ChatInfoDialog(
                         ) { telegram.setMuted(chat, !muted) }
                         Box(Modifier.weight(1f)) {
                             ProfileAction(Icons.Outlined.MoreHoriz, "More", Modifier.fillMaxWidth()) { moreAt = DpOffset(0.dp, 0.dp) }
-                            ChatActions(chat, telegram, settings, moreAt, onDismiss = { moreAt = null }, onOpenChat = onOpenChat)
+                            ChatActions(chat, telegram, settings, moreAt, onDismiss = { moreAt = null }, onOpenChat = onOpenChat, showProfile = false)
                         }
                     }
                 }
