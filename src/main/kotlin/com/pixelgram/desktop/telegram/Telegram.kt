@@ -1612,11 +1612,13 @@ class Telegram(
         }
     }
 
-    fun forwardMessages(toChatId: Long, fromChatId: Long, ids: LongArray) {
+    fun forwardMessages(toChatId: Long, fromChatId: Long, ids: LongArray, sendCopy: Boolean = false, removeCaption: Boolean = false) {
         send(TdApi.ForwardMessages().apply {
             chatId = toChatId
             this.fromChatId = fromChatId
             messageIds = ids
+            this.sendCopy = sendCopy
+            this.removeCaption = removeCaption
         })
     }
 

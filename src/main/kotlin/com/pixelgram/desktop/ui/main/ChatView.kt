@@ -334,7 +334,7 @@ fun ChatView(
     }
     forwarding?.let { message ->
         ForwardDialog(telegram, settings, onDismiss = { forwarding = null }) { target ->
-            telegram.forwardMessages(target, message.chatId, longArrayOf(message.id))
+            PendingForward.start(target, message.chatId, listOf(message))
             forwarding = null
             onOpenChat(target)
         }
@@ -377,7 +377,7 @@ fun ChatView(
     }
     if (forwardingSelected) {
         ForwardDialog(telegram, settings, onDismiss = { forwardingSelected = false }) { target ->
-            telegram.forwardMessages(target, chat.id, selectedIds())
+            PendingForward.start(target, chat.id, selectedMessages())
             forwardingSelected = false
             selected.clear()
             onOpenChat(target)
@@ -789,6 +789,7 @@ fun ChatView(
             },
             onCancelEdit = { editing = null },
             onAttach = attach,
+            onOpenChat = onOpenChat,
             onSend = { text, entities ->
                 val edited = editing
                 val replyId = replyTo?.id ?: 0L
@@ -809,9 +810,10 @@ fun ChatView(
                     telegram.sendFiles(chat.id, attachments.toList(), photos, text, replyId, entities)
                     attachments.clear()
                     asFiles = false
-                } else {
+                } else if (text.isNotBlank()) {
                     telegram.sendText(chat.id, text, replyId, entities)
                 }
+                if (edited == null) PendingForward.send(telegram, chat.id)
                 if (listState.firstVisibleItemIndex > 0) {
                     scope.launch { listState.animateScrollToItem(0) }
                 }
@@ -1419,6 +1421,7 @@ private fun Composer(
     onCancelEdit: () -> Unit,
     onAttach: (List<File>) -> Unit,
     onSend: (String, Array<TdApi.TextEntity>) -> Unit,
+    onOpenChat: (Long) -> Unit = {},
 ) {
     var text by remember(chatId) {
         val draft = telegram.chats[chatId]?.draft.orEmpty()
@@ -1557,7 +1560,8 @@ private fun Composer(
         setText(TextFieldValue(value, TextRange(value.length)))
         runCatching { focus.requestFocus() }
     }
-    val canSend = if (editing?.photo != null) hasAttachments else text.text.isNotBlank() || hasAttachments
+    val hasForward = editing == null && PendingForward.drafts[chatId] != null
+    val canSend = if (editing?.photo != null) hasAttachments else text.text.isNotBlank() || hasAttachments || hasForward
     val send = {
         if (canSend) {
             val raw = text.text
@@ -1576,6 +1580,7 @@ private fun Composer(
         text = TextFieldValue("")
         spans = emptyList()
     }
+    ForwardBar(chatId, telegram, settings, onOpenChat)
     val shown = remember { MutableTransitionState(false) }
     shown.targetState = editing != null || replyTo != null
     var banner by remember { mutableStateOf<Pair<Boolean, UiMessage>?>(null) }
