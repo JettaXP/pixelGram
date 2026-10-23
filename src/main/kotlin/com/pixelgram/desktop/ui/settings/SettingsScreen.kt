@@ -206,7 +206,10 @@ fun SettingsScreen(
     var query by remember { mutableStateOf("") }
     var menuOpen by remember { mutableStateOf(false) }
     OnEscape {
-        if (inPreferences) {
+        if (searching) {
+            searching = false
+            query = ""
+        } else if (inPreferences) {
             inPreferences = false
             section = Section.MyAccount
         } else {

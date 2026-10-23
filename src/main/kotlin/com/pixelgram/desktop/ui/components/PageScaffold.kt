@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.components
 
+import com.pixelgram.desktop.ui.OnEscape
 import java.awt.datatransfer.StringSelection
 import java.awt.Toolkit
 import androidx.compose.ui.unit.DpOffset
@@ -46,6 +47,10 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun PageScaffold(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    OnEscape {
+        onBack()
+        true
+    }
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

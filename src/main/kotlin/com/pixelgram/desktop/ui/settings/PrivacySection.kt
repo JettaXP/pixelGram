@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppLock
+import com.pixelgram.desktop.ui.OnEscape
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.components.rememberPixelgramLogo
@@ -113,6 +114,10 @@ fun PrivacySection(telegram: Telegram, settings: AppSettings) {
     var sessions by remember { mutableStateOf<List<TdApi.Session>?>(null) }
     var reload by remember { mutableIntStateOf(0) }
     LaunchedEffect(reload) { telegram.activeSessions { sessions = it } }
+    if (page == PrivacyPage.Sessions) OnEscape {
+        page = PrivacyPage.Main
+        true
+    }
     AnimatedContent(
         targetState = page,
         transitionSpec = {

@@ -1,7 +1,9 @@
 # Changelog
 
-## 0.21.1 Pill
+## 0.21.2
 
+- Escape goes one level back in Settings: from Active sessions to Privacy and Security, then out of Settings. It also closes the settings search.
+- Escape closes My Profile, Contacts and Calls.
 - The "official pixelGram resource" pill now shows at the top of the window, where "pixelGram Updated!" appears, and slides away smoothly.
 
 ## 0.21.0 Locked
