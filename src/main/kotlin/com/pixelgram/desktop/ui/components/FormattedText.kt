@@ -62,8 +62,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pixelgram.desktop.ui.theme.withEmoji
-import com.pixelgram.desktop.ui.theme.InlineContentTag
-import com.pixelgram.desktop.ui.theme.CustomEmojiPrefix
+import com.pixelgram.desktop.ui.theme.CustomEmojiTag
 import it.tdlight.jni.TdApi
 import java.time.Instant
 import java.time.ZoneId
@@ -110,7 +109,7 @@ fun formattedString(text: String, entities: List<TdApi.TextEntity>, colors: Form
             is TdApi.TextEntityTypeMentionName ->
                 builder.addLink(link("tg://user?id=${type.userId}", colors, underline = false), start, end)
             is TdApi.TextEntityTypeCustomEmoji ->
-                builder.addStringAnnotation(InlineContentTag, CustomEmojiPrefix + type.customEmojiId, start, end)
+                builder.addStringAnnotation(CustomEmojiTag, type.customEmojiId.toString(), start, end)
             is TdApi.TextEntityTypeHashtag,
             is TdApi.TextEntityTypeCashtag, is TdApi.TextEntityTypeBotCommand, is TdApi.TextEntityTypeDateTime ->
                 builder.addStyle(SpanStyle(color = colors.accent), start, end)

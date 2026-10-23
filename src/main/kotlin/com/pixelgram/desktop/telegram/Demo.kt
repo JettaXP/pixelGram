@@ -127,6 +127,15 @@ fun Telegram.loadDemo() {
         messages(100L).add(0, UiMessage(7, 100, 2, 0, false, now - 3, "Шашки\nХодит: Alice (⚪ белые)", keyboard = rows, viaBot = 2))
     }
     run {
+        val text = "Ходит: 🍇 Jetta (⚪ белые)\n⚫ 12 — ⚪ 12"
+        val entities = listOf(
+            TdApi.TextEntity(text.indexOf("⚪"), 1, TdApi.TextEntityTypeCustomEmoji(11)),
+            TdApi.TextEntity(text.indexOf("⚫"), 1, TdApi.TextEntityTypeCustomEmoji(12)),
+            TdApi.TextEntity(text.lastIndexOf("⚪"), 1, TdApi.TextEntityTypeCustomEmoji(11)),
+        )
+        messages(100L).add(0, UiMessage(9, 100, 2, 0, false, now - 2, text, entities = entities, viaBot = 2))
+    }
+    run {
         val text = "Bold, italic, underline, struck out, mono and a secret spoiler text right here. Link to pixelGram.\nAnd a quote line"
         fun at(part: String, type: TdApi.TextEntityType) = TdApi.TextEntity(text.indexOf(part), part.length, type)
         val entities = listOf(

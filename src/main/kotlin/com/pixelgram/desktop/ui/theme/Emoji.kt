@@ -249,29 +249,41 @@ fun EmojiText(
 
 fun withEmoji(text: AnnotatedString): Pair<AnnotatedString, Map<String, InlineTextContent>> {
     val plain = text.text
-    val custom = text.getStringAnnotations(InlineContentTag, 0, plain.length).filter { it.item.startsWith(CustomEmojiPrefix) }
+    val custom = text.getStringAnnotations(CustomEmojiTag, 0, plain.length)
     val ranges = emojiRanges(plain).filter { range -> custom.none { range.first < it.end && range.last + 1 > it.start } }
     if (ranges.isEmpty() && custom.isEmpty()) return text to emptyMap()
     val builder = AnnotatedString.Builder(text)
-    val customInline = custom.associate { annotation ->
-        val fallback = plain.substring(annotation.start, annotation.end)
-        annotation.item to InlineTextContent(Placeholder(EmojiSize, EmojiSize, PlaceholderVerticalAlign.TextCenter)) {
-            CustomEmojiView(annotation.item.removePrefix(CustomEmojiPrefix).toLong(), fallback)
+    val inline = mutableMapOf<String, InlineTextContent>()
+    val slots = mutableListOf<Triple<Int, Int, String>>()
+    custom.forEach { annotation ->
+        val key = CustomEmojiPrefix + annotation.item
+        slots += Triple(annotation.start, annotation.end, key)
+        if (key !in inline) {
+            val fallback = plain.substring(annotation.start, annotation.end)
+            inline[key] = InlineTextContent(Placeholder(EmojiSize, EmojiSize, PlaceholderVerticalAlign.TextCenter)) {
+                CustomEmojiView(annotation.item.toLong(), fallback)
+            }
         }
     }
-    if (!EmojiFonts.use3D) {
+    if (EmojiFonts.use3D) {
+        ranges.forEach { range ->
+            val emoji = plain.substring(range.first, range.last + 1)
+            slots += Triple(range.first, range.last + 1, emoji)
+            if (emoji !in inline) {
+                inline[emoji] = InlineTextContent(Placeholder(EmojiSize, EmojiSize, PlaceholderVerticalAlign.TextCenter)) {
+                    Emoji3DImage(emoji)
+                }
+            }
+        }
+    } else {
         val style = SpanStyle(fontFamily = FlatEmoji)
         ranges.forEach { builder.addStyle(style, it.first, it.last + 1) }
-        return builder.toAnnotatedString() to customInline
     }
-    ranges.forEach { builder.addStringAnnotation(InlineContentTag, plain.substring(it.first, it.last + 1), it.first, it.last + 1) }
-    val inline = ranges.map { plain.substring(it.first, it.last + 1) }.distinct().associateWith { emoji ->
-        InlineTextContent(Placeholder(EmojiSize, EmojiSize, PlaceholderVerticalAlign.TextCenter)) {
-            Emoji3DImage(emoji)
-        }
-    }
-    return builder.toAnnotatedString() to inline + customInline
+    slots.sortedBy { it.first }.forEach { (start, end, key) -> builder.addStringAnnotation(InlineContentTag, key, start, end) }
+    return builder.toAnnotatedString() to inline
 }
+
+const val CustomEmojiTag = "pixelgram.customEmoji"
 
 const val CustomEmojiPrefix = "ce:"
 
