@@ -33,6 +33,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.FastOutSlowInEasing
+import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
 import kotlinx.coroutines.delay
@@ -45,6 +50,9 @@ private const val RoundPercent = 50
 private const val PressedPercent = 28
 private const val ShapeHoldMs = 700L
 private const val MorphMs = 450
+private const val SlotMs = 220
+private const val GrowDamping = 0.6f
+private const val GrowStiffness = 500f
 
 private val DotShapes = listOf(
     MaterialShapes.Cookie4Sided,
@@ -63,7 +71,6 @@ const val EnterKey = "enter"
 @Composable
 fun PinDots(count: Int, modifier: Modifier = Modifier) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(DotGap),
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier.height(DotSize * 1.6f),
     ) {
@@ -77,14 +84,29 @@ private fun PinDot(index: Int) {
     val morph = remember(index) { Morph(DotShapes[index % DotShapes.size], MaterialShapes.Circle) }
     val progress = remember(index) { Animatable(0f) }
     val grow = remember(index) { Animatable(0f) }
+    val slot = remember(index) { Animatable(0f) }
     LaunchedEffect(index) {
-        grow.animateTo(1f, spring(dampingRatio = 0.5f))
+        grow.animateTo(1f, spring(dampingRatio = GrowDamping, stiffness = GrowStiffness))
+    }
+    LaunchedEffect(index) {
+        slot.animateTo(1f, tween(SlotMs, easing = FastOutSlowInEasing))
     }
     LaunchedEffect(index) {
         delay(ShapeHoldMs)
         progress.animateTo(1f, tween(MorphMs))
     }
-    Canvas(Modifier.size(DotSize * 1.4f)) {
+    val dot = DotSize * 1.4f
+    val gap = if (index == 0) 0.dp else DotGap
+    Canvas(
+        Modifier
+            .layout { measurable, constraints ->
+                val full = (dot + gap).roundToPx()
+                val width = (full * slot.value).roundToInt()
+                val placeable = measurable.measure(Constraints.fixed(dot.roundToPx(), dot.roundToPx()))
+                layout(width, placeable.height) { placeable.place(width - placeable.width, 0) }
+            }
+            .graphicsLayer { alpha = grow.value.coerceIn(0f, 1f) },
+    ) {
         val path = Path()
         var first = true
         morph.forEachCubic(progress.value) { cubic ->

@@ -7,8 +7,8 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.22.0"
-val codename = "Core"
+version = "0.22.1"
+val codename = "Pass"
 
 kotlin {
     jvmToolchain(21)

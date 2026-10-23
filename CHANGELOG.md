@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.1 Pass
+
+- Passcode dots appear smoothly: the row makes room for each new digit and the dot fades and grows in instead of popping up.
+
 ## 0.22.0 Core
 
 - Fixed blank or half-drawn windows on tiling window managers (niri, Hyprland, sway, river, i3 and others): the Linux launcher now turns on Java's non-reparenting mode by itself.
