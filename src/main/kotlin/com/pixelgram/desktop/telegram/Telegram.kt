@@ -101,6 +101,8 @@ class ChatState(val id: Long) {
     var supergroupId = 0L
     var basicGroupId = 0L
     var draft by mutableStateOf("")
+    var replyMarkupMessageId = 0L
+    var keyboard by mutableStateOf<TdApi.ReplyMarkupShowKeyboard?>(null)
     var notifications by mutableStateOf<TdApi.ChatNotificationSettings?>(null)
     val positions = mutableStateMapOf<ChatListKey, Long>()
     val pinned = mutableStateMapOf<ChatListKey, Boolean>()
@@ -117,6 +119,8 @@ enum class ConnectionStatus(val label: String?) {
 }
 
 data class Presence(val label: String, val online: Boolean)
+
+data class BotCommandItem(val botId: Long, val command: String, val description: String)
 
 data class UnreadCount(val chats: Int, val unmuted: Int)
 
@@ -672,6 +676,10 @@ class Telegram(
                 chat.lastMessage = update.lastMessage
                 update.positions?.forEach { applyPosition(chat, it) }
             }
+            is TdApi.UpdateChatReplyMarkup -> chats[update.chatId]?.let { chat ->
+                chat.replyMarkupMessageId = update.replyMarkupMessage?.id ?: 0L
+                chat.keyboard = update.replyMarkupMessage?.replyMarkup as? TdApi.ReplyMarkupShowKeyboard
+            }
             is TdApi.UpdateChatDraftMessage -> chats[update.chatId]?.let { chat ->
                 chat.draft = draftText(update.draftMessage)
                 update.positions?.forEach { applyPosition(chat, it) }
@@ -853,6 +861,7 @@ class Telegram(
             supergroupId = (chat.type as? TdApi.ChatTypeSupergroup)?.supergroupId ?: 0L
             basicGroupId = (chat.type as? TdApi.ChatTypeBasicGroup)?.basicGroupId ?: 0L
             draft = draftText(chat.draftMessage)
+            replyMarkupMessageId = chat.replyMarkupMessageId
             notifications = chat.notificationSettings
         }
         chat.positions?.forEach { applyPosition(state, it) }
@@ -1124,6 +1133,35 @@ class Telegram(
             }
         }
         send(TdApi.SetChatDraftMessage(chatId, null, draft))
+    }
+
+    fun loadKeyboard(chat: ChatState) {
+        val id = chat.replyMarkupMessageId
+        if (id == 0L || chat.keyboard != null) return
+        send(TdApi.GetMessage(chat.id, id)) { result ->
+            chat.keyboard = (result as? TdApi.Message)?.replyMarkup as? TdApi.ReplyMarkupShowKeyboard
+        }
+    }
+
+    fun botInfo(userId: Long, onResult: (TdApi.BotInfo?) -> Unit) = userFullInfo(userId) { onResult(it?.botInfo) }
+
+    fun chatCommands(chat: ChatState, onResult: (List<BotCommandItem>) -> Unit) {
+        fun flatten(groups: Array<TdApi.BotCommands>?) = groups.orEmpty().flatMap { bot ->
+            ensureUser(bot.botUserId)
+            bot.commands.orEmpty().map { BotCommandItem(bot.botUserId, it.command, it.description) }
+        }
+        when {
+            chat.privateUserId != 0L -> botInfo(chat.privateUserId) { info ->
+                onResult(info?.commands.orEmpty().map { BotCommandItem(chat.privateUserId, it.command, it.description) })
+            }
+            chat.supergroupId != 0L -> send(TdApi.GetSupergroupFullInfo(chat.supergroupId)) { result ->
+                onResult(flatten((result as? TdApi.SupergroupFullInfo)?.botCommands))
+            }
+            chat.basicGroupId != 0L -> send(TdApi.GetBasicGroupFullInfo(chat.basicGroupId)) { result ->
+                onResult(flatten((result as? TdApi.BasicGroupFullInfo)?.botCommands))
+            }
+            else -> onResult(emptyList())
+        }
     }
 
     fun togglePin(message: UiMessage) {

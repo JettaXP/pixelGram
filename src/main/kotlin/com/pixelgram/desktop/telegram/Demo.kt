@@ -47,6 +47,14 @@ fun Telegram.loadDemo() {
     }
     chats[100L]?.lastReadOutbox = 2
     chats[104L]?.isGroup = true
+    fun key(text: String) = TdApi.KeyboardButton().apply { this.text = text; type = TdApi.KeyboardButtonTypeText() }
+    chats[102L]?.keyboard = TdApi.ReplyMarkupShowKeyboard().apply {
+        rows = arrayOf(
+            arrayOf(key("Edit birthday date"), key("Disable notifications")),
+            arrayOf(key("How many days until my birthday?")),
+            arrayOf(key("How many days since my birthday?")),
+        )
+    }
     users[2] = TdApi.User().apply { id = 2; firstName = "Alice"; lastName = "" }
     users[3] = TdApi.User().apply { id = 3; firstName = "Bob"; lastName = "" }
     messages(104L).addAll(listOf(

@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material.icons.outlined.KeyboardHide
+import androidx.compose.material.icons.outlined.Keyboard
+import androidx.compose.material3.FilledTonalButton
+import com.pixelgram.desktop.telegram.BotCommandItem
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.core.AvatarKind
 import androidx.compose.ui.graphics.luminance
@@ -462,6 +466,24 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
             )
             ScrollDownButton(listState, Modifier.align(Alignment.BottomEnd).padding(16.dp))
+            if (chat.privateUserId != 0L && telegram.isBot(chat)) {
+                var welcome by remember(chat.id) { mutableStateOf(false) }
+                val empty = shown.isEmpty()
+                LaunchedEffect(chat.id, empty) {
+                    welcome = false
+                    if (!empty) return@LaunchedEffect
+                    delay(WelcomeDelayMs)
+                    welcome = true
+                }
+                if (welcome) {
+                    BotWelcome(
+                        chat.privateUserId,
+                        telegram,
+                        onStart = { telegram.sendText(chat.id, "/start") },
+                        modifier = Modifier.align(Alignment.Center).padding(16.dp),
+                    )
+                }
+            }
         }
         val panelSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
         val panelFade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -1085,6 +1107,8 @@ private fun SenderAvatar(message: UiMessage, telegram: Telegram, settings: AppSe
 private const val DraftSaveDelayMs = 1_500L
 private const val InlineDelayMs = 400L
 private const val GifTab = 2
+private const val CommandLimit = 30
+private const val WelcomeDelayMs = 700L
 
 @Composable
 private fun Composer(
@@ -1167,6 +1191,26 @@ private fun Composer(
         spans = emptyList()
         onCancelReply()
     }
+    val composerChat = telegram.chats[chatId]
+    var commands by remember(chatId) { mutableStateOf(emptyList<BotCommandItem>()) }
+    LaunchedEffect(chatId) {
+        val target = telegram.chats[chatId] ?: return@LaunchedEffect
+        telegram.chatCommands(target) { commands = it }
+        telegram.loadKeyboard(target)
+    }
+    val commandQuery = if (text.selection.collapsed) CommandQuery.matchEntire(text.text)?.groupValues?.get(1) else null
+    val commandMatches = commandQuery?.let { query -> commands.filter { it.command.startsWith(query, ignoreCase = true) }.take(CommandLimit) }.orEmpty()
+    val showCommands = commandMatches.isNotEmpty()
+    val pickCommand = { item: BotCommandItem ->
+        val manyBots = commands.map { it.botId }.distinct().size > 1
+        val suffix = if (manyBots) telegram.users[item.botId]?.usernames?.activeUsernames?.firstOrNull()?.let { "@$it" }.orEmpty() else ""
+        telegram.sendText(chatId, "/${item.command}$suffix", replyTo?.id ?: 0)
+        text = TextFieldValue("")
+        spans = emptyList()
+        onCancelReply()
+    }
+    val keyboard = composerChat?.keyboard
+    var keyboardOpen by remember(chatId, keyboard) { mutableStateOf(true) }
     val showSuggestions = mentionQuery != null && suggestions.isNotEmpty()
     val pickMention = { userId: Long ->
         val query = mentionQuery.orEmpty()
@@ -1290,6 +1334,20 @@ private fun Composer(
         )
     }
     AnimatedVisibility(
+        visible = showCommands,
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+    ) {
+        CommandSuggestions(
+            commandMatches,
+            -1,
+            telegram,
+            settings,
+            onPick = pickCommand,
+            modifier = Modifier.fillMaxWidth().padding(start = 64.dp, end = 120.dp, top = 8.dp),
+        )
+    }
+    AnimatedVisibility(
         visible = showInline,
         enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
         exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
@@ -1320,6 +1378,23 @@ private fun Composer(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        if (commands.isNotEmpty()) {
+            val openCommands = {
+                setText(TextFieldValue("/", TextRange(1)))
+                runCatching { focus.requestFocus() }
+            }
+            if (composerChat?.privateUserId != 0L) {
+                FilledTonalButton(
+                    onClick = { openCommands() },
+                    contentPadding = PaddingValues(horizontal = 14.dp),
+                    modifier = Modifier.height(36.dp),
+                ) { Text("Menu") }
+            } else {
+                IconButton(onClick = { openCommands() }) {
+                    Text("/", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
         IconButton(onClick = { pickScope.launch { onAttach(Attachments.pick()) } }) {
             Icon(Icons.Outlined.AttachFile, contentDescription = "Attach files")
         }
@@ -1446,6 +1521,11 @@ private fun Composer(
                     },
             )
         }
+        if (keyboard != null) {
+            IconToggleButton(checked = keyboardOpen, onCheckedChange = { keyboardOpen = it }) {
+                Icon(if (keyboardOpen) Icons.Outlined.KeyboardHide else Icons.Outlined.Keyboard, contentDescription = "Bot keyboard")
+            }
+        }
         Box {
             IconToggleButton(checked = emojiOpen, onCheckedChange = { emojiOpen = it }) {
                 Icon(Icons.Outlined.EmojiEmotions, contentDescription = "Emoji")
@@ -1490,6 +1570,19 @@ private fun Composer(
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
                 }
             }
+        }
+    }
+    AnimatedVisibility(
+        visible = keyboard != null && keyboardOpen,
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+    ) {
+        keyboard?.let { shown ->
+            ReplyKeyboardPanel(shown, onPress = { button ->
+                telegram.sendText(chatId, button.text, replyTo?.id ?: 0)
+                onCancelReply()
+                if (shown.oneTime) keyboardOpen = false
+            }, modifier = Modifier.padding(bottom = 8.dp))
         }
     }
 }
