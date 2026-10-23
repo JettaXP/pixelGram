@@ -391,9 +391,9 @@ class Telegram(
             apiId = this@Telegram.apiId
             apiHash = this@Telegram.apiHash
             systemLanguageCode = System.getProperty("user.language") ?: "en"
-            deviceModel = "Desktop"
+            deviceModel = settings.deviceName.value.ifBlank { "Desktop" }
             systemVersion = "${System.getProperty("os.name")} ${System.getProperty("os.version")}"
-            applicationVersion = "pixelGram ${BuildConfig.VERSION}"
+            applicationVersion = BuildConfig.VERSION
         }
         send(parameters) { result ->
             if (result is TdApi.Error) {
@@ -554,7 +554,32 @@ class Telegram(
         }
     }
 
+    fun privacyRules(setting: TdApi.UserPrivacySetting, onResult: (TdApi.UserPrivacySettingRules?) -> Unit) {
+        send(TdApi.GetUserPrivacySettingRules(setting)) { result -> onResult(result as? TdApi.UserPrivacySettingRules) }
+    }
+
+    fun setPrivacyRules(setting: TdApi.UserPrivacySetting, rules: TdApi.UserPrivacySettingRules, done: (String?) -> Unit) {
+        send(TdApi.SetUserPrivacySettingRules(setting, rules)) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+    }
+
+    fun newChatPrivacy(onResult: (TdApi.NewChatPrivacySettings?) -> Unit) {
+        send(TdApi.GetNewChatPrivacySettings()) { result -> onResult(result as? TdApi.NewChatPrivacySettings) }
+    }
+
+    fun setNewChatPrivacy(value: TdApi.NewChatPrivacySettings, done: (String?) -> Unit) {
+        send(TdApi.SetNewChatPrivacySettings(value)) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+    }
+
+    fun terminateSession(id: Long, done: (String?) -> Unit) {
+        send(TdApi.TerminateSession(id)) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+    }
+
+    fun terminateOtherSessions(done: (String?) -> Unit) {
+        send(TdApi.TerminateAllOtherSessions()) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+    }
+
     fun activeSessions(onResult: (List<TdApi.Session>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(demoSessions())
         send(TdApi.GetActiveSessions()) { result ->
             onResult((result as? TdApi.Sessions)?.sessions?.toList().orEmpty())
         }

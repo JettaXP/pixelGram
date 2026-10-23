@@ -100,6 +100,11 @@ class AppSettings private constructor(private val props: Properties) {
 
     fun avatarShapeFor(kind: AvatarKind?): AvatarShape = kind?.let(::kindShape) ?: avatarShape.value
 
+    val deviceName = string("deviceName", "")
+    val passcodeHash = string("passcodeHash", "")
+    val passcodeSalt = string("passcodeSalt", "")
+    val autoLockMinutes = int("autoLockMinutes", 0)
+
     val stickersInPanel = bool("stickersInPanel", true)
     val stickersInChat = bool("stickersInChat", true)
     val emojiInMessages = bool("emojiInMessages", true)
@@ -124,6 +129,7 @@ class AppSettings private constructor(private val props: Properties) {
         doubleClickOwn, doubleClickOther, doubleClickEmoji,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius,
+        deviceName, passcodeHash, passcodeSalt, autoLockMinutes,
         stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations,
         apiId, apiHash,
         accounts, activeAccount,

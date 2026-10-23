@@ -340,3 +340,28 @@ fun Telegram.demoProfileAudios(userId: Long): List<TdApi.Audio> {
         }
     }
 }
+
+fun demoSessions(): List<TdApi.Session> {
+    val now = (System.currentTimeMillis() / 1000).toInt()
+    fun session(id: Long, current: Boolean, app: String, version: String, device: String, platform: String, system: String, type: TdApi.SessionDeviceType, official: Boolean, ago: Int) =
+        TdApi.Session().apply {
+            this.id = id
+            isCurrent = current
+            applicationName = app
+            applicationVersion = version
+            deviceModel = device
+            this.platform = platform
+            systemVersion = system
+            deviceType = type
+            isOfficialApplication = official
+            logInDate = now - 86_400
+            lastActiveDate = now - ago
+            location = "Dnipro, Ukraine"
+        }
+    return listOf(
+        session(1, true, "pixelGram", "0.17.0", "PRIME H510M-K", "Windows", "11", TdApi.SessionDeviceTypeWindows(), false, 0),
+        session(2, false, "Telegram Android", "12.1.0", "Google Pixel 7a", "Android", "16", TdApi.SessionDeviceTypeAndroid(), true, 600),
+        session(3, false, "pixelGram", "pixelGram 0.12.0", "Desktop", "Linux", "6.18", TdApi.SessionDeviceTypeLinux(), false, 7_200),
+        session(4, false, "Telegram Desktop", "6.2.4 x64", "M5506NA", "Windows", "11 x64", TdApi.SessionDeviceTypeWindows(), true, 90_000),
+    )
+}

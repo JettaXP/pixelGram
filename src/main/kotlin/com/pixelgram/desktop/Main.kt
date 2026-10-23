@@ -1,5 +1,7 @@
 package com.pixelgram.desktop
 
+import com.pixelgram.desktop.core.AppLock
+import com.pixelgram.desktop.ui.LockScreen
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import com.pixelgram.desktop.ui.main.BotAnswer
@@ -349,6 +351,13 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
         }
     }
     val ready = telegram.authState == AuthState.Ready || devScreen != null
+    AppLock.start(settings)
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(LockCheckMs)
+            AppLock.tick()
+        }
+    }
     LaunchedEffect(ready) {
         if (ready && Updater.consumeUpdated()) {
             delay(UpdatedNoticeDelayMs)
@@ -401,6 +410,11 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
                 }
             }
         }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = AppLock.locked,
+            enter = androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.fadeOut(),
+        ) { LockScreen() }
         BotAnswer(
             TopNotice.text?.let { it to false },
             onDismiss = { TopNotice.text = null },
@@ -412,3 +426,4 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
 
 private const val RaiseHoldMs = 150L
 private const val UpdatedNoticeDelayMs = 1500L
+private const val LockCheckMs = 10_000L

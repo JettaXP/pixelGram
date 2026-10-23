@@ -381,7 +381,7 @@ fun SettingsScreen(
                         Section.Bubbles -> BubblesSection(settings)
                         Section.About -> AboutSection(telegram, settings, onOpenChat)
                         Section.MyAccount -> AccountSection(telegram, onOpenProfile)
-                        Section.Privacy -> PrivacySection(telegram)
+                        Section.Privacy -> PrivacySection(telegram, settings)
                         Section.ChatSettings -> ChatSettingsSection(settings) {
                             inPreferences = true
                             section = Section.Bubbles
@@ -476,7 +476,7 @@ private fun PreferencesHeader() {
 }
 
 @Composable
-private fun SegmentedGroup(content: @Composable () -> Unit) {
+internal fun SegmentedGroup(content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
         content()
     }
@@ -544,7 +544,7 @@ private fun PreferencesEntry(onClick: () -> Unit) {
 }
 
 @Composable
-private fun Header(text: String) {
+internal fun Header(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.titleSmall,
@@ -554,7 +554,7 @@ private fun Header(text: String) {
 }
 
 @Composable
-private fun <T> effects() = MaterialTheme.motionScheme.defaultEffectsSpec<T>()
+internal fun <T> effects() = MaterialTheme.motionScheme.defaultEffectsSpec<T>()
 
 @Composable
 private fun Reveal(visible: Boolean, content: @Composable () -> Unit) {
@@ -582,7 +582,7 @@ private fun AnimatedDescription(text: String) {
 }
 
 @Composable
-private fun Description(text: String) {
+internal fun Description(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.bodyMedium,
@@ -990,50 +990,6 @@ private fun AccountSection(telegram: Telegram, onOpenProfile: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
         OutlinedButton(onClick = onOpenProfile) { Text("Open profile") }
         Button(onClick = telegram::logOut) { Text("Log out") }
-    }
-}
-
-@Composable
-private fun PrivacySection(telegram: Telegram) {
-    var sessions by remember { mutableStateOf<List<TdApi.Session>?>(null) }
-    LaunchedEffect(Unit) { telegram.activeSessions { sessions = it } }
-    Header("Active sessions")
-    val fx = effects<Float>()
-    AnimatedContent(
-        targetState = sessions,
-        transitionSpec = { fadeIn(fx) togetherWith fadeOut(fx) },
-        contentKey = { it == null },
-    ) { loaded ->
-        if (loaded == null) {
-            LoadingIndicator()
-        } else {
-            SessionList(loaded)
-        }
-    }
-}
-
-@Composable
-private fun SessionList(loaded: List<TdApi.Session>) {
-    val sorted = loaded.sortedWith(compareByDescending<TdApi.Session> { it.isCurrent }.thenByDescending { it.lastActiveDate })
-    SegmentedGroup {
-        sorted.forEachIndexed { index, session ->
-            SegmentedListItem(
-                onClick = {},
-                shapes = ListItemDefaults.segmentedShapes(index, sorted.size),
-                leadingContent = { Icon(Icons.Outlined.Devices, contentDescription = null) },
-                supportingContent = {
-                    Text(
-                        listOf(
-                            "${session.applicationName} ${session.applicationVersion}",
-                            session.location,
-                            if (session.isCurrent) "this device" else formatChatDate(session.lastActiveDate),
-                        ).filter { it.isNotBlank() }.joinToString(" · ")
-                    )
-                },
-            ) {
-                Text(session.deviceModel.ifBlank { session.platform })
-            }
-        }
     }
 }
 

@@ -1,0 +1,159 @@
+package com.pixelgram.desktop.ui
+
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Backspace
+import androidx.compose.material.icons.automirrored.outlined.KeyboardTab
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.unit.dp
+import androidx.graphics.shapes.Morph
+import kotlinx.coroutines.delay
+
+private val KeySize = 72.dp
+private val KeyGap = 16.dp
+private val DotSize = 16.dp
+private val DotGap = 10.dp
+private const val RoundPercent = 50
+private const val PressedPercent = 28
+private const val ShapeHoldMs = 700L
+private const val MorphMs = 450
+
+private val DotShapes = listOf(
+    MaterialShapes.Cookie4Sided,
+    MaterialShapes.Clover4Leaf,
+    MaterialShapes.Sunny,
+    MaterialShapes.Pentagon,
+    MaterialShapes.Gem,
+    MaterialShapes.Cookie6Sided,
+    MaterialShapes.Flower,
+    MaterialShapes.Heart,
+)
+
+const val BackspaceKey = "back"
+const val EnterKey = "enter"
+
+@Composable
+fun PinDots(count: Int, modifier: Modifier = Modifier) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(DotGap),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.height(DotSize * 1.6f),
+    ) {
+        repeat(count) { index -> PinDot(index) }
+    }
+}
+
+@Composable
+private fun PinDot(index: Int) {
+    val color = MaterialTheme.colorScheme.onSurface
+    val morph = remember(index) { Morph(DotShapes[index % DotShapes.size], MaterialShapes.Circle) }
+    val progress = remember(index) { Animatable(0f) }
+    val grow = remember(index) { Animatable(0f) }
+    LaunchedEffect(index) {
+        grow.animateTo(1f, spring(dampingRatio = 0.5f))
+    }
+    LaunchedEffect(index) {
+        delay(ShapeHoldMs)
+        progress.animateTo(1f, tween(MorphMs))
+    }
+    Canvas(Modifier.size(DotSize * 1.4f)) {
+        val path = Path()
+        var first = true
+        morph.forEachCubic(progress.value) { cubic ->
+            if (first) {
+                path.moveTo(cubic.anchor0X, cubic.anchor0Y)
+                first = false
+            }
+            path.cubicTo(cubic.control0X, cubic.control0Y, cubic.control1X, cubic.control1Y, cubic.anchor1X, cubic.anchor1Y)
+        }
+        path.close()
+        val side = size.minDimension * grow.value
+        val offset = (size.minDimension - side) / 2f
+        translateAndScale(offset, side) { drawPath(path, color) }
+    }
+}
+
+private inline fun androidx.compose.ui.graphics.drawscope.DrawScope.translateAndScale(
+    offset: Float,
+    side: Float,
+    block: androidx.compose.ui.graphics.drawscope.DrawScope.() -> Unit,
+) {
+    drawContext.transform.translate(offset, offset)
+    scale(side, side, pivot = androidx.compose.ui.geometry.Offset.Zero) { block() }
+    drawContext.transform.translate(-offset, -offset)
+}
+
+@Composable
+fun PinPad(onKey: (String) -> Unit, modifier: Modifier = Modifier) {
+    val rows = listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf(BackspaceKey, "0", EnterKey))
+    Column(verticalArrangement = Arrangement.spacedBy(KeyGap), modifier = modifier) {
+        rows.forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(KeyGap)) {
+                row.forEach { key -> PinKey(key, onKey) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PinKey(key: String, onKey: (String) -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val percent by animateIntAsState(
+        if (pressed) PressedPercent else RoundPercent,
+        spring(dampingRatio = 0.6f, stiffness = 900f),
+    )
+    val scheme = MaterialTheme.colorScheme
+    val action = key == BackspaceKey || key == EnterKey
+    val container = if (action) scheme.primaryContainer else scheme.surfaceContainerHighest
+    val content = if (action) scheme.onPrimaryContainer else scheme.onSurface
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(KeySize)
+            .clip(RoundedCornerShape(percent))
+            .background(if (pressed) container.blend(content) else container)
+            .clickable(interactionSource = interaction, indication = null) { onKey(key) },
+    ) {
+        when (key) {
+            BackspaceKey -> Icon(Icons.AutoMirrored.Outlined.Backspace, contentDescription = "Delete", tint = content)
+            EnterKey -> Icon(Icons.AutoMirrored.Outlined.KeyboardTab, contentDescription = "Unlock", tint = content)
+            else -> Text(key, style = MaterialTheme.typography.headlineSmall, color = content)
+        }
+    }
+}
+
+private fun Color.blend(over: Color): Color = Color(
+    red = red * 0.88f + over.red * 0.12f,
+    green = green * 0.88f + over.green * 0.12f,
+    blue = blue * 0.88f + over.blue * 0.12f,
+    alpha = alpha,
+)
