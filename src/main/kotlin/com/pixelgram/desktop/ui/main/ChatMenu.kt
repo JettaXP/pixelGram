@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.profile.ProfileMusic
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
@@ -258,6 +259,7 @@ fun ChatInfoDialog(
                     if (bio.isNotBlank()) add(InfoRow(Icons.Outlined.Info, "Bio", bio))
                     add(InfoRow(Icons.Outlined.Numbers, "ID", (if (chat.privateUserId != 0L) chat.privateUserId else chat.id).toString()))
                 }
+                if (chat.privateUserId != 0L) ProfileMusic(telegram, chat.privateUserId, own = false, modifier = Modifier.padding(top = 8.dp))
                 Box(Modifier.fillMaxWidth().padding(top = 8.dp)) { InfoGroup(rows) }
                 if (personalChannel != 0L) {
                     PersonalChannelCard(

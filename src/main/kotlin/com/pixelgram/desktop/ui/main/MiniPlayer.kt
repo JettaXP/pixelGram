@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.material3.SliderDefaults
@@ -106,7 +109,7 @@ fun AudioQueueEffects(telegram: Telegram) {
     LaunchedEffect(pending?.key, path) {
         if (pending != null && path != null) {
             AudioQueue.pending = null
-            AudioPlayer.play(pending.key, path, AudioQueue.title(pending), pending.chatId)
+            AudioPlayer.play(pending.key, path, AudioQueue.title(pending), pending.chatId, (pending.content as? TdApi.MessageAudio)?.audio)
         }
     }
     DisposableEffect(telegram) {
@@ -117,6 +120,7 @@ fun AudioQueueEffects(telegram: Telegram) {
 
 @Composable
 fun MiniPlayer(telegram: Telegram) {
+    LaunchedEffect(telegram, telegram.me?.id) { telegram.loadMyProfileAudios() }
     AnimatedVisibility(
         visible = AudioPlayer.current != null || AudioQueue.pending != null,
         enter = expandVertically() + fadeIn(),
@@ -168,6 +172,21 @@ fun MiniPlayer(telegram: Telegram) {
                             TextButton(onClick = AudioPlayer::nextSpeed) {
                                 Text(speedLabel(AudioPlayer.speed), style = MaterialTheme.typography.labelLarge)
                             }
+                        }
+                    }
+                    AudioPlayer.audio?.let { track ->
+                        val saved = telegram.isInProfile(track)
+                        val scale by animateFloatAsState(if (saved) 1f else 0.9f, spring(dampingRatio = 0.4f, stiffness = 600f))
+                        IconToggleButton(checked = saved, onCheckedChange = { telegram.toggleProfileAudio(track) }) {
+                            Icon(
+                                if (saved) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                contentDescription = if (saved) "Remove from profile" else "Add to profile",
+                                tint = if (saved) MaterialTheme.colorScheme.primary else androidx.compose.material3.LocalContentColor.current,
+                                modifier = Modifier.graphicsLayer {
+                                    scaleX = scale
+                                    scaleY = scale
+                                },
+                            )
                         }
                     }
                     IconButton(onClick = {

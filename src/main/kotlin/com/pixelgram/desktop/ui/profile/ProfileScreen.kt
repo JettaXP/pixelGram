@@ -145,6 +145,7 @@ fun ProfileScreen(
             )
             add(InfoRow(Icons.Outlined.Numbers, "ID", me.id.toString()))
         }
+        ProfileMusic(telegram, me.id, own = true)
         InfoGroup(rows)
 
         val channelId = fullInfo?.personalChatId ?: 0L

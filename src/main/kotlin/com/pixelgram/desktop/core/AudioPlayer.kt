@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.core
 
+import it.tdlight.jni.TdApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +30,8 @@ object AudioPlayer {
         private set
     var chatId by mutableStateOf(0L)
         private set
+    var audio by mutableStateOf<TdApi.Audio?>(null)
+        private set
     var repeat by mutableStateOf(false)
     var muted by mutableStateOf(false)
     var speed by mutableFloatStateOf(1f)
@@ -39,20 +42,19 @@ object AudioPlayer {
     @Volatile private var seekTo: Float? = null
     @Volatile private var generation = 0
 
-    fun toggle(key: Long, path: String, title: String, chatId: Long) {
+    fun toggle(key: Long, path: String, title: String, chatId: Long, audio: TdApi.Audio? = null) {
         if (key == current && !loading) {
             paused = playing
             playing = !playing
             return
         }
-        this.title = title
-        this.chatId = chatId
-        start(key, path, 0f)
+        play(key, path, title, chatId, audio)
     }
 
-    fun play(key: Long, path: String, title: String, chatId: Long) {
+    fun play(key: Long, path: String, title: String, chatId: Long, audio: TdApi.Audio? = null) {
         this.title = title
         this.chatId = chatId
+        this.audio = audio
         start(key, path, 0f)
     }
 

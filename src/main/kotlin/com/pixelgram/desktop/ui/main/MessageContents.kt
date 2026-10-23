@@ -366,9 +366,9 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun PlayButton(key: Long, chatId: Long, title: String, file: TdApi.File?, telegram: Telegram) {
+fun PlayButton(key: Long, chatId: Long, title: String, file: TdApi.File?, telegram: Telegram, audio: TdApi.Audio? = null) {
     val scheme = MaterialTheme.colorScheme
-    val (busy, start) = rememberOpener(file, telegram) { path -> AudioPlayer.toggle(key, path, title, chatId) }
+    val (busy, start) = rememberOpener(file, telegram) { path -> AudioPlayer.toggle(key, path, title, chatId, audio) }
     val active = AudioPlayer.current == key
     val downloaded = telegram.localPath(file) != null
     Box(Modifier.size(PlayerButton)) {
@@ -450,7 +450,7 @@ private fun AudioContent(message: UiMessage, audio: TdApi.Audio, telegram: Teleg
     val title = audioTitle(audio)
     val color = androidx.compose.material3.LocalContentColor.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PlayButton(key, message.chatId, title, audio.audio, telegram)
+        PlayButton(key, message.chatId, title, audio.audio, telegram, audio)
         Column(Modifier.width(WaveWidth)) {
             EmojiText(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (active) {

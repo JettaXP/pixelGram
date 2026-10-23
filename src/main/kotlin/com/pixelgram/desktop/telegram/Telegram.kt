@@ -172,6 +172,7 @@ private const val MuteForever = 366 * 24 * 3600
 private const val AlbumSize = 10
 private const val HistoryPageSize = 100
 private const val ProfilePhotosLimit = 100
+private const val ProfileAudiosLimit = 50
 private const val MentionResolveMin = 4
 private const val HistoryPagesMax = 300
 
@@ -1161,6 +1162,41 @@ class Telegram(
                 onResult(flatten((result as? TdApi.BasicGroupFullInfo)?.botCommands))
             }
             else -> onResult(emptyList())
+        }
+    }
+
+    val myProfileAudios = mutableStateListOf<Int>()
+
+    fun profileAudios(userId: Long, onResult: (List<TdApi.Audio>) -> Unit) {
+        send(TdApi.GetUserProfileAudios(userId, 0, ProfileAudiosLimit)) { result ->
+            onResult((result as? TdApi.Audios)?.audios?.toList().orEmpty())
+        }
+    }
+
+    fun loadMyProfileAudios() {
+        if (myUserId == 0L) return
+        profileAudios(myUserId) { list ->
+            myProfileAudios.clear()
+            myProfileAudios.addAll(list.map { it.audio.id })
+        }
+    }
+
+    fun isInProfile(audio: TdApi.Audio?): Boolean = audio != null && audio.audio.id in myProfileAudios
+
+    fun toggleProfileAudio(audio: TdApi.Audio, done: (String?) -> Unit = {}) {
+        val request: TdApi.Function<TdApi.Ok> = if (isInProfile(audio)) {
+            TdApi.RemoveProfileAudio(audio.audio.id)
+        } else {
+            TdApi.AddProfileAudio(TdApi.InputAudio().apply {
+                this.audio = remoteInput(audio.audio)
+                duration = audio.duration
+                title = audio.title
+                performer = audio.performer
+            })
+        }
+        send(request) { result ->
+            done((result as? TdApi.Error)?.message?.let(::friendlyError))
+            loadMyProfileAudios()
         }
     }
 
