@@ -50,7 +50,7 @@ import com.pixelgram.desktop.ui.main.Attachments
 import com.pixelgram.desktop.ui.theme.EmojiText
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import it.tdlight.jni.TdApi
-import kotlinx.coroutines.launch
+import java.io.File
 import java.time.Month
 import java.time.format.TextStyle
 import java.util.Locale
@@ -82,14 +82,12 @@ fun ProfileScreen(
             refresh++
         }
     }
-    val pickPhoto: () -> Unit = {
-        scope.launch {
-            val file = Attachments.pick().firstOrNull() ?: return@launch
-            telegram.setProfilePhoto(file.absolutePath) {
-                error = it
-                refresh++
-            }
+    val pickPhoto: (File) -> Unit = { file ->
+        val done: (String?) -> Unit = { failure ->
+            error = failure
+            refresh++
         }
+        if (isVideoFile(file)) telegram.setProfileVideo(file.absolutePath, done) else telegram.setProfilePhoto(file.absolutePath, done)
     }
 
     PageScaffold("My Profile", onBack) {
@@ -98,22 +96,12 @@ fun ProfileScreen(
             return@PageScaffold
         }
         val name = me.fullName()
-        Box(Modifier.clickable(enabled = me.profilePhoto != null) { gallery = true }) {
-            Avatar(name, me.profilePhoto?.small, telegram, settings, size = 160.dp, full = me.profilePhoto?.big)
+        AvatarEditor(160.dp, onPicked = pickPhoto) {
+            Box(Modifier.clickable(enabled = me.profilePhoto != null) { gallery = true }) {
+                Avatar(name, me.profilePhoto?.small, telegram, settings, size = 160.dp, full = me.profilePhoto?.big)
+            }
         }
         EmojiText(name, style = MaterialTheme.typography.headlineMediumEmphasized)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(onClick = pickPhoto) {
-                Icon(Icons.Outlined.AddAPhoto, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text("Set new photo", modifier = Modifier.padding(start = 8.dp))
-            }
-            if (me.profilePhoto != null) {
-                OutlinedButton(onClick = { gallery = true }) {
-                    Icon(Icons.Outlined.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text("All photos", modifier = Modifier.padding(start = 8.dp))
-                }
-            }
-        }
         val rows = buildList {
             add(InfoRow(Icons.Outlined.Person, "Name", name, onEdit = { editing = ProfileField.Name }))
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {

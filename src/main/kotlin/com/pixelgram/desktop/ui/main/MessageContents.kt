@@ -689,23 +689,22 @@ fun TransferRing(progress: Float?, color: Color, onCancel: (() -> Unit)?, size: 
         Modifier.size(size).then(if (onCancel != null) Modifier.clip(CircleShape).clickable(onClick = onCancel) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
-        if (progress == null) {
-            LoadingIndicator(Modifier.size(size * 0.8f), color = color)
-        } else {
-            val shown by animateFloatAsState(progress.coerceIn(MinRingProgress, 1f))
-            CircularWavyProgressIndicator(
-                progress = { shown },
-                modifier = Modifier.size(size),
-                color = color,
-                trackColor = color.copy(alpha = 0.25f),
-            )
-            if (onCancel != null) {
-                Icon(Icons.Rounded.Close, contentDescription = "Cancel", tint = color, modifier = Modifier.size(size * 0.42f))
-            }
+        val shown by animateFloatAsState((progress ?: 0f).coerceIn(MinRingProgress, 1f))
+        CircularWavyProgressIndicator(
+            progress = { shown },
+            modifier = Modifier.size(size),
+            color = color,
+            trackColor = color.copy(alpha = 0.25f),
+            amplitude = { value -> if (value < RingFlattenFrom) 1f else ((1f - value) / (1f - RingFlattenFrom)).coerceIn(0f, 1f) },
+            waveSpeed = 0.dp,
+        )
+        if (onCancel != null) {
+            Icon(Icons.Rounded.Close, contentDescription = "Cancel", tint = color, modifier = Modifier.size(size * 0.42f))
         }
     }
 }
 
+private const val RingFlattenFrom = 0.8f
 private const val MinRingProgress = 0.02f
 
 @Composable

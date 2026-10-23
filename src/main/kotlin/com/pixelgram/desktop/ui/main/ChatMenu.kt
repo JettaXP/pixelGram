@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import com.pixelgram.desktop.ui.profile.ProfileMusic
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
@@ -253,6 +257,31 @@ fun ChatInfoDialog(
                     else -> ""
                 }
                 if (subtitle.isNotEmpty()) Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (!telegram.isSavedMessages(chat.id)) {
+                    var moreAt by remember(chat.id) { mutableStateOf<DpOffset?>(null) }
+                    val muted = telegram.isMuted(chat)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    ) {
+                        if (onOpenChat != null) {
+                            ProfileAction(Icons.AutoMirrored.Outlined.Chat, "Message", Modifier.weight(1f)) {
+                                onDismiss()
+                                onOpenChat(chat.id)
+                            }
+                        }
+                        ProfileAction(
+                            if (muted) Icons.Outlined.NotificationsOff else Icons.Outlined.Notifications,
+                            if (muted) "Unmute" else "Mute",
+                            Modifier.weight(1f),
+                            checked = muted,
+                        ) { telegram.setMuted(chat, !muted) }
+                        Box(Modifier.weight(1f)) {
+                            ProfileAction(Icons.Outlined.MoreHoriz, "More", Modifier.fillMaxWidth()) { moreAt = DpOffset(0.dp, 0.dp) }
+                            ChatActions(chat, telegram, settings, moreAt, onDismiss = { moreAt = null }, onOpenChat = onOpenChat)
+                        }
+                    }
+                }
                 val rows = buildList {
                     user?.usernames?.activeUsernames?.firstOrNull()?.let { add(InfoRow(Icons.Outlined.AlternateEmail, "Username", "@$it")) }
                     user?.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it")) }
@@ -275,6 +304,34 @@ fun ChatInfoDialog(
                 }
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
             }
+        }
+    }
+}
+
+@Composable
+private fun ProfileAction(
+    icon: ImageVector,
+    label: String,
+    modifier: Modifier = Modifier,
+    checked: Boolean = false,
+    onClick: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    val container by animateColorAsState(if (checked) colors.secondaryContainer else colors.surfaceContainerHighest)
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(18.dp),
+        color = container,
+        contentColor = if (checked) colors.onSecondaryContainer else colors.onSurface,
+        modifier = modifier,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(vertical = 10.dp),
+        ) {
+            Icon(icon, contentDescription = null)
+            Text(label, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

@@ -616,6 +616,9 @@ class Telegram(
     fun setProfilePhoto(path: String, done: (String?) -> Unit) =
         send(TdApi.SetProfilePhoto(TdApi.InputChatPhotoStatic(TdApi.InputFileLocal(path)), false), okOrError(done))
 
+    fun setProfileVideo(path: String, done: (String?) -> Unit) =
+        send(TdApi.SetProfilePhoto(TdApi.InputChatPhotoAnimation(TdApi.InputFileLocal(path), 0.0), false), okOrError(done))
+
     fun setPreviousProfilePhoto(photoId: Long, done: (String?) -> Unit) =
         send(TdApi.SetProfilePhoto(TdApi.InputChatPhotoPrevious(photoId), false), okOrError(done))
 
