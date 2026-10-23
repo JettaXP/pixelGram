@@ -92,11 +92,12 @@ fun ChatList(
     onBack: (() -> Unit)?,
     menuOpen: Boolean = false,
     onSearch: (() -> Unit)? = null,
+    belowHeader: @Composable () -> Unit = {},
 ) {
     Box(Modifier.fillMaxSize()) {
         ChatListBody(
             listKey, title, chatsFor, order, vertical, compact, selectedChatId, telegram, settings,
-            onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen, onSearch,
+            onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen, onSearch, belowHeader,
         )
         ConnectionPill(
             status = telegram.connection,
@@ -123,6 +124,7 @@ private fun ChatListBody(
     onBack: (() -> Unit)?,
     menuOpen: Boolean = false,
     onSearch: (() -> Unit)? = null,
+    belowHeader: @Composable () -> Unit = {},
 ) {
     if (compact) {
         CompactChatList(
@@ -155,6 +157,7 @@ private fun ChatListBody(
                 IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Search messages") }
             }
         }
+        belowHeader()
         val forward = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
         val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
         AnimatedContent(

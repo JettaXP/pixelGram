@@ -207,13 +207,16 @@ fun MainScreen(
                         .fillMaxHeight()
                         .padding(vertical = 8.dp),
                 ) {
-                    if (!foldersLeft && !compact && selectedKey != ChatListKey.Archive) {
-                        if (settings.capsuleFolders.value) {
-                            CapsuleFolders(tabs, selectedKey, settings, onSelect = { selectedKey = it })
-                        } else {
-                            TopFolders(tabs, selectedKey, onSelect = { selectedKey = it })
+                    val topFolders = @Composable {
+                        if (!foldersLeft && !compact && selectedKey != ChatListKey.Archive) {
+                            if (settings.capsuleFolders.value) {
+                                CapsuleFolders(tabs, selectedKey, settings, onSelect = { selectedKey = it })
+                            } else {
+                                TopFolders(tabs, selectedKey, onSelect = { selectedKey = it })
+                            }
                         }
                     }
+                    if (MessageSearch.open && !compact) topFolders()
                     if (MessageSearch.open && !compact) {
                         MessageSearchPanel(telegram, settings, onOpen = onOpenChat)
                     } else ChatList(
@@ -231,7 +234,8 @@ fun MainScreen(
                         onOpenArchive = { selectedKey = ChatListKey.Archive },
                         onMenu = if (foldersLeft) null else toggleMenu,
                         onSearch = { MessageSearch.start(null) },
-                    menuOpen = menuOpen,
+                        menuOpen = menuOpen,
+                        belowHeader = topFolders,
                         onBack = if (selectedKey == ChatListKey.Archive) {
                             { selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main }
                         } else {
