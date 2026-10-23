@@ -126,6 +126,7 @@ fun StickerView(sticker: TdApi.Sticker?, telegram: Telegram, size: Dp, modifier:
         when {
             path != null && sticker.format is TdApi.StickerFormatTgs -> LottieView(path, Modifier.fillMaxSize(), animate)
             path != null && sticker.format is TdApi.StickerFormatWebp -> FileImage(path, Modifier.fillMaxSize(), ContentScale.Fit)
+            path != null && sticker.format is TdApi.StickerFormatWebm -> VideoStickerView(path, Modifier.fillMaxSize(), animate)
             else -> ThumbImage(sticker.thumbnail?.file, null, telegram, Modifier.fillMaxSize(), ContentScale.Fit)
         }
     }

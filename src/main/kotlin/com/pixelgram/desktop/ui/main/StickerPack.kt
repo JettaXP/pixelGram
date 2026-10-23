@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -121,13 +122,25 @@ fun StickerPackDialog(request: StickerPackRequest, settings: AppSettings, onDism
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.fillMaxWidth().heightIn(max = PackGridMax),
                     ) {
+                        val sendable = loaded.stickerType is TdApi.StickerTypeRegular && request.chatId != 0L
                         items(loaded.stickers.toList(), key = { it.sticker.id }) { sticker ->
-                            Box(Modifier.size(PackCell), contentAlignment = Alignment.Center) {
-                                if (sticker.format is TdApi.StickerFormatWebp) {
-                                    StickerView(sticker, telegram, PackCell, animate = com.pixelgram.desktop.core.PowerSaving.stickersInPanel)
-                                } else {
-                                    ThumbImage(sticker.thumbnail?.file, null, telegram, Modifier.size(PackCell), ContentScale.Fit)
-                                }
+                            Box(
+                                Modifier
+                                    .size(PackCell)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .then(
+                                        if (sendable) {
+                                            Modifier.clickable {
+                                                telegram.sendSticker(request.chatId, sticker)
+                                                onDismiss()
+                                            }
+                                        } else {
+                                            Modifier
+                                        },
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                StickerView(sticker, telegram, PackCell, animate = com.pixelgram.desktop.core.PowerSaving.stickersInPanel)
                             }
                         }
                     }

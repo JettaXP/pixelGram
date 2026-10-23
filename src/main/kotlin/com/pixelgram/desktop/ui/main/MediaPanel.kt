@@ -326,11 +326,7 @@ private object FullWindow : androidx.compose.ui.window.PopupPositionProvider {
 
 @Composable
 private fun StickerThumb(sticker: TdApi.Sticker, telegram: Telegram) {
-    if (sticker.format is TdApi.StickerFormatWebp) {
-        StickerView(sticker, telegram, StickerCell, animate = com.pixelgram.desktop.core.PowerSaving.stickersInPanel)
-    } else {
-        ThumbImage(sticker.thumbnail?.file, null, telegram, Modifier.fillMaxSize(), ContentScale.Fit)
-    }
+    StickerView(sticker, telegram, StickerCell, animate = com.pixelgram.desktop.core.PowerSaving.stickersInPanel)
 }
 
 @Composable

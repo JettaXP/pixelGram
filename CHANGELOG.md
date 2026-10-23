@@ -14,6 +14,11 @@
 - Block and unblock people from the More menu in their profile.
 - Fixed reactions that stayed small after the reaction list changed.
 
+### Stickers
+- Video stickers (WebM) now play in chats, the sticker panel and sticker packs, with transparency. This includes animated custom emoji.
+- Sticker packs show every sticker animated, not only the static ones.
+- Click a sticker in a sticker pack to send it to the chat.
+
 ## 0.28.0 IL
 
 ### Easter egg
