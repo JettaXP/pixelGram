@@ -121,6 +121,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -162,9 +163,13 @@ import com.pixelgram.desktop.ui.themedAppIcon
 import com.pixelgram.desktop.ui.toShape
 import it.tdlight.jni.TdApi
 import java.awt.Desktop
+import java.awt.FileDialog
+import java.awt.Frame
+import java.awt.KeyboardFocusManager
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.net.URI
+import kotlinx.coroutines.Dispatchers
 
 private enum class Section(val title: String, val icon: ImageVector, val pixel: Boolean = false) {
     MyAccount("My Account", Icons.Outlined.AccountCircle),
@@ -655,10 +660,79 @@ private fun AppearanceSection(settings: AppSettings) {
     EmojiStyleChoice(settings)
 
     Header("Accent color")
-    Description("The whole color scheme is generated from this color with Google's Material color utilities.")
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 8.dp)) {
+    Description("Choose a preset accent color or select Dynamic to extract colors from your desktop wallpaper.")
+
+    val scope = rememberCoroutineScope()
+    var matugenStatus by remember { mutableStateOf<String?>(null) }
+    var isWorking by remember { mutableStateOf(false) }
+    val dynamicSelected = AppPaths.isLinux && settings.matugen.value
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 8.dp),
+    ) {
+        if (AppPaths.isLinux) {
+            val dynamicRing by animateDpAsState(if (dynamicSelected) 3.dp else 0.dp, MaterialTheme.motionScheme.fastSpatialSpec())
+            val dynamicScale by animateFloatAsState(if (dynamicSelected) 1f else 0.88f, MaterialTheme.motionScheme.fastSpatialSpec())
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(40.dp)
+                    .graphicsLayer {
+                        scaleX = dynamicScale
+                        scaleY = dynamicScale
+                    }
+                    .clip(CircleShape)
+                    .background(
+                        Brush.sweepGradient(
+                            listOf(
+                                Color(0xFF6750A4),
+                                Color(0xFF0061A4),
+                                Color(0xFF006A6A),
+                                Color(0xFF386A20),
+                                Color(0xFF8B5000),
+                                Color(0xFFB3261E),
+                                Color(0xFF6750A4),
+                            )
+                        )
+                    )
+                    .then(
+                        if (dynamicRing > 0.dp) {
+                            Modifier.border(dynamicRing, MaterialTheme.colorScheme.onSurface, CircleShape)
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .clickable {
+                        settings.matugen.value = true
+                        Matugen.exportTemplate()
+                        if (!Matugen.outputFile.exists() && Matugen.isAvailable && !isWorking) {
+                            isWorking = true
+                            scope.launch(Dispatchers.IO) {
+                                Matugen.runMatugen()
+                                    .onSuccess {
+                                        matugenStatus = "Applied colors from ${it.name}"
+                                    }
+                                    .onFailure {
+                                        matugenStatus = "Could not detect wallpaper. Pick an image below."
+                                    }
+                                isWorking = false
+                            }
+                        }
+                    },
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.AutoAwesome,
+                    contentDescription = "Dynamic (Wallpaper)",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+
         SeedColors.forEach { seed ->
-            val selected = settings.seedColor.value == seed
+            val selected = !dynamicSelected && settings.seedColor.value == seed
             val ring by animateDpAsState(if (selected) 3.dp else 0.dp, MaterialTheme.motionScheme.fastSpatialSpec())
             val scale by animateFloatAsState(if (selected) 1f else 0.88f, MaterialTheme.motionScheme.fastSpatialSpec())
             Box(
@@ -677,45 +751,141 @@ private fun AppearanceSection(settings: AppSettings) {
                             Modifier
                         }
                     )
-                    .clickable { settings.seedColor.value = seed },
+                    .clickable {
+                        settings.matugen.value = false
+                        settings.seedColor.value = seed
+                    },
             )
         }
     }
 
     if (AppPaths.isLinux) {
-        Header("Material You (matugen)")
-        SwitchRow(
-            index = 0,
-            count = 1,
-            title = "Dynamic colors from matugen",
-            subtitle = "Colors follow your wallpaper. Overrides the accent color.",
-            checked = settings.matugen.value,
-            onChange = {
-                settings.matugen.value = it
-                if (it) Matugen.exportTemplate()
-            },
-        )
-        Description(
-            "Add these lines to ~/.config/matugen/config.toml, then run matugen. " +
-                "pixelGram applies new colors automatically."
-        )
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                Matugen.configSnippet,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(12.dp),
-            )
-        }
-        OutlinedButton(onClick = {
-            Matugen.exportTemplate()
-            Toolkit.getDefaultToolkit().systemClipboard
-                .setContents(StringSelection(Matugen.configSnippet), null)
-        }) {
-            Text("Copy config")
+        AnimatedVisibility(visible = dynamicSelected) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                if (Matugen.isAvailable) {
+                    val detected = remember { Matugen.detectWallpaper() }
+                    if (detected != null) {
+                        Description("Detected wallpaper: ${detected.name}")
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                if (isWorking) return@Button
+                                isWorking = true
+                                scope.launch(Dispatchers.IO) {
+                                    Matugen.runMatugen()
+                                        .onSuccess {
+                                            matugenStatus = "Applied colors from ${it.name}"
+                                        }
+                                        .onFailure {
+                                            matugenStatus = "Failed: ${it.message}"
+                                        }
+                                    isWorking = false
+                                }
+                            },
+                            enabled = !isWorking,
+                        ) {
+                            Text(if (isWorking) "Generating..." else "Sync from wallpaper")
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                if (isWorking) return@OutlinedButton
+                                val parent = KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow as? Frame
+                                val dialog = FileDialog(parent, "Select wallpaper or image", FileDialog.LOAD).apply {
+                                    setFilenameFilter { _, name ->
+                                        val ext = name.substringAfterLast('.', "").lowercase()
+                                        ext in listOf("png", "jpg", "jpeg", "webp", "bmp")
+                                    }
+                                    isVisible = true
+                                }
+                                val selectedFile = dialog.files?.firstOrNull()
+                                    ?: dialog.file?.let { File(dialog.directory, it) }
+                                if (selectedFile != null && selectedFile.isFile) {
+                                    isWorking = true
+                                    scope.launch(Dispatchers.IO) {
+                                        Matugen.runMatugen(selectedFile)
+                                            .onSuccess {
+                                                matugenStatus = "Applied colors from ${it.name}"
+                                            }
+                                            .onFailure {
+                                                matugenStatus = "Failed: ${it.message}"
+                                            }
+                                        isWorking = false
+                                    }
+                                }
+                            },
+                            enabled = !isWorking,
+                        ) {
+                            Text("Pick image...")
+                        }
+                    }
+
+                    matugenStatus?.let { status ->
+                        Text(
+                            text = status,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Automatic wallpaper synchronization:",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Description(
+                        "You can add pixelGram to ~/.config/matugen/config.toml so colors update automatically whenever your wallpaper changes."
+                    )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = {
+                            Matugen.installToMatugenConfig()
+                                .onSuccess { target ->
+                                    matugenStatus = "Added to ${target.name}"
+                                }
+                                .onFailure {
+                                    matugenStatus = "Failed to update config: ${it.message}"
+                                }
+                        }) {
+                            Text("Add to matugen config")
+                        }
+
+                        OutlinedButton(onClick = {
+                            Matugen.exportTemplate()
+                            Toolkit.getDefaultToolkit().systemClipboard
+                                .setContents(StringSelection(Matugen.configSnippet), null)
+                            matugenStatus = "Config snippet copied to clipboard"
+                        }) {
+                            Text("Copy snippet")
+                        }
+                    }
+                } else {
+                    Description(
+                        "matugen is not found in PATH. Install matugen, or add these lines to ~/.config/matugen/config.toml:"
+                    )
+                    Surface(
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            Matugen.configSnippet,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(12.dp),
+                        )
+                    }
+                    OutlinedButton(onClick = {
+                        Matugen.exportTemplate()
+                        Toolkit.getDefaultToolkit().systemClipboard
+                            .setContents(StringSelection(Matugen.configSnippet), null)
+                    }) {
+                        Text("Copy config")
+                    }
+                }
+            }
         }
     }
 

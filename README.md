@@ -61,16 +61,18 @@ On Linux the TDLib native library needs OpenSSL 3 (any current distribution).
 
 ## Material You with matugen (Linux)
 
-Enable **Settings → Appearance → Dynamic colors from matugen**, then add to
-`~/.config/matugen/config.toml`:
+Enable **Settings → Appearance → Dynamic colors from matugen**. pixelGram can
+automatically detect your wallpaper and generate Material You light and dark
+themes directly via matugen, or let you pick any image.
+
+For automatic system-wide palette updates on wallpaper changes, you can also add
+to `~/.config/matugen/config.toml` (or click "Add to matugen config" in settings):
 
 ```toml
 [templates.pixelgram]
 input_path = '~/.config/pixelgram/matugen-template.json'
 output_path = '~/.config/pixelgram/matugen.json'
 ```
-
-Run `matugen image /path/to/wallpaper.png` and pixelGram picks up the colors.
 
 ## Data
 

@@ -48,7 +48,7 @@ fun appColorScheme(settings: AppSettings): ColorScheme {
     val seed = settings.seedColor.value
     val seedScheme = remember(seed, dark) { schemeFromSeed(seed, dark) }
     val matugenScheme = if (AppPaths.isLinux && settings.matugen.value) {
-        rememberMatugenScheme()
+        rememberMatugenScheme(dark)
     } else {
         null
     }
