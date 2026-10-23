@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.27.0
+
+### Performance
+- The chat list re-sorts much faster when messages arrive, so pixelGram stays smooth with hundreds of chats.
+- Video frames are freed right away instead of piling up in memory, so videos no longer make the app lag.
+- Window and tray icons are drawn much faster.
+- The log now records which graphics mode pixelGram draws with, to help track down slowness.
+
+### Fixes
+- Posts with a photo no longer stretch wider than the photo when they reply to a long message, so the photo and time stay in place.
+- The send and microphone buttons now fade in place when you swap them.
+
 ## 0.26.0 Iron Dome
 
 ### Photo viewer
