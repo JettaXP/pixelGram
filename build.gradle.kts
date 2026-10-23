@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.11.0"
+version = "0.12.0"
 
 kotlin {
     jvmToolchain(21)

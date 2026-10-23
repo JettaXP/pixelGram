@@ -305,6 +305,16 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .pointerHoverIcon(PointerIcon.Hand)
+                    .clickable { if (!telegram.isSavedMessages(chat.id)) profileChat = chat }
+                    .padding(end = 8.dp),
+            ) {
             ChatAvatar(chat, telegram, settings, size = 40.dp)
             Column(Modifier.weight(1f)) {
                 EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
@@ -318,6 +328,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                         )
                     }
                 }
+            }
             }
             IconButton(onClick = { MessageSearch.start(chat.id) }) {
                 Icon(Icons.Filled.Search, contentDescription = "Search in chat")
@@ -429,6 +440,7 @@ fun ChatView(chat: ChatState, telegram: Telegram, settings: AppSettings, onOpenC
                                         telegram.pressButton(message, button) { text, alert -> botAnswer = text to alert }
                                     },
                                     onOrigin = openOrigin,
+                                    onVia = { bot -> ComposerInsert.request = chat.id to "$bot " },
                                 )
                               }
                             }
@@ -539,6 +551,7 @@ fun MessageBubble(
     onReact: ((String) -> Unit)? = null,
     onButton: ((TdApi.InlineKeyboardButton) -> Unit)? = null,
     onOrigin: ((TdApi.MessageOrigin) -> Unit)? = null,
+    onVia: ((String) -> Unit)? = null,
 ) {
     val seconds = settings.messageSeconds.value
     if (message.service) {
@@ -589,21 +602,42 @@ fun MessageBubble(
             val hasText = message.text.isNotEmpty()
             val inset = photo != null || media || album != null
             Column(Modifier.padding(if (inset) PhotoInset else 0.dp).width(IntrinsicSize.Max)) {
-                val named = !senderName.isNullOrEmpty()
+                val via = if (message.viaBot != 0L && telegram != null) telegram.botName(message.viaBot) else ""
+                val named = !senderName.isNullOrEmpty() || via.isNotBlank()
                 if (named) {
-                    EmojiText(
-                        senderName.orEmpty(),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = senderColor(message.senderUserId.takeIf { it != 0L } ?: message.senderChatId),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.padding(
                             start = if (inset) 8.dp else 12.dp,
                             end = 12.dp,
                             top = if (inset) 4.dp else 7.dp,
                             bottom = if (inset || quote != null) 4.dp else 0.dp,
                         ),
-                    )
+                    ) {
+                        if (!senderName.isNullOrEmpty()) {
+                            EmojiText(
+                                senderName,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = senderColor(message.senderUserId.takeIf { it != 0L } ?: message.senderChatId),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                        }
+                        if (via.isNotBlank()) {
+                            Text(
+                                "via $via",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = colors.primary,
+                                maxLines = 1,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                                    .clickable { if (via.startsWith("@")) onVia?.invoke(via) },
+                            )
+                        }
+                    }
                 }
                 if (quote != null) {
                     Box(
@@ -648,13 +682,6 @@ fun MessageBubble(
                             .padding(horizontal = 12.dp, vertical = 7.dp)
                             .then(if (photo != null || media || album != null) Modifier.width(PhotoMaxWidth - 24.dp) else Modifier),
                     ) {
-                        if (message.viaBot != 0L && telegram != null && telegram.botName(message.viaBot).isNotBlank()) {
-                            Text(
-                                "via " + telegram.botName(message.viaBot),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = colors.primary,
-                            )
-                        }
                         val origin = message.forwardOrigin
                         if (origin != null && telegram != null) {
                             val reachable = onOrigin != null && origin !is TdApi.MessageOriginHiddenUser
@@ -917,6 +944,10 @@ private val KeyboardMinWidth = 260.dp
 private const val JumpPages = 40
 private const val JumpPageDelayMs = 300L
 
+object ComposerInsert {
+    var request by mutableStateOf<Pair<Long, String>?>(null)
+}
+
 object PluginViewer {
     var path by mutableStateOf<String?>(null)
 }
@@ -1152,6 +1183,13 @@ private fun Composer(
             spans = spansFrom(editing.entities)
             focus.requestFocus()
         }
+    }
+    LaunchedEffect(ComposerInsert.request) {
+        val (target, value) = ComposerInsert.request ?: return@LaunchedEffect
+        if (target != chatId) return@LaunchedEffect
+        ComposerInsert.request = null
+        setText(TextFieldValue(value, TextRange(value.length)))
+        runCatching { focus.requestFocus() }
     }
     val canSend = if (editing?.photo != null) hasAttachments else text.text.isNotBlank() || hasAttachments
     val send = {

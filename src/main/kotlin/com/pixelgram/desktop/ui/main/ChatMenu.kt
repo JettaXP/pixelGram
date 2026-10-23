@@ -1,5 +1,15 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.outlined.Numbers
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.AlternateEmail
+import com.pixelgram.desktop.ui.components.InfoRow
+import com.pixelgram.desktop.ui.components.InfoGroup
+import com.pixelgram.desktop.ui.profile.ProfilePhotosDialog
 import androidx.compose.foundation.layout.fillMaxWidth
 import com.pixelgram.desktop.ui.profile.PersonalChannelCard
 import androidx.compose.animation.AnimatedContent
@@ -230,7 +240,11 @@ fun ChatInfoDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(24.dp),
             ) {
-                ChatAvatar(chat, telegram, settings, size = 96.dp)
+                var photos by remember(chat.id) { mutableStateOf(false) }
+                Box(Modifier.clip(CircleShape).clickable(enabled = chat.privateUserId != 0L && chat.photo != null) { photos = true }) {
+                    ChatAvatar(chat, telegram, settings, size = 96.dp)
+                }
+                if (photos) ProfilePhotosDialog(telegram, chat.privateUserId, onDismiss = { photos = false })
                 EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
                 val subtitle = telegram.presence(chat)?.label ?: when {
                     chat.isChannel -> "channel"
@@ -238,11 +252,13 @@ fun ChatInfoDialog(
                     else -> ""
                 }
                 if (subtitle.isNotEmpty()) Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                user?.usernames?.activeUsernames?.firstOrNull()?.let {
-                    Text("@$it", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleSmall)
+                val rows = buildList {
+                    user?.usernames?.activeUsernames?.firstOrNull()?.let { add(InfoRow(Icons.Outlined.AlternateEmail, "Username", "@$it")) }
+                    user?.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it")) }
+                    if (bio.isNotBlank()) add(InfoRow(Icons.Outlined.Info, "Bio", bio))
+                    add(InfoRow(Icons.Outlined.Numbers, "ID", (if (chat.privateUserId != 0L) chat.privateUserId else chat.id).toString()))
                 }
-                user?.phoneNumber?.takeIf { it.isNotEmpty() }?.let { Text("+$it", style = MaterialTheme.typography.bodyMedium) }
-                if (bio.isNotBlank()) EmojiText(bio, style = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Center))
+                Box(Modifier.fillMaxWidth().padding(top = 8.dp)) { InfoGroup(rows) }
                 if (personalChannel != 0L) {
                     PersonalChannelCard(
                         personalChannel,

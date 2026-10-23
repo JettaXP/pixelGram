@@ -165,7 +165,7 @@ fun ProfileScreen(
         PersonalChannelPicker(telegram, settings, onPicked = setChannel, onDismiss = { picking = false })
     }
     if (gallery && me != null) {
-        ProfilePhotosDialog(telegram, me.id, onChanged = { refresh++ }, onDismiss = { gallery = false })
+        ProfilePhotosDialog(telegram, me.id, onDismiss = { gallery = false }, editable = true, onChanged = { refresh++ })
     }
     val dismiss = { editing = null }
     val saved: () -> Unit = {

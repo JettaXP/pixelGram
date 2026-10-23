@@ -560,7 +560,17 @@ class Telegram(
         }
     }
 
-    fun userName(userId: Long): String = users[userId]?.fullName() ?: ""
+    private val userRequests = mutableSetOf<Long>()
+
+    fun ensureUser(userId: Long) {
+        if (userId == 0L || users[userId] != null || !userRequests.add(userId)) return
+        send(TdApi.GetUser(userId)) { result -> if (result is TdApi.User) users[userId] = result }
+    }
+
+    fun userName(userId: Long): String {
+        ensureUser(userId)
+        return users[userId]?.fullName() ?: ""
+    }
 
     fun myFullInfo(onResult: (TdApi.UserFullInfo?) -> Unit) {
         if (myUserId == 0L) return onResult(null)
@@ -1371,8 +1381,10 @@ class Telegram(
         }
     }
 
-    fun botName(userId: Long): String =
-        users[userId]?.usernames?.activeUsernames?.firstOrNull()?.let { "@$it" } ?: userName(userId)
+    fun botName(userId: Long): String {
+        ensureUser(userId)
+        return users[userId]?.usernames?.activeUsernames?.firstOrNull()?.let { "@$it" } ?: userName(userId)
+    }
 
     fun votePoll(chatId: Long, messageId: Long, options: IntArray) {
         send(TdApi.SetPollAnswer().apply {

@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.profile
 
+import androidx.compose.material3.AlertDialog
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -48,11 +49,18 @@ private val GallerySize = 420.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfilePhotosDialog(telegram: Telegram, userId: Long, onChanged: () -> Unit, onDismiss: () -> Unit) {
+fun ProfilePhotosDialog(
+    telegram: Telegram,
+    userId: Long,
+    onDismiss: () -> Unit,
+    editable: Boolean = false,
+    onChanged: () -> Unit = {},
+) {
     var photos by remember { mutableStateOf<List<TdApi.ChatPhoto>?>(null) }
     var index by remember { mutableIntStateOf(0) }
     var reload by remember { mutableIntStateOf(0) }
     var error by remember { mutableStateOf<String?>(null) }
+    var confirmDelete by remember { mutableStateOf<TdApi.ChatPhoto?>(null) }
     LaunchedEffect(userId, reload) { telegram.profilePhotos(userId) { photos = it } }
     val done = { failure: String? ->
         error = failure
@@ -106,14 +114,14 @@ fun ProfilePhotosDialog(telegram: Telegram, userId: Long, onChanged: () -> Unit,
                         modifier = Modifier.weight(1f),
                     )
                     val current = list?.getOrNull(index)
-                    if (current != null && index > 0) {
+                    if (editable && current != null && index > 0) {
                         TextButton(onClick = { telegram.setPreviousProfilePhoto(current.id, done) }) {
                             Icon(Icons.Outlined.Star, contentDescription = null, modifier = Modifier.size(18.dp))
                             Text("Set as main", modifier = Modifier.padding(start = 6.dp))
                         }
                     }
-                    if (current != null) {
-                        TextButton(onClick = { telegram.deleteProfilePhoto(current.id, done) }) {
+                    if (editable && current != null) {
+                        TextButton(onClick = { confirmDelete = current }) {
                             Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
                             Text("Delete", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(start = 6.dp))
                         }
@@ -123,5 +131,20 @@ fun ProfilePhotosDialog(telegram: Telegram, userId: Long, onChanged: () -> Unit,
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
             }
         }
+    }
+    confirmDelete?.let { photo ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            icon = { Icon(Icons.Outlined.Delete, contentDescription = null) },
+            title = { Text("Delete this photo?") },
+            text = { Text("It will be removed from your profile for everyone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = null
+                    telegram.deleteProfilePhoto(photo.id, done)
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Cancel") } },
+        )
     }
 }
