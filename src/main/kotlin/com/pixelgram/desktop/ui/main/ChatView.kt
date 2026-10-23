@@ -150,6 +150,7 @@ import it.tdlight.jni.TdApi
 import java.io.File
 import kotlinx.coroutines.launch
 import com.pixelgram.desktop.ui.OnEscape
+import com.pixelgram.desktop.core.PowerSaving
 import com.pixelgram.desktop.ui.components.OfficialBadge
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -510,7 +511,7 @@ fun ChatView(
             ) {
                 itemsIndexed(shown, key = { _, message -> message.key }) { index, message ->
                     val newDay = index == shown.lastIndex || !sameDay(message.date, shown[index + 1].date)
-                    val rise = remember { Animatable(if (message.fresh && slidIn.add(message.key)) 1f else 0f) }
+                    val rise = remember { Animatable(if (PowerSaving.messageAnimations && message.fresh && slidIn.add(message.key)) 1f else 0f) }
                     LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
                     val flash = remember { Animatable(0f) }
                     LaunchedEffect(highlight) {
@@ -549,7 +550,13 @@ fun ChatView(
                     } else {
                         null
                     }
-                    Column(Modifier.animateItem(fadeInSpec = fade, placementSpec = if (listState.isScrollInProgress) null else placement, fadeOutSpec = fade)) {
+                    Column(
+                        if (PowerSaving.messageAnimations) {
+                            Modifier.animateItem(fadeInSpec = fade, placementSpec = if (listState.isScrollInProgress) null else placement, fadeOutSpec = fade)
+                        } else {
+                            Modifier
+                        },
+                    ) {
                         if (newDay) DateDivider(message.date)
                         if (message.service) {
                             val pin = message.content as? TdApi.MessagePinMessage

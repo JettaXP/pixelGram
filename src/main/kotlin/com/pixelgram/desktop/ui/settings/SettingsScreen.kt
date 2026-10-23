@@ -390,8 +390,8 @@ fun SettingsScreen(
                         Section.Advanced -> AdvancedSection(telegram)
                         Section.Language -> Description("pixelGram is in English for now. More languages are coming.")
                         Section.Notifications -> NotificationsSection(settings)
-                        Section.SpeakersCamera,
-                        Section.Battery -> Description("Not available in pixelGram yet.")
+                        Section.Battery -> BatterySection(settings)
+                        Section.SpeakersCamera -> Description("Not available in pixelGram yet.")
                     }
                 }
                 }
@@ -468,7 +468,7 @@ private fun PreferencesHeader() {
         themedAppIcon()?.let { Image(it, contentDescription = null, modifier = Modifier.size(96.dp)) }
         Text("pixelGram Desktop", style = MaterialTheme.typography.titleLargeEmphasized)
         Text(
-            "v${BuildConfig.VERSION} · ${BuildConfig.CODENAME}",
+            listOf("v${BuildConfig.VERSION}", BuildConfig.CODENAME).filter { it.isNotBlank() }.joinToString(" · "),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

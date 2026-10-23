@@ -96,6 +96,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Rect
 import org.jetbrains.skia.skottie.Animation
+import com.pixelgram.desktop.core.PowerSaving
 import java.awt.Desktop
 import java.io.File
 import java.net.URI
@@ -114,7 +115,7 @@ fun isMediaContent(content: TdApi.MessageContent?): Boolean =
     content is TdApi.MessageVideo || content is TdApi.MessageAnimation
 
 @Composable
-fun StickerView(sticker: TdApi.Sticker?, telegram: Telegram, size: Dp, modifier: Modifier = Modifier) {
+fun StickerView(sticker: TdApi.Sticker?, telegram: Telegram, size: Dp, modifier: Modifier = Modifier, animate: Boolean = true) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         if (sticker == null) {
             LoadingIndicator(Modifier.size(size / 3))
@@ -123,7 +124,7 @@ fun StickerView(sticker: TdApi.Sticker?, telegram: Telegram, size: Dp, modifier:
         LaunchedEffect(sticker.sticker?.id) { telegram.download(sticker.sticker) }
         val path = telegram.localPath(sticker.sticker)
         when {
-            path != null && sticker.format is TdApi.StickerFormatTgs -> LottieView(path, Modifier.fillMaxSize())
+            path != null && sticker.format is TdApi.StickerFormatTgs -> LottieView(path, Modifier.fillMaxSize(), animate)
             path != null && sticker.format is TdApi.StickerFormatWebp -> FileImage(path, Modifier.fillMaxSize(), ContentScale.Fit)
             else -> ThumbImage(sticker.thumbnail?.file, null, telegram, Modifier.fillMaxSize(), ContentScale.Fit)
         }
@@ -131,7 +132,7 @@ fun StickerView(sticker: TdApi.Sticker?, telegram: Telegram, size: Dp, modifier:
 }
 
 @Composable
-fun LottieView(path: String, modifier: Modifier) {
+fun LottieView(path: String, modifier: Modifier, play: Boolean = true) {
     val animation by produceState<Animation?>(null, path) {
         value = withContext(Dispatchers.IO) {
             runCatching {
@@ -140,7 +141,8 @@ fun LottieView(path: String, modifier: Modifier) {
             }.onFailure { AppLog.write("Sticker animation failed", it) }.getOrNull()
         }
     }
-    val time by produceState(0f, animation) {
+    val time by produceState(0f, animation, play) {
+        if (!play) return@produceState
         val start = withFrameNanos { it }
         while (true) withFrameNanos { value = (it - start) / 1_000_000_000f }
     }
@@ -723,15 +725,16 @@ fun BareContent(message: UiMessage, telegram: Telegram) {
             telegram,
             StickerSize,
             Modifier.openPack(telegram, message.chatId, content.sticker),
+            animate = PowerSaving.stickersInChat,
         )
         is TdApi.MessageAnimatedEmoji -> {
             val sticker = content.animatedEmoji?.sticker
-            if (sticker != null) StickerView(sticker, telegram, StickerSize / 1.4f) else
+            if (sticker != null) StickerView(sticker, telegram, StickerSize / 1.4f, animate = PowerSaving.stickersInChat) else
                 Text(content.emoji, fontSize = 64.sp)
         }
         is TdApi.MessageDice -> {
             val sticker = (content.finalState as? TdApi.DiceStickersRegular)?.sticker
-            if (sticker != null) StickerView(sticker, telegram, StickerSize / 1.4f) else
+            if (sticker != null) StickerView(sticker, telegram, StickerSize / 1.4f, animate = PowerSaving.stickersInChat) else
                 Text("${content.emoji} ${content.value}", fontSize = 40.sp)
         }
         is TdApi.MessageVideoNote -> {

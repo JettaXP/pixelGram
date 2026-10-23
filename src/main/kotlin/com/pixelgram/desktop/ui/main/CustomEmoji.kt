@@ -42,7 +42,7 @@ fun CustomEmojiView(id: Long, fallback: String, modifier: Modifier = Modifier.fi
                 Modifier
             },
         ) {
-            StickerView(sticker, telegram, side)
+            StickerView(sticker, telegram, side, animate = com.pixelgram.desktop.core.PowerSaving.emojiInMessages)
         }
     }
 }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.16.0
+
+### Battery and Animations
+- New Settings section to turn animations off and save battery.
+- Animated Stickers: autoplay in the panel and in chats. When off, stickers show their first frame.
+- Animated Emoji: autoplay of custom emoji in messages.
+- Animations in Chats: the spoiler shimmer and message animations (new messages sliding in, list movement).
+- Interface animations: turns off the motion of menus, panels and transitions across the app.
+
 ## 0.15.1 Banners
 
 - Custom emoji no longer swap places with regular emoji in the same message. Fixes pieces and name emoji mixing up in checkers.

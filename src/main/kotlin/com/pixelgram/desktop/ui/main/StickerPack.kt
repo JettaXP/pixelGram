@@ -124,7 +124,7 @@ fun StickerPackDialog(request: StickerPackRequest, settings: AppSettings, onDism
                         items(loaded.stickers.toList(), key = { it.sticker.id }) { sticker ->
                             Box(Modifier.size(PackCell), contentAlignment = Alignment.Center) {
                                 if (sticker.format is TdApi.StickerFormatWebp) {
-                                    StickerView(sticker, telegram, PackCell)
+                                    StickerView(sticker, telegram, PackCell, animate = com.pixelgram.desktop.core.PowerSaving.stickersInPanel)
                                 } else {
                                     ThumbImage(sticker.thumbnail?.file, null, telegram, Modifier.size(PackCell), ContentScale.Fit)
                                 }

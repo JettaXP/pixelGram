@@ -65,7 +65,7 @@ jobs:
             gh release create "v$VERSION" \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
-              --title "pixelGram v$VERSION $CODENAME" \
+              --title "pixelGram v$VERSION${CODENAME:+ $CODENAME}" \
               --notes-file changes.md
             echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
           fi

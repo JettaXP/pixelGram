@@ -1,6 +1,8 @@
 package com.pixelgram.desktop.ui.theme
 
 import com.pixelgram.desktop.ui.main.Links
+import com.pixelgram.desktop.core.PowerSaving
+import com.pixelgram.desktop.core.InstantMotion
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -55,9 +57,10 @@ fun appColorScheme(settings: AppSettings): ColorScheme {
 
 @Composable
 fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
+    PowerSaving.settings = settings
     MaterialExpressiveTheme(
         colorScheme = appColorScheme(settings),
-        motionScheme = MotionScheme.expressive(),
+        motionScheme = if (settings.interfaceAnimations.value) MotionScheme.expressive() else InstantMotion,
         typography = PixelTypography,
     ) {
         CompositionLocalProvider(LocalUriHandler provides Links, content = content)

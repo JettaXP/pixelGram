@@ -245,7 +245,7 @@ fun FormattedText(
         )
         if (hidden.isNotEmpty()) {
             BlurredCopy(annotated, inline, style, color, spoilerPath, 1f)
-            SpoilerShimmer(spoilerPath, textColor, Modifier.matchParentSize())
+            if (com.pixelgram.desktop.core.PowerSaving.spoilerEffect) SpoilerShimmer(spoilerPath, textColor, Modifier.matchParentSize())
         }
         if (fading != null) BlurredCopy(annotated, inline, style, color, fadingPath, 1f - fade.value)
     }

@@ -100,6 +100,13 @@ class AppSettings private constructor(private val props: Properties) {
 
     fun avatarShapeFor(kind: AvatarKind?): AvatarShape = kind?.let(::kindShape) ?: avatarShape.value
 
+    val stickersInPanel = bool("stickersInPanel", true)
+    val stickersInChat = bool("stickersInChat", true)
+    val emojiInMessages = bool("emojiInMessages", true)
+    val spoilerEffect = bool("spoilerEffect", true)
+    val messageAnimations = bool("messageAnimations", true)
+    val interfaceAnimations = bool("interfaceAnimations", true)
+
     val bubbleRadius = int("bubbleRadius", 18)
     val bubbleTailRadius = int("bubbleTailRadius", 4)
 
@@ -117,6 +124,7 @@ class AppSettings private constructor(private val props: Properties) {
         doubleClickOwn, doubleClickOther, doubleClickEmoji,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius,
+        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations,
         apiId, apiHash,
         accounts, activeAccount,
     ) + avatarKindShapes.values

@@ -222,7 +222,7 @@ private fun StickersTab(telegram: Telegram, onSticker: (TdApi.Sticker) -> Unit, 
 @Composable
 private fun StickerThumb(sticker: TdApi.Sticker, telegram: Telegram) {
     if (sticker.format is TdApi.StickerFormatWebp) {
-        StickerView(sticker, telegram, StickerCell)
+        StickerView(sticker, telegram, StickerCell, animate = com.pixelgram.desktop.core.PowerSaving.stickersInPanel)
     } else {
         ThumbImage(sticker.thumbnail?.file, null, telegram, Modifier.fillMaxSize(), ContentScale.Fit)
     }
