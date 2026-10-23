@@ -70,10 +70,12 @@ val generateBuildConfig by tasks.registering {
         .orElse(providers.gradleProperty("pixelgram.apiHash"))
         .orElse("")
     val appVersion = project.version.toString()
+    val commit = providers.environmentVariable("GITHUB_SHA").filter { it.isNotBlank() }.orElse("dev")
     val outputDir = layout.buildDirectory.dir("generated/buildconfig")
     inputs.property("apiId", apiId)
     inputs.property("apiHash", apiHash)
     inputs.property("version", appVersion)
+    inputs.property("commit", commit)
     outputs.dir(outputDir)
     doLast {
         val id = apiId.get().trim().toIntOrNull() ?: 0
@@ -85,6 +87,7 @@ val generateBuildConfig by tasks.registering {
             |
             |object BuildConfig {
             |    const val VERSION = "$appVersion"
+            |    const val COMMIT = "${commit.get()}"
             |    const val API_ID = $id
             |    const val API_HASH = "${apiHash.get().trim()}"
             |}
@@ -95,6 +98,12 @@ val generateBuildConfig by tasks.registering {
 
 kotlin.sourceSets.named("main") {
     kotlin.srcDir(generateBuildConfig)
+}
+
+val installerVersion: String = run {
+    val build = providers.environmentVariable("GITHUB_RUN_NUMBER").orNull?.toIntOrNull()
+    val base = project.version.toString()
+    if (build == null) base else base.substringBeforeLast('.') + "." + build
 }
 
 compose.desktop {
@@ -110,7 +119,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.Msi, TargetFormat.Exe)
             packageName = "pixelGram"
-            packageVersion = project.version.toString()
+            packageVersion = installerVersion
             description = "pixelGram - Telegram client with Material 3"
             vendor = "jettax"
             licenseFile.set(project.file("LICENSE"))

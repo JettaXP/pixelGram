@@ -1,5 +1,10 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material.icons.outlined.SystemUpdate
+import com.pixelgram.desktop.ui.UpdateDialog
+import com.pixelgram.desktop.core.UpdateState
+import com.pixelgram.desktop.core.Updater
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -153,6 +158,13 @@ private fun ChatListBody(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.weight(1f).padding(start = 4.dp),
             )
+            if (Updater.state is UpdateState.Available || Updater.state is UpdateState.Ready || Updater.state is UpdateState.Downloading) {
+                var updateOpen by remember { mutableStateOf(false) }
+                FilledTonalIconButton(onClick = { updateOpen = true }) {
+                    Icon(Icons.Outlined.SystemUpdate, contentDescription = "Update available")
+                }
+                if (updateOpen) UpdateDialog(onBeforeExit = {}, onDismiss = { updateOpen = false })
+            }
             if (onSearch != null) {
                 IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Search messages") }
             }

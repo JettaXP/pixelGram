@@ -84,6 +84,7 @@ class AppSettings private constructor(private val props: Properties) {
     val customTitleBar = bool("customTitleBar", !AppPaths.isLinux)
     val messageSeconds = bool("messageSeconds", false)
     val hidePhone = bool("hidePhone", false)
+    val checkUpdates = bool("checkUpdates", true)
     val doubleClickOwn = enum("doubleClickOwn", DoubleClickAction.Reaction)
     val doubleClickOther = enum("doubleClickOther", DoubleClickAction.Reaction)
     val doubleClickEmoji = string("doubleClickEmoji", "❤")
@@ -112,7 +113,7 @@ class AppSettings private constructor(private val props: Properties) {
         themeMode, seedColor, matugen, emojiStyle, notificationSound, notificationsMuted,
         notificationPopups, notificationSide, notificationStyle,
         materialFolders, hideAllChats,
-        capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone,
+        capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, checkUpdates,
         doubleClickOwn, doubleClickOther, doubleClickEmoji,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius,

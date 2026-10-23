@@ -1,5 +1,6 @@
 package com.pixelgram.desktop
 
+import com.pixelgram.desktop.core.Updater
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.DisposableEffect
 import com.pixelgram.desktop.core.UrlScheme
@@ -135,6 +136,11 @@ private fun ApplicationScope.PixelApp() {
     }
     val accounts = remember { Accounts(settings, MainScope()) }
     LaunchedEffect(Unit) {
+        Updater.shutdown = {
+            accounts.closeAll()
+            Thread.sleep(ShutdownGraceMs)
+        }
+        if (settings.checkUpdates.value) Updater.check()
         accounts.start()
         if (System.getProperty("pixelgram.demo") == "true") accounts.active.loadDemo()
     }
@@ -286,6 +292,7 @@ private fun ApplicationScope.PixelApp() {
 }
 
 private val devScreen: String? = System.getProperty("pixelgram.screen")
+private const val ShutdownGraceMs = 800L
 
 @Composable
 private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {

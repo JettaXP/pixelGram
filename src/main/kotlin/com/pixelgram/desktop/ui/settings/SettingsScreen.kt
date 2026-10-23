@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
+import com.pixelgram.desktop.ui.UpdatePanel
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import com.pixelgram.desktop.ui.OnEscape
 import kotlinx.coroutines.launch
@@ -1235,6 +1236,17 @@ private fun AboutSection(telegram: Telegram, settings: AppSettings, onOpenChat: 
     Reveal(status != null) {
         Text(status.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
     }
+
+    Header("Updates (beta)")
+    SwitchRow(
+        index = 0,
+        count = 1,
+        title = "Check for updates on start",
+        subtitle = "Looks for a newer nightly build on GitHub.",
+        checked = settings.checkUpdates.value,
+        onChange = { settings.checkUpdates.value = it },
+    )
+    UpdatePanel(onBeforeExit = {}, modifier = Modifier.padding(top = 8.dp))
 
     exporting?.let { file ->
         ForwardDialog(telegram, settings, onDismiss = { exporting = null }) { chatId ->
