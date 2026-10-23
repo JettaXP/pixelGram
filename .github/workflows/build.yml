@@ -97,7 +97,7 @@ jobs:
             *.pkg.tar.zst
             pixelGram-linux-x86_64.tar.gz
             pixelGram-x86_64.AppImage
-          retention-days: 14
+          retention-days: 1
           compression-level: 0
 
   windows:
@@ -141,7 +141,7 @@ jobs:
         with:
           name: pixelGram-windows
           path: dist/
-          retention-days: 14
+          retention-days: 1
           compression-level: 0
 
   # Publishes the files as plain downloads: "nightly" for main, a release for tags.
