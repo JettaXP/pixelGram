@@ -396,7 +396,7 @@ fun ChatView(
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
-                    if (telegram.isOfficial(chat)) OfficialBadge()
+                    if (telegram.isOfficial(chat)) OfficialBadge(22.dp)
                 }
                 val status = telegram.presence(chat)
                 AnimatedContent(status, transitionSpec = { fadeIn() togetherWith fadeOut() }) { text ->

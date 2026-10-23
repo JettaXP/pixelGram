@@ -252,7 +252,7 @@ fun ChatInfoDialog(
                 if (photos) ProfilePhotosDialog(telegram, chat.privateUserId, onDismiss = { photos = false })
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
-                    if (telegram.isOfficial(chat)) com.pixelgram.desktop.ui.components.OfficialBadge(24.dp)
+                    if (telegram.isOfficial(chat)) com.pixelgram.desktop.ui.components.OfficialBadge(30.dp)
                 }
                 val subtitle = telegram.presence(chat)?.label ?: when {
                     chat.isChannel -> "channel"

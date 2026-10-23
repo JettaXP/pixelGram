@@ -422,7 +422,7 @@ private fun ChatRow(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                if (telegram.isOfficial(chat)) com.pixelgram.desktop.ui.components.OfficialBadge(16.dp)
+                if (telegram.isOfficial(chat)) com.pixelgram.desktop.ui.components.OfficialBadge(18.dp)
             }
         }
     }

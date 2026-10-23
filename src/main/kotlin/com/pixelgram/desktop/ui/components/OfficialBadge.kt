@@ -7,6 +7,13 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.toShape
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,6 +40,7 @@ import androidx.compose.ui.window.Popup
 import kotlinx.coroutines.delay
 
 private const val PillShowMs = 2_500L
+private const val LogoScale = 0.58f
 private const val LogoResource = "/pixelgram-logo.svg"
 
 @Composable
@@ -45,6 +53,15 @@ fun rememberPixelgramLogo(): Painter? {
 
 private object OfficialBadgeHolder
 
+private object WindowCenter : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ) = IntOffset((windowSize.width - popupContentSize.width) / 2, (windowSize.height - popupContentSize.height) / 2)
+}
+
 @Composable
 fun OfficialBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
     val logo = rememberPixelgramLogo() ?: return
@@ -55,20 +72,26 @@ fun OfficialBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
             pill.targetState = false
         }
     }
+    val scheme = MaterialTheme.colorScheme
     Box(modifier) {
-        Icon(
-            logo,
-            contentDescription = "Official pixelGram resource",
-            tint = MaterialTheme.colorScheme.primary,
+        Box(
+            contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(size)
-                .clip(CircleShape)
+                .clip(MaterialShapes.Cookie12Sided.toShape())
+                .background(scheme.primary)
                 .pointerHoverIcon(PointerIcon.Hand)
                 .clickable { pill.targetState = !pill.targetState },
-        )
+        ) {
+            Icon(
+                logo,
+                contentDescription = "Official pixelGram resource",
+                tint = scheme.onPrimary,
+                modifier = Modifier.size(size * LogoScale),
+            )
+        }
         if (pill.currentState || pill.targetState) {
-            val lift = with(LocalDensity.current) { (size + 8.dp).roundToPx() }
-            Popup(alignment = Alignment.TopCenter, offset = IntOffset(0, lift), onDismissRequest = { pill.targetState = false }) {
+            Popup(popupPositionProvider = WindowCenter, onDismissRequest = { pill.targetState = false }) {
                 AnimatedVisibility(
                     visibleState = pill,
                     enter = fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()) + scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()),
