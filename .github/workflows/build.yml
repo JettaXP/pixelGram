@@ -87,6 +87,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Version.
+        shell: bash
+        run: echo "APP_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' build.gradle.kts)" >> "$GITHUB_ENV"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -111,7 +115,7 @@ jobs:
         run: |
           cp -a build/compose/binaries/main/app/pixelGram portable
           mkdir -p portable/pixelgram-data
-          tar czf pixelGram-linux-x86_64.tar.gz --transform 's,^portable,pixelGram,' portable
+          tar czf "pixelGram-$APP_VERSION-linux-x86_64.tar.gz" --transform 's,^portable,pixelGram,' portable
 
       - name: Arch package.
         run: |
@@ -151,19 +155,19 @@ jobs:
           chmod +x "$appdir/AppRun"
           curl -fsSLo appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool
-          ARCH=x86_64 ./appimagetool --no-appstream "$appdir" pixelGram-x86_64.AppImage
-          ls -la pixelGram-x86_64.AppImage
+          ARCH=x86_64 ./appimagetool --no-appstream "$appdir" "pixelGram-$APP_VERSION-x86_64.AppImage"
+          ls -la pixelGram-*.AppImage
 
       - name: Upload to release.
         if: env.PUBLISH == 'true'
         env:
           VERSIONED: ${{ needs.prepare.outputs.versioned }}
         run: |
-          sha256sum *.pkg.tar.zst pixelGram-linux-x86_64.tar.gz pixelGram-x86_64.AppImage > SHA256SUMS-linux.txt
-          gh release upload "$RELEASE_TAG" *.pkg.tar.zst pixelGram-linux-x86_64.tar.gz pixelGram-x86_64.AppImage SHA256SUMS-linux.txt \
+          sha256sum *.pkg.tar.zst pixelGram-*-linux-x86_64.tar.gz pixelGram-*.AppImage > SHA256SUMS-linux.txt
+          gh release upload "$RELEASE_TAG" *.pkg.tar.zst pixelGram-*-linux-x86_64.tar.gz pixelGram-*.AppImage SHA256SUMS-linux.txt \
             --repo "$GITHUB_REPOSITORY" --clobber
           if [ -n "$VERSIONED" ]; then
-            gh release upload "$VERSIONED" *.pkg.tar.zst pixelGram-linux-x86_64.tar.gz pixelGram-x86_64.AppImage SHA256SUMS-linux.txt \
+            gh release upload "$VERSIONED" *.pkg.tar.zst pixelGram-*-linux-x86_64.tar.gz pixelGram-*.AppImage SHA256SUMS-linux.txt \
               --repo "$GITHUB_REPOSITORY" --clobber
           fi
 
@@ -175,6 +179,10 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+
+      - name: Version.
+        shell: bash
+        run: echo "APP_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' build.gradle.kts)" >> "$GITHUB_ENV"
 
       - uses: actions/setup-java@v4
         with:
@@ -201,10 +209,10 @@ jobs:
         shell: bash
         run: |
           mkdir dist
-          cp build/compose/binaries/main/msi/*.msi dist/
+          cp build/compose/binaries/main/msi/*.msi "dist/pixelGram-$APP_VERSION-windows-x64.msi"
           # The pixelgram-data folder turns on portable mode (data next to the app).
           mkdir -p build/compose/binaries/main/app/pixelGram/pixelgram-data
-          7z a dist/pixelGram-windows-x64-portable.zip ./build/compose/binaries/main/app/pixelGram
+          7z a "dist/pixelGram-$APP_VERSION-windows-x64-portable.zip" ./build/compose/binaries/main/app/pixelGram
 
       - name: Upload to release.
         if: env.PUBLISH == 'true'

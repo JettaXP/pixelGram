@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.20.0 Upd
+
+- Fixed portable updates failing with "There is not enough space on the disk": the update is now downloaded and unpacked inside the pixelGram folder, on the same drive, and moved into place instead of copied.
+- The downloaded archive is removed after the update.
+- If an update fails, pixelGram tells you why after it restarts instead of quietly starting the old version.
+- Release files now have the version in their names, like pixelGram-0.20.0-windows-x64-portable.zip.
+
 ## 0.18.1
 
 - Updates, capsule folders and Noto 3D emoji are no longer marked as beta or experimental.

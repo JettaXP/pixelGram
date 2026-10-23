@@ -139,6 +139,13 @@ object Updater {
 
     fun consumeUpdated(): Boolean = marker.isFile && marker.delete()
 
+    fun consumeFailure(): String? {
+        val log = File(AppPaths.dataDir, "update-error.log").takeIf { it.isFile } ?: return null
+        val reason = log.readLines().lastOrNull { it.isNotBlank() }?.trim()
+        log.delete()
+        return reason ?: "Unknown error"
+    }
+
     private fun applyArchive(file: File) {
         val exe = launcher() ?: error("Unknown launcher")
         val target = AppPaths.appDir ?: error("Unknown install folder")
@@ -204,16 +211,20 @@ private val WindowsScript = """
 param([int]${'$'}ProcessId, [string]${'$'}Archive, [string]${'$'}Target, [string]${'$'}Exe, [string]${'$'}Marker)
 Wait-Process -Id ${'$'}ProcessId -Timeout 60 -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 500
-${'$'}temp = Join-Path ([IO.Path]::GetTempPath()) ("pixelgram-update-" + [guid]::NewGuid())
+${'$'}temp = Join-Path (Split-Path ${'$'}Archive) 'extract'
+Remove-Item -LiteralPath ${'$'}temp -Recurse -Force -ErrorAction SilentlyContinue
 try {
     Expand-Archive -LiteralPath ${'$'}Archive -DestinationPath ${'$'}temp -Force
+    Remove-Item -LiteralPath ${'$'}Archive -Force -ErrorAction SilentlyContinue
     ${'$'}source = Join-Path ${'$'}temp 'pixelGram'
     if (-not (Test-Path ${'$'}source)) { ${'$'}source = ${'$'}temp }
-    robocopy ${'$'}source ${'$'}Target /E /R:5 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
-    if (${'$'}LASTEXITCODE -lt 8) { Set-Content -LiteralPath ${'$'}Marker -Value 'updated' }
+    robocopy ${'$'}source ${'$'}Target /E /MOVE /R:5 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+    if (${'$'}LASTEXITCODE -lt 8) {
+        Set-Content -LiteralPath ${'$'}Marker -Value 'updated'
+    }
     else { Add-Content -LiteralPath (Join-Path (Split-Path ${'$'}Marker) 'update-error.log') -Value "robocopy exit ${'$'}LASTEXITCODE" }
 } catch {
-    Add-Content -LiteralPath (Join-Path (Split-Path ${'$'}Marker) 'update-error.log') -Value ${'$'}_
+    Add-Content -LiteralPath (Join-Path (Split-Path ${'$'}Marker) 'update-error.log') -Value ${'$'}_.Exception.Message
 } finally {
     Remove-Item -LiteralPath ${'$'}temp -Recurse -Force -ErrorAction SilentlyContinue
 }
@@ -223,8 +234,9 @@ Start-Process -FilePath ${'$'}Exe
 private val LinuxScript = """
 pid="${'$'}1"; archive="${'$'}2"; target="${'$'}3"; exe="${'$'}4"; marker="${'$'}5"
 while kill -0 "${'$'}pid" 2>/dev/null; do sleep 0.3; done
-temp="${'$'}(mktemp -d)"
-if tar -xzf "${'$'}archive" -C "${'$'}temp" && cp -a "${'$'}temp/pixelGram/." "${'$'}target/"; then
+temp="${'$'}(dirname "${'$'}archive")/extract"
+rm -rf "${'$'}temp"; mkdir -p "${'$'}temp"
+if tar -xzf "${'$'}archive" -C "${'$'}temp" && rm -f "${'$'}archive" && cp -a "${'$'}temp/pixelGram/." "${'$'}target/"; then
     echo updated > "${'$'}marker"
 else
     echo "update failed" >> "${'$'}(dirname "${'$'}marker")/update-error.log"

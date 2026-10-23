@@ -359,9 +359,12 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
         }
     }
     LaunchedEffect(ready) {
-        if (ready && Updater.consumeUpdated()) {
+        if (!ready) return@LaunchedEffect
+        val updated = Updater.consumeUpdated()
+        val failure = Updater.consumeFailure()
+        if (updated || failure != null) {
             delay(UpdatedNoticeDelayMs)
-            TopNotice.text = "pixelGram Updated!"
+            TopNotice.text = if (failure != null) "Update failed: $failure" else "pixelGram Updated!"
         }
     }
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
