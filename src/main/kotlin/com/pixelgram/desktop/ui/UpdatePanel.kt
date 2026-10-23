@@ -34,6 +34,7 @@ fun UpdatePanel(onBeforeExit: () -> Unit, modifier: Modifier = Modifier, showAct
             UpdateState.Checking -> Text("Checking…")
             UpdateState.UpToDate -> Text("You have the latest nightly.")
             UpdateState.Unavailable -> Text("Updates are unavailable right now.")
+            UpdateState.Building -> Text("A new version is being built. Try again in a few minutes.")
             is UpdateState.Available -> Text(
                 state.version?.let { "pixelGram $it is out (${state.commit})" } ?: "New nightly ${state.commit} is out",
                 style = MaterialTheme.typography.titleMedium,

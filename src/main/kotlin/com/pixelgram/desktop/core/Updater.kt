@@ -18,6 +18,7 @@ sealed interface UpdateState {
     data object Checking : UpdateState
     data object UpToDate : UpdateState
     data object Unavailable : UpdateState
+    data object Building : UpdateState
     data class Available(val commit: String, val asset: UpdateAsset, val version: String?) : UpdateState
     data class Downloading(val asset: UpdateAsset, val version: String?) : UpdateState
     data class Ready(val file: File, val manual: String?) : UpdateState
@@ -28,6 +29,7 @@ object Updater {
     private const val Repository = "JettaXP/pixelGram"
     private const val Channel = "nightly"
     private const val ApiUrl = "https://api.github.com/repos/$Repository/releases/tags/$Channel"
+    private const val LatestUrl = "https://api.github.com/repos/$Repository/releases/latest"
     private const val TimeoutMs = 15_000
 
     var state by mutableStateOf<UpdateState>(UpdateState.Idle)
@@ -51,15 +53,33 @@ object Updater {
     }
 
     private fun fetch(): UpdateState {
-        val connection = URI(ApiUrl).toURL().openConnection() as HttpURLConnection
+        val nightly = read(ApiUrl)
+        if (nightly != null) {
+            val commit = commitOf(nightly) ?: return UpdateState.Unavailable
+            if (commit.equals(BuildConfig.COMMIT, ignoreCase = true)) return UpdateState.UpToDate
+            available(nightly, commit)?.let { return it }
+        }
+        val latest = read(LatestUrl) ?: return if (nightly != null) UpdateState.Building else UpdateState.Unavailable
+        val commit = commitOf(latest) ?: return UpdateState.Unavailable
+        val tag = Regex(""""tag_name"\s*:\s*"v?([^"]+)"""").find(latest)?.groupValues?.get(1)
+        val installed = commit.equals(BuildConfig.COMMIT, ignoreCase = true) || tag == BuildConfig.VERSION
+        if (installed) return if (nightly != null) UpdateState.Building else UpdateState.UpToDate
+        return available(latest, commit) ?: if (nightly != null) UpdateState.Building else UpdateState.Unavailable
+    }
+
+    private fun read(url: String): String? {
+        val connection = URI(url).toURL().openConnection() as HttpURLConnection
         connection.connectTimeout = TimeoutMs
         connection.readTimeout = TimeoutMs
         connection.setRequestProperty("Accept", "application/vnd.github+json")
-        if (connection.responseCode != HttpURLConnection.HTTP_OK) return UpdateState.Unavailable
-        val json = connection.inputStream.bufferedReader().use { it.readText() }
-        val commit = Regex(""""target_commitish"\s*:\s*"([^"]+)"""").find(json)?.groupValues?.get(1)
-            ?: return UpdateState.Unavailable
-        if (commit.equals(BuildConfig.COMMIT, ignoreCase = true)) return UpdateState.UpToDate
+        if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
+        return connection.inputStream.bufferedReader().use { it.readText() }
+    }
+
+    private fun commitOf(json: String): String? =
+        Regex(""""target_commitish"\s*:\s*"([^"]+)"""").find(json)?.groupValues?.get(1)
+
+    private fun available(json: String, commit: String): UpdateState.Available? {
         val assets = Regex(""""browser_download_url"\s*:\s*"([^"]+)"""")
             .findAll(json)
             .map { match ->
@@ -67,7 +87,7 @@ object Updater {
                 UpdateAsset(URLDecoder.decode(url.substringAfterLast('/'), Charsets.UTF_8), url, 0L)
             }
             .toList()
-        val asset = pickAsset(assets) ?: return UpdateState.Unavailable
+        val asset = pickAsset(assets) ?: return null
         val version = Regex("""pixel[Gg]ram-(\d+\.\d+\.\d+)""").find(asset.name)?.groupValues?.get(1)
             ?: Regex("""What's new in (\d+\.\d+\.\d+)""").find(json)?.groupValues?.get(1)
         return UpdateState.Available(commit.take(7), asset, version)
