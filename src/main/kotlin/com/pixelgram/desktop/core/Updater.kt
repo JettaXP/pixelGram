@@ -30,6 +30,7 @@ object Updater {
     private const val Channel = "nightly"
     private const val ApiUrl = "https://api.github.com/repos/$Repository/releases/tags/$Channel"
     private const val LatestUrl = "https://api.github.com/repos/$Repository/releases/latest"
+    private const val LatestPage = "https://github.com/$Repository/releases/latest"
     private const val TimeoutMs = 15_000
 
     var state by mutableStateOf<UpdateState>(UpdateState.Idle)
@@ -47,19 +48,22 @@ object Updater {
         Thread {
             state = runCatching { fetch() }.getOrElse {
                 AppLog.write("Update check failed", it)
+                null
+            } ?: runCatching { fetchFromWeb() }.getOrElse {
+                AppLog.write("Update check without the GitHub API failed", it)
                 UpdateState.Unavailable
             }
         }.apply { isDaemon = true }.start()
     }
 
-    private fun fetch(): UpdateState {
+    private fun fetch(): UpdateState? {
         val nightly = read(ApiUrl)
         if (nightly != null) {
             val commit = commitOf(nightly) ?: return UpdateState.Unavailable
             if (commit.equals(BuildConfig.COMMIT, ignoreCase = true)) return UpdateState.UpToDate
             available(nightly, commit)?.let { return it }
         }
-        val latest = read(LatestUrl) ?: return if (nightly != null) UpdateState.Building else UpdateState.Unavailable
+        val latest = read(LatestUrl) ?: return if (nightly != null) UpdateState.Building else null
         val commit = commitOf(latest) ?: return UpdateState.Unavailable
         val tag = Regex(""""tag_name"\s*:\s*"v?([^"]+)"""").find(latest)?.groupValues?.get(1)
         val installed = commit.equals(BuildConfig.COMMIT, ignoreCase = true) || tag == BuildConfig.VERSION
@@ -72,8 +76,43 @@ object Updater {
         connection.connectTimeout = TimeoutMs
         connection.readTimeout = TimeoutMs
         connection.setRequestProperty("Accept", "application/vnd.github+json")
-        if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
+        val code = connection.responseCode
+        if (code != HttpURLConnection.HTTP_OK) {
+            AppLog.write("Update check: $url answered $code")
+            return null
+        }
         return connection.inputStream.bufferedReader().use { it.readText() }
+    }
+
+    private fun isNewer(candidate: String, installed: String): Boolean {
+        fun parts(value: String) = value.split('.').map { it.toIntOrNull() ?: 0 }
+        val a = parts(candidate)
+        val b = parts(installed)
+        for (i in 0 until maxOf(a.size, b.size)) {
+            val diff = a.getOrElse(i) { 0 } - b.getOrElse(i) { 0 }
+            if (diff != 0) return diff > 0
+        }
+        return false
+    }
+
+    private fun fetchFromWeb(): UpdateState {
+        val connection = URI(LatestPage).toURL().openConnection() as HttpURLConnection
+        connection.instanceFollowRedirects = false
+        connection.connectTimeout = TimeoutMs
+        connection.readTimeout = TimeoutMs
+        val location = connection.getHeaderField("Location") ?: return UpdateState.Unavailable
+        val version = location.substringAfterLast("/tag/v", "").takeIf { it.isNotBlank() } ?: return UpdateState.Unavailable
+        if (!isNewer(version, BuildConfig.VERSION)) return UpdateState.UpToDate
+        val names = listOf(
+            "pixelGram-$version-windows-x64-portable.zip",
+            "pixelGram-$version-windows-x64.msi",
+            "pixelGram-$version-x86_64.AppImage",
+            "pixelgram-$version-1-x86_64.pkg.tar.zst",
+            "pixelGram-$version-linux-x86_64.tar.gz",
+        )
+        val assets = names.map { UpdateAsset(it, "https://github.com/$Repository/releases/download/v$version/$it", 0L) }
+        val asset = pickAsset(assets) ?: return UpdateState.Unavailable
+        return UpdateState.Available("v$version", asset, version)
     }
 
     private fun commitOf(json: String): String? =

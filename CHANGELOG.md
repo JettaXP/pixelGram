@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.28.0 IL
+
+### Easter egg
+- The easter egg now also turns on a special white and blue theme for the whole app, notifications included. It lasts while the egg is active and switches off with the second activation.
+- While it is on, the theme can't be changed: Settings show Light, and the accent color and matugen are locked. The special theme is not listed among the themes.
+
+### Fixes
+- Opening photos and videos full screen is much smoother, especially on Linux: the viewer no longer uses a transparent full-screen window.
+- Updates keep working when the GitHub API is unreachable or rate-limited: pixelGram falls back to the GitHub releases page. The log now records why a check failed.
+- System notifications work without notify-send: pixelGram talks to the notification daemon over D-Bus, so the System/pixelGram style switch shows up on more Linux setups.
+
 ## 0.27.1 Cookie
 
 - The official pixelGram channel always has a 12-sided cookie avatar, whatever avatar shape you picked: in the chat list, the chat header and its profile.

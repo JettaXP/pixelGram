@@ -145,7 +145,7 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
         ),
         title = "pixelGram photo",
         undecorated = true,
-        transparent = true,
+        transparent = false,
         resizable = false,
         alwaysOnTop = true,
         onKeyEvent = { event ->
@@ -168,6 +168,7 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
         },
     ) {
         PixelTheme(settings) {
+            Box(Modifier.fillMaxSize().background(Color.Black)) {
             AnimatedVisibility(shown, enter = fadeIn(), exit = fadeOut()) {
                 Box(
                     Modifier
@@ -255,6 +256,7 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
                         }
                     }
                 }
+            }
             }
         }
     }

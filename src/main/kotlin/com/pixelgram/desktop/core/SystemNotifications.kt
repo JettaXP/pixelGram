@@ -6,7 +6,8 @@ import java.awt.EventQueue
 import java.io.File
 
 object SystemNotifications {
-    val available: Boolean by lazy { AppPaths.isLinux && onPath("notify-send") }
+    private val notifySend: Boolean by lazy { onPath("notify-send") }
+    val available: Boolean by lazy { AppPaths.isLinux && (notifySend || onPath("gdbus")) }
 
     private fun onPath(name: String) = System.getenv("PATH").orEmpty().split(File.pathSeparator)
         .any { File(it, name).canExecute() }
@@ -23,6 +24,10 @@ object SystemNotifications {
     fun show(title: String, body: String, icon: String?, onClick: () -> Unit) {
         Thread {
             runCatching {
+                if (!notifySend) {
+                    viaDbus(title, body, icon ?: appIcon ?: "pixelgram")
+                    return@runCatching
+                }
                 val base = listOf("notify-send", "--app-name=pixelGram", "--icon=${icon ?: appIcon ?: "pixelgram"}")
                 val text = listOf(title, escape(body))
                 val clicked = run(base + listOf("--action=default=Open", "--wait") + text)
@@ -31,6 +36,21 @@ object SystemNotifications {
             }.onFailure { AppLog.write("System notification failed", it) }
         }.apply { isDaemon = true }.start()
     }
+
+    private fun viaDbus(title: String, body: String, icon: String) {
+        run(
+            listOf(
+                "gdbus", "call", "--session",
+                "--dest", "org.freedesktop.Notifications",
+                "--object-path", "/org/freedesktop/Notifications",
+                "--method", "org.freedesktop.Notifications.Notify",
+                variant("pixelGram"), "uint32 0", variant(icon), variant(title), variant(escape(body)),
+                "@as []", "@a{sv} {}", "int32 -1",
+            ),
+        ) ?: error("gdbus could not reach the notification daemon")
+    }
+
+    private fun variant(text: String) = "'" + text.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
     private fun run(command: List<String>): String? {
         val process = ProcessBuilder(command).redirectErrorStream(false).start()

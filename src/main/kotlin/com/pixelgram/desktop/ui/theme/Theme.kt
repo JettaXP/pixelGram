@@ -14,6 +14,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.dynamiccolor.DynamicColor
 import com.materialkolor.dynamiccolor.DynamicScheme
@@ -36,7 +37,7 @@ val SeedColors = listOf(
 )
 
 @Composable
-fun isDarkTheme(settings: AppSettings): Boolean = when (settings.themeMode.value) {
+fun isDarkTheme(settings: AppSettings): Boolean = if (settings.israelLogo.value) false else when (settings.themeMode.value) {
     ThemeMode.System -> isSystemInDarkTheme()
     ThemeMode.Light -> false
     ThemeMode.Dark -> true
@@ -44,6 +45,7 @@ fun isDarkTheme(settings: AppSettings): Boolean = when (settings.themeMode.value
 
 @Composable
 fun appColorScheme(settings: AppSettings): ColorScheme {
+    if (settings.israelLogo.value) return remember { israelScheme() }
     val dark = isDarkTheme(settings)
     val seed = settings.seedColor.value
     val seedScheme = remember(seed, dark) { schemeFromSeed(seed, dark) }
@@ -67,6 +69,20 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
         CompositionLocalProvider(LocalUriHandler provides Links, content = content)
     }
 }
+
+private val IsraelBlue = Color(0xFF0038B8)
+private val IsraelPaper = Color(0xFFF7F9FF)
+
+fun israelScheme(): ColorScheme = schemeFromSeed(IsraelBlue.toArgb(), false).copy(
+    primary = IsraelBlue,
+    onPrimary = Color.White,
+    surfaceTint = IsraelBlue,
+    background = Color.White,
+    surface = Color.White,
+    surfaceBright = Color.White,
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = IsraelPaper,
+)
 
 fun schemeFromSeed(seed: Int, dark: Boolean): ColorScheme {
     val scheme = SchemeTonalSpot(

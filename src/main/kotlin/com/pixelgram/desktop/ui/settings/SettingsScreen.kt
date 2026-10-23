@@ -183,6 +183,7 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
 }
 
 private val QrAvatarSize = 80.dp
+private const val DisabledAlpha = 0.38f
 
 private const val PixelPreferencesTitle = "pixelGram Preferences"
 private const val ChannelUsername = "pixelgramclient"
@@ -677,7 +678,8 @@ private fun AppearanceSection(settings: AppSettings) {
                             Modifier
                         }
                     )
-                    .clickable { settings.seedColor.value = seed },
+                    .graphicsLayer { alpha = if (settings.israelLogo.value) DisabledAlpha else 1f }
+                    .clickable(enabled = !settings.israelLogo.value) { settings.seedColor.value = seed },
             )
         }
     }
@@ -691,8 +693,10 @@ private fun AppearanceSection(settings: AppSettings) {
             subtitle = "Colors follow your wallpaper. Overrides the accent color.",
             checked = settings.matugen.value,
             onChange = {
-                settings.matugen.value = it
-                if (it) Matugen.exportTemplate()
+                if (!settings.israelLogo.value) {
+                    settings.matugen.value = it
+                    if (it) Matugen.exportTemplate()
+                }
             },
         )
         Description(
@@ -800,8 +804,8 @@ private fun EmojiStyleChoice(settings: AppSettings) {
 @Composable
 private fun ThemeModeButtons(settings: AppSettings) = ConnectedChoice(
     options = ThemeMode.entries.map { it to it.name },
-    selected = settings.themeMode.value,
-    onSelect = { settings.themeMode.value = it },
+    selected = if (settings.israelLogo.value) ThemeMode.Light else settings.themeMode.value,
+    onSelect = { if (!settings.israelLogo.value) settings.themeMode.value = it },
 )
 
 @Composable

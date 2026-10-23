@@ -7,8 +7,8 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.27.1"
-val codename = "Cookie"
+version = "0.28.0"
+val codename = "IL"
 
 kotlin {
     jvmToolchain(21)

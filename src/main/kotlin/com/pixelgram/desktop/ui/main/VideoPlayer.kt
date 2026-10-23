@@ -306,7 +306,7 @@ fun VideoPlayerWindow(request: VideoRequest, settings: AppSettings) {
         ),
         title = "pixelGram video",
         undecorated = true,
-        transparent = true,
+        transparent = false,
         resizable = false,
         alwaysOnTop = true,
         onKeyEvent = { event ->
@@ -323,8 +323,10 @@ fun VideoPlayerWindow(request: VideoRequest, settings: AppSettings) {
         },
     ) {
         PixelTheme(settings) {
+            Box(Modifier.fillMaxSize().background(Color.Black)) {
             AnimatedVisibility(shown, enter = fadeIn(), exit = fadeOut()) {
                 VideoSurface(request, engine, close)
+            }
             }
         }
     }
