@@ -121,6 +121,7 @@ private const val LateFrameUs = 120_000L
 private const val AudioBufferSeconds = 0.4
 private const val MaxDecodeWidth = 1920
 private const val MaxFrameGapNs = 100_000_000L
+private const val KeptFrames = 3
 private val VolumeSliderWidth = 110.dp
 
 private class VideoEngine(private val path: String, private val loop: Boolean) {
@@ -138,6 +139,7 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
     @Volatile private var seekTo = -1L
     private var line: SourceDataLine? = null
     private var pixels = ByteArray(0)
+    private val retired = ArrayDeque<SkiaImage>()
 
     private val thread = Thread(::run, "pixelgram-video").apply { isDaemon = true }
 
@@ -236,6 +238,7 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
             AppLog.write("Video playback failed", error)
             failed = true
         } finally {
+            releaseFrames()
             runCatching { line?.close() }
             runCatching { grabber.stop() }
             runCatching { grabber.release() }
@@ -268,7 +271,19 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
         if (pixels.size != size) pixels = ByteArray(size)
         buffer.duplicate().apply { rewind() }.get(pixels, 0, minOf(size, buffer.capacity()))
         val info = ImageInfo(frame.imageWidth, frame.imageHeight, ColorType.BGRA_8888, ColorAlphaType.OPAQUE)
-        this.frame = SkiaImage.makeRaster(info, pixels, stride).toComposeImageBitmap()
+        val image = SkiaImage.makeRaster(info, pixels, stride)
+        this.frame = image.toComposeImageBitmap()
+        retired.addLast(image)
+        if (retired.size > KeptFrames) {
+            val old = retired.removeFirst()
+            java.awt.EventQueue.invokeLater { old.close() }
+        }
+    }
+
+    private fun releaseFrames() {
+        val left = retired.toList()
+        retired.clear()
+        java.awt.EventQueue.invokeLater { left.dropLast(1).forEach { it.close() } }
     }
 }
 

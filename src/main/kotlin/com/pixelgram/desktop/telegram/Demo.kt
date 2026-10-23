@@ -106,6 +106,18 @@ fun Telegram.loadDemo() {
             }
         }
         messages(100L).add(UiMessage(4, 100, 1, 0, true, now - 30, "Screenshot of the new build 🎉", photo = file, photoWidth = 1280, photoHeight = 800))
+        chats[106L]?.apply {
+            isChannel = true
+            isGroup = true
+        }
+        fun reaction(emoji: String, count: Int) = TdApi.MessageReaction().apply { type = TdApi.ReactionTypeEmoji(emoji); totalCount = count }
+        messages(106L).add(UiMessage(502, 106, 0, 106, false, now - 900, "ИнтеллиНьюз - Израиль и Ближний Восток. Все о безопасности: цена нефти марки Brent достигла отметки в 115 долларов"))
+        messages(106L).add(0, UiMessage(
+            501, 106, 0, 106, false, now - 600, replyToId = 502, text = "Цена нефти марки Brent достигла отметки в 117 долларов за баррель.\n\n#news",
+            photo = file, photoWidth = 800, photoHeight = 1000, fullPhoto = file,
+            reactions = listOf(reaction("😱", 25), reaction("💔", 2), reaction("🤷", 2), reaction("🤬", 1), reaction("🐳", 1)),
+            signature = "Alex Dromi", views = 2500, comments = 4,
+        ))
         System.getProperty("pixelgram.demo.photo2")?.let { second ->
             val other = TdApi.File().apply {
                 id = 999_998

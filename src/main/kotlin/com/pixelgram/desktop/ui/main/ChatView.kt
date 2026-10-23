@@ -904,7 +904,12 @@ fun MessageBubble(
             val readColor = if (outgoing) colors.primary else metaColor
             val hasText = message.text.isNotEmpty()
             val inset = photo != null || media || album != null
-            Column(Modifier.padding(if (inset) PhotoInset else 0.dp).width(IntrinsicSize.Max)) {
+            Column(
+                Modifier
+                    .padding(if (inset) PhotoInset else 0.dp)
+                    .then(if (inset) Modifier.widthIn(max = PhotoMaxWidth) else Modifier)
+                    .width(IntrinsicSize.Max),
+            ) {
                 val via = if (message.viaBot != 0L && telegram != null) telegram.botName(message.viaBot) else ""
                 val named = !senderName.isNullOrEmpty() || via.isNotBlank()
                 if (named) {
@@ -1252,6 +1257,7 @@ private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @
 private val MetaGap = 10.dp
 private const val NewerThreshold = 5
 private const val PanelScaleFrom = 0.9f
+private const val SwapScaleFrom = 0.6f
 private val SendSlot = 40.dp
 object VoiceButton {
     var preferred by mutableStateOf(true)
@@ -1896,7 +1902,7 @@ private fun Composer(
             } else {
                 val showMic = voice.active || (VoiceButton.preferred && !canSend && editing == null)
                 val swapFade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-                val swapSlide = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+                val swapScale = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
                 Box(
                     Modifier.pointerInput(Unit) {
                         awaitPointerEventScope {
@@ -1913,10 +1919,10 @@ private fun Composer(
                     AnimatedContent(
                         targetState = showMic,
                         transitionSpec = {
-                            val direction = if (targetState) 1 else -1
-                            ((slideInHorizontally(swapSlide) { it * direction } + fadeIn(swapFade)) togetherWith
-                                (slideOutHorizontally(swapSlide) { -it * direction } + fadeOut(swapFade))) using SizeTransform(clip = false)
+                            ((fadeIn(swapFade) + scaleIn(swapScale, initialScale = SwapScaleFrom)) togetherWith
+                                (fadeOut(swapFade) + scaleOut(swapScale, targetScale = SwapScaleFrom))) using SizeTransform(clip = false)
                         },
+                        contentAlignment = Alignment.Center,
                     ) { mic ->
                         if (mic) {
                             MicButton(voice, onRelease = releaseVoice)

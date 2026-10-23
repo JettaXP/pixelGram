@@ -250,6 +250,10 @@ private fun ApplicationScope.PixelApp() {
         state = windowState,
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
+        LaunchedEffect(Unit) {
+            delay(RenderApiLogDelayMs)
+            com.pixelgram.desktop.core.AppLog.write("Render API: ${window.renderApi}")
+        }
         LaunchedEffect(scheme.surfaceContainer) {
             val background = java.awt.Color(scheme.surfaceContainer.toArgb())
             window.background = background
@@ -443,6 +447,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
 }
 
 private const val RaiseHoldMs = 150L
+private const val RenderApiLogDelayMs = 3_000L
 private const val UpdatedNoticeDelayMs = 1500L
 private const val LockCheckMs = 10_000L
 private const val LockScaleFrom = 1.08f

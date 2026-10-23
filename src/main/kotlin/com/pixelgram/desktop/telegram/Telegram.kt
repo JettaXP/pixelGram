@@ -1045,17 +1045,19 @@ class Telegram(
         listsVersion
         return listCache.getOrPut(key) {
             Snapshot.withoutReadObservation {
-                when (key) {
-                    ChatListKey.Unread -> chats.values
-                        .filter { ChatListKey.Main in it.positions && (it.unreadCount > 0 || it.markedUnread) }
-                        .sortedByDescending { it.positions[ChatListKey.Main] }
-                    ChatListKey.Mentions -> chats.values
-                        .filter { ChatListKey.Main in it.positions && it.unreadMentions > 0 }
-                        .sortedByDescending { it.positions[ChatListKey.Main] }
-                    else -> chats.values
-                        .filter { key in it.positions }
-                        .sortedByDescending { it.positions[key] }
+                val source = if (key == ChatListKey.Unread || key == ChatListKey.Mentions) ChatListKey.Main else key
+                val ordered = ArrayList<Pair<ChatState, Long>>()
+                for (chat in chats.values) {
+                    val order = chat.positions[source] ?: continue
+                    val keep = when (key) {
+                        ChatListKey.Unread -> chat.unreadCount > 0 || chat.markedUnread
+                        ChatListKey.Mentions -> chat.unreadMentions > 0
+                        else -> true
+                    }
+                    if (keep) ordered += chat to order
                 }
+                ordered.sortByDescending { it.second }
+                ordered.map { it.first }
             }
         }
     }

@@ -54,9 +54,12 @@ object AppIcons {
         runCatching { ImageIO.write(image, "png", file) }
     }
 
+    private val sizeCache = HashMap<BufferedImage, List<BufferedImage>>()
+
+    @Synchronized
     fun sizes(scheme: ColorScheme): List<BufferedImage> {
         val image = themed(scheme) ?: return emptyList()
-        return SystemSizes.map { scaled(image, it) }
+        return sizeCache.getOrPut(image) { SystemSizes.map { scaled(image, it) } }
     }
 
     fun installForSystem(scheme: ColorScheme) {
@@ -77,11 +80,17 @@ object AppIcons {
     }
 
     private fun scaled(image: BufferedImage, size: Int): BufferedImage {
+        var current = image
+        while (current.width / 2 >= size) current = draw(current, current.width / 2)
+        return if (current.width == size) current else draw(current, size)
+    }
+
+    private fun draw(image: BufferedImage, size: Int): BufferedImage {
         val result = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
         val graphics = result.createGraphics()
-        graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+        graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
         graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
-        graphics.drawImage(image.getScaledInstance(size, size, java.awt.Image.SCALE_SMOOTH), 0, 0, null)
+        graphics.drawImage(image, 0, 0, size, size, null)
         graphics.dispose()
         return result
     }
