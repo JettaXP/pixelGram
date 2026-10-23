@@ -119,9 +119,9 @@ fun LockScreen() {
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(72.dp).clip(MaterialShapes.Cookie12Sided.toShape()).background(MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.size(72.dp).clip(MaterialShapes.Cookie12Sided.toShape()).background(if (EasterEgg.israel) IsraelWhite else MaterialTheme.colorScheme.primary),
                 ) {
-                    rememberPixelgramLogo()?.let { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(42.dp)) }
+                    rememberPixelgramLogo()?.let { Icon(it, contentDescription = null, tint = if (EasterEgg.israel) IsraelBlue else MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(42.dp)) }
                 }
                 val titleColor by animateColorAsState(
                     if (wrong) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,

@@ -106,6 +106,16 @@ fun Telegram.loadDemo() {
             }
         }
         messages(100L).add(UiMessage(4, 100, 1, 0, true, now - 30, "Screenshot of the new build 🎉", photo = file, photoWidth = 1280, photoHeight = 800))
+        System.getProperty("pixelgram.demo.photo2")?.let { second ->
+            val other = TdApi.File().apply {
+                id = 999_998
+                local = TdApi.LocalFile().apply {
+                    this.path = second
+                    isDownloadingCompleted = true
+                }
+            }
+            messages(100L).add(UiMessage(4_007, 100, 2, 0, false, now - 45, "The banner from the profile, with a much longer caption so it wraps across a couple of lines in the viewer 🖼", photo = other, photoWidth = 1280, photoHeight = 400))
+        }
     }
     messages(100L).addAll(listOf(
         UiMessage(3, 100, 2, 0, false, now - 60, "Did the new emoji arrive? 😀🥳🫠👍"),

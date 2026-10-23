@@ -33,7 +33,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import com.pixelgram.desktop.core.AppSettings
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pixelgram.desktop.telegram.Telegram
@@ -55,7 +57,12 @@ private const val NoticeHoldMs = 3_200L
 private const val SwayDegrees = 8f
 private val FlagSize = 220.dp
 
+val IsraelBlue = Color(0xFF0038B8)
+val IsraelWhite = Color.White
+
 object EasterEgg {
+    var settings: AppSettings? = null
+    val israel: Boolean get() = settings?.israelLogo?.value == true
     var shown by mutableIntStateOf(0)
         private set
     var sticker by mutableStateOf<TdApi.Sticker?>(null)
@@ -73,6 +80,7 @@ object EasterEgg {
         if (taps == 1) prefetch.launch { Emoji3D.file(Flag) }
         if (taps < TapsNeeded) return
         taps = 0
+        settings?.israelLogo?.let { it.value = !it.value }
         this.telegram = telegram
         telegram.animatedEmoji(Flag) { found -> sticker = found }
         shown++

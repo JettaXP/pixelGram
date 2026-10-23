@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.settings
 
+import com.pixelgram.desktop.ui.EasterEgg
+import com.pixelgram.desktop.ui.IsraelBlue
+import com.pixelgram.desktop.ui.IsraelWhite
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -691,9 +694,9 @@ private fun SessionIcon(session: TdApi.Session, size: Dp) {
     if (isPixelgram(session)) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(size).clip(MaterialShapes.Cookie12Sided.toShape()).background(scheme.primary),
+            modifier = Modifier.size(size).clip(MaterialShapes.Cookie12Sided.toShape()).background(if (EasterEgg.israel) IsraelWhite else scheme.primary),
         ) {
-            rememberPixelgramLogo()?.let { Icon(it, contentDescription = "pixelGram", tint = scheme.onPrimary, modifier = Modifier.size(size * 0.58f)) }
+            rememberPixelgramLogo()?.let { Icon(it, contentDescription = "pixelGram", tint = if (EasterEgg.israel) IsraelBlue else scheme.onPrimary, modifier = Modifier.size(size * 0.58f)) }
         }
     } else {
         Box(

@@ -4,6 +4,7 @@ import com.pixelgram.desktop.core.AppLock
 import com.pixelgram.desktop.ui.LockScreen
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
+import com.pixelgram.desktop.ui.EasterEgg
 import com.pixelgram.desktop.ui.EasterEggOverlay
 import com.pixelgram.desktop.ui.main.BotAnswer
 import com.pixelgram.desktop.ui.main.TopNotice
@@ -163,8 +164,10 @@ private fun ApplicationScope.PixelApp() {
     }
     var visible by remember { mutableStateOf(true) }
     val scheme = appColorScheme(settings)
-    val icon = remember(scheme.primaryContainer, scheme.onPrimaryContainer) { AppIcons.painter(scheme) }
-    LaunchedEffect(scheme.primaryContainer, scheme.onPrimaryContainer) {
+    EasterEgg.settings = settings
+    val israel = EasterEgg.israel
+    val icon = remember(scheme.primaryContainer, scheme.onPrimaryContainer, israel) { AppIcons.painter(scheme) }
+    LaunchedEffect(scheme.primaryContainer, scheme.onPrimaryContainer, israel) {
         withContext(Dispatchers.IO) {
             SystemNotifications.updateIcon(scheme)
             AppIcons.installForSystem(scheme)
@@ -174,7 +177,7 @@ private fun ApplicationScope.PixelApp() {
         SystemTray.isSupported() && !(AppPaths.isLinux && System.getenv("WAYLAND_DISPLAY") != null)
     }
     if (hasTray) {
-        val trayImages = remember(scheme.primaryContainer, scheme.onPrimaryContainer) { AppIcons.sizes(scheme) }
+        val trayImages = remember(scheme.primaryContainer, scheme.onPrimaryContainer, israel) { AppIcons.sizes(scheme) }
         PixelTray(trayImages, settings, onOpen = { visible = true }, onQuit = quit)
     }
 
@@ -252,7 +255,7 @@ private fun ApplicationScope.PixelApp() {
             window.background = background
             window.contentPane.background = background
         }
-        LaunchedEffect(scheme.primaryContainer, scheme.onPrimaryContainer) {
+        LaunchedEffect(scheme.primaryContainer, scheme.onPrimaryContainer, israel) {
             val images = withContext(Dispatchers.IO) { AppIcons.sizes(scheme) }
             if (images.isNotEmpty()) window.iconImages = images
         }

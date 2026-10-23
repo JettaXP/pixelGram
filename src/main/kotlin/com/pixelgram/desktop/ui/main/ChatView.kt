@@ -1324,7 +1324,7 @@ private fun MessagePhoto(
             .size(width, height)
             .clip(RoundedCornerShape(corner))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            .clickable { PhotoViewer.current = ViewedPhoto(telegram, file, message.fullPhoto ?: file, message.text) },
+            .clickable { PhotoViewer.current = ViewedPhoto(telegram, file, message.fullPhoto ?: file, message.text, message.chatId, message.id) },
         contentAlignment = Alignment.Center,
     ) {
         val bitmap = image

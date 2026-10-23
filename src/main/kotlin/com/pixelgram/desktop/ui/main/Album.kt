@@ -136,7 +136,7 @@ private fun AlbumCell(message: UiMessage, cell: Cell, telegram: Telegram, modifi
     } else {
         {
             val photo = message.photo
-            if (photo != null) PhotoViewer.current = ViewedPhoto(telegram, photo, message.fullPhoto ?: photo, message.text)
+            if (photo != null) PhotoViewer.current = ViewedPhoto(telegram, photo, message.fullPhoto ?: photo, message.text, message.chatId, message.id)
         }
     }
     Box(

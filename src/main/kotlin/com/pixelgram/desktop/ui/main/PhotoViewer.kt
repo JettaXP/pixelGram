@@ -1,6 +1,28 @@
 package com.pixelgram.desktop.ui.main
 
 import kotlinx.coroutines.launch
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.unit.IntOffset
+import com.pixelgram.desktop.telegram.UiMessage
+import kotlinx.coroutines.delay
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.runtime.rememberCoroutineScope
@@ -74,7 +96,12 @@ class ViewedPhoto(
     val preview: TdApi.File,
     val full: TdApi.File?,
     val caption: String,
+    val chatId: Long = 0,
+    val messageId: Long = 0,
 )
+
+private fun UiMessage.toViewed(telegram: Telegram): ViewedPhoto? =
+    photo?.let { ViewedPhoto(telegram, it, fullPhoto ?: it, text, chatId, id) }
 
 object PhotoViewer {
     var current by mutableStateOf<ViewedPhoto?>(null)
@@ -88,6 +115,28 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
         if (shown.isIdle && !shown.currentState && PhotoViewer.current === photo) PhotoViewer.current = null
     }
     val screen = remember { GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration.bounds }
+    val telegram = photo.telegram
+    val photos = remember(photo) {
+        if (photo.chatId == 0L) emptyList() else telegram.messages(photo.chatId).filter { it.photo != null }.reversed()
+    }
+    var index by remember(photo) { mutableIntStateOf(photos.indexOfFirst { it.id == photo.messageId && it.chatId == photo.chatId }) }
+    var direction by remember { mutableIntStateOf(1) }
+    val current = photos.getOrNull(index)?.toViewed(telegram) ?: photo
+    var controls by remember { mutableStateOf(true) }
+    var moves by remember { mutableIntStateOf(0) }
+    var lastWheel by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(moves, index) {
+        controls = true
+        delay(IdleHideMs)
+        controls = false
+    }
+    val go: (Int) -> Unit = { step ->
+        val target = index + step
+        if (index >= 0 && target in photos.indices) {
+            direction = step
+            index = target
+        }
+    }
     Window(
         onCloseRequest = close,
         state = rememberWindowState(
@@ -100,11 +149,21 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
         resizable = false,
         alwaysOnTop = true,
         onKeyEvent = { event ->
-            if (event.type == KeyEventType.KeyDown && event.key == Key.Escape) {
-                close()
-                true
-            } else {
-                false
+            when {
+                event.type != KeyEventType.KeyDown -> false
+                event.key == Key.Escape -> {
+                    close()
+                    true
+                }
+                event.key == Key.DirectionLeft -> {
+                    go(-1)
+                    true
+                }
+                event.key == Key.DirectionRight -> {
+                    go(1)
+                    true
+                }
+                else -> false
             }
         },
     ) {
@@ -114,29 +173,111 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
                     Modifier
                         .fillMaxSize()
                         .background(Color.Black.copy(alpha = 0.9f))
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    if (event.type == PointerEventType.Move || event.type == PointerEventType.Enter) {
+                                        controls = true
+                                        moves++
+                                    }
+                                }
+                            }
+                        }
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.type != PointerEventType.Scroll) continue
+                                    val change = event.changes.first()
+                                    if (change.isConsumed) continue
+                                    val now = System.currentTimeMillis()
+                                    if (now - lastWheel < WheelStepMs) continue
+                                    lastWheel = now
+                                    go(if (change.scrollDelta.y + change.scrollDelta.x > 0) 1 else -1)
+                                }
+                            }
+                        }
                         .pointerInput(Unit) { detectTapGestures(onTap = { close() }) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    ZoomablePhoto(photo, Modifier.align(Alignment.Center).animateEnterExit(
-                        enter = scaleIn(initialScale = 0.92f),
-                        exit = scaleOut(targetScale = 0.92f),
-                    ))
+                    val slide = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+                    val fade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+                    AnimatedContent(
+                        targetState = current,
+                        contentKey = { it.messageId to it.preview.id },
+                        transitionSpec = {
+                            (slideInHorizontally(slide) { it / SlideDivisor * direction } + fadeIn(fade)) togetherWith
+                                (slideOutHorizontally(slide) { -it / SlideDivisor * direction } + fadeOut(fade))
+                        },
+                        modifier = Modifier.fillMaxSize().animateEnterExit(
+                            enter = scaleIn(initialScale = 0.92f),
+                            exit = scaleOut(targetScale = 0.92f),
+                        ),
+                        contentAlignment = Alignment.Center,
+                    ) { viewed ->
+                        ZoomablePhoto(viewed, Modifier.fillMaxSize())
+                    }
                     FilledTonalIconButton(
                         onClick = close,
                         modifier = Modifier.align(Alignment.TopEnd).padding(24.dp),
                     ) {
                         Icon(Icons.Filled.Close, contentDescription = "Close")
                     }
-                    if (photo.caption.isNotBlank()) {
-                        EmojiText(
-                            photo.caption,
-                            color = Color.White,
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(32.dp).widthIn(max = 720.dp),
-                        )
+                    val chrome by animateFloatAsState(
+                        if (controls) 1f else 0f,
+                        tween(if (controls) ShowMs else HideFadeMs),
+                    )
+                    NavArrow(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous photo", index > 0, chrome, Modifier.align(Alignment.CenterStart)) { go(-1) }
+                    NavArrow(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next photo", index in 0 until photos.lastIndex, chrome, Modifier.align(Alignment.CenterEnd)) { go(1) }
+                    AnimatedContent(
+                        targetState = current.caption,
+                        transitionSpec = { fadeIn(fade) togetherWith fadeOut(fade) },
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(32.dp).graphicsLayer { alpha = chrome },
+                    ) { caption ->
+                        if (caption.isNotBlank()) {
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = CaptionColor.copy(alpha = CaptionAlpha),
+                                contentColor = Color.White,
+                                modifier = Modifier.widthIn(max = 720.dp),
+                            ) {
+                                EmojiText(
+                                    caption,
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier
+                                        .heightIn(max = CaptionMaxHeight)
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(horizontal = 20.dp, vertical = 14.dp),
+                                )
+                            }
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun NavArrow(icon: ImageVector, label: String, visible: Boolean, chrome: Float, modifier: Modifier, onClick: () -> Unit) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + scaleIn(initialScale = 0.8f),
+        exit = fadeOut() + scaleOut(targetScale = 0.8f),
+        modifier = modifier.padding(horizontal = 24.dp),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .graphicsLayer { alpha = chrome }
+                .size(ArrowSize)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = ArrowAlpha))
+                .clickable(enabled = chrome > 0f, onClick = onClick),
+        ) {
+            Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(32.dp))
         }
     }
 }
@@ -208,7 +349,10 @@ private fun ZoomablePhoto(photo: ViewedPhoto, modifier: Modifier) {
                             while (true) {
                                 val event = awaitPointerEvent()
                                 if (event.type != PointerEventType.Scroll) continue
-                                val delta = event.changes.first().scrollDelta.y
+                                if (!event.keyboardModifiers.isCtrlPressed && zoom <= 1f) continue
+                                val change = event.changes.first()
+                                change.consume()
+                                val delta = change.scrollDelta.y
                                 zoom = (zoom * if (delta < 0) 1.15f else 1 / 1.15f).coerceIn(1f, MaxZoom)
                                 if (zoom == 1f) offset = Offset.Zero
                             }
@@ -251,4 +395,14 @@ private fun ZoomablePhoto(photo: ViewedPhoto, modifier: Modifier) {
 }
 
 private const val FullSize = 4096
+private const val IdleHideMs = 2_000L
+private const val ShowMs = 120
+private const val HideFadeMs = 400
+private const val WheelStepMs = 250L
+private const val SlideDivisor = 5
+private const val CaptionAlpha = 0.72f
+private val CaptionColor = Color(0xFF2B2B2E)
+private const val ArrowAlpha = 0.16f
+private val ArrowSize = 56.dp
+private val CaptionMaxHeight = 220.dp
 private const val MaxZoom = 6f

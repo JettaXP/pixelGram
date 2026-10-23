@@ -142,6 +142,8 @@ import com.pixelgram.desktop.telegram.fullName
 import com.pixelgram.desktop.ui.AvatarShape
 import com.pixelgram.desktop.ui.auth.QrCode
 import com.pixelgram.desktop.ui.EasterEgg
+import com.pixelgram.desktop.ui.IsraelBlue
+import com.pixelgram.desktop.ui.IsraelWhite
 import com.pixelgram.desktop.ui.components.UsernameQrDialog
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.ui.components.AvatarImage
@@ -454,8 +456,8 @@ private fun PreferencesHeader(telegram: Telegram) {
         Surface(
             onClick = { EasterEgg.tap(telegram) },
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            color = if (EasterEgg.israel) IsraelWhite else MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = if (EasterEgg.israel) IsraelBlue else MaterialTheme.colorScheme.onSecondaryContainer,
             modifier = Modifier.padding(top = 6.dp),
         ) {
             Text(

@@ -43,22 +43,25 @@ object AppIcons {
         }
     }
 
+    private fun themed(scheme: ColorScheme): BufferedImage? =
+        if (EasterEgg.israel) image(IsraelWhite, IsraelBlue) else image(scheme.primaryContainer, scheme.onPrimaryContainer)
+
     fun painter(scheme: ColorScheme): Painter? =
-        image(scheme.primaryContainer, scheme.onPrimaryContainer)?.let { BitmapPainter(it.toComposeImageBitmap()) }
+        themed(scheme)?.let { BitmapPainter(it.toComposeImageBitmap()) }
 
     fun writeTo(file: File, scheme: ColorScheme) {
-        val image = image(scheme.primaryContainer, scheme.onPrimaryContainer) ?: return
+        val image = themed(scheme) ?: return
         runCatching { ImageIO.write(image, "png", file) }
     }
 
     fun sizes(scheme: ColorScheme): List<BufferedImage> {
-        val image = image(scheme.primaryContainer, scheme.onPrimaryContainer) ?: return emptyList()
+        val image = themed(scheme) ?: return emptyList()
         return SystemSizes.map { scaled(image, it) }
     }
 
     fun installForSystem(scheme: ColorScheme) {
         if (!AppPaths.isLinux) return
-        val image = image(scheme.primaryContainer, scheme.onPrimaryContainer) ?: return
+        val image = themed(scheme) ?: return
         val dataHome = System.getenv("XDG_DATA_HOME")?.takeIf { it.isNotBlank() }
             ?: (System.getProperty("user.home") + "/.local/share")
         val hicolor = File(dataHome, "icons/hicolor")
@@ -90,5 +93,6 @@ object AppIcons {
 @Composable
 fun themedAppIcon(): Painter? {
     val scheme = MaterialTheme.colorScheme
-    return remember(scheme.primaryContainer, scheme.onPrimaryContainer) { AppIcons.painter(scheme) }
+    val israel = EasterEgg.israel
+    return remember(scheme.primaryContainer, scheme.onPrimaryContainer, israel) { AppIcons.painter(scheme) }
 }

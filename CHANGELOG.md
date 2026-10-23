@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.26.0
+
+### Photo viewer
+- Browse photos in a chat without closing the viewer: arrows on the sides, Left and Right keys, or the mouse wheel. An arrow disappears when there are no more photos that way.
+- The caption sits in a translucent panel.
+- Arrows and caption hide when you leave the mouse still, and quickly fade back when you move it.
+- Hold Ctrl and scroll to zoom.
+
+### Easter egg
+- The easter egg now also switches the pixelGram logo to a white and blue Israel edition everywhere: window, taskbar and tray icons, notifications, title bar, login and lock screens, the official badge and the version capsule. Trigger it again to go back to your theme colors.
+
 ## 0.25.5 יהודה
 
 - Profile music and other audio in M4A, FLAC and other formats now play, not just MP3 and OGG.

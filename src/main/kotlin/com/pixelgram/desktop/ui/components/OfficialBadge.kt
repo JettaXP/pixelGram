@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.components
 
+import com.pixelgram.desktop.ui.EasterEgg
+import com.pixelgram.desktop.ui.IsraelBlue
+import com.pixelgram.desktop.ui.IsraelWhite
 import com.pixelgram.desktop.ui.main.TopNotice
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -46,14 +49,14 @@ fun OfficialBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
         modifier = modifier
             .size(size)
             .clip(MaterialShapes.Cookie12Sided.toShape())
-            .background(scheme.primary)
+            .background(if (EasterEgg.israel) IsraelWhite else scheme.primary)
             .pointerHoverIcon(PointerIcon.Hand)
             .clickable { TopNotice.text = OfficialNotice },
     ) {
         Icon(
             logo,
             contentDescription = "Official pixelGram resource",
-            tint = scheme.onPrimary,
+            tint = if (EasterEgg.israel) IsraelBlue else scheme.onPrimary,
             modifier = Modifier.size(size * LogoScale),
         )
     }
