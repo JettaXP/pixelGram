@@ -40,7 +40,7 @@ import androidx.compose.ui.window.Popup
 import kotlinx.coroutines.delay
 
 private const val PillShowMs = 2_500L
-private const val LogoScale = 0.58f
+private const val LogoScale = 0.66f
 private const val LogoResource = "/pixelgram-logo.svg"
 
 @Composable
