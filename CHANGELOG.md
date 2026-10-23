@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.16.0
+## 0.16.0 Battery
 
 ### Battery and Animations
 - New Settings section to turn animations off and save battery.
