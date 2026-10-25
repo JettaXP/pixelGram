@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.33.0 Pill
+
+### macOS
+- pixelGram now runs on macOS (Apple Silicon) with a DMG, the native menu bar, Dock icon, Notification Center and tg:// links. Thanks to MrFaDeveloper.
+
+### Chats
+- Big animated emoji play once, replay on click without restarting, and show Telegram's own click effect.
+- "Forwarded from" sits at the top of the message with the source's avatar.
+- Long posts are shown in full again, without Show more.
+- Group chats in the list show who sent the last message.
+- Jumping to the beginning, a pinned message or a quoted message loads a full page around it, and quotes jump to messages that aren't loaded yet.
+- The emoji button closes the panel on the second click.
+- Copy Callback Data only appears on inline buttons.
+- Downloaded files are saved to Downloads/pixelGram.
+
+### Look and feel
+- Badge descriptions show as a pill in the middle of the window.
+- Your own badge shows in My Profile, with a new main developer icon </>.
+- Screens change with a scale and fade, menus open with a single expressive animation.
+- Sliders stretch and narrow when held and released.
+- Emoji previews switch right away when you change the emoji style.
+- Vibrant colors keep dark message bubbles.
+
+### Search and speed
+- Search shows matching chats first, then messages.
+- The chat list takes at most 45% of the window, so chats never squeeze into a strip.
+- Fast scrolling through the chat list no longer decodes every avatar it passes.
+
+### Fixes
+- The Israel flag no longer pops up on the add account screen.
+
 ## 0.32.0 12-side cookie
 
 ### Colors and look

@@ -1,6 +1,5 @@
 package com.pixelgram.desktop
 
-import com.pixelgram.desktop.ui.components.tipBlur
 import com.pixelgram.desktop.core.AppLock
 import com.pixelgram.desktop.ui.LockScreen
 import androidx.compose.foundation.layout.padding
@@ -311,7 +310,6 @@ private fun ApplicationScope.PixelApp() {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .tipBlur()
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {

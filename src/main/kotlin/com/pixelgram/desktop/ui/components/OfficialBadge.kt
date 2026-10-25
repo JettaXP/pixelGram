@@ -1,6 +1,5 @@
 package com.pixelgram.desktop.ui.components
 
-import androidx.compose.ui.draw.blur
 import com.pixelgram.desktop.ui.icons.filled.Code
 import com.pixelgram.desktop.ui.components.expressive.popIn
 import androidx.compose.foundation.layout.padding
@@ -150,20 +149,6 @@ private val BugNet: ImageVector by lazy {
         .build()
 }
 
-object BadgeTips {
-    var active by mutableStateOf(0)
-        internal set
-}
-
-@Composable
-fun Modifier.tipBlur(): Modifier {
-    val radius by androidx.compose.animation.core.animateDpAsState(
-        if (BadgeTips.active > 0) TipBlur else 0.dp,
-        MaterialTheme.motionScheme.defaultEffectsSpec(),
-    )
-    return if (radius > 0.dp) this.blur(radius) else this
-}
-
 @Composable
 fun BadgeTip(text: String?, onDone: () -> Unit) {
     if (text == null) return
@@ -174,10 +159,6 @@ fun BadgeTip(text: String?, onDone: () -> Unit) {
     }
     LaunchedEffect(shown.currentState, shown.isIdle) {
         if (shown.isIdle && !shown.currentState) onDone()
-    }
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        BadgeTips.active++
-        onDispose { BadgeTips.active-- }
     }
     androidx.compose.ui.window.Popup(
         popupPositionProvider = CenterInWindow,
@@ -193,7 +174,7 @@ fun BadgeTip(text: String?, onDone: () -> Unit) {
         ) {
             androidx.compose.material3.Surface(
                 shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = TipAlpha),
+                color = MaterialTheme.colorScheme.inverseSurface,
                 contentColor = MaterialTheme.colorScheme.inverseOnSurface,
                 shadowElevation = 6.dp,
             ) {
@@ -219,7 +200,5 @@ private object CenterInWindow : androidx.compose.ui.window.PopupPositionProvider
     )
 }
 
-private val TipBlur = 8.dp
 private const val TipScaleFrom = 0.8f
-private const val TipAlpha = 0.92f
 private const val TipMs = 2500L
