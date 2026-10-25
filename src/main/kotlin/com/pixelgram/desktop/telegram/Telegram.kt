@@ -171,6 +171,8 @@ enum class MessageStatus { Sending, Sent, Read, Failed }
 private const val AUTH_TIMEOUT_MS = 30_000L
 private const val PinnedLimit = 100
 private const val JumpPageSize = 60
+private const val JumpMinMessages = 20
+private const val JumpAttempts = 3
 private const val SavedTopicsPage = 100
 private const val CommonGroupsLimit = 100
 private const val ThreadPageSize = 100
@@ -1427,20 +1429,36 @@ class Telegram(
 
     private fun loadAround(chatId: Long, fromId: Long, offset: Int, done: () -> Unit) {
         val requested = generation(chatId)
-        send(TdApi.GetChatHistory().apply {
-            this.chatId = chatId
-            fromMessageId = fromId
-            this.offset = offset
-            limit = JumpPageSize
-            onlyLocal = false
-        }) { result ->
-            val loaded = (result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty()
-            if (loaded.isEmpty() || requested != generation(chatId)) return@send done()
+        val collected = LinkedHashMap<Long, TdApi.Message>()
+        fun finish() {
+            if (collected.isEmpty() || requested != generation(chatId)) return done()
+            if (fromId > 1 && collected[fromId] == null) return done()
             resetHistory(chatId)
-            messages(chatId).addAll(loaded.sortedByDescending { it.id }.map { it.toUi() })
+            messages(chatId).addAll(collected.values.sortedByDescending { it.id }.map { it.toUi() })
             detached[chatId] = true
             done()
         }
+        fun fetch(from: Long, shift: Int, attempt: Int) {
+            send(TdApi.GetChatHistory().apply {
+                this.chatId = chatId
+                fromMessageId = from
+                this.offset = shift
+                limit = JumpPageSize
+                onlyLocal = false
+            }) { result ->
+                val loaded = (result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty()
+                loaded.forEach { collected[it.id] = it }
+                val enough = collected.size >= JumpMinMessages || loaded.isEmpty() || attempt >= JumpAttempts
+                if (enough || requested != generation(chatId)) {
+                    finish()
+                } else {
+                    val oldest = collected.keys.min()
+                    val newest = collected.keys.max()
+                    if (fromId <= 1) fetch(newest, -(JumpPageSize - 1), attempt + 1) else fetch(oldest, 0, attempt + 1)
+                }
+            }
+        }
+        fetch(fromId, offset, 1)
     }
 
     private val loadingNewer = HashSet<Long>()

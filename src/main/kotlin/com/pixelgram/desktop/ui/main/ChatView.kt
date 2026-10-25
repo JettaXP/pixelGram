@@ -336,6 +336,8 @@ fun ChatView(
                 if (index >= 0) {
                     scope.launch { listState.animateScrollToItem(index) }
                     highlight = id to System.nanoTime()
+                } else {
+                    MessageSearch.jump = chat.id to id
                 }
             },
         )
