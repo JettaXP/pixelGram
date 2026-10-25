@@ -205,7 +205,7 @@ fun MainScreen(
                         tabs = tabs,
                         selected = selectedKey,
                         onToggleMenu = toggleMenu,
-                        onSelect = { key -> closeMenuAnd { selectedKey = key } },
+                        onSelect = { key -> closeMenuAnd { if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
                         onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
                         onOpenSaved = {
                             closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
@@ -222,9 +222,9 @@ fun MainScreen(
                     val topFolders = @Composable {
                         if (!foldersLeft && !compact && selectedKey != ChatListKey.Archive) {
                             if (settings.capsuleFolders.value) {
-                                CapsuleFolders(tabs, selectedKey, settings, onSelect = { selectedKey = it })
+                                CapsuleFolders(tabs, selectedKey, settings, onSelect = { if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
                             } else {
-                                TopFolders(tabs, selectedKey, onSelect = { selectedKey = it })
+                                TopFolders(tabs, selectedKey, onSelect = { if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
                             }
                         }
                     }

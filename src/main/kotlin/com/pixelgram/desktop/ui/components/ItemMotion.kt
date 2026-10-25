@@ -7,9 +7,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 @Composable
-fun LazyItemScope.itemMotion(): Modifier = Modifier.animateItem(
+fun LazyItemScope.itemMotion(placement: Boolean = true): Modifier = Modifier.animateItem(
     fadeInSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-    placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+    placementSpec = if (placement) MaterialTheme.motionScheme.defaultSpatialSpec() else null,
     fadeOutSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
 )
 

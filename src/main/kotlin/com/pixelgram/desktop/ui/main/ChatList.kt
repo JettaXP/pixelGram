@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.runtime.mutableIntStateOf
 import com.pixelgram.desktop.ui.components.itemMotion
 import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.components.expressive.FilledTonalIconButton
@@ -197,6 +198,14 @@ private fun ChatListBody(
         ) { key ->
             val (pinned, rest) = chatsFor(key).partition { it.pinned[key] == true }
             val listState = rememberLazyListState()
+            val scrollRequest = ChatListScroll.request
+            val seenRequest = remember { intArrayOf(scrollRequest) }
+            LaunchedEffect(scrollRequest) {
+                if (scrollRequest == seenRequest[0]) return@LaunchedEffect
+                seenRequest[0] = scrollRequest
+                if (listState.firstVisibleItemIndex > ScrollJumpItems) listState.scrollToItem(ScrollJumpItems)
+                listState.animateScrollToItem(0)
+            }
             val topChat = rest.firstOrNull()?.id
             LaunchedEffect(topChat) {
                 withFrameNanos { }
@@ -235,7 +244,7 @@ private fun ChatListBody(
                     item(key = "archive-gap") { Spacer(Modifier.height(GroupGap)) }
                 }
                 itemsIndexed(pinned, key = { _, chat -> chat.id }) { index, chat ->
-                    ChatRow(chat, index, pinned.size, chat.id == selectedChatId, telegram, settings, key, itemMotion()) {
+                    ChatRow(chat, index, pinned.size, chat.id == selectedChatId, telegram, settings, key, itemMotion(!listState.isScrollInProgress)) {
                         onOpen(chat.id)
                     }
                 }
@@ -243,7 +252,7 @@ private fun ChatListBody(
                     item(key = "pinned-gap") { Spacer(Modifier.height(GroupGap)) }
                 }
                 itemsIndexed(rest, key = { _, chat -> chat.id }) { index, chat ->
-                    ChatRow(chat, index, rest.size, chat.id == selectedChatId, telegram, settings, key, itemMotion()) {
+                    ChatRow(chat, index, rest.size, chat.id == selectedChatId, telegram, settings, key, itemMotion(!listState.isScrollInProgress)) {
                         onOpen(chat.id)
                     }
                 }
@@ -358,6 +367,11 @@ private fun CompactChatList(
 }
 
 private val CompactItemSize = 64.dp
+private const val ScrollJumpItems = 12
+
+object ChatListScroll {
+    var request by mutableIntStateOf(0)
+}
 
 @Composable
 private fun ChatRow(
