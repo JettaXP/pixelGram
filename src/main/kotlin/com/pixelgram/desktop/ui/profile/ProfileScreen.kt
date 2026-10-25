@@ -122,7 +122,10 @@ fun ProfileScreen(
                 }
             }
         }
-        EmojiText(name, style = MaterialTheme.typography.headlineMediumEmphasized)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EmojiText(name, style = MaterialTheme.typography.headlineMediumEmphasized)
+            com.pixelgram.desktop.ui.components.UserBadge.of(me.id)?.let { com.pixelgram.desktop.ui.components.UserBadgeView(it, 30.dp) }
+        }
         val rows = buildList {
             add(InfoRow(Icons.Outlined.Person, "Name", name, onEdit = { editing = ProfileField.Name }))
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {

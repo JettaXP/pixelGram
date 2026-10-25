@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.components
 
+import androidx.compose.ui.draw.blur
 import com.pixelgram.desktop.ui.icons.filled.Code
 import com.pixelgram.desktop.ui.components.expressive.popIn
 import androidx.compose.foundation.layout.padding
@@ -149,33 +150,76 @@ private val BugNet: ImageVector by lazy {
         .build()
 }
 
+object BadgeTips {
+    var active by mutableStateOf(0)
+        internal set
+}
+
+@Composable
+fun Modifier.tipBlur(): Modifier {
+    val radius by androidx.compose.animation.core.animateDpAsState(
+        if (BadgeTips.active > 0) TipBlur else 0.dp,
+        MaterialTheme.motionScheme.defaultEffectsSpec(),
+    )
+    return if (radius > 0.dp) this.blur(radius) else this
+}
+
 @Composable
 fun BadgeTip(text: String?, onDone: () -> Unit) {
     if (text == null) return
+    val shown = remember(text) { androidx.compose.animation.core.MutableTransitionState(false).apply { targetState = true } }
     LaunchedEffect(text) {
         kotlinx.coroutines.delay(TipMs)
-        onDone()
+        shown.targetState = false
+    }
+    LaunchedEffect(shown.currentState, shown.isIdle) {
+        if (shown.isIdle && !shown.currentState) onDone()
+    }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        BadgeTips.active++
+        onDispose { BadgeTips.active-- }
     }
     androidx.compose.ui.window.Popup(
-        alignment = Alignment.TopCenter,
-        offset = androidx.compose.ui.unit.IntOffset(0, -TipOffset),
-        onDismissRequest = onDone,
+        popupPositionProvider = CenterInWindow,
+        onDismissRequest = { shown.targetState = false },
     ) {
-        androidx.compose.material3.Surface(
-            shape = androidx.compose.foundation.shape.CircleShape,
-            color = MaterialTheme.colorScheme.inverseSurface,
-            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-            shadowElevation = 4.dp,
-            modifier = Modifier.popIn(),
+        val motion = MaterialTheme.motionScheme
+        androidx.compose.animation.AnimatedVisibility(
+            visibleState = shown,
+            enter = androidx.compose.animation.fadeIn(motion.fastEffectsSpec()) +
+                androidx.compose.animation.scaleIn(motion.defaultSpatialSpec(), initialScale = TipScaleFrom),
+            exit = androidx.compose.animation.fadeOut(motion.fastEffectsSpec()) +
+                androidx.compose.animation.scaleOut(motion.fastSpatialSpec(), targetScale = TipScaleFrom),
         ) {
-            androidx.compose.material3.Text(
-                text,
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            )
+            androidx.compose.material3.Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = TipAlpha),
+                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                shadowElevation = 6.dp,
+            ) {
+                androidx.compose.material3.Text(
+                    text,
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                )
+            }
         }
     }
 }
 
+private object CenterInWindow : androidx.compose.ui.window.PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: androidx.compose.ui.unit.IntRect,
+        windowSize: androidx.compose.ui.unit.IntSize,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        popupContentSize: androidx.compose.ui.unit.IntSize,
+    ) = androidx.compose.ui.unit.IntOffset(
+        (windowSize.width - popupContentSize.width) / 2,
+        (windowSize.height - popupContentSize.height) / 2,
+    )
+}
+
+private val TipBlur = 8.dp
+private const val TipScaleFrom = 0.8f
+private const val TipAlpha = 0.92f
 private const val TipMs = 2500L
-private const val TipOffset = 52

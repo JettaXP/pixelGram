@@ -1,5 +1,6 @@
 package com.pixelgram.desktop
 
+import com.pixelgram.desktop.ui.components.tipBlur
 import com.pixelgram.desktop.core.AppLock
 import com.pixelgram.desktop.ui.LockScreen
 import androidx.compose.foundation.layout.padding
@@ -286,6 +287,7 @@ private fun ApplicationScope.PixelApp() {
             Box(
                 Modifier
                     .fillMaxSize()
+                    .tipBlur()
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
@@ -318,6 +320,8 @@ private fun ApplicationScope.PixelApp() {
 
 private val devScreen: String? = System.getProperty("pixelgram.screen")
 private const val ShutdownGraceMs = 800L
+private const val ScreenScaleFrom = 0.94f
+private const val ScreenScaleTo = 1.03f
 
 @Composable
 private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
@@ -389,9 +393,13 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
       Box(Modifier.fillMaxSize()) {
         val enter = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
         val exit = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+        val grow = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
         AnimatedContent(
             targetState = ready to screen,
-            transitionSpec = { fadeIn(enter) togetherWith fadeOut(exit) },
+            transitionSpec = {
+                (fadeIn(enter) + androidx.compose.animation.scaleIn(grow, initialScale = ScreenScaleFrom)) togetherWith
+                    (fadeOut(exit) + androidx.compose.animation.scaleOut(grow, targetScale = ScreenScaleTo))
+            },
         ) { (isReady, current) ->
             saved.SaveableStateProvider(if (isReady) current.toString() else "auth") {
                 when {
