@@ -118,7 +118,7 @@ fun ChatAvatar(
     size: Dp,
     modifier: Modifier = Modifier,
 ) {
-    if (telegram.isOfficial(chat) || telegram.isDeveloper(chat)) {
+    if (telegram.isOfficial(chat)) {
         AvatarImage(chat.title, chat.photo, telegram, MaterialShapes.Cookie12Sided.toShape(), size, modifier)
         return
     }

@@ -172,7 +172,6 @@ private const val AUTH_TIMEOUT_MS = 30_000L
 private const val PinnedLimit = 100
 private const val JumpPageSize = 60
 private const val SavedTopicsPage = 100
-private val DeveloperIds = setOf(1061520526L)
 private const val CommonGroupsLimit = 100
 private const val ThreadPageSize = 100
 private const val CustomEmojiBatchMs = 40L
@@ -1185,8 +1184,6 @@ class Telegram(
     fun isOfficial(chat: ChatState): Boolean =
         chat.supergroupId != 0L && officialSupergroups[chat.supergroupId] == true ||
             System.getProperty("pixelgram.demo") == "true" && chat.id == DemoOfficialChat
-
-    fun isDeveloper(chat: ChatState): Boolean = chat.privateUserId in DeveloperIds
 
     fun avatarKind(chat: ChatState): AvatarKind = when {
         chat.privateUserId != 0L -> if (isBot(chat)) AvatarKind.Bot else AvatarKind.Private
