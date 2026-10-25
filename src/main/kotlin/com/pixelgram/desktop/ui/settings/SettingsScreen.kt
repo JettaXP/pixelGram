@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
+import com.pixelgram.desktop.ui.icons.outlined.RestartAlt
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.pixelgram.desktop.ui.components.expressive.BasicAlertDialog
@@ -668,7 +669,10 @@ private fun AppearanceSection(settings: AppSettings) {
 
     Header("Select a color")
     Description("Slide to pick any hue, or use one of the presets below.")
-    HueSlider(settings)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f)) { HueSlider(settings) }
+        ResetButton(settings.seedColor)
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 8.dp)) {
         SeedColors.forEach { seed ->
             val selected = settings.seedColor.value == seed
@@ -785,6 +789,7 @@ private fun AppearanceSection(settings: AppSettings) {
             modifier = Modifier.weight(1f),
         )
         Text("${settings.capsuleSpacing.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+        ResetButton(settings.capsuleSpacing)
     }
     Text("Height", style = MaterialTheme.typography.bodyLarge)
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -796,6 +801,7 @@ private fun AppearanceSection(settings: AppSettings) {
             modifier = Modifier.weight(1f),
         )
         Text("${settings.capsuleHeight.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+        ResetButton(settings.capsuleHeight)
     }
 }
 
@@ -935,6 +941,7 @@ private fun AvatarsSection(settings: AppSettings) {
             modifier = Modifier.weight(1f),
         )
         Text("$corner%", modifier = Modifier.width(56.dp).padding(start = 12.dp))
+        ResetButton(settings.avatarCorner)
     }
 }
 
@@ -969,6 +976,7 @@ private fun BubblesSection(settings: AppSettings) {
             modifier = Modifier.weight(1f),
         )
         Text("${settings.bubbleRadius.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+        ResetButton(settings.bubbleRadius)
     }
 
     Header("Tail corner")
@@ -982,6 +990,7 @@ private fun BubblesSection(settings: AppSettings) {
             modifier = Modifier.weight(1f),
         )
         Text("${settings.bubbleTailRadius.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+        ResetButton(settings.bubbleTailRadius)
     }
 }
 
@@ -1029,6 +1038,13 @@ private fun CornersSection(settings: AppSettings) {
 }
 
 @Composable
+private fun ResetButton(setting: com.pixelgram.desktop.core.Setting<Int>) {
+    IconButton(onClick = { setting.reset() }, enabled = setting.value != setting.default) {
+        Icon(Icons.Outlined.RestartAlt, contentDescription = "Reset to default")
+    }
+}
+
+@Composable
 private fun CornerSlider(title: String, description: String, setting: com.pixelgram.desktop.core.Setting<Int>, range: IntRange) {
     Header(title)
     Description(description)
@@ -1040,6 +1056,7 @@ private fun CornerSlider(title: String, description: String, setting: com.pixelg
             modifier = Modifier.weight(1f),
         )
         Text("${setting.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+        ResetButton(setting)
     }
 }
 
@@ -1153,6 +1170,7 @@ private fun WallpaperSettings(settings: AppSettings) {
                 modifier = Modifier.weight(1f),
             )
             Text("${settings.wallpaperDim.value}%", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+            ResetButton(settings.wallpaperDim)
         }
     }
     SwitchRow(
@@ -1215,6 +1233,7 @@ private fun MessageFontSettings(settings: AppSettings) {
             modifier = Modifier.weight(1f),
         )
         Text("${settings.messageFontSize.value} sp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+        ResetButton(settings.messageFontSize)
     }
     if (choosing) FontPickerDialog(settings) { choosing = false }
 }
@@ -1409,6 +1428,30 @@ private fun AboutSection(telegram: Telegram, settings: AppSettings, onOpenChat: 
     }
     Reveal(status != null) {
         Text(status.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+    }
+
+    Header("Reset")
+    var confirmReset by remember { mutableStateOf(false) }
+    SegmentedGroup {
+        LinkItem(0, 1, Icons.Outlined.RestartAlt, "Reset all settings", "Theme, colors, folders, corners, fonts and everything else in pixelGram", trailing = false) {
+            confirmReset = true
+        }
+    }
+    if (confirmReset) {
+        AlertDialog(
+            onDismissRequest = { confirmReset = false },
+            icon = { Icon(Icons.Outlined.RestartAlt, contentDescription = null) },
+            title = { Text("Reset all settings?") },
+            text = { Text("Every pixelGram setting goes back to its default. Your accounts, chats and passcode stay.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    settings.resetAll()
+                    confirmReset = false
+                    status = "All settings were reset."
+                }) { Text("Reset", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Cancel") } },
+        )
     }
 
     Header("Updates")

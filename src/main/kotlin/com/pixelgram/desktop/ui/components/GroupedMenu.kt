@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.components
 
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -53,19 +55,35 @@ fun MenuGroups(
     }
     shown.forEachIndexed { groupIndex, entries ->
         if (groupIndex + offset > 0) Spacer(Modifier.height(MenuDefaults.GroupSpacing))
-        DropdownMenuGroup(shapes = MenuDefaults.groupShape(groupIndex + offset, total), modifier = Modifier.width(width)) {
+        DropdownMenuGroup(
+            shapes = MenuDefaults.groupShape(groupIndex + offset, total),
+            modifier = Modifier.width(width),
+            containerColor = Color.Transparent,
+            shadowElevation = 0.dp,
+            tonalElevation = 0.dp,
+            contentPadding = PaddingValues(0.dp),
+        ) {
             entries.forEachIndexed { index, entry ->
+                if (index > 0) Spacer(Modifier.height(ItemGap))
                 val tint = if (entry.color == Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else entry.color
-                DropdownMenuItem(
-                    onClick = entry.onClick,
-                    text = { Text(entry.label, color = entry.color) },
-                    shape = MenuDefaults.itemShape(index, entries.size).shape,
-                    leadingIcon = entry.icon?.let { icon -> { Icon(icon, contentDescription = null, tint = tint) } },
-                    trailingIcon = entry.trailing?.let { icon -> { Icon(icon, contentDescription = null, tint = tint) } },
-                )
+                Surface(
+                    shape = groupShapes(index, entries.size).shape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shadowElevation = ItemShadow,
+                ) {
+                    DropdownMenuItem(
+                        onClick = entry.onClick,
+                        text = { Text(entry.label, color = entry.color) },
+                        shape = groupShapes(index, entries.size).shape,
+                        leadingIcon = entry.icon?.let { icon -> { Icon(icon, contentDescription = null, tint = tint) } },
+                        trailingIcon = entry.trailing?.let { icon -> { Icon(icon, contentDescription = null, tint = tint) } },
+                    )
+                }
             }
         }
     }
 }
 
+private val ItemGap = 2.dp
+private val ItemShadow = 2.dp
 private val MenuWidth = 260.dp

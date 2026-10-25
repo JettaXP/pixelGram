@@ -27,8 +27,13 @@ class Setting<T>(
     private val owner: AppSettings,
     val key: String,
     initial: T,
+    val default: T = initial,
 ) {
     private val state: MutableState<T> = mutableStateOf(initial)
+
+    fun reset() {
+        value = default
+    }
 
     var value: T
         get() = state.value
@@ -54,18 +59,18 @@ class Setting<T>(
 
 class AppSettings private constructor(private val props: Properties) {
     private fun string(key: String, default: String) =
-        Setting(this, key, props.getProperty(key) ?: default)
+        Setting(this, key, props.getProperty(key) ?: default, default)
 
     private fun int(key: String, default: Int) =
-        Setting(this, key, props.getProperty(key)?.toIntOrNull() ?: default)
+        Setting(this, key, props.getProperty(key)?.toIntOrNull() ?: default, default)
 
     private fun bool(key: String, default: Boolean) =
-        Setting(this, key, props.getProperty(key)?.toBooleanStrictOrNull() ?: default)
+        Setting(this, key, props.getProperty(key)?.toBooleanStrictOrNull() ?: default, default)
 
     private inline fun <reified E : Enum<E>> enum(key: String, default: E) =
         Setting(this, key, props.getProperty(key)?.let { name ->
             enumValues<E>().firstOrNull { it.name == name }
-        } ?: default)
+        } ?: default, default)
 
     val themeMode = enum("themeMode", ThemeMode.System)
     val seedColor = int("seedColor", 0xFF6750A4.toInt())
@@ -164,6 +169,11 @@ class AppSettings private constructor(private val props: Properties) {
     ) + avatarKindShapes.values
 
     private val localOnly = setOf(apiId, apiHash, accounts, activeAccount, outputDevice, inputDevice, cameraDevice)
+
+    fun resetAll() {
+        val keep = localOnly + setOf(passcodeHash, passcodeSalt, autoLockMinutes, deviceName)
+        all.filter { it !in keep }.forEach { it.reset() }
+    }
 
     fun snapshot(): Properties = Properties().apply {
         for (setting in all) {
