@@ -65,6 +65,7 @@ fun PhoneText(
     }
     val text = if (phone.startsWith("+")) phone else "+$phone"
     val tint = if (color != Color.Unspecified) color else style.color.takeIf { it != Color.Unspecified } ?: LocalContentColor.current
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr) {
     AnimatedContent(
         targetState = hidden && !peek,
         transitionSpec = { (fadeIn() + scaleIn(initialScale = 0.9f)) togetherWith fadeOut() },
@@ -92,6 +93,7 @@ fun PhoneText(
                 }
             }
         }
+    }
     }
 }
 

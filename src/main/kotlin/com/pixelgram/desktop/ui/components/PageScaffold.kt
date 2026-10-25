@@ -107,7 +107,7 @@ fun InfoGroup(rows: List<InfoRow>) {
         rows.forEachIndexed { index, row ->
             var menuAt by remember { mutableStateOf<DpOffset?>(null) }
             val density = LocalDensity.current
-            val copy = { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(row.value.replace("\u200E", "")), null) }
+            val copy = { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(row.value), null) }
             Box(
                 Modifier.pointerInput(row) {
                     awaitPointerEventScope {

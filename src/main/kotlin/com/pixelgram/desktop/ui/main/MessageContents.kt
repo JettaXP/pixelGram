@@ -510,7 +510,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
             FileRow(
                 Icons.Filled.Person,
                 listOf(contact.firstName, contact.lastName).filter { it.isNotBlank() }.joinToString(" "),
-                contact.phoneNumber.let { if (it.startsWith("+")) it else "\u200E+$it" },
+                contact.phoneNumber.let { if (it.startsWith("+")) it else "+$it" },
                 false,
             ) {}
         }

@@ -330,7 +330,7 @@ fun ChatInfoDialog(
                             )
                         )
                     }
-                    user?.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "\u200E+$it")) }
+                    user?.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it")) }
                     if (bio.isNotBlank()) {
                         add(
                             InfoRow(

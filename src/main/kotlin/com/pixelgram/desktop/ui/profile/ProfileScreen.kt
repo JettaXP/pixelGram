@@ -129,7 +129,7 @@ fun ProfileScreen(
         val rows = buildList {
             add(InfoRow(Icons.Outlined.Person, "Name", name, onEdit = { editing = ProfileField.Name }))
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
-                add(InfoRow(Icons.Outlined.Phone, "Phone", "\u200E+$it", phone = true))
+                add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it", phone = true))
             }
             add(
                 InfoRow(

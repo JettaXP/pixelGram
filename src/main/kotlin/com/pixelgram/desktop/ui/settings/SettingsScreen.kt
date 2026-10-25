@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.settings
 
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.focus.focusRequester
+import com.pixelgram.desktop.ui.icons.outlined.Edit
 import com.pixelgram.desktop.ui.icons.outlined.RestartAlt
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -193,6 +196,41 @@ private val QrAvatarSize = 80.dp
 private const val DisabledAlpha = 0.38f
 
 private const val PixelPreferencesTitle = "pixelGram Preferences"
+private const val HighlightHoldMs = 2_500L
+private val SettingsMenuWidth = 220.dp
+
+private fun searchSettings(raw: String): List<Pair<Section, String?>> {
+    val query = raw.trim()
+    if (query.isEmpty()) return emptyList()
+    fun matches(text: String) = text.contains(query, ignoreCase = true) || com.pixelgram.desktop.core.tr(text).contains(query, ignoreCase = true)
+    val sections = Section.entries.filter { matches(it.title) }.map { it to null as String? }
+    val items = SettingsIndex.mapNotNull { (name, title) ->
+        val target = Section.entries.firstOrNull { it.name == name } ?: return@mapNotNull null
+        if (matches(title)) target to title else null
+    }
+    return (sections + items).distinct().take(SearchLimit)
+}
+
+private const val SearchLimit = 40
+
+@Composable
+private fun SearchResultRow(index: Int, count: Int, target: Section, title: String?, onClick: () -> Unit) {
+    val path = buildList {
+        add(com.pixelgram.desktop.core.tr("Settings"))
+        if (target.pixel) add(com.pixelgram.desktop.core.tr(PixelPreferencesTitle))
+        if (title != null) add(com.pixelgram.desktop.core.tr(target.title))
+    }.joinToString(" › ")
+    androidx.compose.material3.SegmentedListItem(
+        onClick = onClick,
+        shapes = com.pixelgram.desktop.ui.components.groupShapes(index, count),
+        leadingContent = { Icon(target.icon, contentDescription = null) },
+        supportingContent = {
+            androidx.compose.material3.Text(path, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        },
+    ) {
+        Text(title ?: target.title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    }
+}
 private const val ChannelUsername = "pixelgramclient"
 private const val ChannelUrl = "https://t.me/$ChannelUsername"
 private const val GitHubUrl = "https://github.com/JettaXP/pixelGram"
@@ -217,6 +255,20 @@ fun SettingsScreen(
     var searching by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var menuOpen by remember { mutableStateOf(false) }
+    var highlight by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(highlight) {
+        if (highlight != null) {
+            kotlinx.coroutines.delay(HighlightHoldMs)
+            highlight = null
+        }
+    }
+    val openResult = { target: Section, title: String? ->
+        inPreferences = target.pixel
+        section = target
+        highlight = title
+        searching = false
+        query = ""
+    }
     OnEscape {
         if (searching) {
             searching = false
@@ -276,14 +328,27 @@ fun SettingsScreen(
                             IconButton(onClick = { menuOpen = true }) {
                                 Icon(Icons.Filled.MoreVert, contentDescription = "More")
                             }
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("Log out") },
-                                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null) },
-                                    onClick = {
-                                        menuOpen = false
-                                        telegram.logOut()
-                                    },
+                            com.pixelgram.desktop.ui.components.GroupedMenu(expanded = menuOpen, onDismiss = { menuOpen = false }) {
+                                com.pixelgram.desktop.ui.components.MenuGroups(
+                                    listOf(
+                                        listOf(
+                                            com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Edit, "Edit profile") {
+                                                menuOpen = false
+                                                onOpenProfile()
+                                            },
+                                        ),
+                                        listOf(
+                                            com.pixelgram.desktop.ui.components.MenuEntry(
+                                                Icons.AutoMirrored.Outlined.Logout,
+                                                "Log out",
+                                                MaterialTheme.colorScheme.error,
+                                            ) {
+                                                menuOpen = false
+                                                telegram.logOut()
+                                            },
+                                        ),
+                                    ),
+                                    width = SettingsMenuWidth,
                                 )
                             }
                         }
@@ -314,6 +379,13 @@ fun SettingsScreen(
                         }
                     }
                 } else {
+                    val searchFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+                    LaunchedEffect(searching) {
+                        if (searching) {
+                            withFrameNanos { }
+                            runCatching { searchFocus.requestFocus() }
+                        }
+                    }
                     Reveal(searching) {
                         OutlinedTextField(
                             value = query,
@@ -321,11 +393,20 @@ fun SettingsScreen(
                             onValueChange = { query = it },
                             label = { Text("Search settings") },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).focusRequester(searchFocus),
                         )
                     }
-                    val items = Section.entries.filter {
-                        !it.pixel && (query.isBlank() || it.title.contains(query.trim(), ignoreCase = true))
+                    val items = if (query.isBlank()) Section.entries.filter { !it.pixel } else emptyList()
+                    val results = remember(query, com.pixelgram.desktop.core.I18n.code) { searchSettings(query) }
+                    if (query.isNotBlank()) {
+                        if (results.isEmpty()) {
+                            Text("No results", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(8.dp))
+                        }
+                        SegmentedGroup {
+                            results.forEachIndexed { index, (target, title) ->
+                                SearchResultRow(index, results.size, target, title) { openResult(target, title) }
+                            }
+                        }
                     }
                     Reveal(query.isBlank()) {
                         Column {
@@ -390,6 +471,7 @@ fun SettingsScreen(
                     }
                     Text(shown.title, style = MaterialTheme.typography.headlineSmall)
                     Spacer(Modifier.height(8.dp))
+                    androidx.compose.runtime.CompositionLocalProvider(com.pixelgram.desktop.ui.components.LocalHighlightText provides highlight) {
                     when (shown) {
                         Section.Appearance -> AppearanceSection(settings)
                         Section.Avatars -> AvatarsSection(settings)
@@ -408,6 +490,7 @@ fun SettingsScreen(
                         Section.Notifications -> NotificationsSection(settings)
                         Section.Battery -> BatterySection(settings)
                         Section.SpeakersCamera -> DevicesSection(settings)
+                    }
                     }
                 }
                 }
@@ -1068,7 +1151,7 @@ private fun AccountSection(telegram: Telegram, onOpenProfile: () -> Unit) {
     val me = telegram.me
     if (me != null) {
         InfoGroup(buildList {
-            me.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "\u200E+$it", phone = true)) }
+            me.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it", phone = true)) }
             me.usernames?.activeUsernames?.firstOrNull()?.let {
                 add(InfoRow(Icons.Outlined.AlternateEmail, "Username", "@$it"))
             }
