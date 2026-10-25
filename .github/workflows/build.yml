@@ -231,3 +231,48 @@ jobs:
           sha256sum * > SHA256SUMS-windows.txt
           gh release upload "$RELEASE_TAG" * --repo "$GITHUB_REPOSITORY" --clobber
           if [ -n "$VERSIONED" ]; then gh release upload "$VERSIONED" * --repo "$GITHUB_REPOSITORY" --clobber; fi
+
+  macos:
+    name: macOS (Apple Silicon)
+    needs: [prepare]
+    if: ${{ !failure() && !cancelled() }}
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require Apple Silicon.
+        run: test "$(uname -m)" = arm64
+
+      - name: Version.
+        run: echo "APP_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' build.gradle.kts)" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Info.plist usage strings, the tg:// scheme and ad-hoc signing are
+      # applied by the createDistributable hook in build.gradle.kts.
+      - name: Build.
+        run: ./gradlew --no-daemon packageDmg
+
+      - name: Collect files.
+        run: |
+          mkdir dist
+          dmg=$(find build/compose/binaries/main/dmg -name '*.dmg' | head -1)
+          test -n "$dmg"
+          cp "$dmg" "dist/pixelGram-$APP_VERSION-macos-arm64.dmg"
+          ls -la dist
+
+      - name: Upload to release.
+        if: env.PUBLISH == 'true'
+        env:
+          VERSIONED: ${{ needs.prepare.outputs.versioned }}
+        run: |
+          cd dist
+          shasum -a 256 * > SHA256SUMS-macos.txt
+          gh release upload "$RELEASE_TAG" * --repo "$GITHUB_REPOSITORY" --clobber
+          if [ -n "$VERSIONED" ]; then gh release upload "$VERSIONED" * --repo "$GITHUB_REPOSITORY" --clobber; fi

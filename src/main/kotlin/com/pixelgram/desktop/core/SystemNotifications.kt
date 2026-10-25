@@ -7,7 +7,9 @@ import java.io.File
 
 object SystemNotifications {
     private val notifySend: Boolean by lazy { onPath("notify-send") }
-    val available: Boolean by lazy { AppPaths.isLinux && (notifySend || onPath("gdbus")) }
+    private val linuxAvailable: Boolean by lazy { AppPaths.isLinux && (notifySend || onPath("gdbus")) }
+    val available: Boolean
+        get() = if (AppPaths.isMac) MacNotifications.available else linuxAvailable
 
     private fun onPath(name: String) = System.getenv("PATH").orEmpty().split(File.pathSeparator)
         .any { File(it, name).canExecute() }
@@ -15,13 +17,22 @@ object SystemNotifications {
     @Volatile
     private var appIcon: String? = null
 
+    fun prepare() {
+        if (AppPaths.isMac) MacNotifications.prepare()
+    }
+
     fun updateIcon(scheme: ColorScheme) {
+        if (AppPaths.isMac) return
         val file = File(AppPaths.configDir, "pixelgram-icon.png")
         AppIcons.writeTo(file, scheme)
         appIcon = file.absolutePath.takeIf { file.isFile }
     }
 
     fun show(title: String, body: String, icon: String?, onClick: () -> Unit) {
+        if (AppPaths.isMac) {
+            MacNotifications.show(title, body, onClick)
+            return
+        }
         Thread {
             runCatching {
                 if (!notifySend) {

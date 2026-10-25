@@ -109,6 +109,8 @@ object Updater {
             "pixelGram-$version-x86_64.AppImage",
             "pixelgram-$version-1-x86_64.pkg.tar.zst",
             "pixelGram-$version-linux-x86_64.tar.gz",
+            "pixelGram-$version-macos-arm64.dmg",
+            "pixelGram-$version-macos-aarch64.dmg",
         )
         val assets = names.map { UpdateAsset(it, "https://github.com/$Repository/releases/download/v$version/$it", 0L) }
         val asset = pickAsset(assets) ?: return UpdateState.Unavailable
@@ -137,6 +139,7 @@ object Updater {
         return when {
             AppPaths.isWindows && AppPaths.isPortable -> find { it.endsWith("portable.zip") }
             AppPaths.isWindows -> find { it.endsWith(".msi") }
+            AppPaths.isMac -> find { it.endsWith(".dmg") }
             System.getenv("APPIMAGE") != null -> find { it.endsWith(".appimage") }
             isPacmanInstall() -> find { it.endsWith(".pkg.tar.zst") }
             AppPaths.isLinux -> find { it.endsWith(".tar.gz") }
@@ -232,6 +235,12 @@ object Updater {
     fun install(beforeExit: () -> Unit) {
         val ready = state as? UpdateState.Ready ?: return
         val file = ready.file
+        if (file.name.endsWith(".dmg")) {
+            runCatching { ProcessBuilder("open", file.absolutePath).start() }
+                .onSuccess { state = UpdateState.Ready(file, "Drag pixelGram into Applications to finish.") }
+                .onFailure { state = UpdateState.Failed(it.message ?: "Could not open the disk image") }
+            return
+        }
         runCatching {
             when {
                 file.name.endsWith(".msi") -> {

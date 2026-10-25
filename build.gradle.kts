@@ -110,6 +110,18 @@ val installerVersion: String = run {
     if (build == null) base else base.substringBeforeLast('.') + "." + build
 }
 
+val macSigningIdentity: String? = providers.environmentVariable("CODESIGN_IDENTITY").orNull?.takeIf { it.isNotBlank() }
+    ?: providers.gradleProperty("pixelgram.macSigningIdentity").orNull?.takeIf { it.isNotBlank() }
+
+// jpackage on macOS rejects a bundle version whose major component is zero.
+val nativePackageVersion: String = run {
+    val isMac = System.getProperty("os.name").lowercase().contains("mac")
+    if (!isMac) return@run installerVersion
+    val parts = installerVersion.split('.')
+    if ((parts.firstOrNull()?.toIntOrNull() ?: 1) > 0) installerVersion else "1" + installerVersion.substringAfter('.', "")
+        .let { if (it.isEmpty()) "" else ".$it" }
+}
+
 compose.desktop {
     application {
         mainClass = "com.pixelgram.desktop.MainKt"
@@ -121,9 +133,9 @@ compose.desktop {
         )
 
         nativeDistributions {
-            targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.Msi, TargetFormat.Exe)
+            targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Dmg)
             packageName = "pixelGram"
-            packageVersion = installerVersion
+            packageVersion = nativePackageVersion
             description = "pixelGram - Telegram client with Material 3"
             vendor = "jettax"
             licenseFile.set(project.file("LICENSE"))
@@ -143,6 +155,12 @@ compose.desktop {
                 dirChooser = true
                 upgradeUuid = "2E4E866B-6267-4C9C-8209-97D2256C270A"
             }
+            macOS {
+                bundleID = "com.pixelgram.desktop"
+                dockName = "pixelGram"
+                iconFile.set(project.file("packaging/icons/pixelgram.icns"))
+                appCategory = "public.app-category.social-networking"
+            }
         }
     }
 }
@@ -151,4 +169,64 @@ tasks.withType<JavaExec>().configureEach {
     System.getProperties()
         .filterKeys { it.toString().startsWith("pixelgram.") }
         .forEach { (key, value) -> systemProperty(key.toString(), value) }
+}
+
+// jpackage has no option for usage descriptions or URL types, so the macOS app
+// bundle metadata is patched after imaging and signed ad hoc afterwards.
+if (System.getProperty("os.name").lowercase().contains("mac")) {
+    tasks.matching { it.name == "createDistributable" }.configureEach {
+        inputs.property("pixelgram.macSigningIdentity", macSigningIdentity ?: "-")
+        doLast {
+            val app = layout.buildDirectory.dir("compose/binaries/main/app/pixelGram.app").get().asFile
+            check(app.isDirectory) { "Missing macOS app image at ${app.absolutePath}" }
+            val plist = File(app, "Contents/Info.plist")
+            check(plist.isFile) { "Missing Info.plist at ${plist.absolutePath}" }
+
+            fun plist(vararg arguments: String): Boolean {
+                val command = mutableListOf("/usr/libexec/PlistBuddy")
+                arguments.forEach { command += listOf("-c", it) }
+                command += plist.absolutePath
+                val process = ProcessBuilder(command).redirectErrorStream(true).start()
+                val output = process.inputStream.bufferedReader().readText().trim()
+                val ok = process.waitFor() == 0
+                if (!ok && output.isNotEmpty()) logger.lifecycle("PlistBuddy: $output")
+                return ok
+            }
+
+            fun setString(key: String, value: String) {
+                plist("Delete :$key")
+                check(plist("Add :$key string '$value'")) { "Could not set $key" }
+            }
+
+            setString("CFBundleDisplayName", "pixelGram")
+            setString("CFBundleShortVersionString", project.version.toString())
+            setString("LSMinimumSystemVersion", "11.0")
+            setString("NSHumanReadableCopyright", "GPLv3, JettaXP")
+            setString("NSMicrophoneUsageDescription", "pixelGram records voice messages and calls.")
+            setString("NSCameraUsageDescription", "pixelGram takes photos and makes video calls.")
+            setString("LSApplicationCategoryType", "public.app-category.social-networking")
+            plist("Delete :NSHighResolutionCapable")
+            check(plist("Add :NSHighResolutionCapable bool true")) { "Could not enable high resolution" }
+
+            plist("Delete :CFBundleURLTypes")
+            check(plist("Add :CFBundleURLTypes array")) { "Could not add CFBundleURLTypes" }
+            check(plist("Add :CFBundleURLTypes:0 dict")) { "Could not add URL type" }
+            check(plist("Add :CFBundleURLTypes:0:CFBundleURLName string 'com.pixelgram.desktop'")) { "Could not add URL name" }
+            check(plist("Add :CFBundleURLTypes:0:CFBundleRole string 'Viewer'")) { "Could not add URL role" }
+            check(plist("Add :CFBundleURLTypes:0:CFBundleURLSchemes array")) { "Could not add URL schemes" }
+            check(plist("Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string 'tg'")) { "Could not add tg scheme" }
+
+            val identity = macSigningIdentity ?: "-"
+            val command = mutableListOf("codesign", "--force", "--deep", "--sign", identity)
+            if (identity == "-") command += "--timestamp=none"
+            command += app.absolutePath
+            val sign = ProcessBuilder(command).redirectErrorStream(true).start()
+            val signOutput = sign.inputStream.bufferedReader().readText().trim()
+            check(sign.waitFor() == 0) { "Code signing failed: $signOutput" }
+            logger.lifecycle(
+                if (identity == "-") "Patched and ad-hoc signed ${app.name}"
+                else "Patched and signed ${app.name} with $identity",
+            )
+        }
+    }
 }

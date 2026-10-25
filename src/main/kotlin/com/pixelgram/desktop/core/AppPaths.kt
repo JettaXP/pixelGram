@@ -16,11 +16,18 @@ object AppPaths {
         when {
             launcher == null -> null
             isWindows -> launcher.parentFile
+            isMac -> generateSequence(launcher.parentFile) { it.parentFile }
+                .firstOrNull { it.name.endsWith(".app") }
+                ?: launcher.parentFile?.parentFile
             else -> launcher.parentFile?.parentFile
         }
     }
 
+    /** True when the JVM runs from a macOS application bundle (needed by native APIs). */
+    val isMacBundle: Boolean get() = isMac && appDir?.name?.endsWith(".app") == true
+
     val portableDir: File? by lazy {
+        if (isMac) return@lazy null
         appDir?.let { File(it, "pixelgram-data") }?.takeIf { it.isDirectory }
     }
 
@@ -38,6 +45,7 @@ object AppPaths {
     }
 
     val configDir: File by lazy {
+        if (isMac) return@lazy File(dataDir, "config").apply { mkdirs() }
         val base = System.getenv("XDG_CONFIG_HOME")?.takeIf { it.isNotBlank() }?.let(::File)
             ?: File(home, ".config")
         File(base, "pixelgram").apply { mkdirs() }

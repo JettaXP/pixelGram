@@ -63,6 +63,10 @@ object AppIcons {
     }
 
     fun installForSystem(scheme: ColorScheme) {
+        if (AppPaths.isMac) {
+            com.pixelgram.desktop.core.MacSystem.setDockIcon(themed(scheme))
+            return
+        }
         if (AppPaths.isWindows) installForWindows(scheme)
         if (!AppPaths.isLinux) return
         val image = themed(scheme) ?: return

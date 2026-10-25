@@ -12,6 +12,8 @@ object UrlScheme {
                 when {
                     AppPaths.isWindows -> registerWindows()
                     AppPaths.isLinux -> registerLinux()
+                    // macOS uses the CFBundleURLTypes entry added to Info.plist at build time.
+                    AppPaths.isMac -> Unit
                 }
             }.onFailure { AppLog.write("tg:// registration failed", it) }
         }.apply { isDaemon = true }.start()

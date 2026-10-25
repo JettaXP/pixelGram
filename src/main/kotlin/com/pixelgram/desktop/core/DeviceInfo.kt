@@ -27,6 +27,12 @@ object DeviceInfo {
         AppPaths.isLinux -> listOf("board_name", "product_name")
             .map { File("/sys/devices/virtual/dmi/id/$it") }
             .firstNotNullOfOrNull { file -> file.takeIf { it.canRead() }?.readText()?.trim()?.takeIf { it.lowercase() !in Junk } }
+        AppPaths.isMac -> {
+            val process = ProcessBuilder("sysctl", "-n", "hw.model").redirectErrorStream(true).start()
+            val output = process.inputStream.bufferedReader().use { it.readText() }
+            process.waitFor(ReadTimeoutSeconds, TimeUnit.SECONDS)
+            output.trim().takeIf { it.isNotEmpty() && it.lowercase() !in Junk }
+        }
         else -> null
     }
 }

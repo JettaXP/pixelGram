@@ -72,6 +72,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
+import com.pixelgram.desktop.core.MacSystem
 import com.pixelgram.desktop.core.NotificationStyle
 import com.pixelgram.desktop.core.Sounds
 import com.pixelgram.desktop.core.SystemNotifications
@@ -112,6 +113,10 @@ import kotlinx.coroutines.MainScope
 @OptIn(ExperimentalComposeUiApi::class)
 fun main(args: Array<String>) {
     System.setProperty("sun.awt.noerasebackground", "true")
+    if (AppPaths.isMac) {
+        System.setProperty("apple.awt.application.name", "pixelGram")
+        System.setProperty("apple.laf.useScreenMenuBar", "true")
+    }
     val link = args.firstOrNull { Links.isTelegram(it) }
     when (SingleInstance.acquire(link)) {
         InstanceState.Primary -> Unit
@@ -129,6 +134,13 @@ fun main(args: Array<String>) {
     link?.let { Links.pending = it }
     SingleInstance.onOpen = { Links.pending = it }
     UrlScheme.register()
+    if (AppPaths.isMac) {
+        MacSystem.openLink = { url ->
+            SingleInstance.onOpen?.invoke(url)
+            MacSystem.openWindow?.invoke()
+        }
+        MacSystem.install()
+    }
     application {
         CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides CrashHandler) {
             PixelApp()
@@ -156,6 +168,7 @@ private fun ApplicationScope.PixelApp() {
         }
         if (settings.checkUpdates.value) Updater.check()
         if (settings.wallpaperColors.value) com.pixelgram.desktop.ui.main.Wallpapers.applyColors(settings)
+        if (settings.notificationStyle.value == NotificationStyle.System) SystemNotifications.prepare()
         accounts.start()
         if (System.getProperty("pixelgram.demo") == "true") accounts.active.loadDemo()
     }
@@ -185,6 +198,17 @@ private fun ApplicationScope.PixelApp() {
 
     val toasts = remember { ToastStack() }
     var raise by remember { mutableIntStateOf(0) }
+    DisposableEffect(Unit) {
+        MacSystem.quit = quit
+        MacSystem.openWindow = {
+            visible = true
+            raise++
+        }
+        onDispose {
+            MacSystem.quit = null
+            MacSystem.openWindow = null
+        }
+    }
     val openFromNotification = { card: ToastData ->
         visible = true
         raise++
@@ -373,6 +397,14 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
         }
     }
     val ready = telegram.authState == AuthState.Ready || devScreen != null
+    DisposableEffect(ready) {
+        MacSystem.openSettings = if (ready) {
+            { if (screen !is Screen.Settings) navigate(Screen.Settings()) }
+        } else {
+            null
+        }
+        onDispose { MacSystem.openSettings = null }
+    }
     AppLock.start(settings)
     LaunchedEffect(Unit) {
         while (true) {

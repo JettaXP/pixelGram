@@ -39,6 +39,7 @@ Channel: [@pixelgramclient](https://t.me/pixelgramclient)
 - **Windows:** run the `.msi` installer or unpack the portable `.zip`
 - **Any Linux (AppImage):** `chmod +x pixelGram-x86_64.AppImage && ./pixelGram-x86_64.AppImage`
 - **Any Linux (archive):** unpack `pixelGram-linux-x86_64.tar.gz` and run `pixelGram/bin/pixelGram`
+- **macOS (Apple Silicon):** open `pixelGram-macos-arm64.dmg` and drag pixelGram to Applications
 - Sign in by phone, code, two-step password or QR code
 
 ## Building
@@ -49,6 +50,7 @@ Requirements: JDK 21.
 ./gradlew run                    # run from sources
 ./gradlew createDistributable    # Linux app folder (Arch package: packaging/arch)
 ./gradlew packageMsi             # Windows .msi
+./gradlew packageDmg             # macOS .dmg (Apple Silicon)
 ./gradlew createDistributable    # portable folder in build/compose/binaries
 ```
 
@@ -58,6 +60,26 @@ time with `TELEGRAM_API_ID` / `TELEGRAM_API_HASH` environment variables or the
 asks for them on first launch.
 
 On Linux the TDLib native library needs OpenSSL 3 (any current distribution).
+
+### macOS
+
+The macOS build uses the same Compose Multiplatform sources and the same
+Material 3 Expressive UI as the Linux and Windows builds. TDLib is shipped as the
+official `macos_arm64` native library, so Apple Silicon is required.
+
+The app bundle is ad hoc signed and carries microphone/camera usage strings,
+`tg://` URL registration and a notification bridge. Downloaded builds are not
+notarized; if Gatekeeper blocks the first launch, open the app from the context
+menu or run `xattr -dr com.apple.quarantine /Applications/pixelGram.app`.
+
+Set `CODESIGN_IDENTITY` (or `-Ppixelgram.macSigningIdentity`) to a Developer ID
+Application identity to sign a release build instead of using the ad hoc
+signature. macOS may withhold notification authorization from ad hoc builds;
+pixelGram then falls back to its in-app notification style.
+
+The bundle metadata (usage descriptions, URL scheme, high-DPI flag) is applied
+after `jpackage` in `build.gradle.kts`. macOS does not need matugen: dynamic
+colors from the system are not part of the design.
 
 ## Material You with matugen (Linux)
 
