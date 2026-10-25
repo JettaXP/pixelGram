@@ -52,6 +52,8 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
+import com.pixelgram.desktop.core.AppLog
+import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.WindowsCorners
 import java.awt.Cursor
 import java.awt.Frame
@@ -59,8 +61,11 @@ import java.awt.MouseInfo
 import java.awt.Rectangle
 import java.awt.Toolkit
 import java.awt.Window
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
+import java.awt.geom.RoundRectangle2D
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -72,7 +77,39 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
 
     fun updateCorners() {
         (window as? ComposeWindow)?.let { WindowsCorners.apply(it.windowHandle, round = !maximized) }
+        updateShape()
     }
+
+    private var shapeReported = false
+
+    fun updateShape() {
+        if (!AppPaths.isMac) return
+        val frame = window as? Frame ?: return
+        if (!frame.isUndecorated || !frame.isDisplayable) return
+        runCatching {
+            val shape = if (maximized) {
+                null
+            } else {
+                val width = frame.width
+                val height = frame.height
+                if (width <= 0 || height <= 0) return@runCatching
+                RoundRectangle2D.Double(
+                    0.0,
+                    0.0,
+                    width.toDouble(),
+                    height.toDouble(),
+                    MacWindowCornerRadius * 2,
+                    MacWindowCornerRadius * 2,
+                )
+            }
+            frame.shape = shape
+            if (shape != null && !shapeReported) {
+                shapeReported = true
+                AppLog.write("macOS window shape applied: ${frame.width}x${frame.height}, radius $MacWindowCornerRadius")
+            }
+        }.onFailure { AppLog.write("macOS window shape failed", it) }
+    }
+
     private var restoreBounds: Rectangle? = null
     private var nativeRestore: Rectangle? = null
     private var job: Job? = null
@@ -163,6 +200,7 @@ private const val SwapOutMs = 70
 private const val SwapInMs = 140
 private const val SwapSettleMs = 40L
 private const val SwapOpacity = 0.15f
+private const val MacWindowCornerRadius = 10.0
 
 @Composable
 fun FrameWindowScope.rememberWindowChrome(): WindowChrome {
@@ -176,7 +214,16 @@ fun FrameWindowScope.rememberWindowChrome(): WindowChrome {
             override fun windowActivated(e: WindowEvent) = chrome.updateCorners()
         }
         window.addWindowListener(listener)
-        onDispose { window.removeWindowListener(listener) }
+        val componentListener = object : ComponentAdapter() {
+            override fun componentResized(e: ComponentEvent) = chrome.updateShape()
+            override fun componentShown(e: ComponentEvent) = chrome.updateShape()
+        }
+        window.addComponentListener(componentListener)
+        chrome.updateShape()
+        onDispose {
+            window.removeComponentListener(componentListener)
+            window.removeWindowListener(listener)
+        }
     }
     return chrome
 }

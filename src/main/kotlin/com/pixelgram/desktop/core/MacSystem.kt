@@ -3,8 +3,6 @@ package com.pixelgram.desktop.core
 import com.sun.jna.Pointer
 import java.awt.Desktop
 import java.awt.EventQueue
-import java.awt.Taskbar
-import java.awt.image.BufferedImage
 
 /** Hooks the app into the standard macOS application menu and dock. */
 object MacSystem {
@@ -56,17 +54,6 @@ object MacSystem {
             val application = MacObjC.send(MacObjC.cls("NSApplication"), "sharedApplication")
             MacObjC.sendVoid(application, "orderFrontStandardAboutPanel:", Pointer.NULL)
         }.onFailure { AppLog.write("About panel failed", it) }
-    }
-
-    fun setDockIcon(image: BufferedImage?) {
-        if (!AppPaths.isMac || image == null) return
-        EventQueue.invokeLater {
-            runCatching {
-                if (!Taskbar.isTaskbarSupported()) return@runCatching
-                val taskbar = Taskbar.getTaskbar()
-                if (taskbar.isSupported(Taskbar.Feature.ICON_IMAGE)) taskbar.setIconImage(image)
-            }.onFailure { AppLog.write("Dock icon update failed", it) }
-        }
     }
 
 }
