@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.34.0 Flower
+
+### Languages
+- pixelGram speaks Russian and Hebrew. Hebrew flips the whole interface right to left. Pick a language in Settings → Language, the other Telegram languages are listed and will come later.
+
+### Media
+- GIFs and videos play right inside messages without sound. A second click opens a viewer window with sound instead of a fullscreen one.
+- Autoplay for GIFs and videos can be turned off in Battery and Animations, then the first click plays inside the message.
+- Live wallpapers: pick a video as the chat wallpaper, and the theme colors come from its first frame.
+- Right click a GIF to save it to your GIFs.
+
+### Settings
+- Search finds single options in every section, shows where they live and jumps to them with a highlight.
+- The menu next to search has Edit profile and Log out.
+- Advanced has the window title options (chat name, account, unread count, system frame) and system integration: tray icon, monochrome tray icon, launch at login and launch minimized.
+
+### Fixes
+- Badges no longer shift when you click them.
+- Slider thumbs stay in place when you grab them.
+- Swipe to reply works only with a touchpad and is easier to trigger. Mouse drags no longer move messages.
+
 ## 0.33.0 Pill
 
 ### macOS
