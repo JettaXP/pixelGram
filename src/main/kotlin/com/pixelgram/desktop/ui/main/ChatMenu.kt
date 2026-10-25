@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.heightIn
 import com.pixelgram.desktop.ui.components.GroupedMenu
 import com.pixelgram.desktop.ui.components.MenuEntry
 import com.pixelgram.desktop.ui.components.MenuGroups
@@ -249,21 +252,32 @@ fun ChatInfoDialog(
     }
     mentioned?.let { other -> ChatInfoDialog(other, telegram, settings, onOpenChat) { mentioned = null } }
     BasicAlertDialog(onDismissRequest = onDismiss) {
-        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.widthIn(min = 360.dp, max = 460.dp)) {
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.widthIn(min = 360.dp, max = 460.dp).heightIn(max = DialogMaxHeight),
+        ) {
+          val scroll = rememberScrollState()
           Box {
             if (chat.privateUserId != 0L && Banners.banner(chat.privateUserId) != null) {
+                val bannerPx = with(LocalDensity.current) { DialogBannerHeight.toPx() }
                 ProfileBanner(
                     chat.privateUserId,
                     telegram,
                     DialogBannerHeight,
                     RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                     MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.graphicsLayer {
+                        val offset = scroll.value.toFloat()
+                        translationY = -offset * BannerParallax
+                        alpha = (1f - offset / bannerPx).coerceIn(0f, 1f)
+                    },
                 )
             }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
+                modifier = Modifier.verticalScroll(scroll).padding(24.dp),
             ) {
                 var photos by remember(chat.id) { mutableStateOf(false) }
                 Box(Modifier.clip(CircleShape).clickable(enabled = chat.privateUserId != 0L && chat.photo != null) { photos = true }) {
@@ -416,3 +430,5 @@ private val ActionCorner = 18.dp
 private val ActionPressedCorner = 32.dp
 
 private val DialogBannerHeight = 140.dp
+private val DialogMaxHeight = 640.dp
+private const val BannerParallax = 0.6f
