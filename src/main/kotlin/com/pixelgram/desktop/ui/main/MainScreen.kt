@@ -185,7 +185,7 @@ fun MainScreen(
 
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            val maxListWidth = (maxWidth - MinChatWidth - RailWidth).value.coerceAtLeast(CompactWidth.value)
+            val maxListWidth = minOf((maxWidth - MinChatWidth - RailWidth).value, maxWidth.value * MaxListShare).coerceAtLeast(CompactWidth.value)
             val compact = dragWidth < CompactThreshold.value
             val listWidth = if (compact) CompactWidth else dragWidth.coerceAtMost(maxListWidth).dp
             Row(Modifier.fillMaxSize()) {
@@ -718,3 +718,5 @@ private val CompactThreshold = 220.dp
 private val DividerWidth = 8.dp
 
 private const val SearchSlideDivisor = 12
+
+private const val MaxListShare = 0.45f

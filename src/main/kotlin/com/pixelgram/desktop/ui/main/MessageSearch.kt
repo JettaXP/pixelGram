@@ -68,6 +68,7 @@ object MessageSearch {
 fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long) -> Unit) {
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<TdApi.Message>>(emptyList()) }
+    var foundChats by remember { mutableStateOf<List<Long>>(emptyList()) }
     var total by remember { mutableStateOf(0) }
     var busy by remember { mutableStateOf(false) }
     val scope = MessageSearch.scopeChatId
@@ -76,11 +77,13 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
     LaunchedEffect(query, scope) {
         if (query.isBlank()) {
             results = emptyList()
+            foundChats = emptyList()
             total = 0
             busy = false
             return@LaunchedEffect
         }
         busy = true
+        if (scope == null) telegram.searchChats(query.trim()) { foundChats = it } else foundChats = emptyList()
         delay(SearchDelayMs)
         telegram.searchMessages(query.trim(), scope) { count, found ->
             total = count
@@ -155,6 +158,20 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
+                if (foundChats.isNotEmpty()) {
+                    item(key = "chats-header") { SearchSection("Chats") }
+                    itemsIndexed(foundChats, key = { _, id -> "chat:$id" }) { index, id ->
+                        val chat = telegram.chats[id] ?: return@itemsIndexed
+                        SegmentedListItem(
+                            onClick = { onOpen(id) },
+                            shapes = groupShapes(index, foundChats.size),
+                            leadingContent = { ChatAvatar(chat, telegram, settings, size = 44.dp) },
+                        ) {
+                            EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    if (results.isNotEmpty()) item(key = "messages-header") { SearchSection("Messages") }
+                }
                 itemsIndexed(results, key = { _, m -> "${m.chatId}:${m.id}" }) { index, message ->
                     val chat = telegram.chats[message.chatId] ?: return@itemsIndexed
                     val ui = message.toUiOrNull()
@@ -184,6 +201,16 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
             }
         }
     }
+}
+
+@Composable
+private fun SearchSection(title: String) {
+    Text(
+        title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 12.dp, top = 10.dp, bottom = 6.dp),
+    )
 }
 
 private fun TdApi.Message.toUiOrNull() = com.pixelgram.desktop.telegram.UiMessage(

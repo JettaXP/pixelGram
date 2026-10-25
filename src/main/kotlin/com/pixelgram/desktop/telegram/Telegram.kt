@@ -171,6 +171,7 @@ enum class MessageStatus { Sending, Sent, Read, Failed }
 private const val AUTH_TIMEOUT_MS = 30_000L
 private const val PinnedLimit = 100
 private const val JumpPageSize = 60
+private const val ChatSearchLimit = 20
 private const val JumpMinMessages = 20
 private const val JumpAttempts = 3
 private const val SavedTopicsPage = 100
@@ -1735,6 +1736,19 @@ class Telegram(
     }
 
     fun photoPath(message: UiMessage): String? = localPath(message.fullPhoto) ?: localPath(message.photo)
+
+    fun searchChats(query: String, onResult: (List<Long>) -> Unit) {
+        val local = chats.values
+            .filter { chatTitle(it).contains(query, ignoreCase = true) }
+            .sortedByDescending { it.lastMessage?.date ?: 0 }
+            .map { it.id }
+            .take(ChatSearchLimit)
+        onResult(local)
+        send(TdApi.SearchChats(query, null, ChatSearchLimit)) { result ->
+            val found = (result as? TdApi.Chats)?.chatIds?.toList().orEmpty()
+            onResult((local + found).distinct().filter { chats[it] != null }.take(ChatSearchLimit))
+        }
+    }
 
     fun searchMessages(query: String, chatId: Long?, onResult: (Int, List<TdApi.Message>) -> Unit) {
         val function: TdApi.Function<*> = if (chatId != null) {
