@@ -54,7 +54,7 @@ fun MenuGroups(
         DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, total), modifier = Modifier.width(width), content = leading)
     }
     shown.forEachIndexed { groupIndex, entries ->
-        if (groupIndex + offset > 0) Spacer(Modifier.height(MenuDefaults.GroupSpacing))
+        if (groupIndex + offset > 0) Spacer(Modifier.height(GroupGap))
         DropdownMenuGroup(
             shapes = MenuDefaults.groupShape(groupIndex + offset, total),
             modifier = Modifier.width(width),
@@ -85,5 +85,6 @@ fun MenuGroups(
 }
 
 private val ItemGap = 2.dp
+private val GroupGap = 10.dp
 private val ItemShadow = 2.dp
 private val MenuWidth = 260.dp

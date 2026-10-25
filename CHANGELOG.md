@@ -6,7 +6,7 @@
 - Icons are now Material Symbols Rounded with a heavier weight, generated from Google's official font.
 - Headlines, titles and buttons use bolder Google Sans, like Google's own apps.
 - Buttons change shape when pressed, list rows round up under your finger, dialogs pop in and lists animate when chats move.
-- Menus are split into groups with gaps: the chat menu (three dots) and the message menu.
+- Menus are split into groups, and every item is its own rounded segment: the chat menu (three dots) and the message menu.
 - New side menu: an account card, Night and Saved tiles like Android quick settings, grouped items and the version at the bottom.
 - A new chat button in the chat list opens a menu with New message, New group and New channel.
 
@@ -20,12 +20,13 @@
 - Colors from wallpaper: the accent color is picked from the image with Google's Material color utilities.
 - Message font and size: any installed font or a .ttf or .otf file.
 - Corners: separate roundness for lists, cards, dialogs and menus in pixelGram Preferences.
+- Every slider has a reset button, and About has Reset all settings (accounts, chats and passcode stay).
 
 ### Profiles and Saved Messages
 - Profiles show photos, videos, files, links, music, voice messages and GIFs, plus groups in common.
 - Clicking the Saved Messages header opens your saved messages by chat: My Notes, Author Hidden and every chat you saved from, with their own media tabs.
 - Personal channel and other single rows are rounded again.
-- pixelGram developers get a badge with a wrench.
+- Badges in a 12-sided cookie: a wrench for the developer, a dollar for the main sponsor and a bug net for the tester. Click one to see what it means.
 
 ### Fixes
 - Channels you haven't joined show a big Join button instead of Mute. Blocked people show a big Unblock button instead of the message field.
