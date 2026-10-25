@@ -1,6 +1,5 @@
 package com.pixelgram.desktop.ui.components
 
-import com.pixelgram.desktop.ui.components.expressive.popIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Surface
@@ -56,7 +55,7 @@ fun MenuGroups(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLowest,
         shadowElevation = MenuShadow,
-        modifier = Modifier.width(width).popIn(),
+        modifier = Modifier.width(width),
     ) {
         Column(Modifier.padding(MenuPadding)) {
             if (leading != null) {
