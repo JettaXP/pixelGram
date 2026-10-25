@@ -1,5 +1,10 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.material3.FloatingActionButtonMenuItem
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
+import com.pixelgram.desktop.ui.icons.filled.Edit
+import com.pixelgram.desktop.ui.icons.filled.Close
 import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.OnEscape
 import androidx.compose.foundation.shape.CircleShape
@@ -238,30 +243,39 @@ fun MainScreen(
                                 MessageSearchPanel(telegram, settings, onOpen = onOpenChat)
                             }
                         } else {
-                            ChatList(
-                                listKey = selectedKey,
-                                title = if (selectedKey == ChatListKey.Archive) "Archived chats" else "pixelGram",
-                                chatsFor = telegram::chatList,
-                                order = { key -> if (key == ChatListKey.Archive) -1 else tabs.indexOfFirst { it.key == key } },
-                                vertical = foldersLeft,
-                                compact = compact,
-                                selectedChatId = openChatId,
-                                telegram = telegram,
-                                settings = settings,
-                                onOpen = onOpenChat,
-                                archivedCount = telegram.chatList(ChatListKey.Archive).size,
-                                onOpenArchive = { selectedKey = ChatListKey.Archive },
-                                onMenu = if (foldersLeft) null else toggleMenu,
-                                onSearch = { MessageSearch.start(null) },
-                                menuOpen = menuOpen,
-                                belowHeader = topFolders,
-                                archiveOn = if (tabs.any { it.key == ChatListKey.Main }) ChatListKey.Main else tabs.firstOrNull()?.key ?: ChatListKey.Main,
-                                onBack = if (selectedKey == ChatListKey.Archive) {
-                                    { selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main }
-                                } else {
-                                    null
-                                },
-                            )
+                            Box(Modifier.fillMaxSize()) {
+                                ChatList(
+                                    listKey = selectedKey,
+                                    title = if (selectedKey == ChatListKey.Archive) "Archived chats" else "pixelGram",
+                                    chatsFor = telegram::chatList,
+                                    order = { key -> if (key == ChatListKey.Archive) -1 else tabs.indexOfFirst { it.key == key } },
+                                    vertical = foldersLeft,
+                                    compact = compact,
+                                    selectedChatId = openChatId,
+                                    telegram = telegram,
+                                    settings = settings,
+                                    onOpen = onOpenChat,
+                                    archivedCount = telegram.chatList(ChatListKey.Archive).size,
+                                    onOpenArchive = { selectedKey = ChatListKey.Archive },
+                                    onMenu = if (foldersLeft) null else toggleMenu,
+                                    onSearch = { MessageSearch.start(null) },
+                                    menuOpen = menuOpen,
+                                    belowHeader = topFolders,
+                                    archiveOn = if (tabs.any { it.key == ChatListKey.Main }) ChatListKey.Main else tabs.firstOrNull()?.key ?: ChatListKey.Main,
+                                    onBack = if (selectedKey == ChatListKey.Archive) {
+                                        { selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main }
+                                    } else {
+                                        null
+                                    },
+                                )
+                                if (!compact && selectedKey != ChatListKey.Archive) {
+                                    NewChatFab(
+                                        onNewChat = { channel -> newChat = channel },
+                                        onContacts = { onNavigate(Screen.Contacts) },
+                                        modifier = Modifier.align(Alignment.BottomEnd),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -479,6 +493,44 @@ private fun MainMenu(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                 )
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun NewChatFab(onNewChat: (Boolean) -> Unit, onContacts: () -> Unit, modifier: Modifier = Modifier) {
+    var expanded by remember { mutableStateOf(false) }
+    androidx.compose.material3.FloatingActionButtonMenu(
+        expanded = expanded,
+        button = {
+            androidx.compose.material3.ToggleFloatingActionButton(
+                checked = expanded,
+                onCheckedChange = { expanded = it },
+            ) {
+                val progress = checkedProgress
+                Icon(
+                    if (progress > 0.5f) Icons.Filled.Close else Icons.Filled.Edit,
+                    contentDescription = if (expanded) "Close" else "New chat",
+                    modifier = Modifier.animateIcon({ progress }),
+                )
+            }
+        },
+        modifier = modifier,
+    ) {
+        listOf(
+            Triple(Icons.Outlined.Contacts, "New message") { onContacts() },
+            Triple(Icons.Outlined.Groups, "New group") { onNewChat(false) },
+            Triple(Icons.Outlined.Campaign, "New channel") { onNewChat(true) },
+        ).forEach { (icon, label, action) ->
+            FloatingActionButtonMenuItem(
+                onClick = {
+                    expanded = false
+                    action()
+                },
+                icon = { Icon(icon, contentDescription = null) },
+                text = { Text(label) },
+            )
         }
     }
 }
