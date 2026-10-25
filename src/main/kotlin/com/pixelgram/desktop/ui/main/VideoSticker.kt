@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
@@ -115,16 +116,20 @@ fun VideoStickerView(path: String, modifier: Modifier, play: Boolean = true) {
     BoxWithConstraints(modifier) {
         val side = with(LocalDensity.current) { minOf(maxWidth, maxHeight).roundToPx() }
         val clip by produceState<StickerClip?>(null, path, side) { value = VideoStickers.clip(path, side) }
-        val elapsed by produceState(0L, clip, play) {
-            if (!play || clip == null) return@produceState
+        val index by produceState(0, clip, play) {
+            val current = clip ?: return@produceState
+            if (!play) return@produceState
             val start = withFrameNanos { it }
-            while (true) withFrameNanos { value = (it - start) / 1_000_000 }
+            while (true) {
+                withFrameNanos { now ->
+                    val at = (now - start) / 1_000_000 % current.durationMs
+                    val next = current.times.indexOfLast { it <= at }.coerceAtLeast(0)
+                    if (next != value) value = next
+                }
+            }
         }
-        Canvas(Modifier.matchParentSize()) {
+        Canvas(Modifier.matchParentSize().graphicsLayer()) {
             val current = clip ?: return@Canvas
-            val at = elapsed % current.durationMs
-            var index = current.times.indexOfLast { it <= at }.coerceAtLeast(0)
-            if (!play) index = 0
             val frame = current.frames[index]
             val fit = minOf(size.width / frame.width, size.height / frame.height)
             val w = (frame.width * fit).roundToInt()

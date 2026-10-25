@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.graphics.graphicsLayer
 import kotlin.math.roundToInt
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -119,7 +120,7 @@ object Wallpapers {
 fun ChatWallpaper(chat: ChatState, telegram: Telegram, settings: AppSettings, dark: Boolean, modifier: Modifier = Modifier) {
     val own = chat.background?.background
     val dim = (settings.wallpaperDim.value / 100f).coerceIn(0f, 0.9f)
-    Box(modifier.fillMaxSize()) {
+    Box(modifier.fillMaxSize().graphicsLayer()) {
         when {
             own != null -> TelegramBackground(own, telegram, dark, chat.background?.darkThemeDimming ?: 0)
             settings.wallpaper.value.isNotBlank() -> {

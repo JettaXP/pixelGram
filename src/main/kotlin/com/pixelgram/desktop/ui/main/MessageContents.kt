@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.animation.core.animateFloatAsState
 import com.pixelgram.desktop.ui.icons.rounded.Close
@@ -143,20 +144,29 @@ fun LottieView(path: String, modifier: Modifier, play: Boolean = true) {
             }.onFailure { AppLog.write("Sticker animation failed", it) }.getOrNull()
         }
     }
-    val time by produceState(0f, animation, play) {
+    val frame by produceState(0, animation, play) {
+        val current = animation ?: return@produceState
         if (!play) return@produceState
+        val fps = current.fPS.takeIf { it > 0f } ?: DefaultLottieFps
+        val total = (current.duration * fps).toInt().coerceAtLeast(1)
         val start = withFrameNanos { it }
-        while (true) withFrameNanos { value = (it - start) / 1_000_000_000f }
+        while (true) {
+            withFrameNanos { now ->
+                val next = (((now - start) / 1_000_000_000.0 * fps).toLong() % total).toInt()
+                if (next != value) value = next
+            }
+        }
     }
-    Canvas(modifier) {
+    Canvas(modifier.graphicsLayer()) {
         val current = animation ?: return@Canvas
-        val duration = current.duration.takeIf { it > 0f } ?: 1f
-        current.seekFrameTime(time % duration)
+        current.seekFrame(frame.toFloat())
         drawIntoCanvas { canvas ->
             current.render(canvas.nativeCanvas, Rect.makeWH(size.width, size.height))
         }
     }
 }
+
+private const val DefaultLottieFps = 60f
 
 @Composable
 fun FileImage(path: String, modifier: Modifier, scale: ContentScale) {

@@ -260,7 +260,7 @@ private fun SpoilerShimmer(path: Path, tint: Color, modifier: Modifier) {
         animationSpec = infiniteRepeatable(tween(ShimmerMs, easing = LinearEasing)),
     )
     Spacer(
-        modifier.drawBehind {
+        modifier.graphicsLayer().drawBehind {
             val bounds = path.getBounds()
             if (bounds.isEmpty) return@drawBehind
             val band = maxOf(bounds.width * ShimmerBand, ShimmerMinBand.toPx())
