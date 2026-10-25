@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.32.0 12-side cookie
+
+### Colors and look
+- Colors from wallpaper now match Android: the image is sampled like on Pixel and the theme uses the 2025 Tonal spot spec. It's on by default and updates on every launch.
+- New hue slider: smooth dragging, an expressive split track and a thumb that narrows while pressed.
+- Menus are one solid card, with each item as its own segment and gaps between groups.
+- The tray menu uses the same grouped style and opens and closes with expressive motion.
+- Apple emoji style, next to Noto and Noto 3D.
+- Custom fonts get real bold weights and can be used across the whole app.
+
+### Chats
+- Drag across messages to select them. The list scrolls smoothly at the edges, and selection animates.
+- New reactions pop in.
+- Long captions under photos and videos collapse behind Show more, and photos and videos are bigger.
+- Record button: click to switch between voice and video messages, hold to record, with a hint on hover. Right click works the same way.
+- The reply panel no longer overlaps the message field.
+- Gifts: View opens gift details, and the price with its currency is shown in "You gifted…".
+- Unsaved drafts are kept when you close the app.
+- Copying an image no longer freezes the app.
+
+### Files
+- Drag downloaded files out of the app, and use Show in folder or Copy file path.
+- Read .md files right in the app.
+- Saved media tabs animate, and links and files have a context menu.
+
+### Profiles and people
+- The profile window no longer fills the screen, and the banner scrolls away with a parallax effect.
+- The banner also shows in the side menu account card.
+- Main developer badge, and badge descriptions show right away.
+- Contacts open instantly, with a badge for mutual contacts.
+
+### Other
+- Click the active folder to scroll back to the top of the chat list.
+- When the app is locked, notifications show only the sender, not the message text.
+- On Windows, pinned taskbar, Start menu and desktop shortcuts get the themed app icon.
+- Animated stickers, wallpaper and spoilers redraw less, so scrolling is lighter.
+
 ## 0.31.0 Back
 
 ### Material 3 Expressive

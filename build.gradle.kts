@@ -7,8 +7,8 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.31.0"
-val codename = "Back"
+version = "0.32.0"
+val codename = "12-side cookie"
 
 kotlin {
     jvmToolchain(21)
