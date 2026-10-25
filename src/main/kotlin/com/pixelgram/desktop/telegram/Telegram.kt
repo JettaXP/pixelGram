@@ -108,6 +108,7 @@ class ChatState(val id: Long) {
     var replyMarkupMessageId = 0L
     var keyboard by mutableStateOf<TdApi.ReplyMarkupShowKeyboard?>(null)
     var notifications by mutableStateOf<TdApi.ChatNotificationSettings?>(null)
+    var background by mutableStateOf<TdApi.ChatBackground?>(null)
     val positions = mutableStateMapOf<ChatListKey, Long>()
     val pinned = mutableStateMapOf<ChatListKey, Boolean>()
 }
@@ -802,6 +803,7 @@ class Telegram(
                 update.positions?.forEach { applyPosition(chat, it) }
             }
             is TdApi.UpdateChatPosition -> chats[update.chatId]?.let { applyPosition(it, update.position) }
+            is TdApi.UpdateChatBackground -> chats[update.chatId]?.background = update.background
             is TdApi.UpdateSavedMessagesTopic -> savedTopics[update.topic.id] = update.topic
             is TdApi.UpdateChatBlockList -> chats[update.chatId]?.privateUserId?.takeIf { it != 0L }?.let { userId ->
                 blockedUsers[userId] = update.blockList != null
@@ -1028,6 +1030,7 @@ class Telegram(
             draft = draftText(chat.draftMessage)
             replyMarkupMessageId = chat.replyMarkupMessageId
             notifications = chat.notificationSettings
+            background = chat.background
         }
         if (state.privateUserId != 0L) blockedUsers[state.privateUserId] = chat.blockList != null
         chat.positions?.forEach { applyPosition(state, it) }

@@ -565,6 +565,7 @@ fun ChatView(
                     }
                 },
         ) {
+            ChatWallpaper(chat, telegram, settings, com.pixelgram.desktop.ui.theme.isDarkTheme(settings))
             LazyColumn(
                 state = listState,
                 reverseLayout = true,

@@ -1062,6 +1062,7 @@ private fun AccountSection(telegram: Telegram, onOpenProfile: () -> Unit) {
 private fun ChatSettingsSection(settings: AppSettings, onOpenBubbles: () -> Unit) {
     Header("Theme")
     ThemeModeButtons(settings)
+    WallpaperSettings(settings)
     Header("Message bubbles")
     Description("Bubble corners, avatar shapes and colors are in pixelGram Preferences.")
     OutlinedButton(onClick = onOpenBubbles) { Text("Open $PixelPreferencesTitle") }
@@ -1082,6 +1083,60 @@ private fun ChatSettingsSection(settings: AppSettings, onOpenBubbles: () -> Unit
         }
     }
 }
+
+@Composable
+private fun WallpaperSettings(settings: AppSettings) {
+    val scope = rememberCoroutineScope()
+    Header("Wallpaper")
+    Description("Shown behind every chat, except chats that have their own background in Telegram.")
+    val path = settings.wallpaper.value
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        modifier = Modifier.fillMaxWidth().height(WallpaperPreviewHeight),
+    ) {
+        if (path.isNotBlank()) {
+            com.pixelgram.desktop.ui.main.FileImage(path, Modifier.fillMaxSize(), androidx.compose.ui.layout.ContentScale.Crop)
+        } else {
+            Box(contentAlignment = Alignment.Center) {
+                Text("No wallpaper", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+        Button(onClick = {
+            scope.launch { com.pixelgram.desktop.ui.main.Wallpapers.pick()?.let { com.pixelgram.desktop.ui.main.Wallpapers.install(settings, it) } }
+        }) { Text(if (path.isBlank()) "Choose image" else "Change") }
+        if (path.isNotBlank()) {
+            OutlinedButton(onClick = { com.pixelgram.desktop.ui.main.Wallpapers.remove(settings) }) { Text("Remove") }
+        }
+    }
+    if (path.isNotBlank()) {
+        Text("Dimming in dark theme", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Slider(
+                value = settings.wallpaperDim.value.toFloat(),
+                onValueChange = { settings.wallpaperDim.value = it.toInt() },
+                valueRange = 0f..80f,
+                modifier = Modifier.weight(1f),
+            )
+            Text("${settings.wallpaperDim.value}%", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+        }
+    }
+    SwitchRow(
+        index = 0,
+        count = 1,
+        title = "Colors from wallpaper",
+        subtitle = "Pick the accent color from the wallpaper with Google's Material color utilities, the same way Android does.",
+        checked = settings.wallpaperColors.value,
+        onChange = {
+            settings.wallpaperColors.value = it
+            if (it) scope.launch { com.pixelgram.desktop.ui.main.Wallpapers.applyColors(settings) }
+        },
+    )
+}
+
+private val WallpaperPreviewHeight = 160.dp
 
 @Composable
 private fun DoubleClickEmoji(settings: AppSettings) {
