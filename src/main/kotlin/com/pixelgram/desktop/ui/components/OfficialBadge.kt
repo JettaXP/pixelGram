@@ -86,7 +86,7 @@ enum class UserBadge(val userId: Long, val notice: String) {
 
     val icon: ImageVector
         get() = when (this) {
-            MainDeveloper -> com.pixelgram.desktop.ui.icons.Icons.Filled.Code
+            MainDeveloper -> CodeSlash
             Developer -> com.pixelgram.desktop.ui.icons.Icons.Filled.Build
             Sponsor -> com.pixelgram.desktop.ui.icons.Icons.Filled.AttachMoney
             Tester -> BugNet
@@ -119,6 +119,20 @@ fun UserBadgeView(badge: UserBadge, size: Dp = 18.dp, modifier: Modifier = Modif
 fun ChatBadges(chat: com.pixelgram.desktop.telegram.ChatState, telegram: com.pixelgram.desktop.telegram.Telegram, size: Dp) {
     if (telegram.isOfficial(chat)) OfficialBadge(size)
     UserBadge.of(chat.privateUserId)?.let { UserBadgeView(it, size) }
+}
+
+private val CodeSlash: ImageVector by lazy {
+    ImageVector.Builder("CodeSlash", 24.dp, 24.dp, 960f, 960f)
+        .addPath(
+            androidx.compose.ui.graphics.vector.addPathNodes(
+                "M320 300L140 480L320 660 M640 300L820 480L640 660 M550 220L410 740"
+            ),
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 84f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round,
+        )
+        .build()
 }
 
 private val BugNet: ImageVector by lazy {

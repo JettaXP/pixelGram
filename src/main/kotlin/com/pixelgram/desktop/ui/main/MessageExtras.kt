@@ -208,7 +208,14 @@ fun InlineKeyboard(rows: List<List<TdApi.InlineKeyboardButton>>, onPress: (TdApi
                         modifier = Modifier
                             .weight(1f)
                             .height(ButtonHeight)
-                            .onPointerEvent(PointerEventType.Enter) { HoverTarget.button = button }
+                            .onPointerEvent(PointerEventType.Enter) {
+                                HoverTarget.button = button
+                                HoverTarget.buttonSeenAt = it.changes.firstOrNull()?.uptimeMillis ?: 0L
+                            }
+                            .onPointerEvent(PointerEventType.Move) {
+                                HoverTarget.button = button
+                                HoverTarget.buttonSeenAt = it.changes.firstOrNull()?.uptimeMillis ?: 0L
+                            }
                             .onPointerEvent(PointerEventType.Exit) { if (HoverTarget.button === button) HoverTarget.button = null },
                     ) {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 8.dp)) {

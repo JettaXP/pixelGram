@@ -145,15 +145,17 @@ fun MessageGestures(
             }
             .pointerInput(message.key) {
                 awaitPointerEventScope {
+                    var lastMove = 0L
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val change = event.changes.firstOrNull() ?: continue
+                        if (event.type == PointerEventType.Move || event.type == PointerEventType.Enter) lastMove = change.uptimeMillis
                         if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
                             change.consume()
                             menuAt = MenuTarget(
                                 with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) },
                                 HoverTarget.link,
-                                HoverTarget.button,
+                                HoverTarget.button?.takeIf { HoverTarget.buttonSeenAt >= lastMove },
                             )
                         } else if (event.type == PointerEventType.Press && event.buttons.isPrimaryPressed) {
                             val (time, at) = lastPress

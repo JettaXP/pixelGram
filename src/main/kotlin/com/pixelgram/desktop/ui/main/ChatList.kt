@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import it.tdlight.jni.TdApi
+import com.pixelgram.desktop.telegram.isService
 import androidx.compose.runtime.mutableIntStateOf
 import com.pixelgram.desktop.ui.components.itemMotion
 import com.pixelgram.desktop.ui.components.groupShapes
@@ -419,11 +421,18 @@ private fun ChatRow(
                         EmojiText(draft.replace('\n', ' '), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 } else {
-                    EmojiText(
-                        last?.let { contentText(it.content).replace('\n', ' ') } ?: "",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    val sender = last?.takeIf { chat.isGroup && !chat.isChannel && !isService(it.content) }?.let { message ->
+                        val id = (message.senderId as? TdApi.MessageSenderUser)?.userId
+                        if (message.isOutgoing) "You" else id?.let { telegram.users[it]?.firstName?.ifBlank { null } } ?: telegram.senderTitle(message.senderId)
+                    }
+                    Row {
+                        if (!sender.isNullOrBlank()) EmojiText("$sender: ", color = colors.primary, maxLines = 1)
+                        EmojiText(
+                            last?.let { contentText(it.content).replace('\n', ' ') } ?: "",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             },
             trailingContent = {

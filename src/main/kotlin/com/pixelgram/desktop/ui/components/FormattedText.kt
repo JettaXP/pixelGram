@@ -74,6 +74,7 @@ import kotlin.math.sin
 object HoverTarget {
     var link: String? = null
     var button: TdApi.InlineKeyboardButton? = null
+    var buttonSeenAt = 0L
 }
 
 data class FormatColors(val accent: Color, val code: Color, val quote: Color)
