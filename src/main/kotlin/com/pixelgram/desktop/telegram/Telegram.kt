@@ -1687,6 +1687,8 @@ class Telegram(
         send(TdApi.ChangeStickerSet(setId, installed, false)) { done() }
     }
 
+    fun userTitle(userId: Long): String = if (userId == 0L) "Anonymous" else senderTitle(TdApi.MessageSenderUser(userId))
+
     fun senderTitle(sender: TdApi.MessageSender?): String = when (sender) {
         is TdApi.MessageSenderUser -> if (sender.userId == myUserId) "You" else userName(sender.userId)
         is TdApi.MessageSenderChat -> chats[sender.chatId]?.title ?: ""

@@ -802,6 +802,8 @@ fun BareContent(message: UiMessage, telegram: Telegram) {
 @Composable
 fun GiftCard(message: UiMessage, telegram: Telegram, modifier: Modifier = Modifier) {
     val content = message.content
+    var details by remember(message.id) { mutableStateOf(false) }
+    if (details) GiftDetailsDialog(message, telegram) { details = false }
     val sticker: TdApi.Sticker?
     val title: String
     val subtitle: String
@@ -815,7 +817,7 @@ fun GiftCard(message: UiMessage, telegram: Telegram, modifier: Modifier = Modifi
                 message.isOutgoing -> "Gift for $name"
                 else -> "Gift from $name"
             }
-            subtitle = "${content.gift.starCount} Stars"
+            subtitle = stars(content.gift.starCount)
         }
         is TdApi.MessageUpgradedGift -> {
             sticker = content.gift.model?.sticker
@@ -824,13 +826,14 @@ fun GiftCard(message: UiMessage, telegram: Telegram, modifier: Modifier = Modifi
         }
         is TdApi.MessageGiftedStars -> {
             sticker = content.sticker
-            title = "${content.starCount} Stars"
-            subtitle = "Gift"
+            title = stars(content.starCount)
+            subtitle = paidPrice(content.currency, content.amount, content.cryptocurrency, content.cryptocurrencyAmount)?.let { "Gift · $it" } ?: "Gift"
         }
         is TdApi.MessageGiftedPremium -> {
             sticker = content.sticker
             title = "Telegram Premium"
-            subtitle = if (content.monthCount > 0) "for ${content.monthCount} months" else "for ${content.dayCount} days"
+            val length = if (content.monthCount > 0) "for ${content.monthCount} months" else "for ${content.dayCount} days"
+            subtitle = paidPrice(content.currency, content.amount, content.cryptocurrency, content.cryptocurrencyAmount)?.let { "$length · $it" } ?: length
         }
         else -> return
     }
@@ -850,18 +853,24 @@ fun GiftCard(message: UiMessage, telegram: Telegram, modifier: Modifier = Modifi
             if (message.text.isNotBlank()) {
                 EmojiText(message.text, style = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Center))
             }
-            FilledTonalButton(onClick = {}) { Text("View") }
+            FilledTonalButton(onClick = { details = true }) { Text("View") }
         }
     }
 }
 
 fun giftServiceText(message: UiMessage, telegram: Telegram): String? = when (val content = message.content) {
     is TdApi.MessageGift ->
-        if (message.isOutgoing) "You sent a gift for ${content.gift.starCount} Stars"
-        else "${telegram.senderTitle(content.senderId)} sent you a gift for ${content.gift.starCount} Stars"
+        if (message.isOutgoing) "You sent a gift for ${stars(content.gift.starCount)}"
+        else "${telegram.senderTitle(content.senderId)} sent you a gift for ${stars(content.gift.starCount)}"
     is TdApi.MessageUpgradedGift -> "Collectible gift"
-    is TdApi.MessageGiftedStars -> if (message.isOutgoing) "You gifted ${content.starCount} Stars" else "You received ${content.starCount} Stars"
-    is TdApi.MessageGiftedPremium -> if (message.isOutgoing) "You gifted Telegram Premium" else "You received Telegram Premium"
+    is TdApi.MessageGiftedStars -> {
+        val paid = paidPrice(content.currency, content.amount, content.cryptocurrency, content.cryptocurrencyAmount)?.let { " for $it" }.orEmpty()
+        if (message.isOutgoing) "You gifted ${stars(content.starCount)}$paid" else "You received ${stars(content.starCount)}$paid"
+    }
+    is TdApi.MessageGiftedPremium -> {
+        val paid = paidPrice(content.currency, content.amount, content.cryptocurrency, content.cryptocurrencyAmount)?.let { " for $it" }.orEmpty()
+        if (message.isOutgoing) "You gifted Telegram Premium$paid" else "You received Telegram Premium$paid"
+    }
     else -> null
 }
 
