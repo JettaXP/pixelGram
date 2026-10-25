@@ -195,8 +195,34 @@ class AppSettings private constructor(private val props: Properties) {
             val value = setting.value
             out.setProperty(setting.key, if (value is Enum<*>) value.name else value.toString())
         }
-        runCatching {
-            AppPaths.settingsFile.outputStream().use { out.store(it, "pixelGram settings") }
+        Writer.schedule(out)
+    }
+
+    private object Writer {
+        private val executor = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { task ->
+            Thread(task, "pixelgram-settings").apply { isDaemon = true }
+        }
+        private var pending: Properties? = null
+        private var job: java.util.concurrent.ScheduledFuture<*>? = null
+
+        init {
+            Runtime.getRuntime().addShutdownHook(Thread { flush() })
+        }
+
+        @Synchronized
+        fun schedule(props: Properties) {
+            pending = props
+            job?.cancel(false)
+            job = executor.schedule({ flush() }, SaveDelayMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+        }
+
+        @Synchronized
+        fun flush() {
+            val props = pending ?: return
+            pending = null
+            runCatching {
+                AppPaths.settingsFile.outputStream().use { props.store(it, "pixelGram settings") }
+            }
         }
     }
 
@@ -211,3 +237,5 @@ class AppSettings private constructor(private val props: Properties) {
         }
     }
 }
+
+private const val SaveDelayMs = 250L

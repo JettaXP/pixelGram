@@ -1,5 +1,13 @@
 package com.pixelgram.desktop.ui.settings
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.CornerRadius
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -97,36 +105,77 @@ fun ColorStyleRow(settings: AppSettings) {
 
 @Composable
 fun HueSlider(settings: AppSettings) {
-    val hue = Hct.fromInt(settings.seedColor.value).hue.toFloat()
+    val stored = Hct.fromInt(settings.seedColor.value).hue.toFloat()
+    var dragging by remember { mutableStateOf<Float?>(null) }
+    val hue = dragging ?: stored
     val track = remember { Brush.horizontalGradient((0..12).map { Color(Hct.from(it * 30.0, TrackChroma, TrackTone).toInt()) }) }
     val enabled = !settings.israelLogo.value
-    BoxWithConstraints(Modifier.fillMaxWidth().height(SliderHeight)) {
+    val scope = rememberCoroutineScope()
+    var commit by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    val apply = { value: Float ->
+        commit?.cancel()
+        commit = scope.launch {
+            kotlinx.coroutines.delay(CommitDelayMs)
+            settings.seedColor.value = Hct.from(value.toDouble(), SeedChroma, SeedTone).toInt()
+        }
+    }
+    val thumb by animateDpAsState(if (dragging != null) ThumbPressedWidth else ThumbWidth, MaterialTheme.motionScheme.fastSpatialSpec())
+    BoxWithConstraints(Modifier.fillMaxWidth().height(SliderHeight).graphicsLayer { alpha = if (enabled) 1f else DisabledAlpha }) {
         val width = constraints.maxWidth.toFloat()
-        val pick = { x: Float ->
-            if (enabled) {
-                val picked = (x / width).coerceIn(0f, 1f) * 360f
-                settings.seedColor.value = Hct.from(picked.toDouble(), SeedChroma, SeedTone).toInt()
+        val density = LocalDensity.current
+        val gap = with(density) { ThumbGap.toPx() }
+        val position = hue / 360f * width
+        Canvas(
+            Modifier
+                .fillMaxSize()
+                .padding(vertical = 8.dp)
+                .pointerInput(width, enabled) {
+                    if (!enabled) return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        fun pick(x: Float) = ((x / width).coerceIn(0f, 1f) * 360f).also { dragging = it; apply(it) }
+                        pick(down.position.x)
+                        down.consume()
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull() ?: break
+                            if (!change.pressed) break
+                            pick(change.position.x)
+                            change.consume()
+                        }
+                        dragging?.let { last ->
+                            commit?.cancel()
+                            settings.seedColor.value = Hct.from(last.toDouble(), SeedChroma, SeedTone).toInt()
+                        }
+                        dragging = null
+                    }
+                },
+        ) {
+            val radius = CornerRadius(size.height / 2)
+            val inner = CornerRadius(InnerCorner.toPx())
+            val leftEnd = (position - gap).coerceAtLeast(0f)
+            val rightStart = (position + gap).coerceAtMost(size.width)
+            if (leftEnd > 0f) {
+                drawPath(
+                    androidx.compose.ui.graphics.Path().apply {
+                        addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, leftEnd, size.height, radius, inner, inner, radius))
+                    },
+                    track,
+                )
+            }
+            if (rightStart < size.width) {
+                drawPath(
+                    androidx.compose.ui.graphics.Path().apply {
+                        addRoundRect(androidx.compose.ui.geometry.RoundRect(rightStart, 0f, size.width, size.height, inner, radius, radius, inner))
+                    },
+                    track,
+                )
             }
         }
         Box(
             Modifier
-                .fillMaxSize()
-                .padding(vertical = 8.dp)
-                .clip(CircleShape)
-                .background(track)
-                .pointerInput(width) {
-                    detectTapGestures { pick(it.x) }
-                }
-                .pointerInput(width) {
-                    detectDragGestures { change, _ -> pick(change.position.x) }
-                },
-        )
-        val density = LocalDensity.current
-        val x = with(density) { (hue / 360f * width).toDp() }
-        Box(
-            Modifier
-                .offset(x = x - ThumbWidth / 2)
-                .width(ThumbWidth)
+                .offset(x = with(density) { position.toDp() } - thumb / 2)
+                .width(thumb)
                 .fillMaxSize()
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.onSurface),
@@ -138,6 +187,11 @@ private val StyleSize = 64.dp
 private val SelectedCorner = 18.dp
 private val SliderHeight = 56.dp
 private val ThumbWidth = 6.dp
+private val ThumbPressedWidth = 3.dp
+private val ThumbGap = 8.dp
+private val InnerCorner = 3.dp
+private const val CommitDelayMs = 60L
+private const val DisabledAlpha = 0.38f
 private const val TrackChroma = 60.0
 private const val TrackTone = 70.0
 private const val SeedChroma = 48.0

@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.components
 
+import com.pixelgram.desktop.ui.components.expressive.popIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.ColumnScope
@@ -48,36 +51,33 @@ fun MenuGroups(
     leading: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val shown = groups.filter { it.isNotEmpty() }
-    val offset = if (leading != null) 1 else 0
-    val total = shown.size + offset
-    if (leading != null) {
-        DropdownMenuGroup(shapes = MenuDefaults.groupShape(0, total), modifier = Modifier.width(width), content = leading)
-    }
-    shown.forEachIndexed { groupIndex, entries ->
-        if (groupIndex + offset > 0) Spacer(Modifier.height(GroupGap))
-        DropdownMenuGroup(
-            shapes = MenuDefaults.groupShape(groupIndex + offset, total),
-            modifier = Modifier.width(width),
-            containerColor = Color.Transparent,
-            shadowElevation = 0.dp,
-            tonalElevation = 0.dp,
-            contentPadding = PaddingValues(0.dp),
-        ) {
-            entries.forEachIndexed { index, entry ->
-                if (index > 0) Spacer(Modifier.height(ItemGap))
-                val tint = if (entry.color == Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else entry.color
-                Surface(
-                    shape = groupShapes(index, entries.size).shape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shadowElevation = ItemShadow,
-                ) {
-                    DropdownMenuItem(
-                        onClick = entry.onClick,
-                        text = { Text(entry.label, color = entry.color) },
-                        shape = groupShapes(index, entries.size).shape,
-                        leadingIcon = entry.icon?.let { icon -> { Icon(icon, contentDescription = null, tint = tint) } },
-                        trailingIcon = entry.trailing?.let { icon -> { Icon(icon, contentDescription = null, tint = tint) } },
-                    )
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        shadowElevation = MenuShadow,
+        modifier = Modifier.width(width).popIn(),
+    ) {
+        Column(Modifier.padding(MenuPadding)) {
+            if (leading != null) {
+                Surface(shape = groupShapes(0, 1).shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                    Column(content = leading)
+                }
+            }
+            shown.forEachIndexed { groupIndex, entries ->
+                if (groupIndex > 0 || leading != null) Spacer(Modifier.height(GroupGap))
+                entries.forEachIndexed { index, entry ->
+                    if (index > 0) Spacer(Modifier.height(ItemGap))
+                    val tint = if (entry.color == Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else entry.color
+                    val shape = groupShapes(index, entries.size).shape
+                    Surface(shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                        DropdownMenuItem(
+                            onClick = entry.onClick,
+                            text = { Text(entry.label, color = entry.color) },
+                            shape = shape,
+                            leadingIcon = entry.icon?.let { icon -> { Icon(icon, contentDescription = null, tint = tint) } },
+                            trailingIcon = entry.trailing?.let { icon -> { Icon(icon, contentDescription = null, tint = tint) } },
+                        )
+                    }
                 }
             }
         }
@@ -85,6 +85,7 @@ fun MenuGroups(
 }
 
 private val ItemGap = 2.dp
-private val GroupGap = 10.dp
-private val ItemShadow = 2.dp
+private val GroupGap = 8.dp
+private val MenuShadow = 6.dp
+private val MenuPadding = 4.dp
 private val MenuWidth = 260.dp

@@ -1,5 +1,12 @@
 package com.pixelgram.desktop.ui.components
 
+import com.pixelgram.desktop.ui.icons.filled.Code
+import com.pixelgram.desktop.ui.components.expressive.popIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import com.pixelgram.desktop.ui.icons.filled.AttachMoney
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeJoin
@@ -51,6 +58,8 @@ private object OfficialBadgeHolder
 fun OfficialBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
     val logo = rememberPixelgramLogo() ?: return
     val scheme = MaterialTheme.colorScheme
+    var tip by remember { mutableStateOf<String?>(null) }
+    BadgeTip(tip) { tip = null }
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -58,7 +67,7 @@ fun OfficialBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
             .clip(MaterialShapes.Cookie12Sided.toShape())
             .background(if (EasterEgg.israel) IsraelWhite else scheme.primary)
             .pointerHoverIcon(PointerIcon.Hand)
-            .clickable { TopNotice.text = OfficialNotice },
+            .clickable { tip = OfficialNotice },
     ) {
         Icon(
             logo,
@@ -70,12 +79,14 @@ fun OfficialBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
 }
 
 enum class UserBadge(val userId: Long, val notice: String) {
+    MainDeveloper(1780288121L, "Main developer of pixelGram"),
     Developer(1061520526L, "Developer of pixelGram"),
     Sponsor(1602207467L, "Main sponsor of pixelGram"),
     Tester(7820526891L, "pixelGram tester, hunts bugs in the client");
 
     val icon: ImageVector
         get() = when (this) {
+            MainDeveloper -> com.pixelgram.desktop.ui.icons.Icons.Filled.Code
             Developer -> com.pixelgram.desktop.ui.icons.Icons.Filled.Build
             Sponsor -> com.pixelgram.desktop.ui.icons.Icons.Filled.AttachMoney
             Tester -> BugNet
@@ -89,6 +100,8 @@ enum class UserBadge(val userId: Long, val notice: String) {
 @Composable
 fun UserBadgeView(badge: UserBadge, size: Dp = 18.dp, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
+    var tip by remember { mutableStateOf<String?>(null) }
+    BadgeTip(tip) { tip = null }
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -96,7 +109,7 @@ fun UserBadgeView(badge: UserBadge, size: Dp = 18.dp, modifier: Modifier = Modif
             .clip(MaterialShapes.Cookie12Sided.toShape())
             .background(scheme.primary)
             .pointerHoverIcon(PointerIcon.Hand)
-            .clickable { TopNotice.text = badge.notice },
+            .clickable { tip = badge.notice },
     ) {
         Icon(badge.icon, contentDescription = badge.notice, tint = scheme.onPrimary, modifier = Modifier.size(size * LogoScale))
     }
@@ -121,3 +134,34 @@ private val BugNet: ImageVector by lazy {
         )
         .build()
 }
+
+@Composable
+private fun BadgeTip(text: String?, onDone: () -> Unit) {
+    if (text == null) return
+    LaunchedEffect(text) {
+        kotlinx.coroutines.delay(TipMs)
+        onDone()
+    }
+    androidx.compose.ui.window.Popup(
+        alignment = Alignment.TopCenter,
+        offset = androidx.compose.ui.unit.IntOffset(0, -TipOffset),
+        onDismissRequest = onDone,
+    ) {
+        androidx.compose.material3.Surface(
+            shape = androidx.compose.foundation.shape.CircleShape,
+            color = MaterialTheme.colorScheme.inverseSurface,
+            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+            shadowElevation = 4.dp,
+            modifier = Modifier.popIn(),
+        ) {
+            androidx.compose.material3.Text(
+                text,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+        }
+    }
+}
+
+private const val TipMs = 2500L
+private const val TipOffset = 52
