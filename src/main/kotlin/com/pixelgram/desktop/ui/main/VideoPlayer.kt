@@ -480,8 +480,8 @@ private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
 }
 
 @Composable
-fun InlineVideo(path: String, modifier: Modifier = Modifier) {
-    val engine = remember(path) { VideoEngine(path, loop = true, sound = false, maxWidth = InlineDecodeWidth).apply { start() } }
+fun InlineVideo(path: String, modifier: Modifier = Modifier, maxWidth: Int = InlineDecodeWidth) {
+    val engine = remember(path) { VideoEngine(path, loop = true, sound = false, maxWidth = maxWidth).apply { start() } }
     DisposableEffect(engine) { onDispose { engine.close() } }
     engine.frame?.let { frame ->
         Image(frame, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier)

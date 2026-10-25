@@ -1213,7 +1213,17 @@ private fun WallpaperSettings(settings: AppSettings) {
                     .clickable { scope.launch { com.pixelgram.desktop.ui.main.Wallpapers.use(settings, file) } },
                 contentAlignment = Alignment.Center,
             ) {
-                com.pixelgram.desktop.ui.main.FileImage(file.absolutePath, Modifier.fillMaxSize(), androidx.compose.ui.layout.ContentScale.Crop)
+                com.pixelgram.desktop.ui.main.FileImage(com.pixelgram.desktop.ui.main.Wallpapers.poster(file.absolutePath), Modifier.fillMaxSize(), androidx.compose.ui.layout.ContentScale.Crop)
+                if (com.pixelgram.desktop.ui.main.Wallpapers.isVideo(file.absolutePath)) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.45f),
+                        contentColor = Color.White,
+                        modifier = Modifier.align(Alignment.TopStart).padding(10.dp),
+                    ) {
+                        Text("Live", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                    }
+                }
                 androidx.compose.animation.AnimatedVisibility(
                     selected,
                     enter = androidx.compose.animation.scaleIn() + androidx.compose.animation.fadeIn(),
@@ -1229,7 +1239,7 @@ private fun WallpaperSettings(settings: AppSettings) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
         Button(onClick = {
             scope.launch { com.pixelgram.desktop.ui.main.Wallpapers.pick()?.let { com.pixelgram.desktop.ui.main.Wallpapers.install(settings, it) } }
-        }) { Text("Add image") }
+        }) { Text("Add image or video") }
         if (path.isNotBlank()) {
             OutlinedButton(onClick = { com.pixelgram.desktop.ui.main.Wallpapers.remove(settings) }) { Text("No wallpaper") }
         }

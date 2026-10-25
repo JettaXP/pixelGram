@@ -48,18 +48,42 @@ object Wallpapers {
 
     suspend fun pick(): File? = runCatching {
         FileKit.openFilePicker(
-            type = FileKitType.Image,
+            type = FileKitType.File(ImageExtensions + VideoExtensions),
             dialogSettings = FileKitDialogSettings(title = "Choose a wallpaper"),
         )?.file
     }.onFailure { AppLog.write("Wallpaper picker failed", it) }.getOrNull()
 
-    fun recent(): List<File> = dir.listFiles()?.filter { it.isFile }?.sortedByDescending { it.lastModified() }.orEmpty()
+    fun recent(): List<File> = dir.listFiles()
+        ?.filter { it.isFile && !it.name.endsWith(PosterSuffix) && !it.name.endsWith(".part") }
+        ?.sortedByDescending { it.lastModified() }
+        .orEmpty()
+
+    fun isVideo(path: String): Boolean = path.substringAfterLast('.', "").lowercase() in VideoExtensions
+
+    fun poster(path: String): String = if (isVideo(path)) "$path$PosterSuffix" else path
+
+    private fun ensurePoster(path: String): String? {
+        if (!isVideo(path)) return path
+        val target = File(poster(path))
+        if (target.isFile) return target.absolutePath
+        return runCatching {
+            val grabber = org.bytedeco.javacv.FFmpegFrameGrabber(path)
+            grabber.start()
+            val frame = grabber.grabImage()
+            val image = frame?.let { org.bytedeco.javacv.Java2DFrameConverter().convert(it) }
+            grabber.stop()
+            grabber.release()
+            image?.let { javax.imageio.ImageIO.write(it, "png", target) }
+            target.takeIf { it.isFile }?.absolutePath
+        }.onFailure { AppLog.write("Wallpaper poster failed", it) }.getOrNull()
+    }
 
     suspend fun install(settings: AppSettings, source: File) {
         val target = withContext(Dispatchers.IO) {
             dir.mkdirs()
-            File(dir, "wallpaper-${System.currentTimeMillis()}.${source.extension.ifBlank { "jpg" }}").also { source.copyTo(it) }
-                .also { recent().drop(MaxRecent).forEach(File::delete) }
+            File(dir, "wallpaper-${System.currentTimeMillis()}.${source.extension.ifBlank { "jpg" }.lowercase()}").also { source.copyTo(it) }
+                .also { ensurePoster(it.absolutePath) }
+                .also { recent().drop(MaxRecent).forEach { old -> File(poster(old.absolutePath)).delete(); old.delete() } }
         }
         use(settings, target)
     }
@@ -79,8 +103,9 @@ object Wallpapers {
         seedFrom(path)?.let { settings.seedColor.value = it }
     }
 
-    suspend fun seedFrom(path: String): Int? = withContext(Dispatchers.Default) {
+    suspend fun seedFrom(source: String): Int? = withContext(Dispatchers.Default) {
         runCatching {
+            val path = withContext(Dispatchers.IO) { ensurePoster(source) } ?: return@runCatching null
             val image = SkiaImage.makeFromEncoded(File(path).readBytes())
             val scale = minOf(1.0, kotlin.math.sqrt(SampleArea.toDouble() / (image.width.toDouble() * image.height)))
             val width = (image.width * scale).roundToInt().coerceAtLeast(1)
@@ -112,6 +137,9 @@ object Wallpapers {
     }
 
     private const val SampleArea = 112 * 112
+    private const val PosterSuffix = ".poster.png"
+    private val ImageExtensions = listOf("png", "jpg", "jpeg", "webp", "bmp")
+    private val VideoExtensions = listOf("mp4", "webm", "mov", "mkv", "m4v", "gif")
     private const val MaxRecent = 8
     private const val MaxColors = 128
 }
@@ -124,13 +152,13 @@ fun ChatWallpaper(chat: ChatState, telegram: Telegram, settings: AppSettings, da
         when {
             own != null -> TelegramBackground(own, telegram, dark, chat.background?.darkThemeDimming ?: 0)
             settings.wallpaper.value.isNotBlank() -> {
-                val image by produceState<ImageBitmap?>(null, settings.wallpaper.value) {
-                    value = loadImage(settings.wallpaper.value, maxSize = WallpaperMaxSize)
+                val path = settings.wallpaper.value
+                val image by produceState<ImageBitmap?>(null, path) {
+                    value = loadImage(Wallpapers.poster(path), maxSize = WallpaperMaxSize)
                 }
-                image?.let {
-                    Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (dark) dim else dim / 2)))
-                }
+                image?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                if (Wallpapers.isVideo(path)) InlineVideo(path, Modifier.fillMaxSize(), maxWidth = LiveWallpaperWidth)
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (dark) dim else dim / 2)))
             }
         }
     }
@@ -170,3 +198,5 @@ private fun fillBrush(fill: TdApi.BackgroundFill): Brush = when (fill) {
 private fun rgb(color: Int) = Color(0xFF000000.toInt() or color)
 
 private const val WallpaperMaxSize = 2048
+
+private const val LiveWallpaperWidth = 1920

@@ -755,3 +755,6 @@ Use monochrome icon	Монохромная иконка
 Launch pixelGram when system starts	Запускать pixelGram при старте системы
 Launch minimized	Запускать свёрнутым
 pixelGram starts in the tray: notifications work, the window opens from the tray icon.	pixelGram запускается в трее: уведомления работают, окно открывается из иконки в трее.
+Save to GIFs	Сохранить в GIF
+Saved to GIFs	Сохранено в GIF
+Couldn't save the GIF	Не удалось сохранить GIF

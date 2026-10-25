@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.icons.outlined.Gif
 import com.pixelgram.desktop.ui.icons.outlined.FolderOpen
 import androidx.compose.foundation.layout.ColumnScope
 import com.pixelgram.desktop.ui.components.GroupedMenu
@@ -24,7 +25,6 @@ import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -98,6 +98,7 @@ class MessageActions(
     val onPin: ((UiMessage) -> Unit)? = null,
     val onSelect: ((UiMessage) -> Unit)? = null,
     val filePath: (UiMessage) -> String? = { null },
+    val onSaveGif: ((UiMessage) -> Unit)? = null,
 )
 
 private class MenuTarget(val at: DpOffset, val link: String?, val button: TdApi.InlineKeyboardButton?)
@@ -134,15 +135,6 @@ fun MessageGestures(
     Box(
         modifier
             .fillMaxWidth()
-            .pointerInput(message.key) {
-                detectHorizontalDragGestures(
-                    onDragEnd = { release() },
-                    onDragCancel = { release() },
-                ) { change, drag ->
-                    change.consume()
-                    move(drag)
-                }
-            }
             .pointerInput(message.key) {
                 awaitPointerEventScope {
                     var lastMove = 0L
@@ -245,6 +237,10 @@ private fun MessageMenu(
             add(MenuEntry(Icons.Outlined.Link, "Copy file path", onClick = act { copy(path) }))
         }
         if (message.photo != null) add(MenuEntry(Icons.Outlined.Image, "Copy photo", onClick = act { actions.onCopyPhoto(message) }))
+        val saveGif = actions.onSaveGif
+        if (saveGif != null && message.content is TdApi.MessageAnimation) {
+            add(MenuEntry(Icons.Outlined.Gif, "Save to GIFs", onClick = act { saveGif(message) }))
+        }
         if (copyLink != null) add(MenuEntry(Icons.Outlined.Link, "Copy Link", onClick = act { copy(copyLink) }))
         (button?.type as? TdApi.InlineKeyboardButtonTypeCallback)?.let { callback ->
             add(MenuEntry(Icons.Outlined.DataObject, "Copy Callback Data", onClick = act { copy(String(callback.data, Charsets.UTF_8)) }))
@@ -348,8 +344,8 @@ fun ReplyQuote(
 }
 
 private val ReplyThumbSize = 32.dp
-private val SwipeThreshold = 64.dp
-private const val TouchpadFactor = 1.6f
-private const val SettleMs = 140L
-private const val HorizontalDominance = 2f
-private const val MinHorizontalScroll = 0.5f
+private val SwipeThreshold = 48.dp
+private const val TouchpadFactor = 2.4f
+private const val SettleMs = 180L
+private const val HorizontalDominance = 1.3f
+private const val MinHorizontalScroll = 0.2f

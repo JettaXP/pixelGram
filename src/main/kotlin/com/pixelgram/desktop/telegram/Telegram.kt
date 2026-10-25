@@ -1236,6 +1236,13 @@ class Telegram(
         send(TdApi.GetAnimatedEmoji(emoji)) { result -> done((result as? TdApi.AnimatedEmoji)?.sticker) }
     }
 
+    fun saveGif(message: UiMessage) {
+        val animation = (message.content as? TdApi.MessageAnimation)?.animation?.animation ?: return
+        send(TdApi.AddSavedAnimation(TdApi.InputFileId(animation.id))) { result ->
+            com.pixelgram.desktop.ui.main.TopNotice.text = com.pixelgram.desktop.core.tr(if (result is TdApi.Ok) "Saved to GIFs" else "Couldn't save the GIF")
+        }
+    }
+
     fun clickAnimatedEmoji(chatId: Long, messageId: Long, done: (TdApi.Sticker?) -> Unit) {
         send(TdApi.ClickAnimatedEmojiMessage(chatId, messageId)) { result -> done(result as? TdApi.Sticker) }
     }

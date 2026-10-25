@@ -10,6 +10,8 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -58,11 +60,17 @@ fun SliderThumb(interaction: MutableInteractionSource, height: Dp = ThumbHeight,
     )
     val colors = MaterialTheme.colorScheme
     Box(
-        Modifier
-            .size(width, tall)
-            .hoverable(interaction)
-            .background(if (enabled) colors.primary else colors.onSurface.copy(alpha = DisabledAlpha), CircleShape),
-    )
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(ThumbWidth, height)
+            .hoverable(interaction),
+    ) {
+        Box(
+            Modifier
+                .requiredSize(width, tall)
+                .background(if (enabled) colors.primary else colors.onSurface.copy(alpha = DisabledAlpha), CircleShape),
+        )
+    }
 }
 
 private val ThumbWidth = 4.dp
