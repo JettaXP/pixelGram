@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.GroupedMenu
+import com.pixelgram.desktop.ui.components.MenuEntry
+import com.pixelgram.desktop.ui.components.MenuGroups
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.animation.core.Spring
@@ -119,12 +122,7 @@ fun ChatActions(
     if (at != null) {
         var folders by remember { mutableStateOf(false) }
         Box(Modifier.offset(at.x, at.y)) {
-            DropdownMenu(
-                expanded = true,
-                onDismissRequest = onDismiss,
-                shape = RoundedCornerShape(16.dp),
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            ) {
+            GroupedMenu(expanded = true, onDismiss = onDismiss) {
                 AnimatedContent(
                     targetState = folders,
                     transitionSpec = {
@@ -133,60 +131,55 @@ fun ChatActions(
                             (slideOutHorizontally { -it / 3 * direction } + fadeOut())
                     },
                 ) { inFolders ->
-                    Column(Modifier.width(MenuWidth)) {
+                    Column {
                         val act = { action: () -> Unit -> { onDismiss(); action() } }
                         if (inFolders) {
-                            Item(Icons.AutoMirrored.Filled.ArrowBack, "Add to folder") { folders = false }
-                            HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                            telegram.folders.forEach { folder ->
-                                Item(Icons.Outlined.Folder, folder.title, onClick = act { telegram.addToFolder(chat, folder.id) })
-                            }
-                        } else {
-                            if (onSearch == null) {
-                                Item(Icons.AutoMirrored.Outlined.OpenInNew, "Open in new window", onClick = act {
-                                    if (ChatWindows.open.none { it.second == chat.id }) ChatWindows.open.add(telegram to chat.id)
-                                })
-                                HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                            }
-                            val muted = telegram.isMuted(chat)
-                            Item(if (muted) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff, if (muted) "Unmute" else "Mute",
-                                onClick = act { telegram.setMuted(chat, !muted) })
-                            if (showProfile) Item(Icons.Outlined.AccountCircle, "View profile", onClick = act { profile = true })
-                            onSearch?.let { Item(Icons.Outlined.Search, "Search", onClick = act(it)) }
-                            onToBeginning?.let { Item(Icons.Outlined.KeyboardDoubleArrowUp, "To beginning", onClick = act(it)) }
-                            if (onSearch == null) {
-                                val pinned = chat.pinned[listKey] == true
-                                Item(Icons.Outlined.PushPin, if (pinned) "Unpin" else "Pin", onClick = act { telegram.setPinned(chat, listKey, !pinned) })
-                            }
-                            val archived = ChatListKey.Archive in chat.positions
-                            Item(if (archived) Icons.Outlined.Unarchive else Icons.Outlined.Archive, if (archived) "Unarchive" else "Archive",
-                                onClick = act { telegram.setArchived(chat, !archived) })
+                            MenuGroups(listOf(
+                                listOf(MenuEntry(Icons.AutoMirrored.Filled.ArrowBack, "Add to folder") { folders = false }),
+                                telegram.folders.map { folder -> MenuEntry(Icons.Outlined.Folder, folder.title, onClick = act { telegram.addToFolder(chat, folder.id) }) },
+                            ))
+                            return@Column
+                        }
+                        val muted = telegram.isMuted(chat)
+                        val pinned = chat.pinned[listKey] == true
+                        val archived = ChatListKey.Archive in chat.positions
+                        val window = if (onSearch == null) listOf(
+                            MenuEntry(Icons.AutoMirrored.Outlined.OpenInNew, "Open in new window", onClick = act {
+                                if (ChatWindows.open.none { it.second == chat.id }) ChatWindows.open.add(telegram to chat.id)
+                            }),
+                        ) else emptyList()
+                        val main = buildList {
+                            add(MenuEntry(if (muted) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff, if (muted) "Unmute" else "Mute",
+                                onClick = act { telegram.setMuted(chat, !muted) }))
+                            if (showProfile) add(MenuEntry(Icons.Outlined.AccountCircle, "View profile", onClick = act { profile = true }))
+                            onSearch?.let { add(MenuEntry(Icons.Outlined.Search, "Search", onClick = act(it))) }
+                            onToBeginning?.let { add(MenuEntry(Icons.Outlined.KeyboardDoubleArrowUp, "To beginning", onClick = act(it))) }
+                        }
+                        val organize = buildList {
+                            if (onSearch == null) add(MenuEntry(Icons.Outlined.PushPin, if (pinned) "Unpin" else "Pin", onClick = act { telegram.setPinned(chat, listKey, !pinned) }))
+                            add(MenuEntry(if (archived) Icons.Outlined.Unarchive else Icons.Outlined.Archive, if (archived) "Unarchive" else "Archive",
+                                onClick = act { telegram.setArchived(chat, !archived) }))
                             if (telegram.folders.isNotEmpty()) {
-                                DropdownMenuItem(
-                                    text = { Text("Add to folder") },
-                                    leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null) },
-                                    trailingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
-                                    onClick = { folders = true },
-                                )
+                                add(MenuEntry(Icons.Outlined.CreateNewFolder, "Add to folder", trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight) { folders = true })
                             }
+                        }
+                        val danger = buildList {
                             if (chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id)) {
                                 if (telegram.isBlocked(chat)) {
-                                    Item(Icons.Outlined.LockOpen, if (telegram.isBot(chat)) "Unblock bot" else "Unblock user",
-                                        onClick = act { telegram.unblock(chat) })
+                                    add(MenuEntry(Icons.Outlined.LockOpen, if (telegram.isBot(chat)) "Unblock bot" else "Unblock user", onClick = act { telegram.unblock(chat) }))
                                 } else {
-                                    Item(Icons.Outlined.Block, if (telegram.isBot(chat)) "Stop and block bot" else "Block user",
-                                        onClick = act { confirm = Confirm.Block })
+                                    add(MenuEntry(Icons.Outlined.Block, if (telegram.isBot(chat)) "Stop and block bot" else "Block user", onClick = act { confirm = Confirm.Block }))
                                 }
                             }
-                            HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                            Item(Icons.Outlined.CleaningServices, "Clear history", onClick = act { confirm = Confirm.Clear })
-                            Item(
+                            add(MenuEntry(Icons.Outlined.CleaningServices, "Clear history", onClick = act { confirm = Confirm.Clear }))
+                            add(MenuEntry(
                                 Icons.Outlined.Delete,
                                 if (chat.privateUserId != 0L) "Delete chat" else if (chat.isChannel) "Leave channel" else "Leave group",
                                 color = MaterialTheme.colorScheme.error,
                                 onClick = act { confirm = Confirm.Delete },
-                            )
+                            ))
                         }
+                        MenuGroups(listOf(window, main, organize, danger))
                     }
                 }
             }
@@ -230,14 +223,6 @@ fun ChatActions(
     if (profile) ChatInfoDialog(chat, telegram, settings, onOpenChat) { profile = false }
 }
 
-@Composable
-private fun Item(icon: ImageVector, label: String, color: Color = Color.Unspecified, onClick: () -> Unit) {
-    DropdownMenuItem(
-        text = { Text(label, color = color) },
-        leadingIcon = { Icon(icon, contentDescription = null, tint = if (color == Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else color) },
-        onClick = onClick,
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

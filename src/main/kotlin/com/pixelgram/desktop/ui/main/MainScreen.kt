@@ -3,6 +3,14 @@ package com.pixelgram.desktop.ui.main
 import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.OnEscape
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
 import com.pixelgram.desktop.ui.components.PhoneText
 import com.pixelgram.desktop.telegram.UnreadCount
 import androidx.compose.ui.graphics.Color
@@ -30,6 +38,7 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -419,40 +428,99 @@ private fun MainMenu(
         ) {
             AccountsList(accounts, settings)
         }
-        val items = listOf(
-            Triple(Icons.Outlined.AccountCircle, "My Profile") { onNavigate(Screen.Profile) },
-            Triple(Icons.Outlined.Groups, "New Group") { onNewChat(false) },
-            Triple(Icons.Outlined.Campaign, "New Channel") { onNewChat(true) },
-            Triple(Icons.Outlined.Contacts, "Contacts") { onNavigate(Screen.Contacts) },
-            Triple(Icons.Outlined.Call, "Calls") { onNavigate(Screen.Calls) },
-            Triple(Icons.Outlined.Bookmark, SavedMessagesTitle, onOpenSaved),
-            Triple(Icons.Outlined.Settings, "Settings") { onNavigate(Screen.Settings()) },
-        )
-        items.forEach { (icon, label, action) ->
-            WideNavigationRailItem(
-                selected = false,
-                onClick = action,
-                icon = { Icon(icon, contentDescription = null) },
-                label = { Text(label) },
-                railExpanded = true,
-            )
-        }
         val dark = isDarkTheme(settings)
-        val toggleNight = { settings.themeMode.value = if (dark) ThemeMode.Light else ThemeMode.Dark }
-        WideNavigationRailItem(
-            selected = false,
-            onClick = toggleNight,
-            icon = { Icon(Icons.Outlined.DarkMode, contentDescription = null) },
-            label = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Night Mode", modifier = Modifier.padding(end = 16.dp))
-                    PixelSwitch(checked = dark, onCheckedChange = { toggleNight() })
-                }
-            },
-            railExpanded = true,
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.width(AccountsWidth).padding(horizontal = 12.dp).padding(bottom = 12.dp),
+        ) {
+            QuickTile(Icons.Outlined.DarkMode, "Night", dark, Modifier.weight(1f)) {
+                settings.themeMode.value = if (dark) ThemeMode.Light else ThemeMode.Dark
+            }
+            QuickTile(Icons.Outlined.Bookmark, "Saved", false, Modifier.weight(1f), onOpenSaved)
+        }
+        val groups = listOf(
+            listOf(
+                Triple(Icons.Outlined.AccountCircle, "My Profile") { onNavigate(Screen.Profile) },
+                Triple(Icons.Outlined.Contacts, "Contacts") { onNavigate(Screen.Contacts) },
+                Triple(Icons.Outlined.Call, "Calls") { onNavigate(Screen.Calls) },
+            ),
+            listOf(
+                Triple(Icons.Outlined.Groups, "New Group") { onNewChat(false) },
+                Triple(Icons.Outlined.Campaign, "New Channel") { onNewChat(true) },
+            ),
+            listOf(
+                Triple(Icons.Outlined.Settings, "Settings") { onNavigate(Screen.Settings()) },
+            ),
         )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.width(AccountsWidth).padding(horizontal = 12.dp),
+        ) {
+            groups.forEach { group ->
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    group.forEachIndexed { index, (icon, label, action) ->
+                        SegmentedListItem(
+                            onClick = action,
+                            shapes = groupShapes(index, group.size),
+                            colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                            leadingContent = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                        ) { Text(label, style = MaterialTheme.typography.titleSmall) }
+                    }
+                }
+            }
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 8.dp),
+            ) {
+                Text(
+                    listOf("pixelGram ${com.pixelgram.desktop.BuildConfig.VERSION}", com.pixelgram.desktop.BuildConfig.CODENAME).filter { it.isNotBlank() }.joinToString(" · "),
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                )
+            }
+        }
     }
 }
+
+@Composable
+private fun QuickTile(icon: ImageVector, label: String, active: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val corner by animateDpAsState(
+        when {
+            pressed -> TilePressedCorner
+            active -> TileActiveCorner
+            else -> TileCorner
+        },
+        MaterialTheme.motionScheme.fastSpatialSpec(),
+    )
+    val container by animateColorAsState(if (active) colors.primary else colors.surfaceContainerHighest, MaterialTheme.motionScheme.defaultEffectsSpec())
+    val content by animateColorAsState(if (active) colors.onPrimary else colors.onSurface, MaterialTheme.motionScheme.defaultEffectsSpec())
+    Surface(
+        onClick = onClick,
+        interactionSource = interaction,
+        shape = RoundedCornerShape(corner),
+        color = container,
+        contentColor = content,
+        modifier = modifier.height(TileHeight),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp),
+        ) {
+            Icon(icon, contentDescription = null)
+            Text(label, style = MaterialTheme.typography.titleSmall)
+        }
+    }
+}
+
+private val TileHeight = 64.dp
+private val TileCorner = 20.dp
+private val TileActiveCorner = 32.dp
+private val TilePressedCorner = 12.dp
 
 @Composable
 private fun AccountsList(accounts: Accounts, settings: AppSettings) {
@@ -507,36 +575,43 @@ private fun AccountHeader(
 ) {
     val me = telegram.me ?: return
     val name = me.fullName()
-    Row(
-        modifier = Modifier
-            .width(AccountsWidth)
-            .padding(start = 12.dp, end = 12.dp, bottom = AccountsGap)
-            .clip(MaterialTheme.shapes.large)
-            .clickable(onClick = onToggle)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        onClick = onToggle,
+        shape = MaterialTheme.shapes.large,
+        color = colors.primaryContainer,
+        contentColor = colors.onPrimaryContainer,
+        modifier = Modifier.width(AccountsWidth).padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
     ) {
-        Avatar(name, me.profilePhoto?.small, telegram, settings, size = 48.dp)
-        Column(Modifier.weight(1f)) {
-            EmojiText(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
-                PhoneText(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Box(Modifier.clip(CircleShape).background(colors.surface.copy(alpha = 0.35f)).padding(4.dp)) {
+                    Avatar(name, me.profilePhoto?.small, telegram, settings, size = 60.dp)
+                }
+                Spacer(Modifier.weight(1f))
+                val turn by animateFloatAsState(
+                    if (accountsOpen) 180f else 0f,
+                    MaterialTheme.motionScheme.defaultSpatialSpec(),
                 )
+                Surface(shape = CircleShape, color = colors.surface.copy(alpha = 0.35f)) {
+                    Icon(
+                        Icons.Filled.KeyboardArrowDown,
+                        contentDescription = "Accounts",
+                        modifier = Modifier.padding(6.dp).rotate(turn),
+                    )
+                }
+            }
+            Column {
+                EmojiText(name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
+                    PhoneText(
+                        it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.onPrimaryContainer.copy(alpha = 0.75f),
+                    )
+                }
             }
         }
-        val turn by animateFloatAsState(
-            if (accountsOpen) 180f else 0f,
-            MaterialTheme.motionScheme.defaultSpatialSpec(),
-        )
-        Icon(
-            Icons.Filled.KeyboardArrowDown,
-            contentDescription = "Accounts",
-            modifier = Modifier.rotate(turn),
-        )
     }
 }
 

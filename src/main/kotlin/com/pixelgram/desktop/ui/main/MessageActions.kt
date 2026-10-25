@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.layout.ColumnScope
+import com.pixelgram.desktop.ui.components.GroupedMenu
+import com.pixelgram.desktop.ui.components.MenuEntry
+import com.pixelgram.desktop.ui.components.MenuGroups
 import com.pixelgram.desktop.ui.icons.outlined.PushPin
 import com.pixelgram.desktop.ui.icons.outlined.Link
 import com.pixelgram.desktop.ui.icons.outlined.DataObject
@@ -217,66 +221,45 @@ private fun MessageMenu(
     button: TdApi.InlineKeyboardButton?,
     onDismiss: () -> Unit,
 ) {
-    val item = @Composable { label: String, icon: ImageVector, action: () -> Unit ->
-        DropdownMenuItem(
-            text = { Text(label) },
-            leadingIcon = { Icon(icon, contentDescription = null) },
-            onClick = {
-                onDismiss()
-                action()
-            },
-        )
-    }
+    val act = { action: () -> Unit -> { onDismiss(); action() } }
     val copy = { value: String -> Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(value), null) }
-    DropdownMenu(
-        expanded = true,
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(16.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
-        if (!message.service && actions.canReact) {
-            var available by remember(message.key) { mutableStateOf(emptyList<String>()) }
-            androidx.compose.runtime.LaunchedEffect(message.key) { actions.loadReactions(message) { available = it } }
-            ReactionPicker(available) { emoji ->
-                onDismiss()
-                actions.onReact(message, emoji)
-            }
-            HorizontalDivider(Modifier.padding(vertical = 4.dp))
-        }
-        item("Reply", Icons.AutoMirrored.Outlined.Reply) { actions.onReply(message) }
+    val buttonUrl = (button?.type as? TdApi.InlineKeyboardButtonTypeUrl)?.url
+        ?: (button?.type as? TdApi.InlineKeyboardButtonTypeLoginUrl)?.url
+    val copyLink = link ?: buttonUrl
+    val reply = buildList {
+        add(MenuEntry(Icons.AutoMirrored.Outlined.Reply, "Reply", onClick = act { actions.onReply(message) }))
+        add(MenuEntry(Icons.AutoMirrored.Outlined.Forward, "Forward", onClick = act { actions.onForward(message) }))
+        if (message.isOutgoing && message.editable) add(MenuEntry(Icons.Outlined.Edit, "Edit", onClick = act { actions.onEdit(message) }))
         actions.onPin?.takeIf { !message.service }?.let { pin ->
-            item(if (message.pinned) "Unpin" else "Pin", Icons.Outlined.PushPin) { pin(message) }
+            add(MenuEntry(Icons.Outlined.PushPin, if (message.pinned) "Unpin" else "Pin", onClick = act { pin(message) }))
         }
-        if (message.isOutgoing && message.editable) {
-            item("Edit", Icons.Outlined.Edit) { actions.onEdit(message) }
-        }
-        val buttonUrl = (button?.type as? TdApi.InlineKeyboardButtonTypeUrl)?.url
-            ?: (button?.type as? TdApi.InlineKeyboardButtonTypeLoginUrl)?.url
-        val copyLink = link ?: buttonUrl
-        if (copyLink != null) {
-            item("Copy Link", Icons.Outlined.Link) { copy(copyLink) }
-        }
+    }
+    val copies = buildList {
+        if (message.text.isNotEmpty()) add(MenuEntry(Icons.Outlined.ContentCopy, "Copy text", onClick = act { copy(message.text) }))
+        if (message.photo != null) add(MenuEntry(Icons.Outlined.Image, "Copy photo", onClick = act { actions.onCopyPhoto(message) }))
+        if (copyLink != null) add(MenuEntry(Icons.Outlined.Link, "Copy Link", onClick = act { copy(copyLink) }))
         (button?.type as? TdApi.InlineKeyboardButtonTypeCallback)?.let { callback ->
-            item("Copy Callback Data", Icons.Outlined.DataObject) { copy(String(callback.data, Charsets.UTF_8)) }
+            add(MenuEntry(Icons.Outlined.DataObject, "Copy Callback Data", onClick = act { copy(String(callback.data, Charsets.UTF_8)) }))
         }
-        if (message.photo != null) {
-            item("Copy photo", Icons.Outlined.Image) { actions.onCopyPhoto(message) }
-        }
-        if (message.text.isNotEmpty()) {
-            item("Copy text", Icons.Outlined.ContentCopy) { copy(message.text) }
-        }
-        item("Forward", Icons.AutoMirrored.Outlined.Forward) { actions.onForward(message) }
-        DropdownMenuItem(
-            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-            leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            onClick = {
-                onDismiss()
-                actions.onDelete(message)
-            },
-        )
+    }
+    val manage = buildList {
         actions.onSelect?.takeIf { !message.service }?.let { select ->
-            item("Select", Icons.Outlined.CheckCircle) { select(message) }
+            add(MenuEntry(Icons.Outlined.CheckCircle, "Select", onClick = act { select(message) }))
         }
+        add(MenuEntry(Icons.Outlined.Delete, "Delete", color = MaterialTheme.colorScheme.error, onClick = act { actions.onDelete(message) }))
+    }
+    GroupedMenu(expanded = true, onDismiss = onDismiss) {
+        val reactions: (@Composable ColumnScope.() -> Unit)? = if (!message.service && actions.canReact) {
+            {
+                var available by remember(message.key) { mutableStateOf(emptyList<String>()) }
+                androidx.compose.runtime.LaunchedEffect(message.key) { actions.loadReactions(message) { available = it } }
+                ReactionPicker(available) { emoji ->
+                    onDismiss()
+                    actions.onReact(message, emoji)
+                }
+            }
+        } else null
+        MenuGroups(listOf(reply, copies, manage), leading = reactions)
     }
 }
 
