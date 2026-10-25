@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.runtime.rememberUpdatedState
 import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.expandHorizontally
@@ -274,6 +276,8 @@ fun ChatView(
     var commentsFor by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     val selected = remember(chat.id) { mutableStateListOf<Long>() }
     val selecting = selected.isNotEmpty()
+    val selectingState = rememberUpdatedState(selecting)
+    val selectScope = rememberCoroutineScope()
     var deletingSelected by remember(chat.id) { mutableStateOf(false) }
     var forwardingSelected by remember(chat.id) { mutableStateOf(false) }
     var shot by remember(chat.id) { mutableStateOf(false) }
@@ -533,8 +537,7 @@ fun ChatView(
                 .weight(1f)
                 .fillMaxWidth()
                 .onGloballyPositioned { listOrigin = it.positionInWindow() }
-                .pointerInput(selecting) {
-                    if (!selecting) return@pointerInput
+                .pointerInput(Unit) {
                     val keyAt = { position: androidx.compose.ui.geometry.Offset ->
                         val point = position + listOrigin
                         shown.firstOrNull { message -> !message.service && itemBounds[message.key]?.let { point.y >= it.top && point.y < it.bottom } == true }?.key
@@ -543,31 +546,61 @@ fun ChatView(
                         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                         if (!currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
                         val start = keyAt(down.position) ?: return@awaitEachGesture
-                        down.consume()
+                        val wasSelecting = selectingState.value
+                        if (wasSelecting) down.consume()
                         val base = selected.toList()
                         val wasSelected = start in base
                         var moved = false
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            val change = event.changes.firstOrNull() ?: break
-                            if (!change.pressed) {
-                                change.consume()
-                                break
-                            }
-                            change.consume()
-                            if (change.position.y < SelectEdgePx) listState.dispatchRawDelta(SelectEdgePx - change.position.y)
-                            if (change.position.y > size.height - SelectEdgePx) listState.dispatchRawDelta(size.height - SelectEdgePx - change.position.y)
-                            val current = keyAt(change.position) ?: continue
-                            if (current == start && !moved) continue
+                        var pointer = down.position
+                        var edgeJob: kotlinx.coroutines.Job? = null
+                        val extend = extend@{
+                            val current = keyAt(pointer) ?: return@extend
+                            if (current == start && !moved) return@extend
                             moved = true
                             val from = shown.indexOfFirst { it.key == start }
                             val to = shown.indexOfFirst { it.key == current }
-                            if (from < 0 || to < 0) continue
+                            if (from < 0 || to < 0) return@extend
                             val range = shown.subList(minOf(from, to), maxOf(from, to) + 1).filter { !it.service }.map { it.key }
                             selected.clear()
                             selected.addAll((base + range).distinct().take(SelectionLimit))
                         }
-                        if (!moved) {
+                        try {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull() ?: break
+                                if (!change.pressed) {
+                                    if (wasSelecting || moved) change.consume()
+                                    break
+                                }
+                                pointer = change.position
+                                if (!wasSelecting && !moved) {
+                                    val current = keyAt(pointer)
+                                    if (current == null || current == start) continue
+                                }
+                                change.consume()
+                                extend()
+                                if (edgeJob == null && moved) {
+                                    edgeJob = selectScope.launch {
+                                        while (true) {
+                                            withFrameNanos { }
+                                            val y = pointer.y
+                                            val speed = when {
+                                                y < SelectEdgePx -> (SelectEdgePx - y) / SelectEdgePx
+                                                y > size.height - SelectEdgePx -> -(y - (size.height - SelectEdgePx)) / SelectEdgePx
+                                                else -> 0f
+                                            }.coerceIn(-1f, 1f)
+                                            if (speed != 0f) {
+                                                listState.dispatchRawDelta(speed * SelectScrollPxPerFrame)
+                                                extend()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } finally {
+                            edgeJob?.cancel()
+                        }
+                        if (wasSelecting && !moved) {
                             if (wasSelected) {
                                 selected.remove(start)
                             } else if (selected.size < SelectionLimit) {
@@ -654,24 +687,31 @@ fun ChatView(
                         } else {
                             val isSelected = message.key in selected
                             val selectTint = MaterialTheme.colorScheme.primary
+                            val highlight by animateFloatAsState(if (isSelected) SelectedAlpha else 0f, MaterialTheme.motionScheme.defaultEffectsSpec())
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .onGloballyPositioned { itemBounds[message.key] = it.boundsInWindow() }
                                     .clip(RoundedCornerShape(16.dp))
-                                    .drawBehind { if (isSelected) drawRect(selectTint.copy(alpha = SelectedAlpha)) },
+                                    .drawBehind { if (highlight > 0f) drawRect(selectTint.copy(alpha = highlight)) },
                             ) {
                             AnimatedVisibility(
                                 visible = selecting,
                                 enter = expandHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(),
                                 exit = shrinkHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(),
                             ) {
-                                Icon(
-                                    if (isSelected) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
-                                    contentDescription = null,
-                                    tint = if (isSelected) selectTint else MaterialTheme.colorScheme.outline,
-                                    modifier = Modifier.padding(horizontal = 8.dp).size(22.dp),
-                                )
+                                val pop by animateFloatAsState(if (isSelected) 1f else 0.85f, MaterialTheme.motionScheme.fastSpatialSpec())
+                                Crossfade(isSelected, animationSpec = MaterialTheme.motionScheme.fastEffectsSpec()) { checked ->
+                                    Icon(
+                                        if (checked) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+                                        contentDescription = null,
+                                        tint = if (checked) selectTint else MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.padding(horizontal = 8.dp).size(22.dp).graphicsLayer {
+                                            scaleX = pop
+                                            scaleY = pop
+                                        },
+                                    )
+                                }
                             }
                             Box(Modifier.weight(1f)) {
                             val groupChat = chat.isGroup && !chat.isChannel && !message.isOutgoing
@@ -1339,7 +1379,8 @@ object VoiceButton {
     var preferred by mutableStateOf(true)
 }
 private const val SelectedAlpha = 0.14f
-private const val SelectEdgePx = 48f
+private const val SelectEdgePx = 64f
+private const val SelectScrollPxPerFrame = 9f
 private const val MentionDelayMs = 150L
 private val KeyboardMinWidth = 260.dp
 
