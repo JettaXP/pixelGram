@@ -1243,7 +1243,7 @@ private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @
         content = {
             if (text.isNotEmpty()) {
                 SelectionContainer {
-                    FormattedText(text, entities, style = MaterialTheme.typography.bodyLarge, onTextLayout = { textLayout = it })
+                    FormattedText(text, entities, style = com.pixelgram.desktop.ui.theme.messageTextStyle(), onTextLayout = { textLayout = it })
                 }
             } else {
                 Box {}

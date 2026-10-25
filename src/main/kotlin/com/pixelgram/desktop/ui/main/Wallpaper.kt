@@ -51,19 +51,25 @@ object Wallpapers {
         )?.file
     }.onFailure { AppLog.write("Wallpaper picker failed", it) }.getOrNull()
 
+    fun recent(): List<File> = dir.listFiles()?.filter { it.isFile }?.sortedByDescending { it.lastModified() }.orEmpty()
+
     suspend fun install(settings: AppSettings, source: File) {
         val target = withContext(Dispatchers.IO) {
             dir.mkdirs()
-            dir.listFiles()?.forEach { it.delete() }
             File(dir, "wallpaper-${System.currentTimeMillis()}.${source.extension.ifBlank { "jpg" }}").also { source.copyTo(it) }
+                .also { recent().drop(MaxRecent).forEach(File::delete) }
         }
-        settings.wallpaper.value = target.absolutePath
+        use(settings, target)
+    }
+
+    suspend fun use(settings: AppSettings, file: File) {
+        file.setLastModified(System.currentTimeMillis())
+        settings.wallpaper.value = file.absolutePath
         if (settings.wallpaperColors.value) applyColors(settings)
     }
 
     fun remove(settings: AppSettings) {
         settings.wallpaper.value = ""
-        runCatching { dir.listFiles()?.forEach { it.delete() } }
     }
 
     suspend fun applyColors(settings: AppSettings) {
@@ -104,6 +110,7 @@ object Wallpapers {
     }
 
     private const val SampleSize = 128
+    private const val MaxRecent = 8
     private const val MaxColors = 128
 }
 

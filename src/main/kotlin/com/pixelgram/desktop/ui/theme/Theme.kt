@@ -79,6 +79,7 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
         CompositionLocalProvider(
             LocalUriHandler provides Links,
             com.pixelgram.desktop.ui.components.LocalCorners provides corners,
+            LocalMessageFont provides messageFont(settings),
             content = content,
         )
     }

@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.settings
 
+import io.github.vinceglb.filekit.dialogs.openFilePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.BasicAlertDialog
 import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.UpdatePanel
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
@@ -1063,6 +1066,7 @@ private fun ChatSettingsSection(settings: AppSettings, onOpenBubbles: () -> Unit
     Header("Theme")
     ThemeModeButtons(settings)
     WallpaperSettings(settings)
+    MessageFontSettings(settings)
     Header("Message bubbles")
     Description("Bubble corners, avatar shapes and colors are in pixelGram Preferences.")
     OutlinedButton(onClick = onOpenBubbles) { Text("Open $PixelPreferencesTitle") }
@@ -1090,25 +1094,53 @@ private fun WallpaperSettings(settings: AppSettings) {
     Header("Wallpaper")
     Description("Shown behind every chat, except chats that have their own background in Telegram.")
     val path = settings.wallpaper.value
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        modifier = Modifier.fillMaxWidth().height(WallpaperPreviewHeight),
-    ) {
-        if (path.isNotBlank()) {
-            com.pixelgram.desktop.ui.main.FileImage(path, Modifier.fillMaxSize(), androidx.compose.ui.layout.ContentScale.Crop)
-        } else {
+    val recent = remember(path) { com.pixelgram.desktop.ui.main.Wallpapers.recent() }
+    if (recent.isEmpty()) {
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            modifier = Modifier.fillMaxWidth().height(WallpaperPreviewHeight),
+        ) {
             Box(contentAlignment = Alignment.Center) {
                 Text("No wallpaper", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    } else {
+        val carousel = androidx.compose.material3.carousel.rememberCarouselState { recent.size }
+        androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel(
+            state = carousel,
+            preferredItemWidth = WallpaperItemWidth,
+            itemSpacing = 8.dp,
+            modifier = Modifier.fillMaxWidth().height(WallpaperPreviewHeight),
+        ) { index ->
+            val file = recent[index]
+            val selected = file.absolutePath == path
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .maskClip(MaterialTheme.shapes.extraLarge)
+                    .clickable { scope.launch { com.pixelgram.desktop.ui.main.Wallpapers.use(settings, file) } },
+                contentAlignment = Alignment.Center,
+            ) {
+                com.pixelgram.desktop.ui.main.FileImage(file.absolutePath, Modifier.fillMaxSize(), androidx.compose.ui.layout.ContentScale.Crop)
+                androidx.compose.animation.AnimatedVisibility(
+                    selected,
+                    enter = androidx.compose.animation.scaleIn() + androidx.compose.animation.fadeIn(),
+                    exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut(),
+                ) {
+                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(56.dp)) {
+                        Icon(Icons.Filled.Check, contentDescription = "Current", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(14.dp))
+                    }
+                }
             }
         }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
         Button(onClick = {
             scope.launch { com.pixelgram.desktop.ui.main.Wallpapers.pick()?.let { com.pixelgram.desktop.ui.main.Wallpapers.install(settings, it) } }
-        }) { Text(if (path.isBlank()) "Choose image" else "Change") }
+        }) { Text("Add image") }
         if (path.isNotBlank()) {
-            OutlinedButton(onClick = { com.pixelgram.desktop.ui.main.Wallpapers.remove(settings) }) { Text("Remove") }
+            OutlinedButton(onClick = { com.pixelgram.desktop.ui.main.Wallpapers.remove(settings) }) { Text("No wallpaper") }
         }
     }
     if (path.isNotBlank()) {
@@ -1136,7 +1168,94 @@ private fun WallpaperSettings(settings: AppSettings) {
     )
 }
 
-private val WallpaperPreviewHeight = 160.dp
+private val WallpaperPreviewHeight = 180.dp
+private val WallpaperItemWidth = 260.dp
+
+@Composable
+private fun MessageFontSettings(settings: AppSettings) {
+    val scope = rememberCoroutineScope()
+    var choosing by remember { mutableStateOf(false) }
+    Header("Message font")
+    Description("The font and size of message text. Pick an installed font or load a .ttf or .otf file.")
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            MessageBubble(UiMessage(1, 0, 0, 0, false, 1_700_000_000, "The quick brown fox jumps over the lazy dog"), senderName = null, settings = settings)
+            MessageBubble(UiMessage(2, 0, 0, 0, true, 1_700_000_060, "Съешь же ещё этих мягких французских булок 🥐"), senderName = null, settings = settings)
+        }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+        Button(onClick = { choosing = true }) { Text(com.pixelgram.desktop.ui.theme.MessageFonts.label(settings.messageFont.value)) }
+        OutlinedButton(onClick = {
+            scope.launch {
+                val file = runCatching {
+                    io.github.vinceglb.filekit.FileKit.openFilePicker(
+                        type = io.github.vinceglb.filekit.dialogs.FileKitType.File(listOf("ttf", "otf")),
+                    )?.file
+                }.getOrNull() ?: return@launch
+                val target = java.io.File(com.pixelgram.desktop.core.AppPaths.dataDir, "fonts").apply { mkdirs() }.resolve(file.name)
+                runCatching { file.copyTo(target, overwrite = true) }.onSuccess {
+                    settings.messageFont.value = com.pixelgram.desktop.ui.theme.MessageFonts.FilePrefix + target.absolutePath
+                }
+            }
+        }) { Text("From file") }
+        if (settings.messageFont.value.isNotBlank()) {
+            TextButton(onClick = { settings.messageFont.value = "" }) { Text("Default") }
+        }
+    }
+    Text("Size", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Slider(
+            value = settings.messageFontSize.value.toFloat(),
+            onValueChange = { settings.messageFontSize.value = it.toInt() },
+            valueRange = 12f..24f,
+            modifier = Modifier.weight(1f),
+        )
+        Text("${settings.messageFontSize.value} sp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+    }
+    if (choosing) FontPickerDialog(settings) { choosing = false }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FontPickerDialog(settings: AppSettings, onDismiss: () -> Unit) {
+    var query by remember { mutableStateOf("") }
+    val families = com.pixelgram.desktop.ui.theme.MessageFonts.systemFamilies
+    val shown = remember(query) { listOf("") + families.filter { it.contains(query, ignoreCase = true) } }
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.width(420.dp).height(560.dp)) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Message font", style = MaterialTheme.typography.headlineSmall)
+                OutlinedTextField(query, { query = it }, placeholder = { Text("Search fonts") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    items(shown.size) { index ->
+                        val value = shown[index]
+                        val selected = settings.messageFont.value == value
+                        SegmentedListItem(
+                            onClick = {
+                                settings.messageFont.value = value
+                                onDismiss()
+                            },
+                            shapes = groupShapes(index, shown.size),
+                            trailingContent = if (selected) {
+                                { Icon(Icons.Filled.Check, contentDescription = null) }
+                            } else null,
+                        ) {
+                            Text(
+                                com.pixelgram.desktop.ui.theme.MessageFonts.label(value),
+                                fontFamily = com.pixelgram.desktop.ui.theme.MessageFonts.family(value) ?: MaterialTheme.typography.bodyLarge.fontFamily,
+                            )
+                        }
+                    }
+                }
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+            }
+        }
+    }
+}
 
 @Composable
 private fun DoubleClickEmoji(settings: AppSettings) {
