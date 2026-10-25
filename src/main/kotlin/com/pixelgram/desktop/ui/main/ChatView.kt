@@ -798,6 +798,7 @@ fun ChatView(
                     fadeOut(barFadeOut) using SizeTransform(clip = false)
             },
         ) { mode ->
+        Column {
         if (mode == BarMode.Select) {
             SelectionBar(
                 count = selected.size,
@@ -866,6 +867,7 @@ fun ChatView(
                 }
             },
         )
+        }
         }
     }
     AnimatedVisibility(
@@ -1991,19 +1993,7 @@ private fun Composer(
                 val showMic = voice.active || (VoiceButton.preferred && !canSend && editing == null)
                 val swapFade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
                 val swapScale = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
-                Box(
-                    Modifier.pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed && !voice.active) {
-                                    event.changes.forEach { it.consume() }
-                                    VoiceButton.preferred = !VoiceButton.preferred
-                                }
-                            }
-                        }
-                    },
-                ) {
+                Box {
                     AnimatedContent(
                         targetState = showMic,
                         transitionSpec = {

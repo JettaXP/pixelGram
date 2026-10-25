@@ -1,5 +1,13 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.expressive.popIn
+import androidx.compose.material3.Surface
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.animation.togetherWith
+import com.pixelgram.desktop.ui.icons.filled.Videocam
+import kotlinx.coroutines.withTimeoutOrNull
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -64,6 +72,10 @@ private const val LevelSmoothing = 0.3f
 private const val CollapseMs = 450
 private const val MinBar = 0.12f
 private const val PressedScale = 1.35f
+private const val TapScale = 0.88f
+private const val HoldMs = 250L
+private const val HintDelayMs = 600L
+private const val HintOffset = 58
 private const val PulseScale = 0.8f
 private const val PulseAlpha = 0.3f
 private const val MaxLevels = 400
@@ -116,6 +128,11 @@ class VoiceRecording {
 
     suspend fun finish(): VoiceNote? = coroutineScope {
         val current = recorder ?: return@coroutineScope null
+        if (current.elapsedMs < VoiceRecorder.MinDurationMs) {
+            cancel()
+            TopNotice.text = "Hold to record a voice message"
+            return@coroutineScope null
+        }
         collapsing = true
         val note = async(Dispatchers.IO) { current.stop() }
         delay(CollapseMs.toLong())
@@ -143,24 +160,88 @@ class VoiceRecording {
     }
 }
 
+enum class RecordMode { Voice, Round }
+
+object RecordButton {
+    var mode by mutableStateOf(RecordMode.Voice)
+}
+
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modifier: Modifier = Modifier) {
     val density = LocalDensity.current
     val cancelPx = with(density) { CancelDistance.toPx() }
     val recording = voice.active && !voice.collapsing
-    val scale by animateFloatAsState(if (recording) PressedScale else 1f, MaterialTheme.motionScheme.fastSpatialSpec())
+    var pressed by remember { mutableStateOf(false) }
+    var hint by remember { mutableStateOf(false) }
+    var hovered by remember { mutableStateOf(false) }
+    LaunchedEffect(hovered) {
+        if (hovered) {
+            kotlinx.coroutines.delay(HintDelayMs)
+            hint = true
+        } else {
+            hint = false
+        }
+    }
+    val scale by animateFloatAsState(
+        when {
+            recording -> PressedScale
+            pressed -> TapScale
+            else -> 1f
+        },
+        MaterialTheme.motionScheme.fastSpatialSpec(),
+    )
     val pulse by animateFloatAsState(if (recording) 1f + voice.level * PulseScale else 1f, MaterialTheme.motionScheme.fastSpatialSpec())
+    val turn by animateFloatAsState(if (RecordButton.mode == RecordMode.Round) 90f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec())
     val scheme = MaterialTheme.colorScheme
     val micShape = MaterialShapes.Cookie4Sided.toShape()
+    if (hint && !recording) {
+        androidx.compose.ui.window.Popup(
+            alignment = Alignment.TopEnd,
+            offset = androidx.compose.ui.unit.IntOffset(0, -HintOffset),
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = scheme.inverseSurface,
+                contentColor = scheme.inverseOnSurface,
+                shadowElevation = 3.dp,
+                modifier = Modifier.popIn(),
+            ) {
+                Text(
+                    if (RecordButton.mode == RecordMode.Voice) "Hold to record audio. Click to switch to video." else "Hold to record video. Click to switch to audio.",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+            }
+        }
+    }
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .size(40.dp)
+            .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { hovered = true }
+            .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Exit) { hovered = false }
             .pointerInput(voice) {
                 awaitEachGesture {
-                    val down = awaitFirstDown()
-                    if (!currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val buttons = currentEvent.buttons
+                    if (!buttons.isPrimaryPressed && !buttons.isSecondaryPressed) return@awaitEachGesture
                     down.consume()
+                    hovered = false
+                    pressed = true
+                    val early = withTimeoutOrNull(HoldMs) { waitForUpOrCancellation() }
+                    if (early != null) {
+                        pressed = false
+                        RecordButton.mode = if (RecordButton.mode == RecordMode.Voice) RecordMode.Round else RecordMode.Voice
+                        hovered = true
+                        return@awaitEachGesture
+                    }
+                    if (RecordButton.mode == RecordMode.Round) {
+                        TopNotice.text = "Video messages aren't supported yet"
+                        waitForUpOrCancellation()
+                        pressed = false
+                        return@awaitEachGesture
+                    }
                     voice.start()
                     while (true) {
                         val event = awaitPointerEvent()
@@ -169,6 +250,7 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
                         change.consume()
                         if (!change.pressed) break
                     }
+                    pressed = false
                     if (voice.active) onRelease(voice.dragX < -cancelPx)
                     voice.dragX = 0f
                 }
@@ -191,10 +273,25 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
+                    rotationZ = turn
                 }
                 .background(scheme.primary, micShape),
         ) {
-            Icon(Icons.Filled.Mic, contentDescription = "Record voice message", tint = scheme.onPrimary, modifier = Modifier.size(22.dp))
+            androidx.compose.animation.AnimatedContent(
+                targetState = RecordButton.mode,
+                transitionSpec = {
+                    (androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = 0.5f)) togetherWith
+                        (androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = 0.5f))
+                },
+                modifier = Modifier.graphicsLayer { rotationZ = -turn },
+            ) { mode ->
+                Icon(
+                    if (mode == RecordMode.Voice) Icons.Filled.Mic else Icons.Filled.Videocam,
+                    contentDescription = if (mode == RecordMode.Voice) "Hold to record a voice message, click for a video message" else "Hold to record a video message, click for a voice message",
+                    tint = scheme.onPrimary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
     }
 }

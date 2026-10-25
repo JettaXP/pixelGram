@@ -183,7 +183,7 @@ class VoiceRecorder private constructor(private val file: File, private val onFa
         private const val MaxPacket = 4_000
         private const val PacketsPerPage = 50
         private const val SilenceDb = 50.0
-        private const val MinDurationMs = 700L
+        const val MinDurationMs = 700L
         private const val StopWaitMs = 3_000L
         private const val WaveformBars = 100
 
