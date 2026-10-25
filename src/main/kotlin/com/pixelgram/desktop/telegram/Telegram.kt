@@ -560,9 +560,15 @@ class Telegram(
         }
     }
 
+    var contactIds by mutableStateOf<List<Long>?>(null)
+        private set
+
     fun contacts(onResult: (List<Long>) -> Unit) {
+        contactIds?.let(onResult)
         send(TdApi.GetContacts()) { result ->
-            onResult((result as? TdApi.Users)?.userIds?.toList().orEmpty())
+            val ids = (result as? TdApi.Users)?.userIds?.toList().orEmpty()
+            contactIds = ids
+            onResult(ids)
         }
     }
 

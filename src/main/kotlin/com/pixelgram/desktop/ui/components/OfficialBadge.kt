@@ -136,7 +136,7 @@ private val BugNet: ImageVector by lazy {
 }
 
 @Composable
-private fun BadgeTip(text: String?, onDone: () -> Unit) {
+fun BadgeTip(text: String?, onDone: () -> Unit) {
     if (text == null) return
     LaunchedEffect(text) {
         kotlinx.coroutines.delay(TipMs)

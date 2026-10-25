@@ -51,7 +51,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun PageScaffold(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+fun PageScaffold(title: String, onBack: () -> Unit, scroll: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     OnEscape {
         onBack()
         true
@@ -67,7 +67,7 @@ fun PageScaffold(title: String, onBack: () -> Unit, content: @Composable ColumnS
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
                     .padding(horizontal = 24.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
