@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenuPopup
@@ -59,7 +60,7 @@ fun MenuGroups(
     ) {
         Column(Modifier.padding(MenuPadding)) {
             if (leading != null) {
-                Surface(shape = groupShapes(0, 1).shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                Surface(shape = groupShapes(0, 1).shape, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
                     Column(content = leading)
                 }
             }

@@ -91,6 +91,7 @@ private fun ReactionCell(emoji: String, onPick: (String) -> Unit) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ReactionChips(
+    owner: Pair<Long, Long>,
     reactions: List<TdApi.MessageReaction>,
     outgoing: Boolean,
     onToggle: (String) -> Unit,
@@ -99,6 +100,8 @@ fun ReactionChips(
     avatars: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val known = remember(owner) { ReactionMemory.known(owner) }
+    LaunchedEffect(owner, reactions) { ReactionMemory.store(owner, reactions) }
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -108,7 +111,11 @@ fun ReactionChips(
             val emoji = (reaction.type as? TdApi.ReactionTypeEmoji)?.emoji ?: return@forEach
             key(emoji) {
             val chosen = reaction.isChosen
-            val pop = remember { Animatable(1f) }
+            val fresh = remember { known != null && emoji !in known }
+            val pop = remember { Animatable(if (fresh) 0f else 1f) }
+            LaunchedEffect(Unit) {
+                if (fresh) pop.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 400f))
+            }
             var shown by remember { mutableStateOf(reaction.totalCount to chosen) }
             LaunchedEffect(reaction.totalCount, chosen) {
                 val now = reaction.totalCount to chosen
@@ -283,3 +290,25 @@ fun BotAnswer(answer: Pair<String, Boolean>?, onDismiss: () -> Unit, modifier: M
 }
 
 private const val AnswerMs = 2500L
+
+object ReactionMemory {
+    private val seen = object : LinkedHashMap<Pair<Long, Long>, Set<String>>(256, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<Long, Long>, Set<String>>) = size > MaxMessages
+    }
+
+    fun note(message: com.pixelgram.desktop.telegram.UiMessage) {
+        val key = message.chatId to message.id
+        if (seen[key] == null) seen[key] = emojis(message.reactions)
+    }
+
+    fun known(owner: Pair<Long, Long>): Set<String>? = seen[owner]
+
+    fun store(owner: Pair<Long, Long>, reactions: List<TdApi.MessageReaction>) {
+        seen[owner] = emojis(reactions)
+    }
+
+    private fun emojis(reactions: List<TdApi.MessageReaction>) =
+        reactions.mapNotNullTo(HashSet()) { (it.type as? TdApi.ReactionTypeEmoji)?.emoji }
+
+    private const val MaxMessages = 4000
+}

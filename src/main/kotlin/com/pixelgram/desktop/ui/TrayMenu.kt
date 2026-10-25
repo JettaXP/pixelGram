@@ -6,6 +6,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.runtime.withFrameNanos
+import com.pixelgram.desktop.ui.components.MenuEntry
+import com.pixelgram.desktop.ui.components.MenuGroups
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -109,9 +113,14 @@ private fun TrayMenuWindow(
     val left = at.x + width > screen.x + screen.width
     val x = if (left) at.x - width else at.x
     val y = if (above) at.y - height else at.y
-    val shown = remember { MutableTransitionState(false).apply { targetState = true } }
+    val shown = remember { MutableTransitionState(false) }
+    var closing by remember { mutableStateOf(false) }
+    val close = { closing = true; shown.targetState = false }
+    LaunchedEffect(closing, shown.isIdle) {
+        if (closing && shown.isIdle) onDismiss()
+    }
     Window(
-        onCloseRequest = onDismiss,
+        onCloseRequest = close,
         state = rememberWindowState(position = WindowPosition(x.dp, y.dp), size = MenuWindow),
         title = "pixelGram",
         undecorated = true,
@@ -121,14 +130,20 @@ private fun TrayMenuWindow(
     ) {
         DisposableEffect(Unit) {
             val listener = object : WindowAdapter() {
-                override fun windowLostFocus(e: WindowEvent) = onDismiss()
+                override fun windowLostFocus(e: WindowEvent) = close()
             }
             window.addWindowFocusListener(listener)
             window.toFront()
             window.requestFocus()
             onDispose { window.removeWindowFocusListener(listener) }
         }
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            shown.targetState = true
+        }
         PixelTheme(settings) {
+            val motion = MaterialTheme.motionScheme
+            val origin = TransformOrigin(if (left) 1f else 0f, if (above) 1f else 0f)
             Box(
                 Modifier.fillMaxSize().padding(8.dp),
                 contentAlignment = when {
@@ -140,11 +155,11 @@ private fun TrayMenuWindow(
             ) {
                 AnimatedVisibility(
                     shown,
-                    enter = fadeIn() + scaleIn(
-                        initialScale = 0.9f,
-                        transformOrigin = TransformOrigin(if (left) 1f else 0f, if (above) 1f else 0f),
-                    ),
-                    exit = fadeOut() + scaleOut(targetScale = 0.9f),
+                    enter = fadeIn(motion.fastEffectsSpec()) +
+                        scaleIn(motion.defaultSpatialSpec(), initialScale = 0.6f, transformOrigin = origin) +
+                        expandVertically(motion.defaultSpatialSpec(), expandFrom = if (above) Alignment.Bottom else Alignment.Top),
+                    exit = fadeOut(motion.fastEffectsSpec()) +
+                        scaleOut(motion.fastSpatialSpec(), targetScale = 0.8f, transformOrigin = origin),
                 ) {
                     TrayMenu(
                         settings,
@@ -163,45 +178,30 @@ private fun TrayMenuWindow(
 @Composable
 private fun TrayMenu(settings: AppSettings, onOpen: () -> Unit, onQuit: () -> Unit) {
     val muted = settings.notificationsMuted.value
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shadowElevation = 4.dp,
-        modifier = Modifier.width(MenuWidth),
-    ) {
-        Column(Modifier.padding(vertical = 8.dp)) {
+    MenuGroups(
+        groups = listOf(
+            listOf(
+                MenuEntry(Icons.Outlined.OpenInNew, "Open pixelGram", onClick = onOpen),
+                MenuEntry(
+                    if (muted) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
+                    if (muted) "Enable notifications" else "Disable notifications",
+                ) { settings.notificationsMuted.value = !muted },
+            ),
+            listOf(MenuEntry(Icons.AutoMirrored.Outlined.ExitToApp, "Quit pixelGram", MaterialTheme.colorScheme.error, onClick = onQuit)),
+        ),
+        width = MenuWidth,
+        leading = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 themedAppIcon()?.let { Image(it, contentDescription = null, modifier = Modifier.size(28.dp)) }
                 Text("pixelGram", style = MaterialTheme.typography.titleMedium)
             }
-            HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            DropdownMenuItem(
-                text = { Text("Open pixelGram") },
-                leadingIcon = { Icon(Icons.Outlined.OpenInNew, contentDescription = null) },
-                onClick = onOpen,
-            )
-            DropdownMenuItem(
-                text = { Text(if (muted) "Enable notifications" else "Disable notifications") },
-                leadingIcon = {
-                    Icon(if (muted) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff, contentDescription = null)
-                },
-                onClick = { settings.notificationsMuted.value = !muted },
-            )
-            HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            DropdownMenuItem(
-                text = { Text("Quit pixelGram", color = MaterialTheme.colorScheme.error) },
-                leadingIcon = {
-                    Icon(Icons.AutoMirrored.Outlined.ExitToApp, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                },
-                onClick = onQuit,
-            )
-        }
-    }
+        },
+    )
 }
 
 private val MenuWidth = 248.dp
-private val MenuWindow = DpSize(MenuWidth + 16.dp, 260.dp)
+private val MenuWindow = DpSize(MenuWidth + 16.dp, 300.dp)

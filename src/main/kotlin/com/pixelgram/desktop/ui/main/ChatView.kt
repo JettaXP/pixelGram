@@ -973,6 +973,7 @@ fun MessageBubble(
     onComments: (() -> Unit)? = null,
 ) {
     val seconds = settings.messageSeconds.value
+    remember(message.chatId, message.id) { ReactionMemory.note(message) }
     if (message.service) {
         ServiceMessage(
             listOfNotNull(senderName?.takeIf { it.isNotBlank() }, message.text).joinToString(" · "),
@@ -1165,6 +1166,7 @@ fun MessageBubble(
                             Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
                                 Box(Modifier.weight(1f)) {
                                     ReactionChips(
+                                        message.chatId to message.id,
                                         message.reactions,
                                         outgoing,
                                         onReact,
@@ -1180,6 +1182,7 @@ fun MessageBubble(
                 } else if (message.reactions.isNotEmpty() && onReact != null) {
                     Box(Modifier.padding(horizontal = 6.dp).padding(bottom = 4.dp)) {
                         ReactionChips(
+                            message.chatId to message.id,
                             message.reactions,
                             outgoing,
                             onReact,
@@ -1240,6 +1243,7 @@ private fun BareMessage(
     modifier: Modifier,
     onReact: ((String) -> Unit)?,
 ) {
+    remember(message.chatId, message.id) { ReactionMemory.note(message) }
     Box(modifier.fillMaxWidth(), contentAlignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart) {
         Column(
             horizontalAlignment = if (message.isOutgoing) Alignment.End else Alignment.Start,
@@ -1249,6 +1253,7 @@ private fun BareMessage(
             BareContent(message, telegram)
             if (message.reactions.isNotEmpty() && onReact != null) {
                 ReactionChips(
+                    message.chatId to message.id,
                     message.reactions,
                     message.isOutgoing,
                     onReact,
