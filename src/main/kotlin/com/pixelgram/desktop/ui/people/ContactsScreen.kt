@@ -101,8 +101,8 @@ fun ContactsScreen(
 @Composable
 private fun MutualBadge() {
     var tip by remember { mutableStateOf<String?>(null) }
-    BadgeTip(tip) { tip = null }
     IconButton(onClick = { tip = "Mutual contact: you're in their contacts too" }) {
         Icon(Icons.Outlined.HowToReg, contentDescription = "Mutual contact", tint = MaterialTheme.colorScheme.primary)
+        BadgeTip(tip) { tip = null }
     }
 }

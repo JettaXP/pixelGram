@@ -59,7 +59,6 @@ fun OfficialBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
     val logo = rememberPixelgramLogo() ?: return
     val scheme = MaterialTheme.colorScheme
     var tip by remember { mutableStateOf<String?>(null) }
-    BadgeTip(tip) { tip = null }
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -69,6 +68,7 @@ fun OfficialBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
             .pointerHoverIcon(PointerIcon.Hand)
             .clickable { tip = OfficialNotice },
     ) {
+        BadgeTip(tip) { tip = null }
         Icon(
             logo,
             contentDescription = "Official pixelGram resource",
@@ -101,7 +101,6 @@ enum class UserBadge(val userId: Long, val notice: String) {
 fun UserBadgeView(badge: UserBadge, size: Dp = 18.dp, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     var tip by remember { mutableStateOf<String?>(null) }
-    BadgeTip(tip) { tip = null }
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -111,6 +110,7 @@ fun UserBadgeView(badge: UserBadge, size: Dp = 18.dp, modifier: Modifier = Modif
             .pointerHoverIcon(PointerIcon.Hand)
             .clickable { tip = badge.notice },
     ) {
+        BadgeTip(tip) { tip = null }
         Icon(badge.icon, contentDescription = badge.notice, tint = scheme.onPrimary, modifier = Modifier.size(size * LogoScale))
     }
 }
