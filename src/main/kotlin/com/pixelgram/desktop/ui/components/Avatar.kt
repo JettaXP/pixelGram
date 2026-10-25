@@ -64,12 +64,17 @@ private object ImageCache {
     }
 }
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+private val ImageDecoding = Dispatchers.IO.limitedParallelism(DecodeThreads)
+
+private const val DecodeThreads = 4
+
 suspend fun loadImage(path: String): ImageBitmap? = loadImage(path, maxSize = 0)
 
 suspend fun loadImage(path: String, maxSize: Int): ImageBitmap? {
     val key = "$path@$maxSize"
     ImageCache.get(key)?.let { return it }
-    return withContext(Dispatchers.IO) {
+    return withContext(ImageDecoding) {
         runCatching {
             val image = SkiaImage.makeFromEncoded(File(path).readBytes())
             val longer = maxOf(image.width, image.height)

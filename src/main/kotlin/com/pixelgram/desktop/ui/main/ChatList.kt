@@ -245,7 +245,7 @@ private fun ChatListBody(
                     }
                     item(key = "archive-gap") { Spacer(Modifier.height(GroupGap)) }
                 }
-                itemsIndexed(pinned, key = { _, chat -> chat.id }) { index, chat ->
+                itemsIndexed(pinned, key = { _, chat -> chat.id }, contentType = { _, _ -> ChatRowType }) { index, chat ->
                     ChatRow(chat, index, pinned.size, chat.id == selectedChatId, telegram, settings, key, itemMotion(!listState.isScrollInProgress)) {
                         onOpen(chat.id)
                     }
@@ -253,7 +253,7 @@ private fun ChatListBody(
                 if (pinned.isNotEmpty() && rest.isNotEmpty()) {
                     item(key = "pinned-gap") { Spacer(Modifier.height(GroupGap)) }
                 }
-                itemsIndexed(rest, key = { _, chat -> chat.id }) { index, chat ->
+                itemsIndexed(rest, key = { _, chat -> chat.id }, contentType = { _, _ -> ChatRowType }) { index, chat ->
                     ChatRow(chat, index, rest.size, chat.id == selectedChatId, telegram, settings, key, itemMotion(!listState.isScrollInProgress)) {
                         onOpen(chat.id)
                     }
@@ -515,3 +515,5 @@ private fun LockButton() {
 }
 
 private const val LockAnimationMs = 260L
+
+private const val ChatRowType = "chat"
