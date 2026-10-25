@@ -69,6 +69,7 @@ class AppSettings private constructor(private val props: Properties) {
 
     val themeMode = enum("themeMode", ThemeMode.System)
     val seedColor = int("seedColor", 0xFF6750A4.toInt())
+    val colorStyle = enum("colorStyle", com.pixelgram.desktop.ui.theme.ColorStyle.TonalSpot)
     val matugen = bool("matugen", false)
     val emojiStyle = enum("emojiStyle", EmojiStyle.Noto)
     val notificationSound = bool("notificationSound", true)
@@ -141,7 +142,7 @@ class AppSettings private constructor(private val props: Properties) {
     val activeAccount = int("activeAccount", 0)
 
     private val all: List<Setting<*>> = listOf(
-        themeMode, seedColor, matugen, emojiStyle, notificationSound, notificationsMuted,
+        themeMode, seedColor, colorStyle, matugen, emojiStyle, notificationSound, notificationsMuted,
         notificationPopups, notificationSide, notificationStyle,
         materialFolders, hideAllChats, folderOrder, folderIcons,
         unreadFolder, unreadFolderName, unreadFolderIcon, mentionsFolder, mentionsFolderName, mentionsFolderIcon,

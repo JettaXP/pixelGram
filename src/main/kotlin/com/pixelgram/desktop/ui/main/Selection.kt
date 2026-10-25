@@ -170,8 +170,8 @@ fun ShotDialog(
     val scope = rememberCoroutineScope()
     val scheme = when (theme) {
         ShotTheme.Default -> MaterialTheme.colorScheme
-        ShotTheme.Light -> remember(settings.seedColor.value) { schemeFromSeed(settings.seedColor.value, false) }
-        ShotTheme.Dark -> remember(settings.seedColor.value) { schemeFromSeed(settings.seedColor.value, true) }
+        ShotTheme.Light -> remember(settings.seedColor.value, settings.colorStyle.value) { schemeFromSeed(settings.seedColor.value, false, settings.colorStyle.value) }
+        ShotTheme.Dark -> remember(settings.seedColor.value, settings.colorStyle.value) { schemeFromSeed(settings.seedColor.value, true, settings.colorStyle.value) }
     }
     val render: (suspend (java.awt.image.BufferedImage) -> Unit) -> Unit = { use ->
         busy++

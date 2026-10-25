@@ -20,7 +20,14 @@ import com.materialkolor.dynamiccolor.DynamicColor
 import com.materialkolor.dynamiccolor.DynamicScheme
 import com.materialkolor.dynamiccolor.MaterialDynamicColors
 import com.materialkolor.hct.Hct
+import com.materialkolor.scheme.SchemeContent
+import com.materialkolor.scheme.SchemeExpressive
+import com.materialkolor.scheme.SchemeFruitSalad
+import com.materialkolor.scheme.SchemeMonochrome
+import com.materialkolor.scheme.SchemeNeutral
+import com.materialkolor.scheme.SchemeRainbow
 import com.materialkolor.scheme.SchemeTonalSpot
+import com.materialkolor.scheme.SchemeVibrant
 import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.ThemeMode
@@ -48,7 +55,8 @@ fun appColorScheme(settings: AppSettings): ColorScheme {
     if (settings.israelLogo.value) return remember { israelScheme() }
     val dark = isDarkTheme(settings)
     val seed = settings.seedColor.value
-    val seedScheme = remember(seed, dark) { schemeFromSeed(seed, dark) }
+    val style = settings.colorStyle.value
+    val seedScheme = remember(seed, dark, style) { schemeFromSeed(seed, dark, style) }
     val matugenScheme = if (AppPaths.isLinux && settings.matugen.value) {
         rememberMatugenScheme()
     } else {
@@ -90,14 +98,35 @@ fun israelScheme(): ColorScheme = schemeFromSeed(IsraelBlue.toArgb(), false).cop
     surfaceContainerLow = IsraelPaper,
 )
 
-fun schemeFromSeed(seed: Int, dark: Boolean): ColorScheme {
-    val scheme = SchemeTonalSpot(
-        Hct.fromInt(seed),
-        dark,
-        0.0,
-        ColorSpec.SpecVersion.SPEC_2021,
-        DynamicScheme.Platform.PHONE,
-    )
+enum class ColorStyle(val title: String) {
+    TonalSpot("Tonal spot"),
+    Expressive("Expressive"),
+    Vibrant("Vibrant"),
+    FruitSalad("Fruit salad"),
+    Rainbow("Rainbow"),
+    Content("Content"),
+    Neutral("Neutral"),
+    Monochrome("Monochrome");
+
+    fun scheme(seed: Int, dark: Boolean): DynamicScheme {
+        val hct = Hct.fromInt(seed)
+        val platform = DynamicScheme.Platform.PHONE
+        val modern = ColorSpec.SpecVersion.SPEC_2025
+        return when (this) {
+            TonalSpot -> SchemeTonalSpot(hct, dark, 0.0, ColorSpec.SpecVersion.SPEC_2021, platform)
+            Expressive -> SchemeExpressive(hct, dark, 0.0, modern, platform)
+            Vibrant -> SchemeVibrant(hct, dark, 0.0, modern, platform)
+            FruitSalad -> SchemeFruitSalad(hct, dark, 0.0, modern, platform)
+            Rainbow -> SchemeRainbow(hct, dark, 0.0, modern, platform)
+            Content -> SchemeContent(hct, dark, 0.0, modern, platform)
+            Neutral -> SchemeNeutral(hct, dark, 0.0, modern, platform)
+            Monochrome -> SchemeMonochrome(hct, dark, 0.0, modern, platform)
+        }
+    }
+}
+
+fun schemeFromSeed(seed: Int, dark: Boolean, style: ColorStyle = ColorStyle.TonalSpot): ColorScheme {
+    val scheme = style.scheme(seed, dark)
     val colors = MaterialDynamicColors()
     fun DynamicColor.color() = Color(getArgb(scheme))
 

@@ -659,8 +659,13 @@ private fun AppearanceSection(settings: AppSettings) {
     Header("Emoji")
     EmojiStyleChoice(settings)
 
-    Header("Accent color")
-    Description("The whole color scheme is generated from this color with Google's Material color utilities.")
+    Header("Your colors")
+    Description("Pick a style. Expressive, Vibrant and the others are the bright Material 3 Expressive schemes from Google's Material color utilities.")
+    ColorStyleRow(settings)
+
+    Header("Select a color")
+    Description("Slide to pick any hue, or use one of the presets below.")
+    HueSlider(settings)
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 8.dp)) {
         SeedColors.forEach { seed ->
             val selected = settings.seedColor.value == seed
