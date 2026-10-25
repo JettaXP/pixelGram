@@ -1,5 +1,16 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Forward
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.OpenInNew
+import com.pixelgram.desktop.ui.icons.outlined.Delete
+import com.pixelgram.desktop.ui.icons.outlined.ChatBubbleOutline
+import com.pixelgram.desktop.ui.icons.outlined.FolderOpen
+import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
+import com.pixelgram.desktop.ui.components.MenuGroups
+import com.pixelgram.desktop.ui.components.MenuEntry
+import com.pixelgram.desktop.ui.components.GroupedMenu
+import androidx.compose.ui.input.pointer.pointerInput
 import com.pixelgram.desktop.ui.components.itemMotion
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -142,6 +153,34 @@ fun PillTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit, modifie
     }
 }
 
+class MediaActions(
+    val onGoTo: (UiMessage) -> Unit,
+    val onForward: (UiMessage) -> Unit,
+)
+
+@Composable
+fun rememberMediaActions(telegram: Telegram, settings: AppSettings, onOpenChat: ((Long) -> Unit)?, onClose: () -> Unit): MediaActions {
+    var forwarding by remember { mutableStateOf<UiMessage?>(null) }
+    forwarding?.let { message ->
+        ForwardDialog(telegram, settings, onDismiss = { forwarding = null }) { target ->
+            PendingForward.start(target, message.chatId, listOf(message))
+            forwarding = null
+            onClose()
+            onOpenChat?.invoke(target)
+        }
+    }
+    return remember(onOpenChat) {
+        MediaActions(
+            onGoTo = { message ->
+                onClose()
+                onOpenChat?.invoke(message.chatId)
+                MessageSearch.jump = message.chatId to message.id
+            },
+            onForward = { forwarding = it },
+        )
+    }
+}
+
 @Composable
 fun SharedMediaPane(
     chatId: Long,
@@ -149,6 +188,7 @@ fun SharedMediaPane(
     telegram: Telegram,
     modifier: Modifier = Modifier,
     savedTopicId: Long = 0L,
+    actions: MediaActions? = null,
 ) {
     val items = remember(chatId, tab, savedTopicId) { mutableStateListOf<UiMessage>() }
     var next by remember(chatId, tab, savedTopicId) { mutableLongStateOf(0L) }
@@ -167,6 +207,11 @@ fun SharedMediaPane(
         }
     }
     LaunchedEffect(chatId, tab, savedTopicId) { loadMore() }
+    val delete = { message: UiMessage ->
+        telegram.deleteMessages(message.chatId, longArrayOf(message.id), false)
+        items.removeAll { it.id == message.id }
+        Unit
+    }
     Box(modifier) {
         when {
             items.isEmpty() && loading -> LoadingIndicator(Modifier.align(Alignment.Center))
@@ -175,14 +220,14 @@ fun SharedMediaPane(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.Center),
             )
-            tab.grid -> MediaGrid(items, tab, telegram, onEnd = loadMore)
-            else -> MediaList(items, tab, telegram, onEnd = loadMore)
+            tab.grid -> MediaGrid(items, tab, telegram, actions, onDelete = delete, onEnd = loadMore)
+            else -> MediaList(items, tab, telegram, actions, onDelete = delete, onEnd = loadMore)
         }
     }
 }
 
 @Composable
-private fun MediaGrid(items: List<UiMessage>, tab: MediaTab, telegram: Telegram, onEnd: () -> Unit) {
+private fun MediaGrid(items: List<UiMessage>, tab: MediaTab, telegram: Telegram, actions: MediaActions?, onDelete: (UiMessage) -> Unit, onEnd: () -> Unit) {
     val state = rememberLazyGridState()
     val nearEnd by remember { derivedStateOf { (state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) >= state.layoutInfo.totalItemsCount - 6 } }
     LaunchedEffect(nearEnd, items.size) { if (nearEnd) onEnd() }
@@ -196,17 +241,20 @@ private fun MediaGrid(items: List<UiMessage>, tab: MediaTab, telegram: Telegram,
     ) {
         months.forEach { (month, list) ->
             item(key = "m$month", span = { GridItemSpan(maxLineSpan) }) { MonthHeader(month) }
-            items(list, key = { it.id }) { message -> Box(itemMotion()) { MediaCell(message, tab, telegram) } }
+            items(list, key = { it.id }) { message -> Box(itemMotion()) { MediaCell(message, tab, telegram, actions, onDelete) } }
         }
     }
 }
 
 @Composable
-private fun MediaCell(message: UiMessage, tab: MediaTab, telegram: Telegram) {
+private fun MediaCell(message: UiMessage, tab: MediaTab, telegram: Telegram, actions: MediaActions?, onDelete: (UiMessage) -> Unit) {
     val thumb = replyThumb(message)
     val content = message.content
+    var menu by remember { mutableStateOf(false) }
+    if (menu) MediaMenu(message, tab, telegram, actions, onDelete, link = null, open = null) { menu = false }
     Box(
         Modifier
+            .secondaryClick { menu = true }
             .aspectRatio(1f)
             .clip(RoundedCornerShape(CellCorner))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
@@ -236,13 +284,13 @@ private fun MediaCell(message: UiMessage, tab: MediaTab, telegram: Telegram) {
 }
 
 @Composable
-private fun MediaList(items: List<UiMessage>, tab: MediaTab, telegram: Telegram, onEnd: () -> Unit) {
+private fun MediaList(items: List<UiMessage>, tab: MediaTab, telegram: Telegram, actions: MediaActions?, onDelete: (UiMessage) -> Unit, onEnd: () -> Unit) {
     val state = rememberLazyListState()
     val nearEnd by remember { derivedStateOf { (state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) >= state.layoutInfo.totalItemsCount - 4 } }
     LaunchedEffect(nearEnd, items.size) { if (nearEnd) onEnd() }
     LazyColumn(state = state, verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxSize()) {
-        itemsIndexed(items) { index, message ->
-            MediaRow(message, tab, telegram, groupShape(index, items.size))
+        itemsIndexed(items, key = { _, message -> message.id }) { index, message ->
+            Box(itemMotion()) { MediaRow(message, tab, telegram, groupShape(index, items.size), actions, onDelete) }
         }
     }
 }
@@ -251,19 +299,16 @@ private fun MediaList(items: List<UiMessage>, tab: MediaTab, telegram: Telegram,
 fun groupShape(index: Int, count: Int): Shape = groupShapes(index, count).shape
 
 @Composable
-private fun MediaRow(message: UiMessage, tab: MediaTab, telegram: Telegram, shape: Shape) {
+private fun MediaRow(message: UiMessage, tab: MediaTab, telegram: Telegram, shape: Shape, actions: MediaActions?, onDelete: (UiMessage) -> Unit) {
     val content = message.content
     val colors = MaterialTheme.colorScheme
     val link = remember(message.id) { UrlPattern.find(message.text)?.value }
     val document = (content as? TdApi.MessageDocument)?.document
     val (busy, open) = rememberOpener(document?.document, telegram) { path -> openFile(path) }
+    var menu by remember { mutableStateOf(false) }
+    if (menu) MediaMenu(message, tab, telegram, actions, onDelete, link, open = if (document != null) open else null) { menu = false }
     Surface(
-        onClick = {
-            when {
-                tab == MediaTab.Links && link != null -> openUrl(link)
-                document != null -> open()
-            }
-        },
+        onClick = { menu = true },
         shape = shape,
         color = colors.surfaceContainer,
         modifier = Modifier.fillMaxWidth(),
@@ -313,6 +358,61 @@ private fun MediaRow(message: UiMessage, tab: MediaTab, telegram: Telegram, shap
 }
 
 @Composable
+private fun MediaMenu(
+    message: UiMessage,
+    tab: MediaTab,
+    telegram: Telegram,
+    actions: MediaActions?,
+    onDelete: (UiMessage) -> Unit,
+    link: String?,
+    open: (() -> Unit)?,
+    onDismiss: () -> Unit,
+) {
+    val act = { action: () -> Unit -> { onDismiss(); action() } }
+    val file = when (val content = message.content) {
+        is TdApi.MessageDocument -> content.document.document
+        is TdApi.MessageAudio -> content.audio.audio
+        is TdApi.MessageVoiceNote -> content.voiceNote.voice
+        is TdApi.MessageVideo -> content.video.video
+        is TdApi.MessageAnimation -> content.animation.animation
+        else -> message.fullPhoto ?: message.photo
+    }
+    val path = telegram.localPath(file)
+    val first = buildList {
+        if (link != null && tab == MediaTab.Links) {
+            add(MenuEntry(Icons.AutoMirrored.Outlined.OpenInNew, "Open link", onClick = act { openUrl(link) }))
+            add(MenuEntry(Icons.Outlined.ContentCopy, "Copy link", onClick = act {
+                java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(java.awt.datatransfer.StringSelection(link), null)
+            }))
+        }
+        if (open != null) add(MenuEntry(Icons.AutoMirrored.Outlined.OpenInNew, "Open", onClick = act(open)))
+        if (path != null) add(MenuEntry(Icons.Outlined.FolderOpen, "Show in folder", onClick = act { showInFolder(path) }))
+    }
+    val second = buildList {
+        if (actions != null) {
+            add(MenuEntry(Icons.Outlined.ChatBubbleOutline, "Go to message", onClick = act { actions.onGoTo(message) }))
+            add(MenuEntry(Icons.AutoMirrored.Outlined.Forward, "Forward", onClick = act { actions.onForward(message) }))
+        }
+    }
+    val third = listOf(MenuEntry(Icons.Outlined.Delete, "Delete", color = MaterialTheme.colorScheme.error, onClick = act { onDelete(message) }))
+    GroupedMenu(expanded = true, onDismiss = onDismiss) {
+        MenuGroups(listOf(first, second, third))
+    }
+}
+
+private fun Modifier.secondaryClick(onClick: () -> Unit): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent()
+            if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                event.changes.forEach { it.consume() }
+                onClick()
+            }
+        }
+    }
+}
+
+@Composable
 private fun MonthHeader(month: String) {
     Text(
         month,
@@ -356,19 +456,16 @@ fun CommonGroupsPane(userId: Long, telegram: Telegram, settings: AppSettings, on
 
 @Composable
 fun SharedMediaSection(chat: com.pixelgram.desktop.telegram.ChatState, telegram: Telegram, settings: AppSettings, onOpenChat: ((Long) -> Unit)?, modifier: Modifier = Modifier) {
+    val actions = rememberMediaActions(telegram, settings, onOpenChat, onClose = {})
     val user = chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id) && !telegram.isBot(chat)
     val titles = MediaTab.entries.map { it.title } + if (user) listOf("Groups") else emptyList()
     var selected by remember(chat.id) { mutableIntStateOf(0) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PillTabs(titles, selected, { selected = it })
-        AnimatedContent(
-            targetState = selected,
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-            modifier = Modifier.fillMaxWidth().height(SectionHeight),
-        ) { index ->
+        TabContent(selected, Modifier.fillMaxWidth().height(SectionHeight)) { index ->
             val tab = MediaTab.entries.getOrNull(index)
             if (tab != null) {
-                SharedMediaPane(chat.id, tab, telegram, Modifier.fillMaxSize())
+                SharedMediaPane(chat.id, tab, telegram, Modifier.fillMaxSize(), actions = actions)
             } else {
                 CommonGroupsPane(chat.privateUserId, telegram, settings, onOpenChat, Modifier.fillMaxSize())
             }
@@ -378,8 +475,15 @@ fun SharedMediaSection(chat: com.pixelgram.desktop.telegram.ChatState, telegram:
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun SavedMessagesDialog(chat: com.pixelgram.desktop.telegram.ChatState, telegram: Telegram, settings: AppSettings, onDismiss: () -> Unit) {
+fun SavedMessagesDialog(
+    chat: com.pixelgram.desktop.telegram.ChatState,
+    telegram: Telegram,
+    settings: AppSettings,
+    onOpenChat: ((Long) -> Unit)? = null,
+    onDismiss: () -> Unit,
+) {
     LaunchedEffect(Unit) { telegram.loadSavedTopics() }
+    val actions = rememberMediaActions(telegram, settings, onOpenChat, onClose = onDismiss)
     var topic by remember { mutableStateOf<TdApi.SavedMessagesTopic?>(null) }
     var selected by remember { mutableIntStateOf(0) }
     val topics = telegram.savedTopics.values.filter { it.order != 0L }.sortedWith(compareByDescending<TdApi.SavedMessagesTopic> { it.isPinned }.thenByDescending { it.order })
@@ -410,15 +514,15 @@ fun SavedMessagesDialog(chat: com.pixelgram.desktop.telegram.ChatState, telegram
                         IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, contentDescription = "Close") }
                     }
                     PillTabs(listOf("Chats") + MediaTab.entries.map { it.title }, selected, { selected = it })
-                    Box(Modifier.weight(1f)) {
-                        if (selected == 0) {
+                    TabContent(selected, Modifier.weight(1f)) { shownTab ->
+                        if (shownTab == 0) {
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxSize()) {
                                 itemsIndexed(topics, key = { _, item -> item.id }) { index, item ->
                                     Box(itemMotion()) { SavedTopicRow(item, telegram, settings, groupShape(index, topics.size)) { topic = item } }
                                 }
                             }
                         } else {
-                            SharedMediaPane(chat.id, MediaTab.entries[selected - 1], telegram, Modifier.fillMaxSize())
+                            SharedMediaPane(chat.id, MediaTab.entries[shownTab - 1], telegram, Modifier.fillMaxSize(), actions = actions)
                         }
                     }
                 }
@@ -517,6 +621,21 @@ private fun SavedTopicView(chat: com.pixelgram.desktop.telegram.ChatState, topic
             }
         }
     }
+}
+
+@Composable
+private fun TabContent(selected: Int, modifier: Modifier, content: @Composable (Int) -> Unit) {
+    val slide = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.unit.IntOffset>()
+    val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    AnimatedContent(
+        targetState = selected,
+        transitionSpec = {
+            val forward = targetState > initialState
+            (slideInHorizontally(slide) { if (forward) it / 3 else -it / 3 } + fadeIn(fade)) togetherWith
+                (slideOutHorizontally(slide) { if (forward) -it / 3 else it / 3 } + fadeOut(fade))
+        },
+        modifier = modifier,
+    ) { content(it) }
 }
 
 private val UrlPattern = Regex("""https?://\S+|t\.me/\S+""")

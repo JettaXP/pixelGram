@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.icons.outlined.FolderOpen
 import androidx.compose.foundation.layout.ColumnScope
 import com.pixelgram.desktop.ui.components.GroupedMenu
 import com.pixelgram.desktop.ui.components.MenuEntry
@@ -96,6 +97,7 @@ class MessageActions(
     val canReact: Boolean = true,
     val onPin: ((UiMessage) -> Unit)? = null,
     val onSelect: ((UiMessage) -> Unit)? = null,
+    val filePath: (UiMessage) -> String? = { null },
 )
 
 private class MenuTarget(val at: DpOffset, val link: String?, val button: TdApi.InlineKeyboardButton?)
@@ -236,6 +238,10 @@ private fun MessageMenu(
     }
     val copies = buildList {
         if (message.text.isNotEmpty()) add(MenuEntry(Icons.Outlined.ContentCopy, "Copy text", onClick = act { copy(message.text) }))
+        actions.filePath(message)?.let { path ->
+            add(MenuEntry(Icons.Outlined.FolderOpen, "Show in folder", onClick = act { showInFolder(path) }))
+            add(MenuEntry(Icons.Outlined.Link, "Copy file path", onClick = act { copy(path) }))
+        }
         if (message.photo != null) add(MenuEntry(Icons.Outlined.Image, "Copy photo", onClick = act { actions.onCopyPhoto(message) }))
         if (copyLink != null) add(MenuEntry(Icons.Outlined.Link, "Copy Link", onClick = act { copy(copyLink) }))
         (button?.type as? TdApi.InlineKeyboardButtonTypeCallback)?.let { callback ->

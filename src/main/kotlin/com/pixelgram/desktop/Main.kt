@@ -197,13 +197,14 @@ private fun ApplicationScope.PixelApp() {
             raise++
         }
         Notifications.onMessage = { telegram, message ->
-            val card = if (settings.notificationPopups.value) toastFor(telegram, message) else null
+            val card = (if (settings.notificationPopups.value) toastFor(telegram, message) else null)
+                ?.let { if (AppLock.locked) it.copy(text = "") else it }
             when {
                 card == null -> Unit
                 settings.notificationStyle.value == NotificationStyle.System && SystemNotifications.available ->
                     SystemNotifications.show(
                         title = card.sender?.let { "$it · ${card.title}" } ?: card.title,
-                        body = card.text,
+                        body = card.text.ifEmpty { LockedBody },
                         icon = telegram.localPath(card.chat.photo),
                         onClick = { openFromNotification(card) },
                     )
@@ -451,3 +452,5 @@ private const val RenderApiLogDelayMs = 3_000L
 private const val UpdatedNoticeDelayMs = 1500L
 private const val LockCheckMs = 10_000L
 private const val LockScaleFrom = 1.08f
+
+private const val LockedBody = " "

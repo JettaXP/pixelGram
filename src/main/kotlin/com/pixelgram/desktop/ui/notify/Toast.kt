@@ -268,13 +268,15 @@ private fun ToastCard(toast: ToastData, settings: AppSettings, onClick: () -> Un
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    EmojiText(
-                        toast.text,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = colors.fg.copy(alpha = 0.88f),
-                        maxLines = if (toast.sender == null) 2 else 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (toast.text.isNotEmpty()) {
+                        EmojiText(
+                            toast.text,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.fg.copy(alpha = 0.88f),
+                            maxLines = if (toast.sender == null) 2 else 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
             WaveTimer(colors, toast.id, Modifier.align(Alignment.BottomCenter))

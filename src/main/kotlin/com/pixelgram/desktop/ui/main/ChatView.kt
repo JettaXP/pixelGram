@@ -294,6 +294,17 @@ fun ChatView(
             onEdit = { replyTo = null; editing = it },
             onDelete = { deleting = it },
             onCopyPhoto = { message -> telegram.photoPath(message)?.let(Attachments::copyImage) },
+            filePath = { message ->
+                val file = when (val content = message.content) {
+                    is TdApi.MessageDocument -> content.document.document
+                    is TdApi.MessageAudio -> content.audio.audio
+                    is TdApi.MessageVideo -> content.video.video
+                    is TdApi.MessageAnimation -> content.animation.animation
+                    is TdApi.MessageVoiceNote -> content.voiceNote.voice
+                    else -> message.fullPhoto ?: message.photo
+                }
+                telegram.localPath(file)
+            },
             onForward = { forwarding = it },
             onReact = { message, emoji -> telegram.toggleReaction(message, emoji) },
             loadReactions = { message, done -> telegram.availableReactions(message, done) },
@@ -712,7 +723,7 @@ fun ChatView(
                 }
             }
             profileChat?.let { ChatInfoDialog(it, telegram, settings, onOpenChat) { profileChat = null } }
-            if (savedHub) SavedMessagesDialog(chat, telegram, settings) { savedHub = false }
+            if (savedHub) SavedMessagesDialog(chat, telegram, settings, onOpenChat) { savedHub = false }
             StickerPack.current?.takeIf { it.chatId == chat.id && it.telegram == telegram }?.let { request ->
                 StickerPackDialog(request, settings) { StickerPack.current = null }
             }

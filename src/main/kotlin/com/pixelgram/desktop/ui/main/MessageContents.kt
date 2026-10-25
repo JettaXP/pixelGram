@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.animation.core.animateFloatAsState
 import com.pixelgram.desktop.ui.icons.rounded.Close
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -213,6 +214,31 @@ fun openFile(path: String) {
     }.apply { isDaemon = true }.start()
 }
 
+fun showInFolder(path: String) {
+    Thread {
+        val file = File(path)
+        val os = System.getProperty("os.name").lowercase()
+        runCatching {
+            when {
+                os.contains("win") -> ProcessBuilder("explorer.exe", "/select,", file.absolutePath).start()
+                os.contains("mac") -> ProcessBuilder("open", "-R", file.absolutePath).start()
+                else -> {
+                    val shown = runCatching {
+                        ProcessBuilder(
+                            "gdbus", "call", "--session",
+                            "--dest", "org.freedesktop.FileManager1",
+                            "--object-path", "/org/freedesktop/FileManager1",
+                            "--method", "org.freedesktop.FileManager1.ShowItems",
+                            "['${file.toURI()}']", "",
+                        ).start().waitFor() == 0
+                    }.getOrDefault(false)
+                    if (!shown) ProcessBuilder("xdg-open", file.parentFile.absolutePath).start()
+                }
+            }
+        }.onFailure { AppLog.write("Show in folder failed", it) }
+    }.apply { isDaemon = true }.start()
+}
+
 fun openUrl(url: String) {
     Links.open(url)
 }
@@ -254,6 +280,7 @@ private fun FileRow(
     preview: (@Composable (Modifier) -> Unit)? = null,
     progress: Float? = null,
     onCancel: (() -> Unit)? = null,
+    dragPath: String? = null,
     onClick: () -> Unit,
 ) {
     val transferring = busy || progress != null
@@ -261,7 +288,11 @@ private fun FileRow(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 2.dp),
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .then(if (dragPath != null) Modifier.fileDragSource(dragPath) else Modifier)
+            .clickable(onClick = onClick)
+            .padding(vertical = 2.dp),
     ) {
         if (preview != null) {
             Box(
@@ -288,6 +319,20 @@ private fun FileRow(
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = LocalContentColorAlpha())
         }
     }
+}
+
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+fun Modifier.fileDragSource(path: String): Modifier = dragAndDropSource { _ ->
+    androidx.compose.ui.draganddrop.DragAndDropTransferData(
+        androidx.compose.ui.draganddrop.DragAndDropTransferable(FileTransfer(File(path))),
+        supportedActions = listOf(androidx.compose.ui.draganddrop.DragAndDropTransferAction.Copy),
+    )
+}
+
+private class FileTransfer(private val file: File) : java.awt.datatransfer.Transferable {
+    override fun getTransferDataFlavors() = arrayOf(java.awt.datatransfer.DataFlavor.javaFileListFlavor)
+    override fun isDataFlavorSupported(flavor: java.awt.datatransfer.DataFlavor) = flavor == java.awt.datatransfer.DataFlavor.javaFileListFlavor
+    override fun getTransferData(flavor: java.awt.datatransfer.DataFlavor): Any = listOf(file)
 }
 
 private val PreviewExtensions = listOf(".png", ".jpg", ".jpeg", ".webp")
@@ -336,6 +381,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
                 onCancel = {
                     if (message.sending) telegram.cancelSending(message) else telegram.cancelDownload(document.document)
                 },
+                dragPath = telegram.localPath(document.document),
                 onClick = open,
             )
         }
