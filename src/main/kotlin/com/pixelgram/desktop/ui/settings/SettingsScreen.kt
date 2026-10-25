@@ -108,7 +108,7 @@ import androidx.compose.material3.MaterialTheme
 import com.pixelgram.desktop.ui.components.expressive.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedListItem
-import androidx.compose.material3.Slider
+import com.pixelgram.desktop.ui.components.expressive.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults

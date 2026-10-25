@@ -1,6 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
-import androidx.compose.material3.Slider
+import com.pixelgram.desktop.ui.components.expressive.Slider
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState

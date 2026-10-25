@@ -318,8 +318,13 @@ const val InlineContentTag = "androidx.compose.foundation.text.inlineContent"
 private val EmojiSize = 1.2.em
 
 @Composable
-private fun Emoji3DImage(emoji: String) = key(emoji) {
+private fun Emoji3DImage(emoji: String) {
     val source = EmojiFonts.images
+    key(emoji, source) { SourceEmojiImage(emoji, source) }
+}
+
+@Composable
+private fun SourceEmojiImage(emoji: String, source: ImageEmoji) {
     val file by produceState(source.cached(emoji), emoji, source) {
         if (value == null) value = source.file(emoji)
     }

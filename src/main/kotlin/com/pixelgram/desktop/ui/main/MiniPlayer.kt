@@ -6,7 +6,7 @@ import com.pixelgram.desktop.ui.icons.filled.Favorite
 import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Slider
+import com.pixelgram.desktop.ui.components.expressive.Slider
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -361,7 +361,7 @@ fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = M
     var dragging by remember { mutableStateOf<Float?>(null) }
     val wave by animateFloatAsState(if (playing) 1f else 0f, spring(dampingRatio = 1f, stiffness = WaveSettleStiffness))
     val interaction = remember { MutableInteractionSource() }
-    Slider(
+    androidx.compose.material3.Slider(
         value = dragging ?: fraction.coerceIn(0f, 1f),
         onValueChange = { dragging = it },
         onValueChangeFinished = {
@@ -369,12 +369,7 @@ fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = M
             dragging = null
         },
         interactionSource = interaction,
-        thumb = {
-            SliderDefaults.Thumb(
-                interactionSource = interaction,
-                thumbSize = DpSize(4.dp, 22.dp),
-            )
-        },
+        thumb = { com.pixelgram.desktop.ui.components.expressive.SliderThumb(interaction, height = 22.dp) },
         track = { state ->
             LinearWavyProgressIndicator(
                 progress = { state.value },
