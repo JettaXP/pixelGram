@@ -57,6 +57,12 @@ object AppIcons {
     private val sizeCache = HashMap<BufferedImage, List<BufferedImage>>()
 
     @Synchronized
+    fun monochromeSizes(): List<BufferedImage> {
+        val image = image(Color.White, Color.Black) ?: return emptyList()
+        return sizeCache.getOrPut(image) { SystemSizes.map { scaled(image, it) } }
+    }
+
+    @Synchronized
     fun sizes(scheme: ColorScheme): List<BufferedImage> {
         val image = themed(scheme) ?: return emptyList()
         return sizeCache.getOrPut(image) { SystemSizes.map { scaled(image, it) } }

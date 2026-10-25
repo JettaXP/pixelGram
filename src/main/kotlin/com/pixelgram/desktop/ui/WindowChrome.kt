@@ -195,7 +195,7 @@ fun FrameWindowScope.MacTitleBar() {
             ) {
                 themedAppIcon()?.let { Image(it, contentDescription = null, modifier = Modifier.size(20.dp)) }
                 Text(
-                    "pixelGram",
+                    com.pixelgram.desktop.core.WindowTitle.text(),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -233,7 +233,7 @@ fun FrameWindowScope.TitleBar(chrome: WindowChrome, onClose: () -> Unit) {
             ) {
                 themedAppIcon()?.let { Image(it, contentDescription = null, modifier = Modifier.size(20.dp)) }
                 Text(
-                    "pixelGram",
+                    com.pixelgram.desktop.core.WindowTitle.text(),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )

@@ -485,7 +485,7 @@ fun SettingsScreen(
                             section = Section.Bubbles
                         }
                         Section.Folders -> FoldersSection(telegram, settings)
-                        Section.Advanced -> AdvancedSection(telegram)
+                        Section.Advanced -> AdvancedSection(telegram, settings)
                         Section.Language -> LanguageSection(settings)
                         Section.Notifications -> NotificationsSection(settings)
                         Section.Battery -> BatterySection(settings)
@@ -712,18 +712,6 @@ private fun AppearanceSection(settings: AppSettings) {
     var capsulePreview by remember { mutableIntStateOf(0) }
     Header("Theme")
     ThemeModeButtons(settings)
-
-    if (!AppPaths.isMac) {
-        Header("Window")
-        SwitchRow(
-            index = 0,
-            count = 1,
-            title = "pixelGram title bar",
-            subtitle = "Material 3 buttons instead of the system frame. Applies after restarting pixelGram.",
-            checked = settings.customTitleBar.value,
-            onChange = { settings.customTitleBar.value = it },
-        )
-    }
 
     Header("Privacy")
     SwitchRow(
@@ -1468,7 +1456,45 @@ private fun NotificationsSection(settings: AppSettings) {
 }
 
 @Composable
-private fun AdvancedSection(telegram: Telegram) {
+private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {
+    Header("Window title bar")
+    val titleRows = buildList {
+        add(Triple("Show chat name", settings.titleChatName.value) { value: Boolean -> settings.titleChatName.value = value })
+        add(Triple("Show active account", settings.titleAccount.value) { value: Boolean -> settings.titleAccount.value = value })
+        add(Triple("Total unread count", settings.titleUnread.value) { value: Boolean -> settings.titleUnread.value = value })
+        if (!AppPaths.isMac) {
+            add(Triple("Use system window frame", !settings.customTitleBar.value) { value: Boolean -> settings.customTitleBar.value = !value })
+        }
+    }
+    titleRows.forEachIndexed { index, (title, checked, change) ->
+        SwitchRow(index, titleRows.size, title, if (title == "Use system window frame") "Applies after restarting pixelGram." else null, checked, change)
+    }
+    Header("System integration")
+    val systemRows = buildList {
+        add(Triple("Show tray icon", settings.trayIcon.value) { value: Boolean -> settings.trayIcon.value = value })
+        if (settings.trayIcon.value) {
+            add(Triple("Use monochrome icon", settings.trayMonochrome.value) { value: Boolean -> settings.trayMonochrome.value = value })
+        }
+        if (com.pixelgram.desktop.core.Autostart.supported) {
+            add(Triple("Launch pixelGram when system starts", settings.autostart.value) { value: Boolean ->
+                settings.autostart.value = value
+                Thread { com.pixelgram.desktop.core.Autostart.apply(value) }.start()
+            })
+            if (settings.autostart.value) {
+                add(Triple("Launch minimized", settings.launchMinimized.value) { value: Boolean -> settings.launchMinimized.value = value })
+            }
+        }
+    }
+    systemRows.forEachIndexed { index, (title, checked, change) ->
+        SwitchRow(
+            index,
+            systemRows.size,
+            title,
+            if (title == "Launch minimized") "pixelGram starts in the tray: notifications work, the window opens from the tray icon." else null,
+            checked,
+            change,
+        )
+    }
     Header("Data and storage")
     MemoryContent(telegram)
     Header("Data folder")

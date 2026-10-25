@@ -132,6 +132,13 @@ class AppSettings private constructor(private val props: Properties) {
     val messageAnimations = bool("messageAnimations", true)
     val interfaceAnimations = bool("interfaceAnimations", true)
     val language = string("language", "en")
+    val titleChatName = bool("titleChatName", true)
+    val titleAccount = bool("titleAccount", true)
+    val titleUnread = bool("titleUnread", true)
+    val trayIcon = bool("trayIcon", true)
+    val trayMonochrome = bool("trayMonochrome", false)
+    val autostart = bool("autostart", false)
+    val launchMinimized = bool("launchMinimized", false)
     val autoplayGifs = bool("autoplayGifs", true)
     val autoplayVideos = bool("autoplayVideos", true)
 
@@ -167,7 +174,7 @@ class AppSettings private constructor(private val props: Properties) {
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,
         deviceName, israelLogo, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
-        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos,
+        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome,
         apiId, apiHash,
         accounts, activeAccount,
     ) + avatarKindShapes.values

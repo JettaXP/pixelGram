@@ -743,3 +743,15 @@ Wallpapers	Обои
 Recent	Недавние
 GIF	GIF
 Edit profile	Изменить профиль
+Window title bar	Заголовок окна
+Show chat name	Название чата
+Show active account	Активный аккаунт
+Total unread count	Общее число непрочитанных
+Use system window frame	Системная рамка окна
+Applies after restarting pixelGram.	Применится после перезапуска pixelGram.
+System integration	Интеграция с системой
+Show tray icon	Иконка в трее
+Use monochrome icon	Монохромная иконка
+Launch pixelGram when system starts	Запускать pixelGram при старте системы
+Launch minimized	Запускать свёрнутым
+pixelGram starts in the tray: notifications work, the window opens from the tray icon.	pixelGram запускается в трее: уведомления работают, окно открывается из иконки в трее.

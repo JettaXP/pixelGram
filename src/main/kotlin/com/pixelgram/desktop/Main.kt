@@ -117,6 +117,7 @@ fun main(args: Array<String>) {
         System.setProperty("apple.awt.application.name", "pixelGram")
         System.setProperty("apple.laf.useScreenMenuBar", "true")
     }
+    com.pixelgram.desktop.core.Autostart.launchedAtLogin = com.pixelgram.desktop.core.Autostart.Flag in args
     val link = args.firstOrNull { Links.isTelegram(it) }
     when (SingleInstance.acquire(link)) {
         InstanceState.Primary -> Unit
@@ -177,7 +178,13 @@ private fun ApplicationScope.PixelApp() {
         accounts.closeAll()
         exitApplication()
     }
-    var visible by remember { mutableStateOf(true) }
+    val hasTray = remember {
+        SystemTray.isSupported() && !(AppPaths.isLinux && System.getenv("WAYLAND_DISPLAY") != null)
+    }
+    val trayOn = hasTray && settings.trayIcon.value
+    var visible by remember {
+        mutableStateOf(!(com.pixelgram.desktop.core.Autostart.launchedAtLogin && settings.launchMinimized.value && trayOn))
+    }
     val scheme = appColorScheme(settings)
     EasterEgg.settings = settings
     val israel = EasterEgg.israel
@@ -188,11 +195,11 @@ private fun ApplicationScope.PixelApp() {
             AppIcons.installForSystem(scheme)
         }
     }
-    val hasTray = remember {
-        SystemTray.isSupported() && !(AppPaths.isLinux && System.getenv("WAYLAND_DISPLAY") != null)
-    }
-    if (hasTray) {
-        val trayImages = remember(scheme.primaryContainer, scheme.onPrimaryContainer, israel) { AppIcons.sizes(scheme) }
+    if (trayOn) {
+        val mono = settings.trayMonochrome.value
+        val trayImages = remember(scheme.primaryContainer, scheme.onPrimaryContainer, israel, mono) {
+            if (mono) AppIcons.monochromeSizes() else AppIcons.sizes(scheme)
+        }
         PixelTray(trayImages, settings, onOpen = { visible = true }, onQuit = quit)
     }
 
@@ -265,7 +272,7 @@ private fun ApplicationScope.PixelApp() {
     }
     ToastWindow(toasts, settings, onOpen = openFromNotification)
 
-    val close = { if (hasTray) visible = false else quit() }
+    val close = { if (trayOn) visible = false else quit() }
     val ownTitleBar = remember { settings.customTitleBar.value }
     val macNativeWindow = AppPaths.isMac
     val windowState = rememberWindowState(size = DpSize(1180.dp, 760.dp))
@@ -273,7 +280,7 @@ private fun ApplicationScope.PixelApp() {
         onCloseRequest = close,
         undecorated = ownTitleBar && !macNativeWindow,
         visible = visible,
-        title = "pixelGram",
+        title = com.pixelgram.desktop.core.WindowTitle.text(settings),
         icon = icon,
         state = windowState,
     ) {
@@ -369,6 +376,14 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
     }
     val back = { screen = history.removeLastOrNull() ?: Screen.Chats }
     var openChatId by remember { mutableStateOf<Long?>(null) }
+    val titleChat = openChatId?.let { id -> telegram.chats[id]?.let(telegram::chatTitle) }
+    val titleAccount = telegram.me?.let { listOf(it.firstName, it.lastName).filter(String::isNotBlank).joinToString(" ") }
+    val titleUnread = telegram.unread[com.pixelgram.desktop.telegram.ChatListKey.Main]?.unmuted ?: 0
+    androidx.compose.runtime.SideEffect {
+        com.pixelgram.desktop.core.WindowTitle.chat = titleChat
+        com.pixelgram.desktop.core.WindowTitle.account = titleAccount
+        com.pixelgram.desktop.core.WindowTitle.unread = titleUnread
+    }
     AudioQueueEffects(telegram)
     val chatTrail = remember { mutableStateListOf<Long>() }
     val openChat = { id: Long ->
