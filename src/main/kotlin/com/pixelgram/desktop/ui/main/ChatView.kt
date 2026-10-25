@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.rememberUpdatedState
 import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
@@ -1157,6 +1160,8 @@ fun MessageBubble(
                             TextWithMeta(text = message.text, entities = message.entities, meta = { Box(Modifier) })
                             LinkPreviewCard(linkPreview, telegram, outgoing, PhotoMaxWidth - 24.dp)
                             if (!reacted) Box(Modifier.align(Alignment.End).padding(top = 4.dp)) { meta() }
+                        } else if ((photo != null || media || album != null) && isLongCaption(message.text)) {
+                            CollapsibleCaption(message, meta = if (reacted) null else meta)
                         } else if (reacted) {
                             TextWithMeta(text = message.text, entities = message.entities, meta = { Box(Modifier) })
                         } else {
@@ -1313,6 +1318,38 @@ private fun formatViews(count: Int): String = when {
     else -> count.toString()
 }
 
+private fun isLongCaption(text: String) = text.length > CaptionLongChars || text.count { it == '\n' } >= CaptionLongLines
+
+@Composable
+private fun CollapsibleCaption(message: UiMessage, meta: (@Composable () -> Unit)?) {
+    var expanded by remember(message.chatId, message.id) { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())) {
+        Box(
+            if (expanded) {
+                Modifier
+            } else {
+                Modifier.heightIn(max = CaptionCollapsedHeight).clipToBounds()
+            },
+        ) {
+            TextWithMeta(text = message.text, entities = message.entities, meta = { Box(Modifier) })
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+            Text(
+                if (expanded) "Show less" else "Show more",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .pointerHoverIcon(PointerIcon.Hand)
+                    .clickable { expanded = !expanded }
+                    .padding(vertical = 4.dp, horizontal = 2.dp),
+            )
+            Spacer(Modifier.weight(1f))
+            if (meta != null) meta()
+        }
+    }
+}
+
 @Composable
 private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @Composable () -> Unit) {
     var textLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -1423,7 +1460,10 @@ fun MessageStatusIcon(status: MessageStatus, color: Color, size: Dp, modifier: M
 }
 
 private val PhotoInset = 4.dp
-private val PhotoMaxWidth = 360.dp
+private val PhotoMaxWidth = 420.dp
+private val CaptionCollapsedHeight = 88.dp
+private const val CaptionLongChars = 240
+private const val CaptionLongLines = 4
 
 @Composable
 private fun MessagePhoto(
@@ -1444,7 +1484,7 @@ private fun MessagePhoto(
         4f / 3f
     }
     val width = PhotoMaxWidth
-    val height = (width / ratio).coerceIn(120.dp, 420.dp)
+    val height = (width / ratio).coerceIn(120.dp, 520.dp)
     Box(
         Modifier
             .size(width, height)

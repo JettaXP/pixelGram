@@ -694,7 +694,7 @@ fun MediaContent(message: UiMessage, telegram: Telegram, width: Dp, corner: Dp) 
     }
     Box(
         Modifier
-            .size(width, (width / ratio).coerceIn(120.dp, 420.dp))
+            .size(width, (width / ratio).coerceIn(120.dp, 520.dp))
             .clip(RoundedCornerShape(corner))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .clickable(onClick = open),
