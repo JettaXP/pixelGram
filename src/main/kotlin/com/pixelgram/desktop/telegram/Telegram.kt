@@ -329,6 +329,7 @@ class Telegram(
 
     fun close() {
         exiting = true
+        flushDrafts()
         send(TdApi.Close())
     }
 
@@ -1541,8 +1542,18 @@ class Telegram(
     }
 
     private val localDraftDates = mutableMapOf<Long, Int>()
+    private val pendingDrafts = java.util.concurrent.ConcurrentHashMap<Long, String>()
+
+    fun noteDraft(chatId: Long, text: String) {
+        if (chats[chatId]?.draft == text) pendingDrafts.remove(chatId) else pendingDrafts[chatId] = text
+    }
+
+    fun flushDrafts() {
+        pendingDrafts.keys.toList().forEach { chatId -> pendingDrafts.remove(chatId)?.let { saveDraft(chatId, it) } }
+    }
 
     fun saveDraft(chatId: Long, text: String) {
+        pendingDrafts.remove(chatId)
         val chat = chats[chatId] ?: return
         if (chat.draft == text) return
         chat.draft = text

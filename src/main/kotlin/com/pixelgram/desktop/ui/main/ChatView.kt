@@ -1604,7 +1604,10 @@ private fun Composer(
         }
     }
     val draftHolder = remember(chatId) { arrayOf("") }
-    if (editing == null) draftHolder[0] = text.text
+    if (editing == null && draftHolder[0] != text.text) {
+        draftHolder[0] = text.text
+        telegram.noteDraft(chatId, text.text)
+    }
     DisposableEffect(chatId) {
         val holder = draftHolder
         onDispose { telegram.saveDraft(chatId, holder[0]) }
