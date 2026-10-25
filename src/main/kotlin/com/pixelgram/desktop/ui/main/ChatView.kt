@@ -1,10 +1,10 @@
 package com.pixelgram.desktop.ui.main
 
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.expandHorizontally
-import androidx.compose.material.icons.outlined.KeyboardHide
-import androidx.compose.material.icons.outlined.Keyboard
+import com.pixelgram.desktop.ui.icons.outlined.KeyboardHide
+import com.pixelgram.desktop.ui.icons.outlined.Keyboard
 import androidx.compose.material3.FilledTonalButton
 import com.pixelgram.desktop.telegram.BotCommandItem
 import com.pixelgram.desktop.ui.components.Avatar
@@ -13,13 +13,13 @@ import androidx.compose.ui.graphics.luminance
 import com.materialkolor.hct.Hct
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material.icons.outlined.Visibility
+import com.pixelgram.desktop.ui.icons.outlined.PushPin
+import com.pixelgram.desktop.ui.icons.outlined.Visibility
 import com.pixelgram.desktop.telegram.contentText
 import com.pixelgram.desktop.core.DoubleClickAction
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.automirrored.outlined.Forward
+import com.pixelgram.desktop.ui.icons.filled.MoreVert
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Forward
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -27,7 +27,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.unit.DpOffset
 import com.pixelgram.desktop.ui.components.FormattedText
 import com.pixelgram.desktop.ui.components.endsWithQuote
-import androidx.compose.material.icons.filled.Search
+import com.pixelgram.desktop.ui.icons.filled.Search
 import com.pixelgram.desktop.telegram.isRich
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
@@ -46,10 +46,11 @@ import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.material.icons.automirrored.outlined.Reply
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Reply
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
+import com.pixelgram.desktop.ui.icons.filled.Check
+import com.pixelgram.desktop.ui.icons.filled.Close
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.core.MutableTransitionState
@@ -57,12 +58,12 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.layout.Layout
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.outlined.Edit
+import com.pixelgram.desktop.ui.icons.outlined.Edit
 import com.pixelgram.desktop.telegram.MessageStatus
-import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.Done
+import com.pixelgram.desktop.ui.icons.outlined.ErrorOutline
+import com.pixelgram.desktop.ui.icons.outlined.Schedule
+import com.pixelgram.desktop.ui.icons.filled.DoneAll
+import com.pixelgram.desktop.ui.icons.filled.Done
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -88,10 +89,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.outlined.AttachFile
-import androidx.compose.material.icons.outlined.EmojiEmotions
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.filled.Send
+import com.pixelgram.desktop.ui.icons.outlined.AttachFile
+import com.pixelgram.desktop.ui.icons.outlined.EmojiEmotions
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -149,6 +150,9 @@ import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
 import java.io.File
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.math.abs
 import com.pixelgram.desktop.ui.OnEscape
 import androidx.compose.material3.toShape
 import androidx.compose.material3.MaterialShapes
@@ -170,8 +174,8 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.positionInWindow
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.outlined.Circle
+import com.pixelgram.desktop.ui.icons.filled.CheckCircle
+import com.pixelgram.desktop.ui.icons.outlined.Circle
 
 @Composable
 fun ChatView(
@@ -242,6 +246,7 @@ fun ChatView(
     var deleting by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var forwarding by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var profileChat by remember(chat.id) { mutableStateOf<ChatState?>(null) }
+    var savedHub by remember(chat.id) { mutableStateOf(false) }
     val openOrigin = { origin: TdApi.MessageOrigin ->
         when (origin) {
             is TdApi.MessageOriginUser -> telegram.openPrivateChat(origin.senderUserId) { id -> profileChat = telegram.chats[id] }
@@ -319,18 +324,18 @@ fun ChatView(
     LaunchedEffect(MessageSearch.jump, chat.id) {
         val (jumpChat, jumpId) = MessageSearch.jump ?: return@LaunchedEffect
         if (jumpChat != chat.id) return@LaunchedEffect
-        repeat(JumpPages) {
-            val index = shown.indexOfFirst { it.id == jumpId || it.album.any { member -> member.id == jumpId } }
-            if (index >= 0) {
-                listState.animateScrollToItem(index)
-                highlight = jumpId to System.nanoTime()
-                MessageSearch.jump = null
-                return@LaunchedEffect
-            }
-            telegram.loadMoreMessages(chat.id)
-            delay(JumpPageDelayMs)
-        }
         MessageSearch.jump = null
+        fun indexOf() = shown.indexOfFirst { it.id == jumpId || it.album.any { member -> member.id == jumpId } }
+        if (indexOf() < 0) {
+            suspendCancellableCoroutine { continuation ->
+                telegram.jumpToMessage(chat.id, jumpId) { if (continuation.isActive) continuation.resume(Unit) }
+            }
+            withFrameNanos { }
+        }
+        val index = indexOf()
+        if (index < 0) return@LaunchedEffect
+        if (abs(listState.firstVisibleItemIndex - index) > JumpCloserItems) listState.scrollToItem(index) else listState.animateScrollToItem(index)
+        highlight = jumpId to System.nanoTime()
     }
     forwarding?.let { message ->
         ForwardDialog(telegram, settings, onDismiss = { forwarding = null }) { target ->
@@ -446,7 +451,7 @@ fun ChatView(
                     .weight(1f)
                     .clip(RoundedCornerShape(20.dp))
                     .pointerHoverIcon(PointerIcon.Hand)
-                    .clickable { if (!telegram.isSavedMessages(chat.id)) profileChat = chat }
+                    .clickable { if (telegram.isSavedMessages(chat.id)) savedHub = true else profileChat = chat }
                     .padding(end = 8.dp),
             ) {
             ChatAvatar(chat, telegram, settings, size = 40.dp)
@@ -706,6 +711,7 @@ fun ChatView(
                 }
             }
             profileChat?.let { ChatInfoDialog(it, telegram, settings, onOpenChat) { profileChat = null } }
+            if (savedHub) SavedMessagesDialog(chat, telegram, settings) { savedHub = false }
             StickerPack.current?.takeIf { it.chatId == chat.id && it.telegram == telegram }?.let { request ->
                 StickerPackDialog(request, settings) { StickerPack.current = null }
             }
@@ -770,8 +776,17 @@ fun ChatView(
                 onShot = { shot = true },
                 onCancel = { selected.clear() },
             )
+        } else if (telegram.isBlocked(chat)) {
+            ComposerBar("UNBLOCK", accent = true) { telegram.unblock(chat) }
+        } else if (telegram.isLeft(chat)) {
+            var joining by remember(chat.id) { mutableStateOf(false) }
+            ComposerBar(if (chat.isChannel) "JOIN CHANNEL" else "JOIN GROUP", accent = true, enabled = !joining) {
+                joining = true
+                telegram.joinChat(chat.id) { joining = false }
+            }
         } else if (!telegram.canPost(chat)) {
-            ChannelMuteBar(chat, telegram)
+            val muted = telegram.isMuted(chat)
+            ComposerBar(if (muted) "UNMUTE" else "MUTE") { telegram.setMuted(chat, !muted) }
         } else Composer(
             chatId = chat.id,
             inGroup = chat.isGroup,
@@ -836,24 +851,22 @@ fun ChatView(
 }
 
 @Composable
-private fun ChannelMuteBar(chat: ChatState, telegram: Telegram) {
-    val muted = telegram.isMuted(chat)
+private fun ComposerBar(label: String, accent: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
     Surface(
-        onClick = { telegram.setMuted(chat, !muted) },
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().padding(12.dp).height(SendSlot + 16.dp).clip(RoundedCornerShape(28.dp)),
-        shape = RoundedCornerShape(28.dp),
+        onClick = onClick,
+        enabled = enabled,
+        color = if (accent) colors.primaryContainer else colors.surfaceContainer,
+        contentColor = if (accent) colors.onPrimaryContainer else colors.primary,
+        modifier = Modifier.fillMaxWidth().padding(12.dp).height(SendSlot + 16.dp),
+        shape = MaterialTheme.shapes.extraLarge,
     ) {
         Box(contentAlignment = Alignment.Center) {
             AnimatedContent(
-                targetState = muted,
+                targetState = label,
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
-            ) { isMuted ->
-                Text(
-                    if (isMuted) "UNMUTE" else "MUTE",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+            ) { text ->
+                Text(text, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
             }
         }
     }
@@ -1294,8 +1307,6 @@ private const val SelectedAlpha = 0.14f
 private const val SelectEdgePx = 48f
 private const val MentionDelayMs = 150L
 private val KeyboardMinWidth = 260.dp
-private const val JumpPages = 40
-private const val JumpPageDelayMs = 300L
 
 object ComposerInsert {
     var request by mutableStateOf<Pair<Long, String>?>(null)
@@ -1454,9 +1465,22 @@ private fun Composer(
         mutableStateOf(TextFieldValue(draft, TextRange(draft.length)))
     }
     var spans by remember { mutableStateOf(emptyList<FormatSpan>()) }
+    val storedDraft = telegram.chats[chatId]?.draft.orEmpty()
+    var savedDraft by remember(chatId) { mutableStateOf(storedDraft) }
+    LaunchedEffect(chatId, storedDraft) {
+        if (storedDraft == savedDraft) return@LaunchedEffect
+        savedDraft = storedDraft
+        if (editing == null && storedDraft != text.text) {
+            text = TextFieldValue(storedDraft, TextRange(storedDraft.length))
+            spans = emptyList()
+        }
+    }
     LaunchedEffect(chatId, text.text) {
         delay(DraftSaveDelayMs)
-        if (editing == null) telegram.saveDraft(chatId, text.text)
+        if (editing == null) {
+            savedDraft = text.text
+            telegram.saveDraft(chatId, text.text)
+        }
     }
     val draftHolder = remember(chatId) { arrayOf("") }
     if (editing == null) draftHolder[0] = text.text
@@ -1795,7 +1819,7 @@ private fun Composer(
                 placeholder = { Text(if (hasAttachments) "Add a caption" else "Message") },
                 visualTransformation = FormatTransformation(spans, MaterialTheme.colorScheme.primary),
                 maxLines = 6,
-                shape = RoundedCornerShape(28.dp),
+                shape = MaterialTheme.shapes.extraLarge,
                 colors = TextFieldDefaults.colors(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,

@@ -22,11 +22,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AddAPhoto
-import androidx.compose.material.icons.outlined.ContentPaste
-import androidx.compose.material.icons.outlined.PhotoCamera
-import androidx.compose.material.icons.outlined.PhotoLibrary
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.AddAPhoto
+import com.pixelgram.desktop.ui.icons.outlined.ContentPaste
+import com.pixelgram.desktop.ui.icons.outlined.PhotoCamera
+import com.pixelgram.desktop.ui.icons.outlined.PhotoLibrary
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -148,7 +148,7 @@ private fun CameraDialog(onDismiss: () -> Unit, onCaptured: (File) -> Unit) {
         onDispose { session?.stop() }
     }
     BasicAlertDialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column(Modifier.width(CameraWidth).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Camera", style = MaterialTheme.typography.headlineSmall)
                 Box(

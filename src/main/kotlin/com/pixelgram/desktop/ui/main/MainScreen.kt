@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.OnEscape
 import androidx.compose.foundation.shape.CircleShape
 import com.pixelgram.desktop.ui.components.PhoneText
@@ -39,20 +40,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuOpen
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.Bookmark
-import androidx.compose.material.icons.outlined.Call
-import androidx.compose.material.icons.outlined.Campaign
-import androidx.compose.material.icons.outlined.Contacts
-import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.PersonAdd
-import androidx.compose.material.icons.outlined.Settings
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.filled.MenuOpen
+import com.pixelgram.desktop.ui.icons.filled.Check
+import com.pixelgram.desktop.ui.icons.filled.KeyboardArrowDown
+import com.pixelgram.desktop.ui.icons.filled.Menu
+import com.pixelgram.desktop.ui.icons.outlined.AccountCircle
+import com.pixelgram.desktop.ui.icons.outlined.Bookmark
+import com.pixelgram.desktop.ui.icons.outlined.Call
+import com.pixelgram.desktop.ui.icons.outlined.Campaign
+import com.pixelgram.desktop.ui.icons.outlined.Contacts
+import com.pixelgram.desktop.ui.icons.outlined.DarkMode
+import com.pixelgram.desktop.ui.icons.outlined.Groups
+import com.pixelgram.desktop.ui.icons.outlined.PersonAdd
+import com.pixelgram.desktop.ui.icons.outlined.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -468,7 +469,7 @@ private fun AccountsList(accounts: Accounts, settings: AppSettings) {
             SegmentedListItem(
                 selected = active,
                 onClick = { accounts.switchTo(account) },
-                shapes = ListItemDefaults.segmentedShapes(index, count),
+                shapes = groupShapes(index, count),
                 leadingContent = { Avatar(name, me?.profilePhoto?.small, account, settings, size = 32.dp) },
                 trailingContent = when {
                     active -> {
@@ -486,7 +487,7 @@ private fun AccountsList(accounts: Accounts, settings: AppSettings) {
         SegmentedListItem(
             onClick = accounts::add,
             enabled = accounts.canAdd,
-            shapes = ListItemDefaults.segmentedShapes(count - 1, count),
+            shapes = groupShapes(count - 1, count),
             leadingContent = { Icon(Icons.Outlined.PersonAdd, contentDescription = null) },
         ) {
             Text("Add Account")

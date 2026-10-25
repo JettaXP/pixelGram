@@ -21,13 +21,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.VolumeOff
-import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Replay
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.rounded.VolumeOff
+import com.pixelgram.desktop.ui.icons.automirrored.rounded.VolumeUp
+import com.pixelgram.desktop.ui.icons.rounded.Close
+import com.pixelgram.desktop.ui.icons.rounded.Pause
+import com.pixelgram.desktop.ui.icons.rounded.PlayArrow
+import com.pixelgram.desktop.ui.icons.rounded.Replay
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -50,7 +50,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -85,7 +85,7 @@ import java.nio.ShortBuffer
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.SourceDataLine
-import org.jetbrains.skia.Image as SkiaImage
+import org.jetbrains.skia.Bitmap
 
 class VideoRequest(
     val telegram: Telegram,
@@ -122,6 +122,9 @@ private const val AudioBufferSeconds = 0.4
 private const val MaxDecodeWidth = 1920
 private const val MaxFrameGapNs = 100_000_000L
 private const val KeptFrames = 3
+private const val AudioQueueChunks = 256
+private const val AudioQueueWaitMs = 20L
+private const val AudioDrainPollMs = 10L
 private val VolumeSliderWidth = 110.dp
 
 private class VideoEngine(private val path: String, private val loop: Boolean) {
@@ -138,8 +141,10 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
     @Volatile private var running = true
     @Volatile private var seekTo = -1L
     private var line: SourceDataLine? = null
+    private val audio = java.util.concurrent.LinkedBlockingQueue<ByteArray>(AudioQueueChunks)
+    private var audioThread: Thread? = null
     private var pixels = ByteArray(0)
-    private val retired = ArrayDeque<SkiaImage>()
+    private val retired = ArrayDeque<Bitmap>()
 
     private val thread = Thread(::run, "pixelgram-video").apply { isDaemon = true }
 
@@ -182,11 +187,18 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
             }
             duration = grabber.lengthInTime / 1000
             if (grabber.audioChannels > 0 && !loop) line = openLine(grabber.sampleRate, grabber.audioChannels)
+            line?.let { output ->
+                audioThread = Thread({ pumpAudio(output) }, "pixelgram-video-audio").apply {
+                    isDaemon = true
+                    start()
+                }
+            }
             var base = System.nanoTime()
             var baseUs = 0L
             var lastShown = 0L
             while (running) {
                 if (!playing && seekTo < 0) {
+                    audio.clear()
                     line?.stop()
                     synchronized(lock) { while (running && !playing && seekTo < 0) lock.wait() }
                     if (!running) break
@@ -198,6 +210,7 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
                 if (target >= 0) {
                     seekTo = -1
                     grabber.setTimestamp(target * 1000, true)
+                    audio.clear()
                     line?.flush()
                     base = System.nanoTime()
                     baseUs = target * 1000
@@ -215,6 +228,7 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
                         baseUs = 0
                         continue
                     }
+                    while (running && audio.isNotEmpty()) Thread.sleep(AudioDrainPollMs)
                     line?.drain()
                     ended = true
                     playing = false
@@ -239,6 +253,8 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
             failed = true
         } finally {
             releaseFrames()
+            audioThread?.interrupt()
+            audio.clear()
             runCatching { line?.close() }
             runCatching { grabber.stop() }
             runCatching { grabber.release() }
@@ -253,15 +269,25 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
         }
     }.onFailure { AppLog.write("Video audio unavailable", it) }.getOrNull()
 
+    private fun pumpAudio(output: SourceDataLine) {
+        try {
+            while (running) {
+                val chunk = audio.take()
+                output.write(chunk, 0, chunk.size)
+            }
+        } catch (_: InterruptedException) {
+        }
+    }
+
     private fun writeAudio(frame: Frame) {
-        val output = line ?: return
+        if (line == null) return
         val samples = frame.samples.firstOrNull() as? ShortBuffer ?: return
         val count = samples.remaining()
         val bytes = ByteBuffer.allocate(count * 2).order(ByteOrder.LITTLE_ENDIAN)
         val start = samples.position()
         val gain = if (muted) 0f else volume
         for (i in 0 until count) bytes.putShort((samples.get(start + i) * gain).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort())
-        output.write(bytes.array(), 0, bytes.capacity())
+        audio.offer(bytes.array(), AudioQueueWaitMs, java.util.concurrent.TimeUnit.MILLISECONDS)
     }
 
     private fun show(frame: Frame) {
@@ -271,9 +297,12 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
         if (pixels.size != size) pixels = ByteArray(size)
         buffer.duplicate().apply { rewind() }.get(pixels, 0, minOf(size, buffer.capacity()))
         val info = ImageInfo(frame.imageWidth, frame.imageHeight, ColorType.BGRA_8888, ColorAlphaType.OPAQUE)
-        val image = SkiaImage.makeRaster(info, pixels, stride)
-        this.frame = image.toComposeImageBitmap()
-        retired.addLast(image)
+        val bitmap = Bitmap()
+        bitmap.allocPixels(info, stride)
+        bitmap.installPixels(info, pixels, stride)
+        bitmap.setImmutable()
+        this.frame = bitmap.asComposeImageBitmap()
+        retired.addLast(bitmap)
         if (retired.size > KeptFrames) {
             val old = retired.removeFirst()
             java.awt.EventQueue.invokeLater { old.close() }
@@ -386,7 +415,7 @@ private fun VideoSurface(request: VideoRequest, engine: VideoEngine?, close: () 
 @Composable
 private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
     Surface(
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
         modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth(0.7f).clickable(
             interactionSource = remember { MutableInteractionSource() },

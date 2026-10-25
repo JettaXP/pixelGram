@@ -2,11 +2,11 @@ package com.pixelgram.desktop.ui.storage
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.PermMedia
-import androidx.compose.material.icons.outlined.Storage
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.Description
+import com.pixelgram.desktop.ui.icons.outlined.Language
+import com.pixelgram.desktop.ui.icons.outlined.PermMedia
+import com.pixelgram.desktop.ui.icons.outlined.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme

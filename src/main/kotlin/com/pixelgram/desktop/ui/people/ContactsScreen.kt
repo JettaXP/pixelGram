@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.people
 
+import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -67,7 +68,7 @@ fun ContactsScreen(
             contacts.forEachIndexed { index, user ->
                 SegmentedListItem(
                     onClick = { telegram.openPrivateChat(user.id, onOpenChat) },
-                    shapes = ListItemDefaults.segmentedShapes(index, contacts.size),
+                    shapes = groupShapes(index, contacts.size),
                     leadingContent = {
                         Avatar(user.fullName(), user.profilePhoto?.small, telegram, settings, size = 40.dp)
                     },

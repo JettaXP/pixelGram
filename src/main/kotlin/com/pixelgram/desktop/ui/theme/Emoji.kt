@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -292,7 +293,7 @@ const val InlineContentTag = "androidx.compose.foundation.text.inlineContent"
 private val EmojiSize = 1.2.em
 
 @Composable
-private fun Emoji3DImage(emoji: String) {
+private fun Emoji3DImage(emoji: String) = key(emoji) {
     val file by produceState(Emoji3D.cached(emoji), emoji) {
         if (value == null) value = Emoji3D.file(emoji)
     }

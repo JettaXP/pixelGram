@@ -44,7 +44,6 @@ val bytedecoPlatform: String = run {
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation(libs.material3)
-    implementation(libs.material.icons.extended)
     implementation(libs.coroutines.swing)
     implementation(libs.material.color.utilities)
     implementation(libs.qrcodegen)

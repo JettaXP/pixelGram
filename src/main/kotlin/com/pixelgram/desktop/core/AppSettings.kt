@@ -129,6 +129,11 @@ class AppSettings private constructor(private val props: Properties) {
     val bubbleRadius = int("bubbleRadius", 18)
     val bubbleTailRadius = int("bubbleTailRadius", 4)
 
+    val cornerLists = int("cornerLists", 20)
+    val cornerCards = int("cornerCards", 24)
+    val cornerDialogs = int("cornerDialogs", 28)
+    val cornerMenus = int("cornerMenus", 16)
+
     val apiId = int("apiId", 0)
     val apiHash = string("apiHash", "")
 
@@ -143,7 +148,7 @@ class AppSettings private constructor(private val props: Properties) {
         capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, checkUpdates,
         doubleClickOwn, doubleClickOther, doubleClickEmoji,
         avatarShape, avatarCorner,
-        bubbleRadius, bubbleTailRadius,
+        bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
         deviceName, israelLogo, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
         stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations,
         apiId, apiHash,

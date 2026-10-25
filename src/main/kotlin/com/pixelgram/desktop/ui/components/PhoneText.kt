@@ -1,7 +1,7 @@
 package com.pixelgram.desktop.ui.components
 
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.Icons
+import com.pixelgram.desktop.ui.icons.rounded.Add
+import com.pixelgram.desktop.ui.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.animation.AnimatedContent

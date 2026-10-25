@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
+import com.pixelgram.desktop.ui.components.groupShapes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -21,13 +22,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Headphones
-import androidx.compose.material.icons.outlined.Mic
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.material.icons.outlined.VideocamOff
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.Check
+import com.pixelgram.desktop.ui.icons.outlined.Headphones
+import com.pixelgram.desktop.ui.icons.outlined.Mic
+import com.pixelgram.desktop.ui.icons.outlined.Settings
+import com.pixelgram.desktop.ui.icons.outlined.Videocam
+import com.pixelgram.desktop.ui.icons.outlined.VideocamOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -85,7 +86,7 @@ fun DevicesSection(settings: AppSettings) {
     Header("Microphone")
     SegmentedGroup {
         DeviceRow(Icons.Outlined.Mic, "Input device", settings.inputDevice, inputs, 0, 2)
-        Surface(shape = ListItemDefaults.segmentedShapes(1, 2).shape, color = MaterialTheme.colorScheme.surfaceContainer) {
+        Surface(shape = groupShapes(1, 2).shape, color = MaterialTheme.colorScheme.surfaceContainer) {
             MicLevel(settings.inputDevice.value, Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp))
         }
     }
@@ -103,7 +104,7 @@ fun DevicesSection(settings: AppSettings) {
         ToggleRow("Accept calls on this device", settings.acceptCalls, 0, 2)
         SegmentedListItem(
             onClick = ::openSoundSettings,
-            shapes = ListItemDefaults.segmentedShapes(1, 2),
+            shapes = groupShapes(1, 2),
             leadingContent = { Icon(Icons.Outlined.Settings, contentDescription = null) },
         ) { Text("Open system sound preferences") }
     }
@@ -115,7 +116,7 @@ private fun DeviceRow(icon: ImageVector, title: String, setting: Setting<String>
     Box {
         SegmentedListItem(
             onClick = { open = true },
-            shapes = ListItemDefaults.segmentedShapes(index, count),
+            shapes = groupShapes(index, count),
             leadingContent = { Icon(icon, contentDescription = null) },
             trailingContent = {
                 val enter = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -163,7 +164,7 @@ private fun DeviceRow(icon: ImageVector, title: String, setting: Setting<String>
 private fun ToggleRow(title: String, setting: Setting<Boolean>, index: Int, count: Int) {
     SegmentedListItem(
         onClick = { setting.value = !setting.value },
-        shapes = ListItemDefaults.segmentedShapes(index, count),
+        shapes = groupShapes(index, count),
         trailingContent = { PixelSwitch(checked = setting.value, onCheckedChange = { setting.value = it }) },
     ) { Text(title) }
 }

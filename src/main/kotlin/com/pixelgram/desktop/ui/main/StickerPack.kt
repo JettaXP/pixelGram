@@ -17,11 +17,11 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Forward
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.ContentCopy
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Forward
+import com.pixelgram.desktop.ui.icons.filled.Close
+import com.pixelgram.desktop.ui.icons.filled.MoreVert
+import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -75,7 +75,7 @@ fun StickerPackDialog(request: StickerPackRequest, settings: AppSettings, onDism
     val link = loaded?.let { "https://t.me/${if (it.stickerType is TdApi.StickerTypeCustomEmoji) "addemoji" else "addstickers"}/${it.name}" }
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(28.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier.width(440.dp),
         ) {

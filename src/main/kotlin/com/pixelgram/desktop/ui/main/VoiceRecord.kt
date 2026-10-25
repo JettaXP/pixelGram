@@ -19,9 +19,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.Mic
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.filled.KeyboardArrowLeft
+import com.pixelgram.desktop.ui.icons.filled.Mic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
@@ -231,7 +231,7 @@ fun RecordingBar(voice: VoiceRecording, modifier: Modifier = Modifier) {
                     translationY = -with(density) { CollapseLift.toPx() } * c
                     alpha = 1f - vanish
                 }
-                .clip(RoundedCornerShape(28.dp))
+                .clip(MaterialTheme.shapes.extraLarge)
                 .background(barColor)
                 .padding(horizontal = 16.dp),
         ) {

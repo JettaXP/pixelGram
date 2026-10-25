@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.SystemUpdate
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -85,6 +85,6 @@ fun UpdateDialog(onBeforeExit: () -> Unit, onDismiss: () -> Unit) {
         text = { UpdatePanel(onBeforeExit, showActions = false) },
         confirmButton = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { UpdateActions(onBeforeExit) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
     )
 }

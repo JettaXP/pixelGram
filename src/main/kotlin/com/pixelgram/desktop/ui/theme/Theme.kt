@@ -61,12 +61,18 @@ fun appColorScheme(settings: AppSettings): ColorScheme {
 fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     PowerSaving.settings = settings
     com.pixelgram.desktop.core.AudioDevices.settings = settings
+    val corners = com.pixelgram.desktop.ui.components.cornerSpec(settings)
     MaterialExpressiveTheme(
         colorScheme = appColorScheme(settings),
         motionScheme = if (settings.interfaceAnimations.value) MotionScheme.expressive() else InstantMotion,
         typography = PixelTypography,
+        shapes = com.pixelgram.desktop.ui.components.cornerShapes(corners),
     ) {
-        CompositionLocalProvider(LocalUriHandler provides Links, content = content)
+        CompositionLocalProvider(
+            LocalUriHandler provides Links,
+            com.pixelgram.desktop.ui.components.LocalCorners provides corners,
+            content = content,
+        )
     }
 }
 

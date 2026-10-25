@@ -123,7 +123,7 @@ fun BotWelcome(botId: Long, telegram: Telegram, onStart: () -> Unit, modifier: M
     LaunchedEffect(botId) { telegram.botInfo(botId) { info = it } }
     val loaded = info ?: return
     Surface(
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier.widthIn(max = WelcomeMaxWidth),
     ) {

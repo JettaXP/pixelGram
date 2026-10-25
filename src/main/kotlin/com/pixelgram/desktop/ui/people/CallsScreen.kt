@@ -1,12 +1,13 @@
 package com.pixelgram.desktop.ui.people
 
+import com.pixelgram.desktop.ui.components.groupShapes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.CallMade
-import androidx.compose.material.icons.automirrored.outlined.CallMissed
-import androidx.compose.material.icons.automirrored.outlined.CallReceived
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.CallMade
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.CallMissed
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.CallReceived
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
@@ -70,7 +71,7 @@ fun CallsScreen(
                 val duration = if (call.duration > 0) " (%d:%02d)".format(call.duration / 60, call.duration % 60) else ""
                 SegmentedListItem(
                     onClick = { onOpenChat(message.chatId) },
-                    shapes = ListItemDefaults.segmentedShapes(index, loaded.size),
+                    shapes = groupShapes(index, loaded.size),
                     leadingContent = { Avatar(name, chat?.photo, telegram, settings, size = 40.dp) },
                     supportingContent = { Text("$kind$duration · ${formatChatDate(message.date)}") },
                     trailingContent = {

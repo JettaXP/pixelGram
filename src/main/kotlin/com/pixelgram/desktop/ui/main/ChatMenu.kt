@@ -9,21 +9,23 @@ import com.pixelgram.desktop.core.Banners
 import com.pixelgram.desktop.ui.profile.ProfileBanner
 import androidx.compose.foundation.layout.Row
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.material.icons.outlined.MoreHoriz
-import androidx.compose.material.icons.automirrored.outlined.Chat
+import com.pixelgram.desktop.ui.icons.outlined.MoreHoriz
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Chat
 import com.pixelgram.desktop.ui.profile.ProfileMusic
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
-import androidx.compose.material.icons.outlined.Numbers
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.material.icons.outlined.AlternateEmail
+import com.pixelgram.desktop.ui.icons.outlined.Numbers
+import com.pixelgram.desktop.ui.icons.outlined.Info
+import com.pixelgram.desktop.ui.icons.outlined.Phone
+import com.pixelgram.desktop.ui.icons.outlined.AlternateEmail
 import com.pixelgram.desktop.ui.components.InfoRow
 import com.pixelgram.desktop.ui.components.UsernameQrButton
 import com.pixelgram.desktop.ui.components.InfoGroup
 import com.pixelgram.desktop.ui.profile.ProfilePhotosDialog
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.pixelgram.desktop.ui.profile.PersonalChannelCard
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -39,24 +41,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
-import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.Block
-import androidx.compose.material.icons.outlined.LockOpen
-import androidx.compose.material.icons.outlined.CleaningServices
-import androidx.compose.material.icons.outlined.CreateNewFolder
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.KeyboardDoubleArrowUp
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.NotificationsOff
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Unarchive
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
+import com.pixelgram.desktop.ui.icons.automirrored.filled.KeyboardArrowRight
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.OpenInNew
+import com.pixelgram.desktop.ui.icons.outlined.AccountCircle
+import com.pixelgram.desktop.ui.icons.outlined.Archive
+import com.pixelgram.desktop.ui.icons.outlined.Block
+import com.pixelgram.desktop.ui.icons.outlined.LockOpen
+import com.pixelgram.desktop.ui.icons.outlined.CleaningServices
+import com.pixelgram.desktop.ui.icons.outlined.CreateNewFolder
+import com.pixelgram.desktop.ui.icons.outlined.Delete
+import com.pixelgram.desktop.ui.icons.outlined.Folder
+import com.pixelgram.desktop.ui.icons.outlined.KeyboardDoubleArrowUp
+import com.pixelgram.desktop.ui.icons.outlined.Notifications
+import com.pixelgram.desktop.ui.icons.outlined.NotificationsOff
+import com.pixelgram.desktop.ui.icons.outlined.PushPin
+import com.pixelgram.desktop.ui.icons.outlined.Search
+import com.pixelgram.desktop.ui.icons.outlined.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -262,7 +264,7 @@ fun ChatInfoDialog(
     }
     mentioned?.let { other -> ChatInfoDialog(other, telegram, settings, onOpenChat) { mentioned = null } }
     BasicAlertDialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.widthIn(min = 320.dp, max = 420.dp)) {
+        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.widthIn(min = 360.dp, max = 460.dp)) {
           Box {
             if (chat.privateUserId != 0L && Banners.banner(chat.privateUserId) != null) {
                 ProfileBanner(
@@ -276,7 +278,7 @@ fun ChatInfoDialog(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
             ) {
                 var photos by remember(chat.id) { mutableStateOf(false) }
                 Box(Modifier.clip(CircleShape).clickable(enabled = chat.privateUserId != 0L && chat.photo != null) { photos = true }) {
@@ -353,6 +355,18 @@ fun ChatInfoDialog(
                         telegram,
                         settings,
                         onOpen = { id ->
+                            onDismiss()
+                            onOpenChat?.invoke(id)
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                }
+                if (!telegram.isSavedMessages(chat.id)) {
+                    SharedMediaSection(
+                        chat,
+                        telegram,
+                        settings,
+                        onOpenChat = { id ->
                             onDismiss()
                             onOpenChat?.invoke(id)
                         },

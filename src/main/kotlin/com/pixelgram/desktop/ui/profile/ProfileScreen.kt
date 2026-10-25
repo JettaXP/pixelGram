@@ -13,15 +13,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AddAPhoto
-import androidx.compose.material.icons.outlined.AlternateEmail
-import androidx.compose.material.icons.outlined.Cake
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Numbers
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.material.icons.outlined.PhotoLibrary
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.AddAPhoto
+import com.pixelgram.desktop.ui.icons.outlined.AlternateEmail
+import com.pixelgram.desktop.ui.icons.outlined.Cake
+import com.pixelgram.desktop.ui.icons.outlined.Info
+import com.pixelgram.desktop.ui.icons.outlined.Numbers
+import com.pixelgram.desktop.ui.icons.outlined.Person
+import com.pixelgram.desktop.ui.icons.outlined.Phone
+import com.pixelgram.desktop.ui.icons.outlined.PhotoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -108,7 +108,7 @@ fun ProfileScreen(
                 me.id,
                 telegram,
                 BannerHeight,
-                RoundedCornerShape(28.dp),
+                MaterialTheme.shapes.extraLarge,
                 MaterialTheme.colorScheme.surfaceContainer,
                 editable = true,
             )
@@ -293,6 +293,6 @@ private fun EditDialog(
             ) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
     )
 }

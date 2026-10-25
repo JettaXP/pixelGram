@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.profile
 
+import com.pixelgram.desktop.ui.components.groupShapes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -39,7 +40,7 @@ fun PersonalChannelCard(
     val channel = telegram.chats[chatId] ?: return
     SegmentedListItem(
         onClick = { onOpen(chatId) },
-        shapes = ListItemDefaults.segmentedShapes(0, 1),
+        shapes = groupShapes(0, 1),
         modifier = modifier,
         leadingContent = { ChatAvatar(channel, telegram, settings, size = 40.dp) },
         overlineContent = { Text("Personal channel") },
@@ -87,7 +88,7 @@ fun PersonalChannelPicker(
                         itemsIndexed(channels, key = { _, it -> it.id }) { index, channel ->
                             SegmentedListItem(
                                 onClick = { onPicked(channel.id) },
-                                shapes = ListItemDefaults.segmentedShapes(index, channels.size),
+                                shapes = groupShapes(index, channels.size),
                                 leadingContent = { ChatAvatar(channel, telegram, settings, size = 40.dp) },
                             ) {
                                 EmojiText(channel.title)

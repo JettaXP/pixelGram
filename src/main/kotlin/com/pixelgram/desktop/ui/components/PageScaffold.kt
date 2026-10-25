@@ -19,8 +19,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.ContentCopy
+import com.pixelgram.desktop.ui.icons.outlined.Edit
+import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Box
@@ -34,8 +34,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItemDefaults
@@ -124,7 +124,7 @@ fun InfoGroup(rows: List<InfoRow>) {
             ) {
                 SegmentedListItem(
                     onClick = { row.onEdit?.invoke() ?: copy() },
-                    shapes = ListItemDefaults.segmentedShapes(index, rows.size),
+                    shapes = groupShapes(index, rows.size),
                     leadingContent = { Icon(row.icon, contentDescription = null) },
                     supportingContent = {
                         Surface(

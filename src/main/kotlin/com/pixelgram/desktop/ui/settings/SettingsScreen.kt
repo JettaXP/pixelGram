@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
+import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.UpdatePanel
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import com.pixelgram.desktop.ui.OnEscape
@@ -9,10 +10,10 @@ import com.pixelgram.desktop.ui.main.BackupImportDialog
 import com.pixelgram.desktop.ui.main.Attachments
 import com.pixelgram.desktop.ui.main.ForwardDialog
 import com.pixelgram.desktop.core.Backup
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Upload
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Info
+import com.pixelgram.desktop.ui.icons.outlined.Download
+import com.pixelgram.desktop.ui.icons.outlined.Upload
+import com.pixelgram.desktop.ui.icons.outlined.Code
+import com.pixelgram.desktop.ui.icons.outlined.Info
 import androidx.compose.material3.FilterChip
 import com.pixelgram.desktop.core.AvatarKind
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,33 +62,34 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.AlternateEmail
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.BatterySaver
-import androidx.compose.material.icons.outlined.Campaign
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.Devices
-import androidx.compose.material.icons.outlined.Face
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Headphones
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Numbers
-import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.material.icons.outlined.QrCode
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Translate
-import androidx.compose.material.icons.outlined.Tune
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
+import com.pixelgram.desktop.ui.icons.automirrored.filled.KeyboardArrowRight
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Logout
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.OpenInNew
+import com.pixelgram.desktop.ui.icons.filled.Check
+import com.pixelgram.desktop.ui.icons.filled.Close
+import com.pixelgram.desktop.ui.icons.filled.MoreVert
+import com.pixelgram.desktop.ui.icons.outlined.AccountCircle
+import com.pixelgram.desktop.ui.icons.outlined.AlternateEmail
+import com.pixelgram.desktop.ui.icons.outlined.AutoAwesome
+import com.pixelgram.desktop.ui.icons.outlined.BatterySaver
+import com.pixelgram.desktop.ui.icons.outlined.Campaign
+import com.pixelgram.desktop.ui.icons.outlined.ChatBubbleOutline
+import com.pixelgram.desktop.ui.icons.outlined.Devices
+import com.pixelgram.desktop.ui.icons.outlined.Face
+import com.pixelgram.desktop.ui.icons.outlined.RoundedCorner
+import com.pixelgram.desktop.ui.icons.outlined.Folder
+import com.pixelgram.desktop.ui.icons.outlined.Headphones
+import com.pixelgram.desktop.ui.icons.outlined.Lock
+import com.pixelgram.desktop.ui.icons.outlined.Notifications
+import com.pixelgram.desktop.ui.icons.outlined.Numbers
+import com.pixelgram.desktop.ui.icons.outlined.Palette
+import com.pixelgram.desktop.ui.icons.outlined.Phone
+import com.pixelgram.desktop.ui.icons.outlined.QrCode
+import com.pixelgram.desktop.ui.icons.outlined.Search
+import com.pixelgram.desktop.ui.icons.outlined.Translate
+import com.pixelgram.desktop.ui.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonGroupDefaults
@@ -179,6 +181,7 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
     Appearance("Appearance", Icons.Outlined.Palette, pixel = true),
     Avatars("Avatars", Icons.Outlined.Face, pixel = true),
     Bubbles("Message bubbles", Icons.Outlined.ChatBubbleOutline, pixel = true),
+    Corners("Corners", Icons.Outlined.RoundedCorner, pixel = true),
     About("About", Icons.Outlined.Info, pixel = true),
 }
 
@@ -387,6 +390,7 @@ fun SettingsScreen(
                         Section.Appearance -> AppearanceSection(settings)
                         Section.Avatars -> AvatarsSection(settings)
                         Section.Bubbles -> BubblesSection(settings)
+                        Section.Corners -> CornersSection(settings)
                         Section.About -> AboutSection(telegram, settings, onOpenChat)
                         Section.MyAccount -> AccountSection(telegram, onOpenProfile)
                         Section.Privacy -> PrivacySection(telegram, settings)
@@ -489,7 +493,7 @@ private fun NavItem(
     SegmentedListItem(
         selected = selected,
         onClick = onClick,
-        shapes = ListItemDefaults.segmentedShapes(index, count),
+        shapes = groupShapes(index, count),
         leadingContent = { Icon(icon, contentDescription = null) },
     ) {
         Text(title)
@@ -598,7 +602,7 @@ private fun SwitchRow(
     SegmentedListItem(
         checked = checked,
         onCheckedChange = onChange,
-        shapes = ListItemDefaults.segmentedShapes(index, count),
+        shapes = groupShapes(index, count),
         supportingContent = subtitle?.let { { Text(it) } },
         trailingContent = {
             PixelSwitch(checked = checked, onCheckedChange = null, interactionSource = interaction)
@@ -974,6 +978,64 @@ private fun BubblesSection(settings: AppSettings) {
 }
 
 @Composable
+private fun CornersSection(settings: AppSettings) {
+    Description("Pick how round each kind of element is, everywhere in pixelGram.")
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        listOf("A list row", "Another one").forEachIndexed { index, title ->
+            Surface(
+                shape = groupShapes(index, 2).shape,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                ) {
+                    Icon(if (index == 0) Icons.Outlined.RoundedCorner else Icons.Outlined.Palette, contentDescription = null)
+                    Text(title)
+                }
+            }
+        }
+    }
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    ) {
+        Text("A card", modifier = Modifier.padding(20.dp), style = MaterialTheme.typography.titleMedium)
+    }
+    CornerSlider("Lists", "Grouped rows in settings, profiles and lists.", settings.cornerLists, 0..32)
+    CornerSlider("Cards", "Panels, cards and previews.", settings.cornerCards, 0..40)
+    CornerSlider("Dialogs and bars", "Dialogs, the message bar, pop-ups and sheets.", settings.cornerDialogs, 0..48)
+    CornerSlider("Menus and fields", "Context menus and text fields.", settings.cornerMenus, 0..28)
+    TextButton(
+        onClick = {
+            settings.cornerLists.value = 20
+            settings.cornerCards.value = 24
+            settings.cornerDialogs.value = 28
+            settings.cornerMenus.value = 16
+        },
+        modifier = Modifier.padding(top = 8.dp),
+    ) { Text("Reset to default") }
+}
+
+@Composable
+private fun CornerSlider(title: String, description: String, setting: com.pixelgram.desktop.core.Setting<Int>, range: IntRange) {
+    Header(title)
+    Description(description)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Slider(
+            value = setting.value.toFloat(),
+            onValueChange = { setting.value = it.toInt() },
+            valueRange = range.first.toFloat()..range.last.toFloat(),
+            modifier = Modifier.weight(1f),
+        )
+        Text("${setting.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+    }
+}
+
+@Composable
 private fun AccountSection(telegram: Telegram, onOpenProfile: () -> Unit) {
     val me = telegram.me
     if (me != null) {
@@ -1208,7 +1270,7 @@ private fun LinkItem(
 ) {
     SegmentedListItem(
         onClick = onClick,
-        shapes = ListItemDefaults.segmentedShapes(index, count),
+        shapes = groupShapes(index, count),
         leadingContent = { Icon(icon, contentDescription = null) },
         supportingContent = { Text(subtitle) },
         trailingContent = if (trailing) {

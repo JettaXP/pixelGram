@@ -14,8 +14,8 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
+import com.pixelgram.desktop.ui.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton

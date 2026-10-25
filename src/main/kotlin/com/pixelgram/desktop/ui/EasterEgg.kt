@@ -146,7 +146,7 @@ fun BoxScope.EasterEggOverlay() {
         modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp),
     ) {
         Surface(
-            shape = RoundedCornerShape(28.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             shadowElevation = 6.dp,
         ) {

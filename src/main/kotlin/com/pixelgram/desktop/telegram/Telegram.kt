@@ -170,6 +170,8 @@ enum class MessageStatus { Sending, Sent, Read, Failed }
 private const val AUTH_TIMEOUT_MS = 30_000L
 private const val PinnedLimit = 100
 private const val JumpPageSize = 60
+private const val SavedTopicsPage = 100
+private const val CommonGroupsLimit = 100
 private const val ThreadPageSize = 100
 private const val CustomEmojiBatchMs = 40L
 private const val CustomEmojiChunk = 200
@@ -794,10 +796,16 @@ class Telegram(
                 chat.keyboard = update.replyMarkupMessage?.replyMarkup as? TdApi.ReplyMarkupShowKeyboard
             }
             is TdApi.UpdateChatDraftMessage -> chats[update.chatId]?.let { chat ->
-                chat.draft = draftText(update.draftMessage)
+                val date = update.draftMessage?.date
+                val echo = date != null && date <= (localDraftDates[update.chatId] ?: 0)
+                if (!echo) chat.draft = draftText(update.draftMessage)
                 update.positions?.forEach { applyPosition(chat, it) }
             }
             is TdApi.UpdateChatPosition -> chats[update.chatId]?.let { applyPosition(it, update.position) }
+            is TdApi.UpdateSavedMessagesTopic -> savedTopics[update.topic.id] = update.topic
+            is TdApi.UpdateChatBlockList -> chats[update.chatId]?.privateUserId?.takeIf { it != 0L }?.let { userId ->
+                blockedUsers[userId] = update.blockList != null
+            }
             is TdApi.UpdateChatReadInbox -> chats[update.chatId]?.let { chat ->
                 chat.unreadCount = update.unreadCount
                 chatListsChanged()
@@ -1021,6 +1029,7 @@ class Telegram(
             replyMarkupMessageId = chat.replyMarkupMessageId
             notifications = chat.notificationSettings
         }
+        if (state.privateUserId != 0L) blockedUsers[state.privateUserId] = chat.blockList != null
         chat.positions?.forEach { applyPosition(state, it) }
         chats[chat.id] = state
         chatListsChanged()
@@ -1256,13 +1265,25 @@ class Telegram(
 
     fun closeChat(chatId: Long) {
         if (openChatId == chatId) openChatId = 0L
-        if (detached.remove(chatId) == true) messages[chatId]?.clear()
+        if (detached.remove(chatId) == true) resetHistory(chatId)
         send(TdApi.CloseChat().apply { this.chatId = chatId })
+    }
+
+    private val historyGeneration = HashMap<Long, Int>()
+
+    private fun generation(chatId: Long) = historyGeneration[chatId] ?: 0
+
+    private fun resetHistory(chatId: Long): Int {
+        val next = generation(chatId) + 1
+        historyGeneration[chatId] = next
+        messages(chatId).clear()
+        return next
     }
 
     fun loadMoreMessages(chatId: Long, pageSize: Int = 50, onLoaded: (Int) -> Unit = {}) {
         val list = messages(chatId)
         val fromId = list.lastOrNull()?.id ?: 0L
+        val requested = generation(chatId)
         send(TdApi.GetChatHistory().apply {
             this.chatId = chatId
             fromMessageId = fromId
@@ -1270,12 +1291,14 @@ class Telegram(
             limit = pageSize
             onlyLocal = false
         }) { result ->
-            if (result !is TdApi.Messages) {
+            if (result !is TdApi.Messages || requested != generation(chatId)) {
                 onLoaded(0)
                 return@send
             }
+            val oldest = list.lastOrNull()?.id ?: Long.MAX_VALUE
             val loaded = result.messages?.filterNotNull().orEmpty()
-                .filter { message -> list.none { it.id == message.id } }
+                .filter { it.id < oldest }
+                .sortedByDescending { it.id }
                 .map { it.toUi() }
             list.addAll(loaded)
             if (loaded.isNotEmpty()) {
@@ -1315,6 +1338,52 @@ class Telegram(
         threadMessages.clear()
     }
 
+    val savedTopics = mutableStateMapOf<Long, TdApi.SavedMessagesTopic>()
+
+    fun loadSavedTopics() {
+        send(TdApi.LoadSavedMessagesTopics(SavedTopicsPage))
+    }
+
+    fun savedTopicHistory(topicId: Long, fromMessageId: Long, done: (List<UiMessage>) -> Unit) {
+        send(TdApi.GetSavedMessagesTopicHistory(topicId, fromMessageId, 0, HistoryPageSize)) { result ->
+            done((result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty().map { it.toUi() })
+        }
+    }
+
+    fun searchMedia(
+        chatId: Long,
+        filter: TdApi.SearchMessagesFilter,
+        fromMessageId: Long,
+        savedTopicId: Long = 0L,
+        done: (List<UiMessage>, Long) -> Unit,
+    ) {
+        send(TdApi.SearchChatMessages().apply {
+            this.chatId = chatId
+            topicId = if (savedTopicId != 0L) TdApi.MessageTopicSavedMessages(savedTopicId) else null
+            query = ""
+            this.fromMessageId = fromMessageId
+            offset = 0
+            limit = HistoryPageSize
+            this.filter = filter
+        }) { result ->
+            val found = result as? TdApi.FoundChatMessages
+            done(found?.messages?.filterNotNull().orEmpty().map { it.toUi() }, found?.nextFromMessageId ?: 0L)
+        }
+    }
+
+    fun groupsInCommon(userId: Long, done: (List<Long>) -> Unit) {
+        send(TdApi.GetGroupsInCommon(userId, 0, CommonGroupsLimit)) { result ->
+            val ids = (result as? TdApi.Chats)?.chatIds?.toList().orEmpty()
+            ids.forEach(::loadChat)
+            done(ids)
+        }
+    }
+
+    fun isLeft(chat: ChatState): Boolean {
+        val status = supergroupInfo[chat.supergroupId]?.status ?: return false
+        return status is TdApi.ChatMemberStatusLeft
+    }
+
     fun mustJoin(chatId: Long): Boolean {
         val chat = chats[chatId] ?: return false
         val group = supergroupInfo[chat.supergroupId] ?: return false
@@ -1338,19 +1407,23 @@ class Telegram(
 
     val detached = mutableStateMapOf<Long, Boolean>()
 
-    fun jumpToStart(chatId: Long, done: () -> Unit) {
+    fun jumpToStart(chatId: Long, done: () -> Unit) = loadAround(chatId, 1, -(JumpPageSize - 1), done)
+
+    fun jumpToMessage(chatId: Long, messageId: Long, done: () -> Unit) = loadAround(chatId, messageId, -(JumpPageSize / 2), done)
+
+    private fun loadAround(chatId: Long, fromId: Long, offset: Int, done: () -> Unit) {
+        val requested = generation(chatId)
         send(TdApi.GetChatHistory().apply {
             this.chatId = chatId
-            fromMessageId = 1
-            offset = -(JumpPageSize - 1)
+            fromMessageId = fromId
+            this.offset = offset
             limit = JumpPageSize
             onlyLocal = false
         }) { result ->
             val loaded = (result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty()
-            if (loaded.isEmpty()) return@send done()
-            val list = messages(chatId)
-            list.clear()
-            list.addAll(loaded.sortedByDescending { it.id }.map { it.toUi() })
+            if (loaded.isEmpty() || requested != generation(chatId)) return@send done()
+            resetHistory(chatId)
+            messages(chatId).addAll(loaded.sortedByDescending { it.id }.map { it.toUi() })
             detached[chatId] = true
             done()
         }
@@ -1362,6 +1435,7 @@ class Telegram(
         if (detached[chatId] != true || !loadingNewer.add(chatId)) return
         val list = messages(chatId)
         val newest = list.firstOrNull()?.id ?: return run { loadingNewer.remove(chatId) }
+        val requested = generation(chatId)
         send(TdApi.GetChatHistory().apply {
             this.chatId = chatId
             fromMessageId = newest
@@ -1370,9 +1444,10 @@ class Telegram(
             onlyLocal = false
         }) { result ->
             loadingNewer.remove(chatId)
-            val known = list.mapTo(HashSet()) { it.id }
+            if (requested != generation(chatId)) return@send
+            val top = list.firstOrNull()?.id ?: newest
             val newer = (result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty()
-                .filter { it.id > newest && it.id !in known }
+                .filter { it.id > top }
                 .sortedByDescending { it.id }
             if (newer.isEmpty()) {
                 detached[chatId] = false
@@ -1383,8 +1458,7 @@ class Telegram(
     }
 
     fun returnToLatest(chatId: Long, done: () -> Unit) {
-        val list = messages(chatId)
-        list.clear()
+        resetHistory(chatId)
         detached[chatId] = false
         loadMoreMessages(chatId) { done() }
     }
@@ -1457,13 +1531,17 @@ class Telegram(
         return null
     }
 
+    private val localDraftDates = mutableMapOf<Long, Int>()
+
     fun saveDraft(chatId: Long, text: String) {
         val chat = chats[chatId] ?: return
         if (chat.draft == text) return
         chat.draft = text
+        val now = (System.currentTimeMillis() / 1000).toInt()
+        localDraftDates[chatId] = now
         val draft = text.takeIf { it.isNotBlank() }?.let {
             TdApi.DraftMessage().apply {
-                date = (System.currentTimeMillis() / 1000).toInt()
+                date = now
                 content = TdApi.DraftMessageContentText().apply { this.text = TdApi.FormattedText(it, emptyArray()) }
             }
         }

@@ -26,10 +26,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.filled.KeyboardArrowDown
+import com.pixelgram.desktop.ui.icons.filled.KeyboardArrowUp
+import com.pixelgram.desktop.ui.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +41,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -105,9 +107,20 @@ fun ReactionChips(
         reactions.forEach { reaction ->
             val emoji = (reaction.type as? TdApi.ReactionTypeEmoji)?.emoji ?: return@forEach
             key(emoji) {
-            val pop = remember { Animatable(0.6f) }
-            LaunchedEffect(reaction.totalCount, reaction.isChosen) { pop.snapTo(0.85f); pop.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 500f)) }
             val chosen = reaction.isChosen
+            val pop = remember { Animatable(1f) }
+            var shown by remember { mutableStateOf(reaction.totalCount to chosen) }
+            LaunchedEffect(reaction.totalCount, chosen) {
+                val now = reaction.totalCount to chosen
+                if (now == shown) return@LaunchedEffect
+                shown = now
+                try {
+                    pop.snapTo(0.85f)
+                    pop.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 500f))
+                } finally {
+                    withContext(NonCancellable) { pop.snapTo(1f) }
+                }
+            }
             Surface(
                 onClick = { onToggle(emoji) },
                 shape = CircleShape,

@@ -1,7 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.groupShapes
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material.icons.outlined.SystemUpdate
+import com.pixelgram.desktop.ui.icons.outlined.SystemUpdate
 import com.pixelgram.desktop.ui.UpdateDialog
 import com.pixelgram.desktop.core.UpdateState
 import com.pixelgram.desktop.core.Updater
@@ -14,7 +15,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.material.icons.filled.Search
+import com.pixelgram.desktop.ui.icons.filled.Search
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.graphicsLayer
@@ -43,19 +44,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.LockOpen
+import com.pixelgram.desktop.ui.icons.outlined.Lock
+import com.pixelgram.desktop.ui.icons.outlined.LockOpen
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.MenuOpen
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.Archive
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
+import com.pixelgram.desktop.ui.icons.automirrored.filled.MenuOpen
+import com.pixelgram.desktop.ui.icons.filled.Menu
+import com.pixelgram.desktop.ui.icons.outlined.Archive
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -390,7 +391,7 @@ private fun ChatRow(
         SegmentedListItem(
             selected = selected,
             onClick = onClick,
-            shapes = ListItemDefaults.segmentedShapes(index, count),
+            shapes = groupShapes(index, count),
             leadingContent = {
                 OnlineAvatar(chat, telegram, settings, 48.dp)
             },

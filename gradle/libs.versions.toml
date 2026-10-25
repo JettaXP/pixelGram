@@ -2,7 +2,6 @@
 kotlin = "2.4.21"
 compose = "1.12.2"
 material3 = "1.12.0-alpha03"
-materialIcons = "1.7.3"
 coroutines = "1.11.0"
 materialColorUtilities = "6.0.0"
 tdlight = "3.5.9+td.1.8.68"
@@ -16,7 +15,6 @@ ffmpeg = "7.1-1.5.11"
 
 [libraries]
 material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIcons" }
 coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
 material-color-utilities = { module = "com.materialkolor:material-color-utilities", version.ref = "materialColorUtilities" }
 tdlight-bom = { module = "it.tdlight:tdlight-java-bom", version.ref = "tdlight" }

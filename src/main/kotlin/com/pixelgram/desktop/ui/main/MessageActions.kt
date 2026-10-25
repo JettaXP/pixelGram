@@ -1,9 +1,9 @@
 package com.pixelgram.desktop.ui.main
 
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material.icons.outlined.Link
-import androidx.compose.material.icons.outlined.DataObject
-import androidx.compose.material.icons.outlined.CheckCircle
+import com.pixelgram.desktop.ui.icons.outlined.PushPin
+import com.pixelgram.desktop.ui.icons.outlined.Link
+import com.pixelgram.desktop.ui.icons.outlined.DataObject
+import com.pixelgram.desktop.ui.icons.outlined.CheckCircle
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.pixelgram.desktop.ui.components.HoverTarget
 import it.tdlight.jni.TdApi
@@ -11,8 +11,8 @@ import com.pixelgram.desktop.telegram.Telegram
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.material.icons.automirrored.outlined.Forward
-import androidx.compose.material.icons.outlined.Image
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Forward
+import com.pixelgram.desktop.ui.icons.outlined.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -33,11 +33,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Reply
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Reply
+import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
+import com.pixelgram.desktop.ui.icons.outlined.Delete
+import com.pixelgram.desktop.ui.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu

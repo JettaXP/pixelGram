@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
+import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.EasterEgg
 import com.pixelgram.desktop.ui.IsraelBlue
 import com.pixelgram.desktop.ui.IsraelWhite
@@ -22,23 +23,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Computer
-import androidx.compose.material.icons.outlined.Devices
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.LaptopMac
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.PanTool
-import androidx.compose.material.icons.outlined.PhoneAndroid
-import androidx.compose.material.icons.outlined.PhoneIphone
-import androidx.compose.material.icons.outlined.Place
-import androidx.compose.material.icons.outlined.SportsEsports
-import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material.icons.outlined.TabletMac
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
+import com.pixelgram.desktop.ui.icons.outlined.Add
+import com.pixelgram.desktop.ui.icons.outlined.Close
+import com.pixelgram.desktop.ui.icons.outlined.Computer
+import com.pixelgram.desktop.ui.icons.outlined.Devices
+import com.pixelgram.desktop.ui.icons.outlined.Info
+import com.pixelgram.desktop.ui.icons.outlined.Language
+import com.pixelgram.desktop.ui.icons.outlined.LaptopMac
+import com.pixelgram.desktop.ui.icons.outlined.Lock
+import com.pixelgram.desktop.ui.icons.outlined.PanTool
+import com.pixelgram.desktop.ui.icons.outlined.PhoneAndroid
+import com.pixelgram.desktop.ui.icons.outlined.PhoneIphone
+import com.pixelgram.desktop.ui.icons.outlined.Place
+import com.pixelgram.desktop.ui.icons.outlined.SportsEsports
+import com.pixelgram.desktop.ui.icons.outlined.Star
+import com.pixelgram.desktop.ui.icons.outlined.TabletMac
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
@@ -142,7 +143,7 @@ fun PrivacySection(telegram: Telegram, settings: AppSettings) {
 private fun ValueRow(index: Int, count: Int, icon: ImageVector?, title: String, value: String?, star: Boolean = false, onClick: () -> Unit) {
     SegmentedListItem(
         onClick = onClick,
-        shapes = ListItemDefaults.segmentedShapes(index, count),
+        shapes = groupShapes(index, count),
         leadingContent = icon?.let { { Icon(it, contentDescription = null) } },
         trailingContent = {
             if (value == null) LoadingIndicator(Modifier.size(24.dp)) else Text(value, color = MaterialTheme.colorScheme.primary)
@@ -567,7 +568,7 @@ private fun SessionsPage(
     currentSession?.let { session ->
         SegmentedListItem(
             onClick = { details = session },
-            shapes = ListItemDefaults.segmentedShapes(0, 1),
+            shapes = groupShapes(0, 1),
             leadingContent = { SessionIcon(session, 44.dp) },
             supportingContent = { Text(sessionSubtitle(session, current = true)) },
         ) { Text(session.deviceModel.ifBlank { session.platform }) }
@@ -575,7 +576,7 @@ private fun SessionsPage(
     if (others.isNotEmpty()) {
         SegmentedListItem(
             onClick = { terminateAll = true },
-            shapes = ListItemDefaults.segmentedShapes(0, 1),
+            shapes = groupShapes(0, 1),
             leadingContent = { Icon(Icons.Outlined.PanTool, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             supportingContent = { Text("Logs out all devices except for this one.") },
         ) { Text("Terminate all other sessions", color = MaterialTheme.colorScheme.error) }
@@ -584,7 +585,7 @@ private fun SessionsPage(
             others.forEachIndexed { index, session ->
                 SegmentedListItem(
                     onClick = { details = session },
-                    shapes = ListItemDefaults.segmentedShapes(index, others.size),
+                    shapes = groupShapes(index, others.size),
                     leadingContent = { SessionIcon(session, 44.dp) },
                     supportingContent = { Text(sessionSubtitle(session, current = false)) },
                     trailingContent = {

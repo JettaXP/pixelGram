@@ -22,10 +22,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.InsertDriveFile
-import androidx.compose.material.icons.outlined.PhotoLibrary
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.Image
+import com.pixelgram.desktop.ui.icons.outlined.InsertDriveFile
+import com.pixelgram.desktop.ui.icons.outlined.PhotoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
@@ -176,7 +176,7 @@ private fun DropZoneCard(zone: DropZone, active: Boolean, modifier: Modifier) {
     val spin by animateFloatAsState(if (active) 90f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec())
     val iconShape = MaterialShapes.Cookie9Sided.toShape()
     Surface(
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         color = container,
         border = BorderStroke(2.dp, outline),
         modifier = modifier,

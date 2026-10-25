@@ -1,8 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
 import androidx.compose.material3.IconToggleButton
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.filled.Favorite
+import com.pixelgram.desktop.ui.icons.outlined.FavoriteBorder
+import com.pixelgram.desktop.ui.icons.filled.Favorite
 import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.material3.SliderDefaults
@@ -44,16 +44,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.RepeatOn
-import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material.icons.rounded.SkipPrevious
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.filled.VolumeOff
+import com.pixelgram.desktop.ui.icons.automirrored.filled.VolumeUp
+import com.pixelgram.desktop.ui.icons.filled.Close
+import com.pixelgram.desktop.ui.icons.rounded.Pause
+import com.pixelgram.desktop.ui.icons.rounded.PlayArrow
+import com.pixelgram.desktop.ui.icons.filled.Repeat
+import com.pixelgram.desktop.ui.icons.filled.RepeatOn
+import com.pixelgram.desktop.ui.icons.rounded.SkipNext
+import com.pixelgram.desktop.ui.icons.rounded.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme

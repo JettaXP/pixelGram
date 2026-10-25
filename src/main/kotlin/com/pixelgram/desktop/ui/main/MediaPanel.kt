@@ -1,11 +1,11 @@
 package com.pixelgram.desktop.ui.main
 
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.material.icons.outlined.NotificationsOff
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Alarm
-import androidx.compose.material.icons.outlined.Collections
-import androidx.compose.material.icons.outlined.Delete
+import com.pixelgram.desktop.ui.icons.outlined.NotificationsOff
+import com.pixelgram.desktop.ui.icons.outlined.CalendarMonth
+import com.pixelgram.desktop.ui.icons.outlined.Alarm
+import com.pixelgram.desktop.ui.icons.outlined.Collections
+import com.pixelgram.desktop.ui.icons.outlined.Delete
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.isSecondaryPressed
@@ -13,9 +13,8 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material.icons.automirrored.outlined.Send
-import androidx.compose.material.icons.outlined.StarOutline
-import androidx.compose.material.icons.outlined.Star
+import com.pixelgram.desktop.ui.icons.outlined.StarOutline
+import com.pixelgram.desktop.ui.icons.outlined.Star
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,9 +34,9 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.Search
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.Schedule
+import com.pixelgram.desktop.ui.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LoadingIndicator
