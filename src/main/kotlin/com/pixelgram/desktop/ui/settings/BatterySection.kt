@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
+import com.pixelgram.desktop.ui.icons.outlined.Movie
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -62,6 +63,15 @@ fun BatterySection(settings: AppSettings) {
             Icons.Outlined.EmojiEmotions,
             "Animated Emoji",
             listOf(PowerOption("Autoplay in messages", settings.emojiInMessages)),
+            RoundedCornerShape(4.dp),
+        )
+        PowerGroup(
+            Icons.Outlined.Movie,
+            "Autoplay Media",
+            listOf(
+                PowerOption("GIFs", settings.autoplayGifs),
+                PowerOption("Videos", settings.autoplayVideos),
+            ),
             RoundedCornerShape(4.dp),
         )
         PowerGroup(

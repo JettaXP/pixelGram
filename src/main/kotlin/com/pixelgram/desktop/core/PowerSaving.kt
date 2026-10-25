@@ -12,6 +12,8 @@ object PowerSaving {
     val emojiInMessages: Boolean get() = settings?.emojiInMessages?.value ?: true
     val spoilerEffect: Boolean get() = settings?.spoilerEffect?.value ?: true
     val messageAnimations: Boolean get() = settings?.messageAnimations?.value ?: true
+    val autoplayGifs: Boolean get() = settings?.autoplayGifs?.value ?: true
+    val autoplayVideos: Boolean get() = settings?.autoplayVideos?.value ?: true
 }
 
 object InstantMotion : MotionScheme {

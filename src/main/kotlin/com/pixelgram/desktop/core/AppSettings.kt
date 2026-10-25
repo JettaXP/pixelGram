@@ -131,6 +131,8 @@ class AppSettings private constructor(private val props: Properties) {
     val spoilerEffect = bool("spoilerEffect", true)
     val messageAnimations = bool("messageAnimations", true)
     val interfaceAnimations = bool("interfaceAnimations", true)
+    val autoplayGifs = bool("autoplayGifs", true)
+    val autoplayVideos = bool("autoplayVideos", true)
 
     val bubbleRadius = int("bubbleRadius", 18)
     val bubbleTailRadius = int("bubbleTailRadius", 4)
@@ -164,7 +166,7 @@ class AppSettings private constructor(private val props: Properties) {
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,
         deviceName, israelLogo, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
-        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations,
+        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos,
         apiId, apiHash,
         accounts, activeAccount,
     ) + avatarKindShapes.values

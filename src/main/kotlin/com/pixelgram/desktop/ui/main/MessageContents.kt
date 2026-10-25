@@ -196,6 +196,7 @@ fun LottieView(path: String, modifier: Modifier, play: Boolean = true, runs: Int
 }
 
 private const val DefaultLottieFps = 60f
+private const val AutoplayVideoBytes = 20L * 1024 * 1024
 
 @Composable
 private fun AnimatedEmojiView(message: UiMessage, content: TdApi.MessageAnimatedEmoji, telegram: Telegram) {
@@ -799,7 +800,12 @@ fun MediaContent(message: UiMessage, telegram: Telegram, width: Dp, corner: Dp) 
         else -> return
     }
     val ratio = if (size.first > 0 && size.second > 0) size.first.toFloat() / size.second else 16f / 9f
-    val busy = false
+    val gif = content is TdApi.MessageAnimation
+    val autoplay = !message.sending && if (gif) PowerSaving.autoplayGifs else PowerSaving.autoplayVideos && ((file?.size ?: 0L) in 1..AutoplayVideoBytes)
+    var started by remember(file?.id) { mutableStateOf(false) }
+    LaunchedEffect(file?.id, autoplay, started) { if (autoplay || started) telegram.download(file) }
+    val path = telegram.localPath(file)
+    val inline = path != null && (autoplay || started)
     val open = {
         when (content) {
             is TdApi.MessageVideo -> VideoPlayer.open(telegram, content.video, message.text)
@@ -807,20 +813,22 @@ fun MediaContent(message: UiMessage, telegram: Telegram, width: Dp, corner: Dp) 
             else -> Unit
         }
     }
+    val busy = started && path == null
     Box(
         Modifier
             .size(width, (width / ratio).coerceIn(120.dp, 520.dp))
             .clip(RoundedCornerShape(corner))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            .clickable(onClick = open),
+            .clickable { if (inline || autoplay) open() else started = true },
         contentAlignment = Alignment.Center,
     ) {
         ThumbImage(thumb, mini, telegram, Modifier.fillMaxSize())
+        if (inline && path != null) InlineVideo(path, Modifier.fillMaxSize())
         if (message.sending) {
             Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
                 TransferRing(telegram.progress(file), Color.White, { telegram.cancelSending(message) }, 44.dp)
             }
-        } else {
+        } else if (!inline) {
             PlayBadge(busy)
         }
         Surface(

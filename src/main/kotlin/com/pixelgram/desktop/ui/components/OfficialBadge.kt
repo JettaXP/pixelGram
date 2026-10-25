@@ -1,6 +1,5 @@
 package com.pixelgram.desktop.ui.components
 
-import com.pixelgram.desktop.ui.icons.filled.Code
 import com.pixelgram.desktop.ui.components.expressive.popIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.LaunchedEffect

@@ -116,6 +116,7 @@ object VideoPlayer {
 }
 
 private const val SeekStepMs = 5_000L
+private const val ViewerShare = 0.8f
 private const val ControlsHideMs = 2_500L
 private const val LateFrameUs = 120_000L
 private const val AudioBufferSeconds = 0.4
@@ -127,7 +128,7 @@ private const val AudioQueueWaitMs = 20L
 private const val AudioDrainPollMs = 10L
 private val VolumeSliderWidth = 110.dp
 
-private class VideoEngine(private val path: String, private val loop: Boolean) {
+internal class VideoEngine(private val path: String, private val loop: Boolean, private val sound: Boolean = true, private val maxWidth: Int = MaxDecodeWidth) {
     var frame by mutableStateOf<ImageBitmap?>(null)
     var position by mutableLongStateOf(0L)
     var duration by mutableLongStateOf(0L)
@@ -178,15 +179,15 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
         }
         try {
             grabber.start()
-            if (grabber.imageWidth > MaxDecodeWidth) {
-                val height = (grabber.imageHeight.toLong() * MaxDecodeWidth / grabber.imageWidth).toInt() and 1.inv()
+            if (grabber.imageWidth > maxWidth) {
+                val height = (grabber.imageHeight.toLong() * maxWidth / grabber.imageWidth).toInt() and 1.inv()
                 grabber.stop()
-                grabber.imageWidth = MaxDecodeWidth
+                grabber.imageWidth = maxWidth
                 grabber.imageHeight = height
                 grabber.start()
             }
             duration = grabber.lengthInTime / 1000
-            if (grabber.audioChannels > 0 && !loop) line = openLine(grabber.sampleRate, grabber.audioChannels)
+            if (grabber.audioChannels > 0 && !loop && sound) line = openLine(grabber.sampleRate, grabber.audioChannels)
             line?.let { output ->
                 audioThread = Thread({ pumpAudio(output) }, "pixelgram-video-audio").apply {
                     isDaemon = true
@@ -244,7 +245,7 @@ private class VideoEngine(private val path: String, private val loop: Boolean) {
                         lastShown = now
                     }
                     position = next.timestamp / 1000
-                } else if (next.samples != null) {
+                } else if (next.samples != null && line != null) {
                     writeAudio(next)
                 }
             }
@@ -327,16 +328,18 @@ fun VideoPlayerWindow(request: VideoRequest, settings: AppSettings) {
     val engine = remember(path) { path?.let { VideoEngine(it, request.loop).apply { start() } } }
     DisposableEffect(engine) { onDispose { engine?.close() } }
     val screen = remember { GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration.bounds }
+    val windowWidth = (screen.width * ViewerShare).toInt()
+    val windowHeight = (screen.height * ViewerShare).toInt()
     Window(
         onCloseRequest = close,
         state = rememberWindowState(
-            position = WindowPosition(screen.x.dp, screen.y.dp),
-            size = DpSize(screen.width.dp, screen.height.dp),
+            position = WindowPosition((screen.x + (screen.width - windowWidth) / 2).dp, (screen.y + (screen.height - windowHeight) / 2).dp),
+            size = DpSize(windowWidth.dp, windowHeight.dp),
         ),
         title = "pixelGram video",
-        undecorated = true,
+        undecorated = false,
         transparent = false,
-        resizable = false,
+        resizable = true,
         alwaysOnTop = true,
         onKeyEvent = { event ->
             if (event.type != KeyEventType.KeyDown) return@Window false
@@ -475,3 +478,14 @@ private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
         }
     }
 }
+
+@Composable
+fun InlineVideo(path: String, modifier: Modifier = Modifier) {
+    val engine = remember(path) { VideoEngine(path, loop = true, sound = false, maxWidth = InlineDecodeWidth).apply { start() } }
+    DisposableEffect(engine) { onDispose { engine.close() } }
+    engine.frame?.let { frame ->
+        Image(frame, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier)
+    }
+}
+
+private const val InlineDecodeWidth = 640
