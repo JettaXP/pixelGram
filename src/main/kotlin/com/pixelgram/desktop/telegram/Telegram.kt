@@ -1233,6 +1233,10 @@ class Telegram(
         send(TdApi.GetAnimatedEmoji(emoji)) { result -> done((result as? TdApi.AnimatedEmoji)?.sticker) }
     }
 
+    fun clickAnimatedEmoji(chatId: Long, messageId: Long, done: (TdApi.Sticker?) -> Unit) {
+        send(TdApi.ClickAnimatedEmojiMessage(chatId, messageId)) { result -> done(result as? TdApi.Sticker) }
+    }
+
     fun loadFolder(folderId: Int, done: (TdApi.ChatFolder?) -> Unit) {
         send(TdApi.GetChatFolder(folderId)) { result -> done(result as? TdApi.ChatFolder) }
     }

@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.animation.core.animateFloatAsState
@@ -117,7 +120,15 @@ fun isMediaContent(content: TdApi.MessageContent?): Boolean =
     content is TdApi.MessageVideo || content is TdApi.MessageAnimation
 
 @Composable
-fun StickerView(sticker: TdApi.Sticker?, telegram: Telegram, size: Dp, modifier: Modifier = Modifier, animate: Boolean = true) {
+fun StickerView(
+    sticker: TdApi.Sticker?,
+    telegram: Telegram,
+    size: Dp,
+    modifier: Modifier = Modifier,
+    animate: Boolean = true,
+    runs: Int = -1,
+    onEnd: () -> Unit = {},
+) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         if (sticker == null) {
             LoadingIndicator(Modifier.size(size / 3))
@@ -126,7 +137,7 @@ fun StickerView(sticker: TdApi.Sticker?, telegram: Telegram, size: Dp, modifier:
         LaunchedEffect(sticker.sticker?.id) { telegram.download(sticker.sticker) }
         val path = telegram.localPath(sticker.sticker)
         when {
-            path != null && sticker.format is TdApi.StickerFormatTgs -> LottieView(path, Modifier.fillMaxSize(), animate)
+            path != null && sticker.format is TdApi.StickerFormatTgs -> LottieView(path, Modifier.fillMaxSize(), animate, runs, onEnd)
             path != null && sticker.format is TdApi.StickerFormatWebp -> FileImage(path, Modifier.fillMaxSize(), ContentScale.Fit)
             path != null && sticker.format is TdApi.StickerFormatWebm -> VideoStickerView(path, Modifier.fillMaxSize(), animate)
             else -> ThumbImage(sticker.thumbnail?.file, null, telegram, Modifier.fillMaxSize(), ContentScale.Fit)
@@ -135,7 +146,7 @@ fun StickerView(sticker: TdApi.Sticker?, telegram: Telegram, size: Dp, modifier:
 }
 
 @Composable
-fun LottieView(path: String, modifier: Modifier, play: Boolean = true) {
+fun LottieView(path: String, modifier: Modifier, play: Boolean = true, runs: Int = -1, onEnd: () -> Unit = {}) {
     val animation by produceState<Animation?>(null, path) {
         value = withContext(Dispatchers.IO) {
             runCatching {
@@ -144,16 +155,31 @@ fun LottieView(path: String, modifier: Modifier, play: Boolean = true) {
             }.onFailure { AppLog.write("Sticker animation failed", it) }.getOrNull()
         }
     }
-    val frame by produceState(0, animation, play) {
+    val ended by rememberUpdatedState(onEnd)
+    val frame by produceState(0, animation, play, runs) {
         val current = animation ?: return@produceState
-        if (!play) return@produceState
+        if (!play || runs == 0) {
+            value = 0
+            return@produceState
+        }
         val fps = current.fPS.takeIf { it > 0f } ?: DefaultLottieFps
         val total = (current.duration * fps).toInt().coerceAtLeast(1)
         val start = withFrameNanos { it }
         while (true) {
+            var done = false
             withFrameNanos { now ->
-                val next = (((now - start) / 1_000_000_000.0 * fps).toLong() % total).toInt()
-                if (next != value) value = next
+                val passed = ((now - start) / 1_000_000_000.0 * fps).toLong()
+                if (runs > 0 && passed >= total) {
+                    done = true
+                    value = 0
+                } else {
+                    val next = (passed % total).toInt()
+                    if (next != value) value = next
+                }
+            }
+            if (done) {
+                ended()
+                break
             }
         }
     }
@@ -167,6 +193,76 @@ fun LottieView(path: String, modifier: Modifier, play: Boolean = true) {
 }
 
 private const val DefaultLottieFps = 60f
+
+@Composable
+private fun AnimatedEmojiView(message: UiMessage, content: TdApi.MessageAnimatedEmoji, telegram: Telegram) {
+    val sticker = content.animatedEmoji?.sticker
+    val size = StickerSize / 1.4f
+    if (sticker == null) {
+        Text(content.emoji, fontSize = 64.sp)
+        return
+    }
+    val animate = PowerSaving.stickersInChat
+    val key = message.chatId to message.id
+    var runs by remember(key) { mutableStateOf(if (animate && AnimatedEmojiPlays.first(key)) 1 else 0) }
+    var playing by remember(key) { mutableStateOf(runs > 0) }
+    var effect by remember(key) { mutableStateOf<TdApi.Sticker?>(null) }
+    var effectRuns by remember(key) { mutableStateOf(0) }
+    Box {
+        StickerView(
+            sticker,
+            telegram,
+            size,
+            Modifier.clickable(interactionSource = null, indication = null) {
+                if (!animate) return@clickable
+                if (!playing) {
+                    playing = true
+                    runs++
+                }
+                if (effect == null) {
+                    telegram.clickAnimatedEmoji(message.chatId, message.id) { result ->
+                        if (result != null && effect == null) {
+                            effect = result
+                            effectRuns++
+                        }
+                    }
+                }
+            },
+            animate = animate,
+            runs = runs,
+            onEnd = { playing = false },
+        )
+        effect?.let { shown ->
+            val shift = with(LocalDensity.current) { (size * EffectShift).roundToPx() }
+            androidx.compose.ui.window.Popup(
+                alignment = Alignment.Center,
+                offset = IntOffset(if (message.isOutgoing) -shift else shift, 0),
+            ) {
+                StickerView(
+                    shown,
+                    telegram,
+                    size * EffectScale,
+                    Modifier.graphicsLayer { if (message.isOutgoing) scaleX = -1f },
+                    runs = effectRuns,
+                    onEnd = { effect = null },
+                )
+            }
+        }
+    }
+}
+
+private object AnimatedEmojiPlays {
+    private val played = object : LinkedHashMap<Pair<Long, Long>, Boolean>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<Long, Long>, Boolean>) = size > MaxRemembered
+    }
+
+    fun first(key: Pair<Long, Long>): Boolean = played.put(key, true) == null
+
+    private const val MaxRemembered = 4000
+}
+
+private const val EffectScale = 3f
+private const val EffectShift = 1f
 
 @Composable
 fun FileImage(path: String, modifier: Modifier, scale: ContentScale) {
@@ -784,11 +880,7 @@ fun BareContent(message: UiMessage, telegram: Telegram) {
             Modifier.openPack(telegram, message.chatId, content.sticker),
             animate = PowerSaving.stickersInChat,
         )
-        is TdApi.MessageAnimatedEmoji -> {
-            val sticker = content.animatedEmoji?.sticker
-            if (sticker != null) StickerView(sticker, telegram, StickerSize / 1.4f, animate = PowerSaving.stickersInChat) else
-                Text(content.emoji, fontSize = 64.sp)
-        }
+        is TdApi.MessageAnimatedEmoji -> AnimatedEmojiView(message, content, telegram)
         is TdApi.MessageDice -> {
             val sticker = (content.finalState as? TdApi.DiceStickersRegular)?.sticker
             if (sticker != null) StickerView(sticker, telegram, StickerSize / 1.4f, animate = PowerSaving.stickersInChat) else
