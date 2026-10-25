@@ -1069,6 +1069,49 @@ fun MessageBubble(
                         }
                     }
                 }
+                val origin = message.forwardOrigin
+                if (origin != null && telegram != null) {
+                    val reachable = onOrigin != null && origin !is TdApi.MessageOriginHiddenUser
+                    val originName = telegram.forwardName(origin).ifBlank { "unknown" }
+                    val originPhoto = when (origin) {
+                        is TdApi.MessageOriginUser -> telegram.users[origin.senderUserId]?.profilePhoto?.small
+                        is TdApi.MessageOriginChat -> telegram.chats[origin.senderChatId]?.photo
+                        is TdApi.MessageOriginChannel -> telegram.chats[origin.chatId]?.photo
+                        else -> null
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .padding(start = if (inset) 8.dp else 12.dp, end = 12.dp, top = if (inset || named) 4.dp else 7.dp, bottom = 4.dp)
+                            .then(
+                                if (reachable) {
+                                    Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .pointerHoverIcon(PointerIcon.Hand)
+                                        .clickable { onOrigin?.invoke(origin) }
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Outlined.Forward,
+                            contentDescription = null,
+                            tint = colors.primary,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Text("Forwarded from", style = MaterialTheme.typography.labelMedium, color = colors.primary, maxLines = 1)
+                        if (originPhoto != null) Avatar(originName, originPhoto, telegram, settings, ForwardAvatarSize)
+                        EmojiText(
+                            originName,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colors.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
                 if (quote != null) {
                     Box(
                         Modifier
@@ -1115,36 +1158,6 @@ fun MessageBubble(
                             .padding(horizontal = 12.dp, vertical = 7.dp)
                             .then(if (photo != null || media || album != null) Modifier.width(PhotoMaxWidth - 24.dp) else Modifier),
                     ) {
-                        val origin = message.forwardOrigin
-                        if (origin != null && telegram != null) {
-                            val reachable = onOrigin != null && origin !is TdApi.MessageOriginHiddenUser
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = if (reachable) {
-                                    Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .pointerHoverIcon(PointerIcon.Hand)
-                                        .clickable { onOrigin?.invoke(origin) }
-                                } else {
-                                    Modifier
-                                },
-                            ) {
-                                Icon(
-                                    Icons.AutoMirrored.Outlined.Forward,
-                                    contentDescription = null,
-                                    tint = colors.primary,
-                                    modifier = Modifier.size(14.dp),
-                                )
-                                EmojiText(
-                                    "Forwarded from " + telegram.forwardName(origin).ifBlank { "unknown" },
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = colors.primary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
                         if (block && telegram != null) {
                             BlockContent(message, telegram, onPlugin = { PluginViewer.path = it })
                             Spacer(Modifier.height(4.dp))
@@ -1524,6 +1537,7 @@ internal fun SenderAvatar(message: UiMessage, telegram: Telegram, settings: AppS
 }
 private const val DraftSaveDelayMs = 1_500L
 private const val PanelReopenGuardMs = 300L
+private val ForwardAvatarSize = 16.dp
 private const val InlineDelayMs = 400L
 private const val GifTab = 2
 private const val CommandLimit = 30
