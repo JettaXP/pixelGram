@@ -105,6 +105,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.ThemeMode
 import com.pixelgram.desktop.telegram.Accounts
@@ -217,7 +218,7 @@ fun MainScreen(
                     Modifier
                         .width(listWidth)
                         .fillMaxHeight()
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = if (AppPaths.isMac) 0.dp else 8.dp),
                 ) {
                     val topFolders = @Composable {
                         if (!foldersLeft && !compact && selectedKey != ChatListKey.Archive) {
@@ -311,8 +312,16 @@ fun MainScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .padding(top = 8.dp, end = 8.dp, bottom = 8.dp),
-                    shape = MaterialTheme.shapes.extraLarge,
+                        .padding(
+                            top = if (AppPaths.isMac) 0.dp else 8.dp,
+                            end = if (AppPaths.isMac) 0.dp else 8.dp,
+                            bottom = if (AppPaths.isMac) 0.dp else 8.dp,
+                        ),
+                    shape = if (AppPaths.isMac) {
+                        RoundedCornerShape(topStart = MacPaneCornerRadius, bottomStart = MacPaneCornerRadius)
+                    } else {
+                        MaterialTheme.shapes.extraLarge
+                    },
                     color = MaterialTheme.colorScheme.surface,
                 ) {
                     val chat = openChatId?.let { telegram.chats[it] }
@@ -720,3 +729,4 @@ private val DividerWidth = 8.dp
 private const val SearchSlideDivisor = 12
 
 private const val MaxListShare = 0.45f
+private val MacPaneCornerRadius = 28.dp

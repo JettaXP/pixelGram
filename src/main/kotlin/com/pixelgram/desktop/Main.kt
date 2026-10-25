@@ -84,6 +84,7 @@ import com.pixelgram.desktop.ui.AppIcons
 import com.pixelgram.desktop.ui.PixelTray
 import com.pixelgram.desktop.ui.ResizeHandles
 import com.pixelgram.desktop.ui.Screen
+import com.pixelgram.desktop.ui.MacTitleBar
 import com.pixelgram.desktop.ui.TitleBar
 import com.pixelgram.desktop.ui.rememberWindowChrome
 import com.pixelgram.desktop.ui.auth.AuthScreen
@@ -266,16 +267,24 @@ private fun ApplicationScope.PixelApp() {
 
     val close = { if (hasTray) visible = false else quit() }
     val ownTitleBar = remember { settings.customTitleBar.value }
+    val macNativeWindow = AppPaths.isMac
     val windowState = rememberWindowState(size = DpSize(1180.dp, 760.dp))
     Window(
         onCloseRequest = close,
-        undecorated = ownTitleBar,
+        undecorated = ownTitleBar && !macNativeWindow,
         visible = visible,
         title = "pixelGram",
         icon = icon,
         state = windowState,
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
+        if (macNativeWindow) {
+            LaunchedEffect(Unit) {
+                window.rootPane.putClientProperty("apple.awt.fullWindowContent", true)
+                window.rootPane.putClientProperty("apple.awt.transparentTitleBar", true)
+                window.rootPane.putClientProperty("apple.awt.windowTitleVisible", false)
+            }
+        }
         LaunchedEffect(Unit) {
             delay(RenderApiLogDelayMs)
             com.pixelgram.desktop.core.AppLog.write("Render API: ${window.renderApi}")
@@ -329,12 +338,15 @@ private fun ApplicationScope.PixelApp() {
                     },
             ) {
                 Column {
-                    if (ownTitleBar) TitleBar(chrome, onClose = close)
+                    when {
+                        macNativeWindow -> MacTitleBar()
+                        ownTitleBar -> TitleBar(chrome, onClose = close)
+                    }
                     key(accounts.active) {
                         App(accounts, accounts.active, settings)
                     }
                 }
-                if (ownTitleBar) ResizeHandles(chrome)
+                if (ownTitleBar && !macNativeWindow) ResizeHandles(chrome)
             }
         }
     }

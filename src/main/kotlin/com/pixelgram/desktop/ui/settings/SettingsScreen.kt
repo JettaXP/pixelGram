@@ -630,15 +630,17 @@ private fun AppearanceSection(settings: AppSettings) {
     Header("Theme")
     ThemeModeButtons(settings)
 
-    Header("Window")
-    SwitchRow(
-        index = 0,
-        count = 1,
-        title = "pixelGram title bar",
-        subtitle = "Material 3 buttons instead of the system frame. Applies after restarting pixelGram.",
-        checked = settings.customTitleBar.value,
-        onChange = { settings.customTitleBar.value = it },
-    )
+    if (!AppPaths.isMac) {
+        Header("Window")
+        SwitchRow(
+            index = 0,
+            count = 1,
+            title = "pixelGram title bar",
+            subtitle = "Material 3 buttons instead of the system frame. Applies after restarting pixelGram.",
+            checked = settings.customTitleBar.value,
+            onChange = { settings.customTitleBar.value = it },
+        )
+    }
 
     Header("Privacy")
     SwitchRow(
