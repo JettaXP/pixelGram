@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import kotlin.math.roundToInt
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -80,15 +81,15 @@ object Wallpapers {
     suspend fun seedFrom(path: String): Int? = withContext(Dispatchers.Default) {
         runCatching {
             val image = SkiaImage.makeFromEncoded(File(path).readBytes())
-            val scale = SampleSize.toFloat() / maxOf(image.width, image.height)
-            val width = (image.width * scale).toInt().coerceAtLeast(1)
-            val height = (image.height * scale).toInt().coerceAtLeast(1)
+            val scale = minOf(1.0, kotlin.math.sqrt(SampleArea.toDouble() / (image.width.toDouble() * image.height)))
+            val width = (image.width * scale).roundToInt().coerceAtLeast(1)
+            val height = (image.height * scale).roundToInt().coerceAtLeast(1)
             val surface = Surface.makeRasterN32Premul(width, height)
             surface.canvas.drawImageRect(
                 image,
                 Rect.makeWH(image.width.toFloat(), image.height.toFloat()),
                 Rect.makeWH(width.toFloat(), height.toFloat()),
-                SamplingMode.LINEAR,
+                SamplingMode.DEFAULT,
                 null,
                 true,
             )
@@ -109,7 +110,7 @@ object Wallpapers {
         }.onFailure { AppLog.write("Wallpaper colors failed", it) }.getOrNull()
     }
 
-    private const val SampleSize = 128
+    private const val SampleArea = 112 * 112
     private const val MaxRecent = 8
     private const val MaxColors = 128
 }

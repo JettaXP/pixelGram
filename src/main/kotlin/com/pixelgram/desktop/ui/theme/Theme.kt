@@ -116,7 +116,7 @@ enum class ColorStyle(val title: String) {
         val platform = DynamicScheme.Platform.PHONE
         val modern = ColorSpec.SpecVersion.SPEC_2025
         return when (this) {
-            TonalSpot -> SchemeTonalSpot(hct, dark, 0.0, ColorSpec.SpecVersion.SPEC_2021, platform)
+            TonalSpot -> SchemeTonalSpot(hct, dark, 0.0, modern, platform)
             Expressive -> SchemeExpressive(hct, dark, 0.0, modern, platform)
             Vibrant -> SchemeVibrant(hct, dark, 0.0, modern, platform)
             FruitSalad -> SchemeFruitSalad(hct, dark, 0.0, modern, platform)

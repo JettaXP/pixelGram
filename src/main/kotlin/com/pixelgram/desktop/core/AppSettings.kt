@@ -140,7 +140,7 @@ class AppSettings private constructor(private val props: Properties) {
     val fontEverywhere = bool("fontEverywhere", true)
     val wallpaper = string("wallpaper", "")
     val wallpaperDim = int("wallpaperDim", 20)
-    val wallpaperColors = bool("wallpaperColors", false)
+    val wallpaperColors = bool("wallpaperColors", true)
 
     val cornerLists = int("cornerLists", 20)
     val cornerCards = int("cornerCards", 24)

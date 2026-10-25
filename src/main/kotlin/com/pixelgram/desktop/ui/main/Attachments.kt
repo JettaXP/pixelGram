@@ -96,16 +96,24 @@ object Attachments {
     }
 
     fun copyImage(image: java.awt.Image) {
-        runCatching {
-            Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageSelection(image), null)
-        }.onFailure { AppLog.write("Copy image failed", it) }
+        copier.execute {
+            runCatching {
+                Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageSelection(image), null)
+            }.onFailure { AppLog.write("Copy image failed", it) }
+        }
     }
 
     fun copyImage(path: String) {
-        runCatching {
-            val image = ImageIO.read(File(path)) ?: return
-            Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageSelection(image), null)
-        }.onFailure { AppLog.write("Copy image failed", it) }
+        copier.execute {
+            runCatching {
+                val image = ImageIO.read(File(path)) ?: return@runCatching
+                Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageSelection(image), null)
+            }.onFailure { AppLog.write("Copy image failed", it) }
+        }
+    }
+
+    private val copier = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
+        Thread(task, "image-copy").apply { isDaemon = true }
     }
 
     suspend fun saveFile(path: String, name: String) {

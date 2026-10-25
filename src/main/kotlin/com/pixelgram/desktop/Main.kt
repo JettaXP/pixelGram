@@ -154,6 +154,7 @@ private fun ApplicationScope.PixelApp() {
             Thread.sleep(ShutdownGraceMs)
         }
         if (settings.checkUpdates.value) Updater.check()
+        if (settings.wallpaperColors.value) com.pixelgram.desktop.ui.main.Wallpapers.applyColors(settings)
         accounts.start()
         if (System.getProperty("pixelgram.demo") == "true") accounts.active.loadDemo()
     }
