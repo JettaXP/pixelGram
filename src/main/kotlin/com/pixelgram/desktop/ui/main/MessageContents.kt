@@ -352,7 +352,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
                 when {
                     plugin -> onPlugin(path)
                     backup -> BackupViewer.path = path
-                    else -> openFile(path)
+                    else -> openDocument(path)
                 }
             }
             val image = PreviewExtensions.any { name.endsWith(it, ignoreCase = true) }

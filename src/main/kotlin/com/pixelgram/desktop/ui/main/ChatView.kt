@@ -417,6 +417,7 @@ fun ChatView(
     }
     PluginViewer.path?.let { path -> PluginDialog(path, telegram) { PluginViewer.path = null } }
     BackupViewer.path?.let { path -> BackupImportDialog(java.io.File(path), settings) { BackupViewer.path = null } }
+    MarkdownViewer.path?.let { path -> MarkdownDialog(path) { MarkdownViewer.path = null } }
     deleting?.let { message ->
         val private = chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id)
         DeleteMessageDialog(

@@ -304,7 +304,7 @@ private fun MediaRow(message: UiMessage, tab: MediaTab, telegram: Telegram, shap
     val colors = MaterialTheme.colorScheme
     val link = remember(message.id) { UrlPattern.find(message.text)?.value }
     val document = (content as? TdApi.MessageDocument)?.document
-    val (busy, open) = rememberOpener(document?.document, telegram) { path -> openFile(path) }
+    val (busy, open) = rememberOpener(document?.document, telegram) { path -> openDocument(path) }
     var menu by remember { mutableStateOf(false) }
     if (menu) MediaMenu(message, tab, telegram, actions, onDelete, link, open = if (document != null) open else null) { menu = false }
     Surface(
