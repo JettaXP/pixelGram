@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.components
 
+import com.pixelgram.desktop.ui.icons.filled.Build
 import com.pixelgram.desktop.ui.EasterEgg
 import com.pixelgram.desktop.ui.IsraelBlue
 import com.pixelgram.desktop.ui.IsraelWhite
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 private const val OfficialNotice = "This is an official pixelGram resource"
+private const val DeveloperNotice = "This is a pixelGram developer"
 private const val LogoScale = 0.66f
 private const val LogoResource = "/pixelgram-logo.svg"
 
@@ -60,4 +62,31 @@ fun OfficialBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
             modifier = Modifier.size(size * LogoScale),
         )
     }
+}
+
+@Composable
+fun DeveloperBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(size)
+            .clip(MaterialShapes.Cookie12Sided.toShape())
+            .background(scheme.tertiary)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable { TopNotice.text = DeveloperNotice },
+    ) {
+        Icon(
+            com.pixelgram.desktop.ui.icons.Icons.Filled.Build,
+            contentDescription = "pixelGram developer",
+            tint = scheme.onTertiary,
+            modifier = Modifier.size(size * LogoScale),
+        )
+    }
+}
+
+@Composable
+fun ChatBadges(chat: com.pixelgram.desktop.telegram.ChatState, telegram: com.pixelgram.desktop.telegram.Telegram, size: Dp) {
+    if (telegram.isOfficial(chat)) OfficialBadge(size)
+    if (telegram.isDeveloper(chat)) DeveloperBadge(size)
 }

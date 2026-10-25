@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.31.0 Back
+
+### Material 3 Expressive
+- Icons are now Material Symbols Rounded with a heavier weight, generated from Google's official font.
+- Headlines, titles and buttons use bolder Google Sans, like Google's own apps.
+- Buttons change shape when pressed, list rows round up under your finger, dialogs pop in and lists animate when chats move.
+- Menus are split into groups with gaps: the chat menu (three dots) and the message menu.
+- New side menu: an account card, Night and Saved tiles like Android quick settings, grouped items and the version at the bottom.
+- A new chat button in the chat list opens a menu with New message, New group and New channel.
+
+### Colors
+- Color styles: Tonal spot, Expressive, Vibrant, Fruit salad, Rainbow, Content, Neutral and Monochrome, picked like in Android's Wallpaper & style.
+- Pick any hue with the new color slider.
+
+### Wallpapers and fonts
+- Chat wallpaper in Chat Settings, with dimming for the dark theme. Chats that have their own background in Telegram keep it.
+- Recent wallpapers in a Material 3 carousel.
+- Colors from wallpaper: the accent color is picked from the image with Google's Material color utilities.
+- Message font and size: any installed font or a .ttf or .otf file.
+- Corners: separate roundness for lists, cards, dialogs and menus in pixelGram Preferences.
+
+### Profiles and Saved Messages
+- Profiles show photos, videos, files, links, music, voice messages and GIFs, plus groups in common.
+- Clicking the Saved Messages header opens your saved messages by chat: My Notes, Author Hidden and every chat you saved from, with their own media tabs.
+- Personal channel and other single rows are rounded again.
+- pixelGram developers get a badge with a wrench.
+
+### Fixes
+- Channels you haven't joined show a big Join button instead of Mute. Blocked people show a big Unblock button instead of the message field.
+- Reactions no longer stay small.
+- A draft sent from another device disappears from the message field.
+- Emoji in inline games and names no longer get mixed up.
+- Jumping to a pinned message or to the beginning takes one request instead of loading page after page.
+- Messages no longer end up out of order after jumping around a chat.
+- Videos play smoothly: about 48 instead of 3 frames per second on a 1080p60 test video.
+
 ## 0.30.0 Bye...
 
 ### Forwarding
