@@ -259,10 +259,11 @@ fun ChatInfoDialog(
         ) {
           val scroll = rememberScrollState()
           Box {
-            if (chat.privateUserId != 0L && Banners.banner(chat.privateUserId) != null) {
+            val bannerId = if (chat.privateUserId != 0L) chat.privateUserId else chat.id
+            if (Banners.banner(bannerId) != null) {
                 val bannerPx = with(LocalDensity.current) { DialogBannerHeight.toPx() }
                 ProfileBanner(
-                    chat.privateUserId,
+                    bannerId,
                     telegram,
                     DialogBannerHeight,
                     RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),

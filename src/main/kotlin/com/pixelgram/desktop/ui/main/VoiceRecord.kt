@@ -1,5 +1,10 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.layout.Column
+import com.pixelgram.desktop.ui.icons.automirrored.filled.Send
+import com.pixelgram.desktop.ui.icons.filled.KeyboardArrowUp
+import com.pixelgram.desktop.ui.icons.outlined.Delete
+import com.pixelgram.desktop.ui.icons.outlined.Lock
 import com.pixelgram.desktop.ui.components.expressive.popIn
 import androidx.compose.material3.Surface
 import androidx.compose.ui.input.pointer.isSecondaryPressed
@@ -83,6 +88,9 @@ private val BarWidth = 3.dp
 private val BarGap = 2.dp
 private val PillWidth = 180.dp
 private val CancelDistance = 120.dp
+private val LockDistance = 72.dp
+private const val LockHintOffset = 64f
+private const val LockTravel = 60f
 private val CollapseLift = 48.dp
 
 @Stable
@@ -96,6 +104,8 @@ class VoiceRecording {
     var cancelled by mutableStateOf(false)
         private set
     var dragX by mutableFloatStateOf(0f)
+    var dragY by mutableFloatStateOf(0f)
+    var locked by mutableStateOf(false)
     var level by mutableFloatStateOf(0f)
         private set
     var elapsedMs by mutableLongStateOf(0L)
@@ -108,6 +118,8 @@ class VoiceRecording {
         level = 0f
         elapsedMs = 0
         dragX = 0f
+        dragY = 0f
+        locked = false
         cancelled = false
         collapsing = false
         active = true
@@ -120,6 +132,7 @@ class VoiceRecording {
     }
 
     fun cancel() {
+        locked = false
         recorder?.cancel()
         recorder = null
         cancelled = true
@@ -171,6 +184,7 @@ object RecordButton {
 fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modifier: Modifier = Modifier) {
     val density = LocalDensity.current
     val cancelPx = with(density) { CancelDistance.toPx() }
+    val lockPx = with(density) { LockDistance.toPx() }
     val recording = voice.active && !voice.collapsing
     var pressed by remember { mutableStateOf(false) }
     var hint by remember { mutableStateOf(false) }
@@ -215,6 +229,26 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
             }
         }
     }
+    if (recording && !voice.locked) {
+        val lift = (-voice.dragY / lockPx).coerceIn(0f, 1f)
+        androidx.compose.ui.window.Popup(
+            alignment = Alignment.TopCenter,
+            offset = androidx.compose.ui.unit.IntOffset(0, -(LockHintOffset + (lift * LockTravel)).toInt()),
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = lerp(scheme.surfaceContainerHigh, scheme.primaryContainer, lift),
+                contentColor = lerp(scheme.onSurfaceVariant, scheme.onPrimaryContainer, lift),
+                shadowElevation = 3.dp,
+                modifier = Modifier.popIn(),
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)) {
+                    Icon(Icons.Outlined.Lock, contentDescription = "Slide up to lock", modifier = Modifier.size(20.dp))
+                    Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+    }
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -227,6 +261,12 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
                     val buttons = currentEvent.buttons
                     if (!buttons.isPrimaryPressed && !buttons.isSecondaryPressed) return@awaitEachGesture
                     down.consume()
+                    if (voice.active && voice.locked) {
+                        waitForUpOrCancellation()
+                        voice.locked = false
+                        onRelease(false)
+                        return@awaitEachGesture
+                    }
                     hovered = false
                     pressed = true
                     val early = withTimeoutOrNull(HoldMs) { waitForUpOrCancellation() }
@@ -246,13 +286,28 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
                     while (true) {
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        voice.dragX = (change.position.x - down.position.x).coerceAtMost(0f)
                         change.consume()
+                        if (!voice.locked) {
+                            val dx = (change.position.x - down.position.x).coerceAtMost(0f)
+                            val dy = (change.position.y - down.position.y).coerceAtMost(0f)
+                            if (-dy > -dx) {
+                                voice.dragY = dy
+                                voice.dragX = 0f
+                                if (-dy >= lockPx) {
+                                    voice.locked = true
+                                    voice.dragY = 0f
+                                }
+                            } else {
+                                voice.dragX = dx
+                                voice.dragY = 0f
+                            }
+                        }
                         if (!change.pressed) break
                     }
                     pressed = false
-                    if (voice.active) onRelease(voice.dragX < -cancelPx)
+                    if (voice.active && !voice.locked) onRelease(voice.dragX < -cancelPx)
                     voice.dragX = 0f
+                    voice.dragY = 0f
                 }
             },
     ) {
@@ -278,13 +333,17 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
                 .background(scheme.primary, micShape),
         ) {
             androidx.compose.animation.AnimatedContent(
-                targetState = RecordButton.mode,
+                targetState = if (voice.locked && voice.active) null else RecordButton.mode,
                 transitionSpec = {
                     (androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = 0.5f)) togetherWith
                         (androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = 0.5f))
                 },
                 modifier = Modifier.graphicsLayer { rotationZ = -turn },
             ) { mode ->
+                if (mode == null) {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = scheme.onPrimary, modifier = Modifier.size(22.dp))
+                    return@AnimatedContent
+                }
                 Icon(
                     if (mode == RecordMode.Voice) Icons.Filled.Mic else Icons.Filled.Videocam,
                     contentDescription = if (mode == RecordMode.Voice) "Hold to record a voice message, click for a video message" else "Hold to record a video message, click for a voice message",
@@ -348,15 +407,31 @@ fun RecordingBar(voice: VoiceRecording, modifier: Modifier = Modifier) {
             }
             Waveform(voice, waveColor, c, Modifier.weight(1f).height(32.dp))
             if (chrome > 0f) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.graphicsLayer {
-                        alpha = chrome * (1f - (-voice.dragX / with(density) { CancelDistance.toPx() }).coerceIn(0f, 0.7f))
-                        translationX = voice.dragX / 2
-                    },
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null, tint = scheme.onSurfaceVariant)
-                    Text("Slide to cancel", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+                if (voice.locked) {
+                    androidx.compose.material3.TextButton(onClick = { voice.cancel() }, modifier = Modifier.graphicsLayer { alpha = chrome }) {
+                        Text("Cancel", color = scheme.error)
+                    }
+                } else {
+                    val cancelPx = with(density) { CancelDistance.toPx() }
+                    val armed = -voice.dragX >= cancelPx
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.graphicsLayer {
+                            alpha = chrome
+                            translationX = voice.dragX.coerceAtLeast(-cancelPx) / 2
+                        },
+                    ) {
+                        Icon(
+                            if (armed) Icons.Outlined.Delete else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = null,
+                            tint = if (armed) scheme.error else scheme.onSurfaceVariant,
+                        )
+                        Text(
+                            if (armed) "Release to cancel" else "Slide to cancel",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (armed) scheme.error else scheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }

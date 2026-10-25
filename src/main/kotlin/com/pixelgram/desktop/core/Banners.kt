@@ -86,7 +86,7 @@ object Banners {
     }
 
     private fun parse(text: String) {
-        val entries = Regex(""""(\d+)"\s*:\s*"([0-9a-f]+)"""").findAll(text)
+        val entries = Regex(""""(-?\d+)"\s*:\s*"([0-9a-f]+)"""").findAll(text)
             .associate { it.groupValues[1].toLong() to it.groupValues[2] }
         index.keys.retainAll(entries.keys)
         index.putAll(entries)

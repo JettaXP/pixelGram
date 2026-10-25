@@ -81,7 +81,8 @@ enum class UserBadge(val userId: Long, val notice: String) {
     MainDeveloper(1780288121L, "Main developer of pixelGram"),
     Developer(1061520526L, "Developer of pixelGram"),
     Sponsor(1602207467L, "Main sponsor of pixelGram"),
-    Tester(7820526891L, "pixelGram tester, hunts bugs in the client");
+    Tester(7820526891L, "pixelGram tester, hunts bugs in the client"),
+    Menorah(8315838128L, "Friend of pixelGram");
 
     val icon: ImageVector
         get() = when (this) {
@@ -89,6 +90,7 @@ enum class UserBadge(val userId: Long, val notice: String) {
             Developer -> com.pixelgram.desktop.ui.icons.Icons.Filled.Build
             Sponsor -> com.pixelgram.desktop.ui.icons.Icons.Filled.AttachMoney
             Tester -> BugNet
+            Menorah -> MenorahIcon
         }
 
     companion object {
@@ -130,6 +132,29 @@ private val CodeSlash: ImageVector by lazy {
             strokeLineWidth = 84f,
             strokeLineCap = StrokeCap.Round,
             strokeLineJoin = StrokeJoin.Round,
+        )
+        .build()
+}
+
+private val MenorahIcon: ImageVector by lazy {
+    ImageVector.Builder("Menorah", 24.dp, 24.dp, 960f, 960f)
+        .addPath(
+            androidx.compose.ui.graphics.vector.addPathNodes(
+                "M480 330L480 760 M390 330A90 90 0 0 0 570 330 M300 330A180 180 0 0 0 660 330 M210 330A270 270 0 0 0 750 330 M380 790L580 790"
+            ),
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 52f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round,
+        )
+        .addPath(
+            androidx.compose.ui.graphics.vector.addPathNodes(
+                (0 until 7).joinToString(" ") { i ->
+                    val x = 210 + i * 90
+                    "M${x - 38} 250L${x + 38} 250L${x + 22} 292L${x - 22} 292Z M$x 150Q${x + 30} 196 $x 228Q${x - 30} 196 $x 150Z"
+                }
+            ),
+            fill = SolidColor(Color.Black),
         )
         .build()
 }
