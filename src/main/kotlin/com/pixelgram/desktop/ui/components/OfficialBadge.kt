@@ -177,7 +177,7 @@ fun BadgeTip(text: String?, onDone: () -> Unit) {
                 contentColor = MaterialTheme.colorScheme.inverseOnSurface,
                 shadowElevation = 6.dp,
             ) {
-                androidx.compose.material3.Text(
+                com.pixelgram.desktop.ui.components.Text(
                     text,
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),

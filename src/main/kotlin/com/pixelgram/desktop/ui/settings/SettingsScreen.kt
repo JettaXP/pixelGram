@@ -112,7 +112,7 @@ import com.pixelgram.desktop.ui.components.expressive.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
+import com.pixelgram.desktop.ui.components.Text
 import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
@@ -404,7 +404,7 @@ fun SettingsScreen(
                         }
                         Section.Folders -> FoldersSection(telegram, settings)
                         Section.Advanced -> AdvancedSection(telegram)
-                        Section.Language -> Description("pixelGram is in English for now. More languages are coming.")
+                        Section.Language -> LanguageSection(settings)
                         Section.Notifications -> NotificationsSection(settings)
                         Section.Battery -> BatterySection(settings)
                         Section.SpeakersCamera -> DevicesSection(settings)
@@ -1068,7 +1068,7 @@ private fun AccountSection(telegram: Telegram, onOpenProfile: () -> Unit) {
     val me = telegram.me
     if (me != null) {
         InfoGroup(buildList {
-            me.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it", phone = true)) }
+            me.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "\u200E+$it", phone = true)) }
             me.usernames?.activeUsernames?.firstOrNull()?.let {
                 add(InfoRow(Icons.Outlined.AlternateEmail, "Username", "@$it"))
             }

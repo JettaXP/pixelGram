@@ -131,6 +131,7 @@ class AppSettings private constructor(private val props: Properties) {
     val spoilerEffect = bool("spoilerEffect", true)
     val messageAnimations = bool("messageAnimations", true)
     val interfaceAnimations = bool("interfaceAnimations", true)
+    val language = string("language", "en")
     val autoplayGifs = bool("autoplayGifs", true)
     val autoplayVideos = bool("autoplayVideos", true)
 

@@ -1,0 +1,743 @@
+# pixelGram: English → עברית. {n} — מספר, {יחיד|רבים} — צורת רבים.
+This account is already added to pixelGram	החשבון הזה כבר נוסף ל-pixelGram
+pixelGram Updated!	pixelGram עודכן!
+Open pixelGram	פתח את pixelGram
+Enable notifications	הפעל התראות
+Disable notifications	כבה התראות
+Quit pixelGram	צא מ-pixelGram
+Wrong passcode	קוד גישה שגוי
+Enter passcode	הזן קוד גישה
+Checking…	בודק…
+You have the latest nightly.	יש לך את הגרסה הלילית האחרונה.
+Updates are unavailable right now.	עדכונים לא זמינים כרגע.
+A new version is being built. Try again in a few minutes.	גרסה חדשה בבנייה. נסה שוב בעוד כמה דקות.
+Download	הורד
+Update	עדכן
+Show file	הצג קובץ
+Copy command	העתק פקודה
+Check for updates	בדוק עדכונים
+Close	סגור
+Delete	מחק
+Unlock	בטל נעילה
+Minimize	מזער
+Restore	שחזר
+Maximize	הגדל
+Custom corner	פינה מותאמת
+Circle	עיגול
+Square	ריבוע
+Slanted	משופע
+Arch	קשת
+Fan	מניפה
+Arrow	חץ
+Semicircle	חצי עיגול
+Oval	אליפסה
+Pill	גלולה
+Triangle	משולש
+Diamond	מעוין
+Clamshell	צדפה
+Pentagon	מחומש
+Gem	יהלום
+Sunny	שמש
+Very sunny	שמש בוהקת
+4-sided cookie	עוגייה, 4 צלעות
+6-sided cookie	עוגייה, 6 צלעות
+7-sided cookie	עוגייה, 7 צלעות
+9-sided cookie	עוגייה, 9 צלעות
+12-sided cookie	עוגייה, 12 צלעות
+Ghost-ish	רוח רפאים
+4-leaf clover	תלתן, 4 עלים
+8-leaf clover	תלתן, 8 עלים
+Burst	פרץ
+Soft burst	פרץ רך
+Boom	בום
+Soft boom	בום רך
+Flower	פרח
+Puffy	ענן
+Puffy diamond	מעוין תפוח
+Pixel circle	עיגול פיקסלים
+Pixel triangle	משולש פיקסלים
+Bun	לחמנייה
+Heart	לב
+This is an official pixelGram resource	זהו משאב רשמי של pixelGram
+Official pixelGram resource	משאב רשמי של pixelGram
+Main developer of pixelGram	המפתח הראשי של pixelGram
+Developer of pixelGram	מפתח pixelGram
+Main sponsor of pixelGram	הספונסר הראשי של pixelGram
+pixelGram tester, hunts bugs in the client	בודק של pixelGram, צד באגים בלקוח
+Back	חזרה
+Edit	ערוך
+Copy	העתק
+QR code	קוד QR
+Incorrect password	סיסמה שגויה
+Enter password	הזן סיסמה
+Sign in	התחבר
+Finish it in another Telegram app.	סיים באפליקציית Telegram אחרת.
+Too many attempts	יותר מדי ניסיונות
+Cancel	ביטול
+Enter your API ID and API hash from my.telegram.org. They are stored only on this computer.	הזן את ה-API ID וה-API hash מ-my.telegram.org. הם נשמרים רק במחשב הזה.
+Continue	המשך
+Two-step verification is on. Enter your password.	אימות דו-שלבי פעיל. הזן את הסיסמה שלך.
+Open Telegram on your phone → Settings → Devices → Link Desktop Device and scan this code.	פתח את Telegram בטלפון ← הגדרות ← מכשירים ← קישור מכשיר שולחני וסרוק את הקוד.
+Choose your country and enter your phone number.	בחר מדינה והזן את מספר הטלפון שלך.
+Loading countries…	טוען מדינות…
+Invalid country code	קוד מדינה שגוי
+Choose a country	בחר מדינה
+Code	קוד
+Phone number	מספר טלפון
+Next	הבא
+Search	חיפוש
+in Telegram on your other device	ב-Telegram במכשיר האחר שלך
+by SMS	ב-SMS
+by a phone call	בשיחה
+with a missed call	בשיחה שלא נענתה
+on Fragment	ב-Fragment
+Send code by SMS	שלח קוד ב-SMS
+Call me with the code	התקשר אליי עם הקוד
+Get a missed call	קבל שיחה שלא נענתה
+Send the code again	שלח שוב את הקוד
+Wrong number?	מספר שגוי?
+Log in by QR code	התחבר עם קוד QR
+Notifications	התראות
+This is how new messages will look 🎉	כך ייראו הודעות חדשות 🎉
+Close all	סגור הכל
+My Profile	הפרופיל שלי
+Not signed in	לא מחובר
+Name	שם
+Phone	טלפון
+Username	שם משתמש
+Bio	ביוגרפיה
+Not set	לא הוגדר
+Birthday	יום הולדת
+Change personal channel	שנה ערוץ אישי
+Add personal channel	הוסף ערוץ אישי
+Remove	הסר
+First name	שם פרטי
+Last name	שם משפחה
+a-z, 0-9 and underscores, at least 5 characters. Leave empty to remove it.	a-z, 0-9 וקווים תחתונים, לפחות 5 תווים. השאר ריק כדי להסיר.
+Day	יום
+Month	חודש
+Year	שנה
+Year is optional. Clear the day to remove the birthday.	השנה אופציונלית. נקה את היום כדי להסיר את יום ההולדת.
+Save	שמור
+No photos yet	אין תמונות עדיין
+Previous	הקודם
+Set as main	קבע כראשית
+Delete this photo?	למחוק את התמונה?
+It will be removed from your profile for everyone.	היא תוסר מהפרופיל שלך עבור כולם.
+Banner updated. Others will see it in a few minutes.	הבאנר עודכן. אחרים יראו אותו בעוד כמה דקות.
+This image can't be used as a banner	לא ניתן להשתמש בתמונה הזו כבאנר
+Banner	באנר
+From computer	מהמחשב
+From clipboard	מהלוח
+Remove banner	הסר באנר
+Banner removed	הבאנר הוסר
+Personal channel	ערוץ אישי
+You have no public channels to show. Create a channel and give it a public link first.	אין לך ערוצים ציבוריים. צור ערוץ ותן לו קישור ציבורי קודם.
+The channel and its latest post appear on your profile.	הערוץ והפוסט האחרון שלו יופיעו בפרופיל שלך.
+Set new photo	הגדר תמונה חדשה
+Photo or video	תמונה או סרטון
+Camera	מצלמה
+No camera found	לא נמצאה מצלמה
+Take photo	צלם
+Music	מוזיקה
+Hide	הסתר
+Remove from profile	הסר מהפרופיל
+Add to profile	הוסף לפרופיל
+Reorder	סדר מחדש
+Save as…	שמור בשם…
+Forward	העבר
+Regular	רגיל
+Medium	בינוני
+SemiBold	חצי מודגש
+Bold	מודגש
+Tonal spot	נקודת גוון
+Expressive	אקספרסיבי
+Vibrant	תוסס
+Fruit salad	סלט פירות
+Rainbow	קשת בענן
+Content	לפי התוכן
+Neutral	ניטרלי
+Monochrome	מונוכרום
+Turn off animations to save battery and make pixelGram lighter on slow computers.	כבה אנימציות כדי לחסוך בסוללה ולהקל על pixelGram במחשבים איטיים.
+Animated Stickers	מדבקות מונפשות
+Autoplay in panel	הפעלה אוטומטית בלוח
+Autoplay in chat	הפעלה אוטומטית בצ'אט
+Animated Emoji	אימוג'י מונפשים
+Autoplay in messages	הפעלה אוטומטית בהודעות
+Autoplay Media	הפעלה אוטומטית של מדיה
+GIFs	GIF
+Videos	סרטונים
+Animations in Chats	אנימציות בצ'אטים
+Animated spoiler effect	אפקט ספוילר מונפש
+Message animations	אנימציות הודעות
+Interface animations	אנימציות ממשק
+Collapse	כווץ
+Expand	הרחב
+Default	ברירת מחדל
+Speakers and headphones	רמקולים ואוזניות
+Output device	התקן פלט
+Microphone	מיקרופון
+Input device	התקן קלט
+Calls and video chats	שיחות וצ'אטים בווידאו
+Use the same devices for calls	אותם התקנים לשיחות
+Other settings	הגדרות נוספות
+Accept calls on this device	קבל שיחות במכשיר זה
+Open system sound preferences	פתח הגדרות צליל של המערכת
+Camera preview	תצוגת מצלמה
+No camera	אין מצלמה
+Drag folders to change their order. Folders sync with your other Telegram apps; Unread and Mentions live in pixelGram.	גרור תיקיות כדי לשנות את הסדר. התיקיות מסונכרנות עם אפליקציות Telegram האחרות; "לא נקראו" ו"אזכורים" קיימות רק ב-pixelGram.
+My folders	התיקיות שלי
+All chats	כל הצ'אטים
+All	הכל
+Hidden	מוסתרת
+All your chats	כל הצ'אטים שלך
+Chats with unread messages	צ'אטים עם הודעות שלא נקראו
+Chats where you were mentioned	צ'אטים שבהם הוזכרת
+Folder	תיקייה
+Drag to reorder	גרור לסידור
+Create new folder	צור תיקייה חדשה
+Delete folder	מחק תיקייה
+Edit folder	ערוך תיקייה
+Folder name	שם התיקייה
+Contacts	אנשי קשר
+Non-contacts	לא אנשי קשר
+Groups	קבוצות
+Channels	ערוצים
+Bots	בוטים
+Muted	מושתקים
+Read	נקראו
+Archived	בארכיון
+Custom	מותאם
+New folder	תיקייה חדשה
+Icon	סמל
+Included chat types	סוגי צ'אטים כלולים
+Exclude	החרג
+Included chats	צ'אטים כלולים
+Add chats	הוסף צ'אטים
+Add at least one chat or chat type	הוסף לפחות צ'אט אחד או סוג צ'אט
+Create	צור
+Done	סיום
+Everybody	כולם
+My contacts	אנשי הקשר שלי
+Nobody	אף אחד
+Last seen & online	נראה לאחרונה ומחובר
+Profile photos	תמונות פרופיל
+Forwarded messages	הודעות מועברות
+Calls	שיחות
+Voice messages	הודעות קוליות
+Gifts	מתנות
+Saved Music	מוזיקה שמורה
+Invites	הזמנות
+Disabled	כבוי
+1 min	דקה
+5 min	5 דק'
+1 hour	שעה
+5 hours	5 שעות
+Premium	Premium
+Security	אבטחה
+Local passcode	קוד גישה
+On	פעיל
+Off	כבוי
+Active sessions	הפעלות פעילות
+Privacy	פרטיות
+Messages	הודעות
+Contacts and Premium	אנשי קשר ו-Premium
+Premium users	משתמשי Premium
+Never share with	לעולם לא לשתף עם
+Always share with	תמיד לשתף עם
+Group	קבוצה
+Add users or groups	הוסף משתמשים או קבוצות
+Who can start a chat with you.	מי יכול להתחיל איתך צ'אט.
+My contacts and Premium users	אנשי הקשר שלי ומשתמשי Premium
+Only Telegram Premium subscribers can limit this.	רק מנויי Telegram Premium יכולים להגביל את זה.
+Passcodes don't match	קודי הגישה לא תואמים
+New passcode	קוד גישה חדש
+Repeat passcode	חזור על קוד הגישה
+Current passcode	קוד גישה נוכחי
+Auto-lock if away for	נעילה אוטומטית אחרי
+Change	שנה
+Lock now	נעל עכשיו
+Turn passcode off	כבה קוד גישה
+Turn off	כבה
+This device	המכשיר הזה
+Rename	שנה שם
+Logs out all devices except for this one.	מנתק את כל המכשירים חוץ מזה.
+Terminate all other sessions	סיים את כל שאר ההפעלות
+Active devices	מכשירים פעילים
+Terminate	סיים
+Terminate session?	לסיים את ההפעלה?
+Terminate all other sessions?	לסיים את כל שאר ההפעלות?
+Every device except this one will be logged out.	כל המכשירים חוץ מזה ינותקו.
+Device name	שם המכשיר
+Other devices will see the new name after pixelGram restarts.	מכשירים אחרים יראו את השם החדש אחרי הפעלה מחדש של pixelGram.
+Info	מידע
+Application	אפליקציה
+System version	גרסת מערכת
+Yes	כן
+No	לא
+Official app	אפליקציה רשמית
+Location	מיקום
+This location estimate is based on the IP address and may not always be accurate.	המיקום משוער לפי כתובת ה-IP ועשוי להיות לא מדויק.
+Terminate Session	סיים הפעלה
+Unknown	לא ידוע
+My Account	החשבון שלי
+Notifications and Sounds	התראות וצלילים
+Privacy and Security	פרטיות ואבטחה
+Chat Settings	הגדרות צ'אט
+Folders	תיקיות
+Advanced	מתקדם
+Speakers and Camera	רמקולים ומצלמה
+Battery and Animations	סוללה ואנימציות
+Language	שפה
+Appearance	מראה
+Avatars	תמונות פרופיל
+Message bubbles	בועות הודעות
+Corners	פינות
+About	אודות
+pixelGram Preferences	העדפות pixelGram
+Settings	הגדרות
+More	עוד
+Log out	התנתק
+Categories	קטגוריות
+Search settings	חיפוש בהגדרות
+Appearance, avatars, bubbles	מראה, תמונות פרופיל, בועות
+Personal	אישי
+Private	פרטי
+Work	עבודה
+Theme	ערכת נושא
+Window	חלון
+pixelGram title bar	שורת כותרת של pixelGram
+Material 3 buttons instead of the system frame. Applies after restarting pixelGram.	כפתורי Material 3 במקום מסגרת המערכת. ייכנס לתוקף אחרי הפעלה מחדש.
+Hide my phone number	הסתר את המספר שלי
+Cover your number with Material shapes in your profile and settings. Click it to peek.	המספר שלך מוסתר בצורות Material בפרופיל ובהגדרות. לחץ כדי להציץ.
+Seconds in message time	שניות בשעת ההודעה
+Show 18:52:33 instead of 18:52 under messages.	הצג 18:52:33 במקום 18:52 מתחת להודעות.
+Emoji	אימוג'י
+Your colors	הצבעים שלך
+Pick a style. Expressive, Vibrant and the others are the bright Material 3 Expressive schemes from Google's Material color utilities.	בחר סגנון. אקספרסיבי, תוסס והשאר הם ערכות Material 3 Expressive בהירות מ-Material color utilities של Google.
+Select a color	בחר צבע
+Slide to pick any hue, or use one of the presets below.	החלק כדי לבחור כל גוון, או בחר אחד מהמוכנים למטה.
+Material You (matugen)	Material You (matugen)
+Dynamic colors from matugen	צבעים דינמיים מ-matugen
+Colors follow your wallpaper. Overrides the accent color.	הצבעים עוקבים אחרי הטפט. מחליף את צבע ההדגשה.
+pixelGram applies new colors automatically.	pixelGram מחיל צבעים חדשים אוטומטית.
+Copy config	העתק הגדרות
+Chat folders	תיקיות צ'אט
+Position	מיקום
+Left	שמאל
+Top	למעלה
+The capsule is always on top.	הקפסולה תמיד למעלה.
+Left is a Material 3 navigation rail, top is a bar above the chat list.	בצד — מסילת ניווט של Material 3, למעלה — פס מעל רשימת הצ'אטים.
+Style on top	סגנון למעלה
+Tabs	לשוניות
+Capsule	קפסולה
+Hide "All chats"	הסתר "כל הצ'אטים"
+Only works when you have at least one folder.	עובד רק כשיש לפחות תיקייה אחת.
+The selected folder shows its name, the others only their icon. Try it here:	התיקייה הנבחרת מציגה שם, האחרות רק סמל. נסה כאן:
+Spacing	ריווח
+Height	גובה
+Chat type	סוג צ'אט
+Pick a shape for all chats, or a separate one for each kind of chat.	בחר צורה לכל הצ'אטים, או צורה נפרדת לכל סוג.
+Official Material 3 Expressive shapes.	צורות Material 3 Expressive רשמיות.
+Same as all chats.	כמו כל הצ'אטים.
+Use the shape for all chats	הצורה לכל הצ'אטים
+Shape	צורה
+Corner radius	רדיוס פינות
+Used by the "Custom corner" shape: 0% is a square, 50% is a circle.	לצורה "פינה מותאמת": ‏0% ריבוע, 50% עיגול.
+Hi! How do the new corners look?	היי! איך נראות הפינות החדשות?
+Way better with Material 3 ✨	הרבה יותר טוב עם Material 3 ✨
+Tail corner	פינת הזנב
+The corner next to the sender. Set it equal to the radius for fully round bubbles.	הפינה בצד השולח. השווה אותה לרדיוס לבועות עגולות לגמרי.
+Pick how round each kind of element is, everywhere in pixelGram.	בחר כמה מעוגל כל סוג רכיב, בכל pixelGram.
+A list row	שורת רשימה
+Another one	עוד אחת
+A card	כרטיס
+Lists	רשימות
+Grouped rows in settings, profiles and lists.	שורות מקובצות בהגדרות, פרופילים ורשימות.
+Cards	כרטיסים
+Panels, cards and previews.	לוחות, כרטיסים ותצוגות מקדימות.
+Dialogs and bars	דיאלוגים ופסים
+Dialogs, the message bar, pop-ups and sheets.	דיאלוגים, שורת ההודעה, חלונות קופצים וגיליונות.
+Menus and fields	תפריטים ושדות
+Context menus and text fields.	תפריטי הקשר ושדות טקסט.
+Reset to default	אפס לברירת מחדל
+Open profile	פתח פרופיל
+Bubble corners, avatar shapes and colors are in pixelGram Preferences.	פינות בועות, צורות תמונות וצבעים נמצאים בהעדפות pixelGram.
+Double click on a message	לחיצה כפולה על הודעה
+Reaction	תגובה
+Reply	השב
+Nothing	כלום
+Your messages	ההודעות שלך
+Other people's messages	הודעות של אחרים
+Wallpaper	טפט
+Shown behind every chat, except chats that have their own background in Telegram.	מוצג מאחורי כל צ'אט, חוץ מצ'אטים עם רקע משלהם ב-Telegram.
+No wallpaper	ללא טפט
+Current	נוכחי
+Add image	הוסף תמונה
+Dimming in dark theme	עמעום בערכה כהה
+Colors from wallpaper	צבעים מהטפט
+Pick the accent color from the wallpaper with Google's Material color utilities, the same way Android does.	צבע ההדגשה נלקח מהטפט עם Material color utilities של Google, כמו באנדרואיד.
+Message font	גופן הודעות
+The font and size of message text. Pick an installed font or load a .ttf or .otf file.	הגופן והגודל של טקסט ההודעות. בחר גופן מותקן או טען קובץ ‎.ttf או ‎.otf.
+The quick brown fox jumps over the lazy dog	דג סקרן שט בים מאוכזב ולפתע מצא חברה
+From file	מקובץ
+Use this font everywhere	השתמש בגופן הזה בכל מקום
+Menus, titles, settings and the chat list use it too, not only messages.	גם תפריטים, כותרות, הגדרות ורשימת הצ'אטים, לא רק הודעות.
+Size	גודל
+Search fonts	חיפוש גופנים
+Notifications are disabled from the tray menu.	ההתראות כבויות מתפריט המגש.
+Sound for new messages	צליל להודעות חדשות
+Plays when a message arrives in a chat that is not muted.	מתנגן כשמגיעה הודעה בצ'אט שאינו מושתק.
+Play sound	נגן צליל
+Pop-ups	חלונות קופצים
+Show pop-up notifications	הצג התראות קופצות
+A card with the chat and message, closes by itself or on click.	כרטיס עם הצ'אט וההודעה, נסגר לבד או בלחיצה.
+Style	סגנון
+System	מערכת
+Shown by your desktop's notification daemon (mako, swaync, dunst…).	מוצג על ידי שירות ההתראות של שולחן העבודה (mako, swaync, dunst…).
+pixelGram's own Material 3 cards.	כרטיסי Material 3 של pixelGram.
+Show test notification	הצג התראת ניסיון
+Data and storage	נתונים ואחסון
+Data folder	תיקיית נתונים
+Open data folder	פתח תיקיית נתונים
+Links	קישורים
+Channel	ערוץ
+Backup	גיבוי
+Save pixelGram Preferences to a .backup file and send it to any chat, or load them from one. Accounts are not included.	שמור את העדפות pixelGram לקובץ ‎.backup ושלח לכל צ'אט, או טען מקובץ. חשבונות לא נכללים.
+Export settings	ייצוא הגדרות
+Choose a chat to send the backup to	בחר צ'אט לשליחת הגיבוי
+Couldn't create the backup.	לא ניתן ליצור גיבוי.
+Import settings	ייבוא הגדרות
+Pick a .backup file	בחר קובץ ‎.backup
+That's not a pixelGram backup.	זה לא גיבוי של pixelGram.
+Reset	איפוס
+Reset all settings	אפס את כל ההגדרות
+Theme, colors, folders, corners, fonts and everything else in pixelGram	ערכת נושא, צבעים, תיקיות, פינות, גופנים וכל השאר ב-pixelGram
+Reset all settings?	לאפס את כל ההגדרות?
+Every pixelGram setting goes back to its default. Your accounts, chats and passcode stay.	כל הגדרות pixelGram יחזרו לברירת המחדל. החשבונות, הצ'אטים וקוד הגישה יישארו.
+All settings were reset.	כל ההגדרות אופסו.
+Updates	עדכונים
+Check for updates on start	בדוק עדכונים בהפעלה
+Looks for a newer nightly build on GitHub.	מחפש גרסה לילית חדשה ב-GitHub.
+Settings imported.	ההגדרות יובאו.
+Message database	מסד הודעות
+Language pack	חבילת שפה
+Logs	יומנים
+Clearing…	מנקה…
+Clears downloaded media and files. Chats and messages stay, media downloads again when needed.	מוחק מדיה וקבצים שהורדו. צ'אטים והודעות נשארים, המדיה תורד שוב כשצריך.
+Could not create the chat.	לא ניתן ליצור את הצ'אט.
+New Channel	ערוץ חדש
+New Group	קבוצה חדשה
+Channel name	שם הערוץ
+Group name	שם הקבוצה
+Description (optional)	תיאור (לא חובה)
+You can add members from the group after it is created.	אפשר להוסיף חברים אחרי יצירת הקבוצה.
+Close search	סגור חיפוש
+Search messages	חיפוש הודעות
+Clear	נקה
+Search messages in	חפש הודעות ב
+Searching…	מחפש…
+1 message found	נמצאה הודעה אחת
+{n} messages found	נמצאו {n} הודעות
+Chats	צ'אטים
+Smileys & Emotion	סמיילים ורגשות
+People & Body	אנשים וגוף
+Animals & Nature	חיות וטבע
+Food & Drink	אוכל ושתייה
+Travel & Places	טיולים ומקומות
+Activities	פעילויות
+Objects	חפצים
+Symbols	סמלים
+Flags	דגלים
+Menu	תפריט
+Update available	עדכון זמין
+Archived chats	צ'אטים בארכיון
+Draft: 	טיוטה: 
+You	אתה
+Lock pixelGram	נעל את pixelGram
+Unread	לא נקראו
+Mention	אזכור
+Mentions	אזכורים
+Unmuted	לא מושתק
+Italic	נטוי
+Underline	קו תחתון
+Strikethrough	קו חוצה
+Quote	ציטוט
+Monospace	רוחב קבוע
+Spoiler	ספוילר
+Create link	צור קישור
+Date	תאריך
+Leave a comment	השאר תגובה
+1 comment	תגובה אחת
+{n} comments	{n} תגובות
+Discussion	דיון
+Comments	תגובות
+No comments here yet…	אין תגובות עדיין…
+Join group	הצטרף לקבוצה
+Comment	הגב
+Send	שלח
+Voice message	הודעה קולית
+Sound	צליל
+Repeat	חזרה
+Close player	סגור נגן
+Play	נגן
+Pause	השהה
+Previous photo	התמונה הקודמת
+Next photo	התמונה הבאה
+Photo	תמונה
+Copy photo	העתק תמונה
+Cut	גזור
+Paste	הדבק
+Formatting	עיצוב
+Select All	בחר הכל
+Clear formatting	נקה עיצוב
+Insert	הוסף
+Scroll to the newest message	להודעה האחרונה
+Choose a wallpaper	בחר טפט
+No results	אין תוצאות
+More reactions	עוד תגובות
+OK	אישור
+Dark	כהה
+Light	בהיר
+Shot	צילום
+Preferences	העדפות
+Show background	הצג רקע
+Show date	הצג תאריך
+Show colorful replies	תשובות צבעוניות
+Message	הודעה
+Select a chat to start messaging	בחר צ'אט כדי להתחיל לכתוב
+Night	לילה
+Saved	שמורים
+New chat	צ'אט חדש
+New message	הודעה חדשה
+New group	קבוצה חדשה
+New channel	ערוץ חדש
+Signing in…	מתחבר…
+Current account	חשבון נוכחי
+Add Account	הוסף חשבון
+Accounts	חשבונות
+Video	סרטון
+Can't play this video	לא ניתן לנגן את הסרטון
+Mute	השתק
+Add to folder	הוסף לתיקייה
+Open in new window	פתח בחלון חדש
+Unmute	בטל השתקה
+View profile	הצג פרופיל
+To beginning	להתחלה
+Unpin	בטל הצמדה
+Pin	הצמד
+Unarchive	הוצא מהארכיון
+Archive	העבר לארכיון
+Unblock bot	בטל חסימת בוט
+Unblock user	בטל חסימה
+Stop and block bot	עצור וחסום בוט
+Block user	חסום משתמש
+Clear history	נקה היסטוריה
+Delete chat	מחק צ'אט
+Leave channel	עזוב ערוץ
+Leave group	עזוב קבוצה
+Clear history?	לנקות היסטוריה?
+Delete chat?	למחוק את הצ'אט?
+All messages in this chat will be deleted for you.	כל ההודעות בצ'אט יימחקו עבורך.
+The chat will be removed from your chat list.	הצ'אט יוסר מרשימת הצ'אטים שלך.
+They won't be able to message you.	הם לא יוכלו לשלוח לך הודעות.
+Block	חסום
+View stickers	הצג מדבקות
+View sticker	הצג מדבקה
+View theme	הצג ערכת נושא
+View background	הצג רקע
+Open bot	פתח בוט
+Send message	שלח הודעה
+View channel	הצג ערוץ
+View group	הצג קבוצה
+Boost	בוסט
+View message	הצג הודעה
+Join	הצטרף
+Open app	פתח אפליקציה
+Add folder	הוסף תיקייה
+View story	הצג סטורי
+Show in folder	הצג בתיקייה
+Copy text	העתק טקסט
+Copy file path	העתק נתיב קובץ
+Copy Link	העתק קישור
+Copy Callback Data	העתק callback data
+Select	בחר
+Delete message?	למחוק את ההודעה?
+Stickers	מדבקות
+Share stickers	שתף מדבקות
+Copy link	העתק קישור
+1 Star	כוכב אחד
+{n} Stars	{n} כוכבים
+From	מאת
+To	אל
+Price	מחיר
+Can be converted to	ניתן להמיר ל
+Upgrade	שדרג
+Refunded	הוחזר
+Upgraded to a collectible	שודרג לפריט אספנות
+Converted to Stars	הומר לכוכבים
+Shown on the profile	מוצג בפרופיל
+Not shown on the profile	לא מוצג בפרופיל
+Status	סטטוס
+Sender	שולח
+Hidden from others	מוסתר מאחרים
+Owner	בעלים
+Number	מספר
+Model	דגם
+Symbol	סמל
+Backdrop	רקע
+Value	ערך
+Stars	כוכבים
+Paid	שולם
+Transaction	עסקה
+Duration	משך
+Gift	מתנה
+Import settings?	לייבא הגדרות?
+Import	ייבוא
+Pin message	הצמד הודעה
+Would you like to pin this message?	להצמיד את ההודעה?
+Notify all subscribers	הודע לכל המנויים
+Notify all members	הודע לכל החברים
+Search in chat	חיפוש בצ'אט
+Chat menu	תפריט צ'אט
+UNBLOCK	בטל חסימה
+JOIN CHANNEL	הצטרף לערוץ
+JOIN GROUP	הצטרף לקבוצה
+UNMUTE	בטל השתקה
+MUTE	השתק
+Forwarded from	הועבר מ
+Views	צפיות
+Pinned	מוצמד
+Edited	נערך
+Editing	עריכה
+Attach files	צרף קבצים
+Add a caption	הוסף כיתוב
+Bot keyboard	מקלדת בוט
+Forward to…	העבר אל…
+Search chats	חיפוש צ'אטים
+Send files	שלח קבצים
+File	קובץ
+Add files	הוסף קבצים
+Audio	אודיו
+Canceled call	שיחה מבוטלת
+Missed call	שיחה שלא נענתה
+Declined call	שיחה שנדחתה
+Outgoing call	שיחה יוצאת
+Incoming call	שיחה נכנסת
+Final results	תוצאות סופיות
+Anonymous quiz	חידון אנונימי
+Quiz	חידון
+Anonymous poll	סקר אנונימי
+Public poll	סקר פומבי
+1 vote	קול אחד
+{n} votes	{n} קולות
+Vote	הצבע
+Retract vote	בטל הצבעה
+Collectible gift	מתנת אספנות
+View	הצג
+Can't open this file	לא ניתן לפתוח את הקובץ
+Forward message without sender	העבר בלי השולח
+Cancel forwarding	בטל העברה
+Forward Message	העבר הודעה
+Show Sender Name	הצג את שם השולח
+Hide Sender Name	הסתר את שם השולח
+Show Caption	הצג כיתוב
+Hide Caption	הסתר כיתוב
+Change Recipient	שנה נמען
+Do Not Forward	אל תעביר
+You can remove the sender's name so that this message will look like it was sent by you.	אפשר להסיר את שם השולח כך שההודעה תיראה כאילו נשלחה ממך.
+Drop files here	שחרר קבצים כאן
+to send them as documents	כדי לשלוח כמסמכים
+Drop images here	שחרר תמונות כאן
+to send them without compression	כדי לשלוח ללא דחיסה
+Drop photos here	שחרר תמונות כאן
+to send them in a quick way	כדי לשלוח במהירות
+Photos	תמונות
+Files	קבצים
+Voice	קוליות
+Nothing here yet	אין כאן כלום עדיין
+Open link	פתח קישור
+Open	פתח
+Go to message	עבור להודעה
+No groups in common	אין קבוצות משותפות
+Saved Messages	הודעות שמורות
+My Notes	ההערות שלי
+Author Hidden	מחבר מוסתר
+Chat	צ'אט
+Favorites	מועדפים
+Recently used	בשימוש לאחרונה
+Send without sound	שלח ללא צליל
+Schedule message	תזמן הודעה
+Send when online	שלח כשיהיה מחובר
+Remove from Favorites	הסר ממועדפים
+Add to Favorites	הוסף למועדפים
+View Sticker Set	הצג חבילת מדבקות
+Remove from Recent	הסר מהאחרונים
+Search GIFs	חיפוש GIF
+Send at	שלח ב
+Schedule	תזמן
+What can this bot do?	מה הבוט הזה יודע לעשות?
+Start	התחל
+Hold to record a voice message	החזק כדי להקליט הודעה קולית
+Hold to record audio. Click to switch to video.	החזק להקלטת קול. לחץ כדי לעבור לווידאו.
+Hold to record video. Click to switch to audio.	החזק להקלטת וידאו. לחץ כדי לעבור לקול.
+Video messages aren't supported yet	הודעות וידאו עדיין לא נתמכות
+Slide to cancel	החלק לביטול
+No recent calls.	אין שיחות אחרונות.
+Making calls is not supported yet, this is your call history.	שיחות עדיין לא נתמכות, זו היסטוריית השיחות שלך.
+Outgoing	יוצאת
+Missed	לא נענתה
+Incoming	נכנסת
+You have no contacts yet.	אין לך אנשי קשר עדיין.
+Nothing found.	לא נמצא כלום.
+Mutual contact: you're in their contacts too	איש קשר הדדי: גם אתה באנשי הקשר שלו
+Mutual contact	איש קשר הדדי
+Waiting for network…	ממתין לרשת…
+Connecting to proxy…	מתחבר לפרוקסי…
+Connecting…	מתחבר…
+Updating…	מעדכן…
+Telegram is taking too long to respond. Try again.	Telegram לא מגיב זמן רב. נסה שוב.
+last seen recently	נראה לאחרונה לא מזמן
+last seen within a week	נראה לאחרונה השבוע
+last seen within a month	נראה לאחרונה החודש
+last seen a long time ago	נראה לאחרונה לפני זמן רב
+last seen just now	נראה לאחרונה הרגע
+online	מחובר
+Comments are unavailable	תגובות לא זמינות
+Anonymous	אנונימי
+Copied	הועתק
+This button isn't supported yet	הכפתור הזה עדיין לא נתמך
+Invalid phone number. Check the country code and number.	מספר טלפון שגוי. בדוק את קוד המדינה והמספר.
+This phone number is banned in Telegram.	מספר הטלפון הזה חסום ב-Telegram.
+Wrong code. Try again.	קוד שגוי. נסה שוב.
+The code has expired. Request a new one.	תוקף הקוד פג. בקש קוד חדש.
+Enter the code.	הזן את הקוד.
+Wrong password.	סיסמה שגויה.
+Too many attempts. Please wait a bit and try again.	יותר מדי ניסיונות. המתן מעט ונסה שוב.
+The API ID / hash are not valid. Check them on my.telegram.org.	ה-API ID / hash לא תקינים. בדוק אותם ב-my.telegram.org.
+Something went wrong.	משהו השתבש.
+Accept	קבל
+Download failed	ההורדה נכשלה
+Unknown error	שגיאה לא ידועה
+Install failed	ההתקנה נכשלה
+Downloads	הורדות
+No microphone found	לא נמצא מיקרופון
+Recording failed	ההקלטה נכשלה
+Private chats	צ'אטים פרטיים
+Forums	פורומים
+There is no translation to this language yet	אין עדיין תרגום לשפה הזו
+{n} selected	{n} נבחרו
+Forward {n}	העבר {n}
+Delete {n}	מחק {n}
+Shot {n}	צילום {n}
+{n} chats	{n} צ'אטים
+{n} days	{n} ימים
+{n} months	{n} חודשים
+Version {n}.{n}.{n}	גרסה {n}.{n}.{n}
+Pinned message	הודעה מוצמדת
+Pinned message #{n}	הודעה מוצמדת מס' {n}
+Unread messages	הודעות שלא נקראו
+Mark as read	סמן כנקרא
+Wallpapers	טפטים
+Recent	אחרונים
+GIF	GIF

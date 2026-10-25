@@ -63,7 +63,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.pixelgram.desktop.ui.components.Text
 import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -510,7 +510,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
             FileRow(
                 Icons.Filled.Person,
                 listOf(contact.firstName, contact.lastName).filter { it.isNotBlank() }.joinToString(" "),
-                contact.phoneNumber.let { if (it.startsWith("+")) it else "+$it" },
+                contact.phoneNumber.let { if (it.startsWith("+")) it else "\u200E+$it" },
                 false,
             ) {}
         }

@@ -152,7 +152,7 @@ private fun AlbumCell(message: UiMessage, cell: Cell, telegram: Telegram, modifi
                 contentColor = Color.White,
                 modifier = Modifier.align(Alignment.TopStart).padding(6.dp),
             ) {
-                androidx.compose.material3.Text(
+                com.pixelgram.desktop.ui.components.Text(
                     formatDuration(video.duration),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),

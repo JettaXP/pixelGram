@@ -67,17 +67,17 @@ object FolderLayout {
         return order(telegram, settings).mapNotNull { key ->
             when (key) {
                 ChatListKey.Main -> if (!settings.hideAllChats.value || telegram.folders.isEmpty()) {
-                    FolderTab(key, "All chats", "All", telegram.unread[ChatListKey.Main])
+                    FolderTab(key, com.pixelgram.desktop.core.tr("All chats"), "All", telegram.unread[ChatListKey.Main])
                 } else {
                     null
                 }
                 ChatListKey.Unread -> if (settings.unreadFolder.value) {
-                    FolderTab(key, settings.unreadFolderName.value, settings.unreadFolderIcon.value, count(telegram, key))
+                    FolderTab(key, com.pixelgram.desktop.core.tr(settings.unreadFolderName.value), settings.unreadFolderIcon.value, count(telegram, key))
                 } else {
                     null
                 }
                 ChatListKey.Mentions -> if (settings.mentionsFolder.value) {
-                    FolderTab(key, settings.mentionsFolderName.value, settings.mentionsFolderIcon.value, count(telegram, key))
+                    FolderTab(key, com.pixelgram.desktop.core.tr(settings.mentionsFolderName.value), settings.mentionsFolderIcon.value, count(telegram, key))
                 } else {
                     null
                 }

@@ -1,0 +1,744 @@
+# pixelGram: English → Русский. Формат: английская строка<TAB>перевод. {n} — число, {форма1|форма2|форма5} — множественное число.
+This account is already added to pixelGram	Этот аккаунт уже добавлен в pixelGram
+pixelGram Updated!	pixelGram обновлён!
+Open pixelGram	Открыть pixelGram
+Enable notifications	Включить уведомления
+Disable notifications	Выключить уведомления
+Quit pixelGram	Выйти из pixelGram
+Wrong passcode	Неверный код-пароль
+Enter passcode	Введите код-пароль
+Checking…	Проверка…
+You have the latest nightly.	У вас последняя ночная сборка.
+Updates are unavailable right now.	Обновления сейчас недоступны.
+A new version is being built. Try again in a few minutes.	Новая версия собирается. Попробуйте через несколько минут.
+Download	Скачать
+Update	Обновить
+Show file	Показать файл
+Copy command	Скопировать команду
+Check for updates	Проверить обновления
+Close	Закрыть
+Delete	Удалить
+Unlock	Разблокировать
+Minimize	Свернуть
+Restore	Восстановить
+Maximize	Развернуть
+Custom corner	Свой угол
+Circle	Круг
+Square	Квадрат
+Slanted	Наклон
+Arch	Арка
+Fan	Веер
+Arrow	Стрелка
+Semicircle	Полукруг
+Oval	Овал
+Pill	Пилюля
+Triangle	Треугольник
+Diamond	Ромб
+Clamshell	Раковина
+Pentagon	Пятиугольник
+Gem	Кристалл
+Sunny	Солнце
+Very sunny	Яркое солнце
+4-sided cookie	Печенье, 4 стороны
+6-sided cookie	Печенье, 6 сторон
+7-sided cookie	Печенье, 7 сторон
+9-sided cookie	Печенье, 9 сторон
+12-sided cookie	Печенье, 12 сторон
+Ghost-ish	Призрак
+4-leaf clover	Клевер, 4 листа
+8-leaf clover	Клевер, 8 листов
+Burst	Вспышка
+Soft burst	Мягкая вспышка
+Boom	Взрыв
+Soft boom	Мягкий взрыв
+Flower	Цветок
+Puffy	Облачко
+Puffy diamond	Пышный ромб
+Pixel circle	Пиксельный круг
+Pixel triangle	Пиксельный треугольник
+Bun	Булочка
+Heart	Сердце
+This is an official pixelGram resource	Это официальный ресурс pixelGram
+Official pixelGram resource	Официальный ресурс pixelGram
+Main developer of pixelGram	Главный разработчик pixelGram
+Developer of pixelGram	Разработчик pixelGram
+Main sponsor of pixelGram	Главный спонсор pixelGram
+pixelGram tester, hunts bugs in the client	Тестер pixelGram, ловит баги в клиенте
+Back	Назад
+Edit	Изменить
+Copy	Копировать
+QR code	QR-код
+Incorrect password	Неверный пароль
+Enter password	Введите пароль
+Sign in	Войти
+Finish it in another Telegram app.	Завершите вход в другом приложении Telegram.
+Too many attempts	Слишком много попыток
+Cancel	Отмена
+Enter your API ID and API hash from my.telegram.org. They are stored only on this computer.	Введите API ID и API hash с my.telegram.org. Они хранятся только на этом компьютере.
+Continue	Продолжить
+Two-step verification is on. Enter your password.	Включена двухэтапная проверка. Введите пароль.
+Open Telegram on your phone → Settings → Devices → Link Desktop Device and scan this code.	Откройте Telegram на телефоне → Настройки → Устройства → Подключить устройство и отсканируйте этот код.
+Choose your country and enter your phone number.	Выберите страну и введите номер телефона.
+Loading countries…	Загрузка стран…
+Invalid country code	Неверный код страны
+Choose a country	Выберите страну
+Code	Код
+Phone number	Номер телефона
+Next	Далее
+Search	Поиск
+in Telegram on your other device	в Telegram на другом устройстве
+by SMS	по SMS
+by a phone call	звонком
+with a missed call	пропущенным звонком
+on Fragment	на Fragment
+Send code by SMS	Отправить код по SMS
+Call me with the code	Позвонить с кодом
+Get a missed call	Получить пропущенный звонок
+Send the code again	Отправить код ещё раз
+Wrong number?	Неверный номер?
+Log in by QR code	Войти по QR-коду
+Notifications	Уведомления
+This is how new messages will look 🎉	Так будут выглядеть новые сообщения 🎉
+Close all	Закрыть все
+My Profile	Мой профиль
+Not signed in	Вход не выполнен
+Name	Имя
+Phone	Телефон
+Username	Имя пользователя
+Bio	О себе
+Not set	Не задано
+Birthday	День рождения
+Change personal channel	Изменить личный канал
+Add personal channel	Добавить личный канал
+Remove	Убрать
+First name	Имя
+Last name	Фамилия
+a-z, 0-9 and underscores, at least 5 characters. Leave empty to remove it.	a-z, 0-9 и подчёркивания, минимум 5 символов. Оставьте пустым, чтобы удалить.
+Day	День
+Month	Месяц
+Year	Год
+Year is optional. Clear the day to remove the birthday.	Год необязателен. Очистите день, чтобы удалить день рождения.
+Save	Сохранить
+No photos yet	Пока нет фото
+Previous	Предыдущее
+Set as main	Сделать главным
+Delete this photo?	Удалить это фото?
+It will be removed from your profile for everyone.	Оно будет удалено из профиля для всех.
+Banner updated. Others will see it in a few minutes.	Баннер обновлён. Другие увидят его через несколько минут.
+This image can't be used as a banner	Это изображение нельзя сделать баннером
+Banner	Баннер
+From computer	С компьютера
+From clipboard	Из буфера обмена
+Remove banner	Убрать баннер
+Banner removed	Баннер убран
+Personal channel	Личный канал
+You have no public channels to show. Create a channel and give it a public link first.	У вас нет публичных каналов. Сначала создайте канал и дайте ему публичную ссылку.
+The channel and its latest post appear on your profile.	Канал и его последний пост появятся в профиле.
+Set new photo	Новое фото
+Photo or video	Фото или видео
+Camera	Камера
+No camera found	Камера не найдена
+Take photo	Сделать фото
+Music	Музыка
+Hide	Скрыть
+Remove from profile	Убрать из профиля
+Add to profile	Добавить в профиль
+Reorder	Переставить
+Save as…	Сохранить как…
+Forward	Переслать
+Regular	Обычный
+Medium	Средний
+SemiBold	Полужирный
+Bold	Жирный
+Tonal spot	Тональный акцент
+Expressive	Выразительный
+Vibrant	Яркий
+Fruit salad	Фруктовый салат
+Rainbow	Радуга
+Content	По содержимому
+Neutral	Нейтральный
+Monochrome	Монохром
+Turn off animations to save battery and make pixelGram lighter on slow computers.	Отключите анимации, чтобы экономить заряд и облегчить pixelGram на слабых компьютерах.
+Animated Stickers	Анимированные стикеры
+Autoplay in panel	Автовоспроизведение в панели
+Autoplay in chat	Автовоспроизведение в чате
+Animated Emoji	Анимированные эмодзи
+Autoplay in messages	Автовоспроизведение в сообщениях
+Autoplay Media	Автовоспроизведение медиа
+GIFs	GIF
+Videos	Видео
+Animations in Chats	Анимации в чатах
+Animated spoiler effect	Анимация скрытого текста
+Message animations	Анимации сообщений
+Interface animations	Анимации интерфейса
+Collapse	Свернуть
+Expand	Развернуть
+Default	По умолчанию
+Speakers and headphones	Динамики и наушники
+Output device	Устройство вывода
+Microphone	Микрофон
+Input device	Устройство ввода
+Calls and video chats	Звонки и видеочаты
+Use the same devices for calls	Те же устройства для звонков
+Other settings	Другие настройки
+Accept calls on this device	Принимать звонки на этом устройстве
+Open system sound preferences	Открыть системные настройки звука
+Camera preview	Предпросмотр камеры
+No camera	Нет камеры
+Drag folders to change their order. Folders sync with your other Telegram apps; Unread and Mentions live in pixelGram.	Перетаскивайте папки, чтобы изменить порядок. Папки синхронизируются с другими приложениями Telegram; «Непрочитанные» и «Упоминания» есть только в pixelGram.
+My folders	Мои папки
+All chats	Все чаты
+All	Все
+Hidden	Скрыта
+All your chats	Все ваши чаты
+Chats with unread messages	Чаты с непрочитанными
+Chats where you were mentioned	Чаты, где вас упомянули
+Folder	Папка
+Drag to reorder	Перетащите для порядка
+Create new folder	Создать папку
+Delete folder	Удалить папку
+Edit folder	Изменить папку
+Folder name	Название папки
+Contacts	Контакты
+Non-contacts	Не контакты
+Groups	Группы
+Channels	Каналы
+Bots	Боты
+Muted	Без звука
+Read	Прочитанные
+Archived	В архиве
+Custom	Своя
+New folder	Новая папка
+Icon	Иконка
+Included chat types	Типы чатов
+Exclude	Исключить
+Included chats	Добавленные чаты
+Add chats	Добавить чаты
+Add at least one chat or chat type	Добавьте хотя бы один чат или тип чатов
+Create	Создать
+Done	Готово
+Everybody	Все
+My contacts	Мои контакты
+Nobody	Никто
+Last seen & online	Последняя активность
+Profile photos	Фото профиля
+Forwarded messages	Пересылка сообщений
+Calls	Звонки
+Voice messages	Голосовые сообщения
+Gifts	Подарки
+Saved Music	Сохранённая музыка
+Invites	Приглашения
+Disabled	Выключено
+1 min	1 мин
+5 min	5 мин
+1 hour	1 час
+5 hours	5 часов
+Premium	Premium
+Security	Безопасность
+Local passcode	Код-пароль
+On	Вкл
+Off	Выкл
+Active sessions	Активные сеансы
+Privacy	Конфиденциальность
+Messages	Сообщения
+Contacts and Premium	Контакты и Premium
+Premium users	Пользователи Premium
+Never share with	Всегда запрещать
+Always share with	Всегда разрешать
+Group	Группа
+Add users or groups	Добавить людей или группы
+Who can start a chat with you.	Кто может начать с вами чат.
+My contacts and Premium users	Мои контакты и Premium
+Only Telegram Premium subscribers can limit this.	Ограничить это могут только подписчики Telegram Premium.
+Passcodes don't match	Коды-пароли не совпадают
+New passcode	Новый код-пароль
+Repeat passcode	Повторите код-пароль
+Current passcode	Текущий код-пароль
+Auto-lock if away for	Автоблокировка через
+Change	Изменить
+Lock now	Заблокировать сейчас
+Turn passcode off	Отключить код-пароль
+Turn off	Отключить
+This device	Это устройство
+Rename	Переименовать
+Logs out all devices except for this one.	Выходит на всех устройствах, кроме этого.
+Terminate all other sessions	Завершить все другие сеансы
+Active devices	Активные устройства
+Terminate	Завершить
+Terminate session?	Завершить сеанс?
+Terminate all other sessions?	Завершить все другие сеансы?
+Every device except this one will be logged out.	Все устройства, кроме этого, выйдут из аккаунта.
+Device name	Имя устройства
+Other devices will see the new name after pixelGram restarts.	Другие устройства увидят новое имя после перезапуска pixelGram.
+Info	Информация
+Application	Приложение
+System version	Версия системы
+Yes	Да
+No	Нет
+Official app	Официальное приложение
+Location	Местоположение
+This location estimate is based on the IP address and may not always be accurate.	Местоположение определено по IP-адресу и может быть неточным.
+Terminate Session	Завершить сеанс
+Unknown	Неизвестно
+My Account	Мой аккаунт
+Notifications and Sounds	Уведомления и звуки
+Privacy and Security	Конфиденциальность
+Chat Settings	Настройки чатов
+Folders	Папки
+Advanced	Продвинутые
+Speakers and Camera	Динамики и камера
+Battery and Animations	Батарея и анимации
+Language	Язык
+Appearance	Оформление
+Avatars	Аватары
+Message bubbles	Пузыри сообщений
+Corners	Углы
+About	О программе
+pixelGram Preferences	Настройки pixelGram
+Settings	Настройки
+More	Ещё
+Log out	Выйти
+Categories	Разделы
+Search settings	Поиск настроек
+Appearance, avatars, bubbles	Оформление, аватары, пузыри
+Personal	Личные
+Private	Личные
+Work	Работа
+Theme	Тема
+Window	Окно
+pixelGram title bar	Заголовок окна pixelGram
+Material 3 buttons instead of the system frame. Applies after restarting pixelGram.	Кнопки Material 3 вместо системной рамки. Применится после перезапуска pixelGram.
+Hide my phone number	Скрыть мой номер
+Cover your number with Material shapes in your profile and settings. Click it to peek.	Номер закрыт фигурами Material в профиле и настройках. Нажмите, чтобы подсмотреть.
+Seconds in message time	Секунды во времени сообщений
+Show 18:52:33 instead of 18:52 under messages.	Показывать 18:52:33 вместо 18:52 под сообщениями.
+Emoji	Эмодзи
+Your colors	Ваши цвета
+Pick a style. Expressive, Vibrant and the others are the bright Material 3 Expressive schemes from Google's Material color utilities.	Выберите стиль. Выразительный, Яркий и другие — яркие схемы Material 3 Expressive из Material color utilities от Google.
+Select a color	Выберите цвет
+Slide to pick any hue, or use one of the presets below.	Проведите, чтобы выбрать любой оттенок, или возьмите готовый ниже.
+Material You (matugen)	Material You (matugen)
+Dynamic colors from matugen	Динамические цвета из matugen
+Colors follow your wallpaper. Overrides the accent color.	Цвета следуют за обоями. Заменяет акцентный цвет.
+pixelGram applies new colors automatically.	pixelGram применяет новые цвета автоматически.
+Copy config	Скопировать конфиг
+Chat folders	Папки чатов
+Position	Расположение
+Left	Слева
+Top	Сверху
+The capsule is always on top.	Капсула всегда сверху.
+Left is a Material 3 navigation rail, top is a bar above the chat list.	Слева — навигационная панель Material 3, сверху — полоса над списком чатов.
+Style on top	Стиль сверху
+Tabs	Вкладки
+Capsule	Капсула
+Hide "All chats"	Скрыть «Все чаты»
+Only works when you have at least one folder.	Работает, только если есть хотя бы одна папка.
+The selected folder shows its name, the others only their icon. Try it here:	У выбранной папки видно название, у остальных — только иконка. Попробуйте:
+Spacing	Отступы
+Height	Высота
+Chat type	Тип чата
+Pick a shape for all chats, or a separate one for each kind of chat.	Выберите форму для всех чатов или отдельную для каждого типа.
+Official Material 3 Expressive shapes.	Официальные формы Material 3 Expressive.
+Same as all chats.	Как у всех чатов.
+Use the shape for all chats	Форма для всех чатов
+Shape	Форма
+Corner radius	Радиус углов
+Used by the "Custom corner" shape: 0% is a square, 50% is a circle.	Для формы «Свой угол»: 0% — квадрат, 50% — круг.
+Hi! How do the new corners look?	Привет! Как тебе новые углы?
+Way better with Material 3 ✨	С Material 3 намного лучше ✨
+Tail corner	Угол у хвостика
+The corner next to the sender. Set it equal to the radius for fully round bubbles.	Угол со стороны отправителя. Сделайте равным радиусу для полностью круглых пузырей.
+Pick how round each kind of element is, everywhere in pixelGram.	Выберите скругление для каждого вида элементов во всём pixelGram.
+A list row	Строка списка
+Another one	Ещё одна
+A card	Карточка
+Lists	Списки
+Grouped rows in settings, profiles and lists.	Сгруппированные строки в настройках, профилях и списках.
+Cards	Карточки
+Panels, cards and previews.	Панели, карточки и превью.
+Dialogs and bars	Диалоги и панели
+Dialogs, the message bar, pop-ups and sheets.	Диалоги, поле сообщения, всплывающие окна и шторки.
+Menus and fields	Меню и поля
+Context menus and text fields.	Контекстные меню и текстовые поля.
+Reset to default	Сбросить
+Open profile	Открыть профиль
+Bubble corners, avatar shapes and colors are in pixelGram Preferences.	Углы пузырей, формы аватаров и цвета — в настройках pixelGram.
+Double click on a message	Двойной клик по сообщению
+Reaction	Реакция
+Reply	Ответить
+Nothing	Ничего
+Your messages	Ваши сообщения
+Other people's messages	Сообщения собеседников
+Wallpaper	Обои
+Shown behind every chat, except chats that have their own background in Telegram.	Показываются во всех чатах, кроме тех, где в Telegram задан свой фон.
+No wallpaper	Без обоев
+Current	Текущие
+Add image	Добавить картинку
+Dimming in dark theme	Затемнение в тёмной теме
+Colors from wallpaper	Цвета из обоев
+Pick the accent color from the wallpaper with Google's Material color utilities, the same way Android does.	Акцентный цвет берётся из обоев алгоритмом Material color utilities от Google, как в Android.
+Message font	Шрифт сообщений
+The font and size of message text. Pick an installed font or load a .ttf or .otf file.	Шрифт и размер текста сообщений. Выберите установленный шрифт или загрузите файл .ttf или .otf.
+The quick brown fox jumps over the lazy dog	Съешь же ещё этих мягких французских булок, да выпей чаю
+From file	Из файла
+Use this font everywhere	Этот шрифт везде
+Menus, titles, settings and the chat list use it too, not only messages.	Меню, заголовки, настройки и список чатов тоже, не только сообщения.
+Size	Размер
+Search fonts	Поиск шрифтов
+Notifications are disabled from the tray menu.	Уведомления отключены в меню трея.
+Sound for new messages	Звук новых сообщений
+Plays when a message arrives in a chat that is not muted.	Играет, когда приходит сообщение в чат со звуком.
+Play sound	Воспроизвести
+Pop-ups	Всплывающие окна
+Show pop-up notifications	Всплывающие уведомления
+A card with the chat and message, closes by itself or on click.	Карточка с чатом и сообщением, закрывается сама или по клику.
+Style	Стиль
+System	Системные
+Shown by your desktop's notification daemon (mako, swaync, dunst…).	Показывает демон уведомлений вашего рабочего стола (mako, swaync, dunst…).
+pixelGram's own Material 3 cards.	Собственные карточки pixelGram в Material 3.
+Show test notification	Тестовое уведомление
+Data and storage	Данные и память
+Data folder	Папка данных
+Open data folder	Открыть папку данных
+Links	Ссылки
+Channel	Канал
+Backup	Резервная копия
+Save pixelGram Preferences to a .backup file and send it to any chat, or load them from one. Accounts are not included.	Сохраните настройки pixelGram в файл .backup и отправьте в любой чат или загрузите из файла. Аккаунты не сохраняются.
+Export settings	Экспорт настроек
+Choose a chat to send the backup to	Выберите чат для резервной копии
+Couldn't create the backup.	Не удалось создать резервную копию.
+Import settings	Импорт настроек
+Pick a .backup file	Выберите файл .backup
+That's not a pixelGram backup.	Это не резервная копия pixelGram.
+Reset	Сброс
+Reset all settings	Сбросить все настройки
+Theme, colors, folders, corners, fonts and everything else in pixelGram	Тема, цвета, папки, углы, шрифты и всё остальное в pixelGram
+Reset all settings?	Сбросить все настройки?
+Every pixelGram setting goes back to its default. Your accounts, chats and passcode stay.	Все настройки pixelGram вернутся к стандартным. Аккаунты, чаты и код-пароль останутся.
+All settings were reset.	Все настройки сброшены.
+Updates	Обновления
+Check for updates on start	Проверять обновления при запуске
+Looks for a newer nightly build on GitHub.	Ищет новую ночную сборку на GitHub.
+Settings imported.	Настройки импортированы.
+Message database	База сообщений
+Language pack	Языковой пакет
+Logs	Журналы
+Clearing…	Очистка…
+Clears downloaded media and files. Chats and messages stay, media downloads again when needed.	Удаляет скачанные медиа и файлы. Чаты и сообщения останутся, медиа скачаются снова при необходимости.
+Could not create the chat.	Не удалось создать чат.
+New Channel	Новый канал
+New Group	Новая группа
+Channel name	Название канала
+Group name	Название группы
+Description (optional)	Описание (необязательно)
+You can add members from the group after it is created.	Участников можно добавить после создания группы.
+Close search	Закрыть поиск
+Search messages	Поиск сообщений
+Clear	Очистить
+Search messages in	Искать сообщения в
+Searching…	Поиск…
+1 message found	Найдено 1 сообщение
+{n} messages found	Найдено: {n}
+Chats	Чаты
+Smileys & Emotion	Смайлы и эмоции
+People & Body	Люди
+Animals & Nature	Животные и природа
+Food & Drink	Еда и напитки
+Travel & Places	Путешествия и места
+Activities	Активности
+Objects	Предметы
+Symbols	Символы
+Flags	Флаги
+Menu	Меню
+Update available	Доступно обновление
+Archived chats	Архив
+Draft: 	Черновик: 
+You	Вы
+Lock pixelGram	Заблокировать pixelGram
+Unread	Непрочитанные
+Mention	Упоминание
+Mentions	Упоминания
+Unmuted	Со звуком
+Bold	Жирный
+Italic	Курсив
+Underline	Подчёркнутый
+Strikethrough	Зачёркнутый
+Quote	Цитата
+Monospace	Моноширинный
+Spoiler	Скрытый
+Create link	Ссылка
+Date	Дата
+Leave a comment	Оставить комментарий
+1 comment	1 комментарий
+{n} comments	{n} {комментарий|комментария|комментариев}
+Discussion	Обсуждение
+Comments	Комментарии
+No comments here yet…	Комментариев пока нет…
+Join group	Вступить в группу
+Comment	Комментарий
+Send	Отправить
+Voice message	Голосовое сообщение
+Sound	Звук
+Repeat	Повтор
+Close player	Закрыть плеер
+Play	Играть
+Pause	Пауза
+Previous photo	Предыдущее фото
+Next photo	Следующее фото
+Photo	Фото
+Copy photo	Копировать фото
+Cut	Вырезать
+Paste	Вставить
+Formatting	Форматирование
+Select All	Выделить всё
+Clear formatting	Убрать форматирование
+Insert	Вставить
+Scroll to the newest message	К новым сообщениям
+Choose a wallpaper	Выберите обои
+No results	Ничего не найдено
+More reactions	Ещё реакции
+OK	ОК
+Dark	Тёмная
+Light	Светлая
+Shot	Снимок
+Preferences	Настройки
+Show background	Показывать фон
+Show date	Показывать дату
+Show colorful replies	Цветные ответы
+Message	Сообщение
+Select a chat to start messaging	Выберите чат, чтобы начать общение
+Night	Ночь
+Saved	Избранное
+New chat	Новый чат
+New message	Новое сообщение
+New group	Новая группа
+New channel	Новый канал
+Signing in…	Вход…
+Current account	Текущий аккаунт
+Add Account	Добавить аккаунт
+Accounts	Аккаунты
+Video	Видео
+Can't play this video	Не удаётся воспроизвести видео
+Mute	Без звука
+Add to folder	В папку
+Open in new window	Открыть в новом окне
+Unmute	Включить звук
+View profile	Профиль
+To beginning	В начало
+Unpin	Открепить
+Pin	Закрепить
+Unarchive	Из архива
+Archive	В архив
+Unblock bot	Разблокировать бота
+Unblock user	Разблокировать
+Stop and block bot	Остановить и заблокировать
+Block user	Заблокировать
+Clear history	Очистить историю
+Delete chat	Удалить чат
+Leave channel	Покинуть канал
+Leave group	Покинуть группу
+Clear history?	Очистить историю?
+Delete chat?	Удалить чат?
+All messages in this chat will be deleted for you.	Все сообщения в этом чате будут удалены для вас.
+The chat will be removed from your chat list.	Чат будет удалён из списка.
+They won't be able to message you.	Он не сможет вам писать.
+Block	Заблокировать
+View stickers	Стикеры
+View sticker	Стикер
+View theme	Тема
+View background	Фон
+Open bot	Открыть бота
+Send message	Написать
+View channel	Открыть канал
+View group	Открыть группу
+Boost	Буст
+View message	Открыть сообщение
+Join	Вступить
+Open app	Открыть приложение
+Add folder	Добавить папку
+View story	История
+Show in folder	Показать в папке
+Copy text	Копировать текст
+Copy file path	Копировать путь
+Copy Link	Копировать ссылку
+Copy Callback Data	Копировать callback data
+Select	Выбрать
+Delete message?	Удалить сообщение?
+Stickers	Стикеры
+Share stickers	Поделиться стикерами
+Copy link	Копировать ссылку
+1 Star	1 звезда
+{n} Stars	{n} {звезда|звезды|звёзд}
+From	От
+To	Кому
+Price	Цена
+Can be converted to	Можно обменять на
+Upgrade	Улучшить
+Refunded	Возвращён
+Upgraded to a collectible	Улучшен до коллекционного
+Converted to Stars	Обменян на звёзды
+Shown on the profile	Показан в профиле
+Not shown on the profile	Не показан в профиле
+Status	Статус
+Sender	Отправитель
+Hidden from others	Скрыто от других
+Owner	Владелец
+Number	Номер
+Model	Модель
+Symbol	Символ
+Backdrop	Фон
+Value	Стоимость
+Stars	Звёзды
+Paid	Оплачено
+Transaction	Транзакция
+Duration	Длительность
+Gift	Подарок
+Import settings?	Импортировать настройки?
+Import	Импорт
+Pin message	Закрепить сообщение
+Would you like to pin this message?	Закрепить это сообщение?
+Notify all subscribers	Уведомить всех подписчиков
+Notify all members	Уведомить всех участников
+Search in chat	Поиск по чату
+Chat menu	Меню чата
+UNBLOCK	РАЗБЛОКИРОВАТЬ
+JOIN CHANNEL	ПОДПИСАТЬСЯ
+JOIN GROUP	ВСТУПИТЬ В ГРУППУ
+UNMUTE	ВКЛЮЧИТЬ ЗВУК
+MUTE	БЕЗ ЗВУКА
+Forwarded from	Переслано от
+Views	Просмотры
+Pinned	Закреплено
+Edited	Изменено
+Editing	Редактирование
+Attach files	Прикрепить файлы
+Add a caption	Добавить подпись
+Bot keyboard	Клавиатура бота
+Forward to…	Переслать…
+Search chats	Поиск чатов
+Send files	Отправить файлы
+File	Файл
+Add files	Добавить файлы
+Audio	Аудио
+Canceled call	Отменённый звонок
+Missed call	Пропущенный звонок
+Declined call	Отклонённый звонок
+Outgoing call	Исходящий звонок
+Incoming call	Входящий звонок
+Final results	Итоги
+Anonymous quiz	Анонимная викторина
+Quiz	Викторина
+Anonymous poll	Анонимный опрос
+Public poll	Публичный опрос
+1 vote	1 голос
+{n} votes	{n} {голос|голоса|голосов}
+Vote	Голосовать
+Retract vote	Отменить голос
+Collectible gift	Коллекционный подарок
+View	Открыть
+Can't open this file	Не удаётся открыть файл
+Forward message without sender	Переслать без автора
+Cancel forwarding	Отменить пересылку
+Forward Message	Переслать сообщение
+Show Sender Name	Показать отправителя
+Hide Sender Name	Скрыть отправителя
+Show Caption	Показать подпись
+Hide Caption	Скрыть подпись
+Change Recipient	Сменить получателя
+Do Not Forward	Не пересылать
+You can remove the sender's name so that this message will look like it was sent by you.	Можно убрать имя отправителя, и сообщение будет выглядеть как отправленное вами.
+Drop files here	Перетащите файлы сюда
+to send them as documents	чтобы отправить как документы
+Drop images here	Перетащите изображения сюда
+to send them without compression	чтобы отправить без сжатия
+Drop photos here	Перетащите фото сюда
+to send them in a quick way	чтобы быстро отправить
+Photos	Фото
+Files	Файлы
+Voice	Голосовые
+Nothing here yet	Здесь пока ничего нет
+Open link	Открыть ссылку
+Open	Открыть
+Go to message	К сообщению
+No groups in common	Нет общих групп
+Saved Messages	Избранное
+My Notes	Мои заметки
+Author Hidden	Автор скрыт
+Chat	Чат
+Favorites	Избранные
+Recently used	Недавние
+Send without sound	Отправить без звука
+Schedule message	Отложить
+Send when online	Отправить, когда будет в сети
+Remove from Favorites	Убрать из избранных
+Add to Favorites	В избранные
+View Sticker Set	Набор стикеров
+Remove from Recent	Убрать из недавних
+Search GIFs	Поиск GIF
+Send at	Отправить в
+Schedule	Запланировать
+What can this bot do?	Что умеет этот бот?
+Start	Запустить
+Hold to record a voice message	Удерживайте, чтобы записать голосовое
+Hold to record audio. Click to switch to video.	Удерживайте для записи голоса. Нажмите, чтобы переключить на видео.
+Hold to record video. Click to switch to audio.	Удерживайте для записи видео. Нажмите, чтобы переключить на голос.
+Video messages aren't supported yet	Видеосообщения пока не поддерживаются
+Slide to cancel	Влево — отмена
+No recent calls.	Недавних звонков нет.
+Making calls is not supported yet, this is your call history.	Звонки пока не поддерживаются, это история звонков.
+Outgoing	Исходящий
+Missed	Пропущенный
+Incoming	Входящий
+You have no contacts yet.	У вас пока нет контактов.
+Nothing found.	Ничего не найдено.
+Mutual contact: you're in their contacts too	Взаимный контакт: вы тоже у него в контактах
+Mutual contact	Взаимный контакт
+Waiting for network…	Ожидание сети…
+Connecting to proxy…	Подключение к прокси…
+Connecting…	Подключение…
+Updating…	Обновление…
+Telegram is taking too long to respond. Try again.	Telegram долго не отвечает. Попробуйте ещё раз.
+last seen recently	был(а) недавно
+last seen within a week	был(а) на этой неделе
+last seen within a month	был(а) в этом месяце
+last seen a long time ago	был(а) давно
+last seen just now	был(а) только что
+online	в сети
+Comments are unavailable	Комментарии недоступны
+Anonymous	Аноним
+Copied	Скопировано
+This button isn't supported yet	Эта кнопка пока не поддерживается
+Invalid phone number. Check the country code and number.	Неверный номер. Проверьте код страны и номер.
+This phone number is banned in Telegram.	Этот номер заблокирован в Telegram.
+Wrong code. Try again.	Неверный код. Попробуйте ещё раз.
+The code has expired. Request a new one.	Срок действия кода истёк. Запросите новый.
+Enter the code.	Введите код.
+Wrong password.	Неверный пароль.
+Too many attempts. Please wait a bit and try again.	Слишком много попыток. Подождите немного и попробуйте снова.
+The API ID / hash are not valid. Check them on my.telegram.org.	API ID / hash недействительны. Проверьте их на my.telegram.org.
+Something went wrong.	Что-то пошло не так.
+Accept	Принять
+Download failed	Не удалось скачать
+Unknown error	Неизвестная ошибка
+Install failed	Не удалось установить
+Downloads	Загрузки
+No microphone found	Микрофон не найден
+Recording failed	Не удалось записать
+Private chats	Личные чаты
+Forums	Форумы
+There is no translation to this language yet	Перевода на этот язык пока нет
+{n} selected	Выбрано: {n}
+Forward {n}	Переслать {n}
+Delete {n}	Удалить {n}
+Shot {n}	Снимок {n}
+{n} chats	{n} {чат|чата|чатов}
+{n} days	{n} {день|дня|дней}
+{n} months	{n} {месяц|месяца|месяцев}
+Version {n}.{n}.{n}	Версия {n}.{n}.{n}
+Pinned message	Закреплённое сообщение
+Pinned message #{n}	Закреплённое сообщение №{n}
+Unread messages	Непрочитанные сообщения
+Mark as read	Прочитано
+Wallpapers	Обои
+Recent	Недавние
+GIF	GIF

@@ -28,7 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.pixelgram.desktop.ui.components.expressive.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import com.pixelgram.desktop.ui.components.Text
 import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -129,7 +129,7 @@ fun ProfileScreen(
         val rows = buildList {
             add(InfoRow(Icons.Outlined.Person, "Name", name, onEdit = { editing = ProfileField.Name }))
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
-                add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it", phone = true))
+                add(InfoRow(Icons.Outlined.Phone, "Phone", "\u200E+$it", phone = true))
             }
             add(
                 InfoRow(

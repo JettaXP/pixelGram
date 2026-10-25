@@ -78,7 +78,7 @@ import androidx.compose.material3.NavigationItemIconPosition
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import com.pixelgram.desktop.ui.components.Text
 import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailDefaults
 import androidx.compose.material3.WideNavigationRailItem

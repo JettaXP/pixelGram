@@ -68,6 +68,7 @@ fun appColorScheme(settings: AppSettings): ColorScheme {
 @Composable
 fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     PowerSaving.settings = settings
+    com.pixelgram.desktop.core.I18n.settings = settings
     com.pixelgram.desktop.core.AudioDevices.settings = settings
     val corners = com.pixelgram.desktop.ui.components.cornerSpec(settings)
     val font = messageFont(settings)
@@ -82,6 +83,8 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
             LocalUriHandler provides Links,
             com.pixelgram.desktop.ui.components.LocalCorners provides corners,
             LocalMessageFont provides font,
+            androidx.compose.ui.platform.LocalLayoutDirection provides
+                if (com.pixelgram.desktop.core.I18n.rtl) androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr,
             content = content,
         )
     }

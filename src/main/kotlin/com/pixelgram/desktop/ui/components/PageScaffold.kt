@@ -43,7 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
+import com.pixelgram.desktop.ui.components.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -107,7 +107,7 @@ fun InfoGroup(rows: List<InfoRow>) {
         rows.forEachIndexed { index, row ->
             var menuAt by remember { mutableStateOf<DpOffset?>(null) }
             val density = LocalDensity.current
-            val copy = { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(row.value), null) }
+            val copy = { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(row.value.replace("\u200E", "")), null) }
             Box(
                 Modifier.pointerInput(row) {
                     awaitPointerEventScope {

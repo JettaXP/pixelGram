@@ -4,7 +4,7 @@ import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.outlined.Settings
 import com.pixelgram.desktop.ui.components.expressive.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.pixelgram.desktop.ui.components.Text
 import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
