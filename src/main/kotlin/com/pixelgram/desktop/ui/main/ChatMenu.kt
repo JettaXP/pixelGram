@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.icons.outlined.Link
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.heightIn
@@ -241,7 +242,9 @@ fun ChatInfoDialog(
     var bioEntities by remember(chat.id) { mutableStateOf(emptyList<TdApi.TextEntity>()) }
     var mentioned by remember(chat.id) { mutableStateOf<ChatState?>(null) }
     var personalChannel by remember(chat.id) { mutableStateOf(0L) }
+    var about by remember(chat.id) { mutableStateOf("") }
     LaunchedEffect(chat.id) {
+        if (chat.privateUserId == 0L) telegram.chatDescription(chat) { about = it }
         if (chat.privateUserId != 0L) {
             telegram.userFullInfo(chat.privateUserId) {
                 bio = it?.bio?.text.orEmpty()
@@ -303,7 +306,7 @@ fun ChatInfoDialog(
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
                         if (onOpenChat != null) {
-                            ProfileAction(Icons.AutoMirrored.Outlined.Chat, "Message", Modifier.weight(1f)) {
+                            ProfileAction(Icons.AutoMirrored.Outlined.Chat, if (chat.isChannel) "Open" else "Message", Modifier.weight(1f)) {
                                 onDismiss()
                                 onOpenChat(chat.id)
                             }
@@ -321,11 +324,26 @@ fun ChatInfoDialog(
                     }
                 }
                 val rows = buildList {
+                    if (chat.privateUserId == 0L) {
+                        val names = telegram.usernames(chat)
+                        names.firstOrNull()?.let { main ->
+                            val also = names.drop(1)
+                            add(
+                                InfoRow(
+                                    Icons.Outlined.Link,
+                                    if (also.isEmpty()) "Link" else "Link · also " + also.joinToString(", ") { "@$it" },
+                                    "t.me/$main",
+                                ),
+                            )
+                        }
+                        if (about.isNotBlank()) add(InfoRow(Icons.Outlined.Info, "Description", about))
+                    }
+                    val extra = user?.usernames?.activeUsernames?.drop(1).orEmpty()
                     user?.usernames?.activeUsernames?.firstOrNull()?.let { username ->
                         add(
                             InfoRow(
                                 Icons.Outlined.AlternateEmail,
-                                "Username",
+                                if (extra.isEmpty()) "Username" else "Username · also " + extra.joinToString(", ") { "@$it" },
                                 "@$username",
                                 trailing = { UsernameQrButton(username, telegram.chatTitle(chat), user.profilePhoto, telegram) },
                             )

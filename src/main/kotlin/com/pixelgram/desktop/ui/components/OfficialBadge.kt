@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.components
 
+import com.pixelgram.desktop.ui.icons.filled.Check
 import com.pixelgram.desktop.ui.components.expressive.popIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.LaunchedEffect
@@ -117,8 +118,23 @@ fun UserBadgeView(badge: UserBadge, size: Dp = 18.dp, modifier: Modifier = Modif
 }
 
 @Composable
+fun VerifiedBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(size)
+            .clip(MaterialShapes.Cookie12Sided.toShape())
+            .background(scheme.primary),
+    ) {
+        Icon(com.pixelgram.desktop.ui.icons.Icons.Filled.Check, contentDescription = "Verified", tint = scheme.onPrimary, modifier = Modifier.size(size * LogoScale))
+    }
+}
+
+@Composable
 fun ChatBadges(chat: com.pixelgram.desktop.telegram.ChatState, telegram: com.pixelgram.desktop.telegram.Telegram, size: Dp) {
     if (telegram.isOfficial(chat)) OfficialBadge(size)
+    if (telegram.isVerified(chat)) VerifiedBadge(size)
     UserBadge.of(chat.privateUserId)?.let { UserBadgeView(it, size) }
 }
 

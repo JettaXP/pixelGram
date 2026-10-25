@@ -1195,6 +1195,30 @@ class Telegram(
         chat.supergroupId != 0L && officialSupergroups[chat.supergroupId] == true ||
             System.getProperty("pixelgram.demo") == "true" && chat.id == DemoOfficialChat
 
+    fun isVerified(chat: ChatState): Boolean = when {
+        chat.privateUserId != 0L -> users[chat.privateUserId]?.verificationStatus?.isVerified == true
+        chat.supergroupId != 0L -> supergroupInfo[chat.supergroupId]?.verificationStatus?.isVerified == true
+        else -> false
+    }
+
+    fun usernames(chat: ChatState): List<String> = when {
+        chat.privateUserId != 0L -> users[chat.privateUserId]?.usernames?.activeUsernames?.toList()
+        chat.supergroupId != 0L -> supergroupInfo[chat.supergroupId]?.usernames?.activeUsernames?.toList()
+        else -> null
+    }.orEmpty()
+
+    fun chatDescription(chat: ChatState, onResult: (String) -> Unit) {
+        when {
+            chat.supergroupId != 0L -> send(TdApi.GetSupergroupFullInfo(chat.supergroupId)) { result ->
+                onResult((result as? TdApi.SupergroupFullInfo)?.description.orEmpty())
+            }
+            chat.basicGroupId != 0L -> send(TdApi.GetBasicGroupFullInfo(chat.basicGroupId)) { result ->
+                onResult((result as? TdApi.BasicGroupFullInfo)?.description.orEmpty())
+            }
+            else -> onResult("")
+        }
+    }
+
     fun avatarKind(chat: ChatState): AvatarKind = when {
         chat.privateUserId != 0L -> if (isBot(chat)) AvatarKind.Bot else AvatarKind.Private
         chat.isChannel -> AvatarKind.Channel
@@ -1977,7 +2001,7 @@ class Telegram(
         replace(after)
         send(
             if (chosen) TdApi.RemoveMessageReaction(message.chatId, message.id, type)
-            else TdApi.AddMessageReaction(message.chatId, message.id, type, false, true)
+            else TdApi.AddMessageReaction(message.chatId, message.id, type, com.pixelgram.desktop.core.PowerSaving.settings?.bigReactions?.value == true, true)
         ) { result ->
             if (result is TdApi.Error) {
                 AppLog.write("Reaction $clean failed ${result.code}: ${result.message}")

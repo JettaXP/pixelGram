@@ -1161,6 +1161,14 @@ private fun ChatSettingsSection(settings: AppSettings, onOpenBubbles: () -> Unit
     Header("Message bubbles")
     Description("Bubble corners, avatar shapes and colors are in pixelGram Preferences.")
     OutlinedButton(onClick = onOpenBubbles) { Text("Open $PixelPreferencesTitle") }
+    Header("Reactions")
+    SwitchRow(
+        0,
+        1,
+        "Always big reactions",
+        "Every reaction you set plays the big effect, like a long press.",
+        settings.bigReactions.value,
+    ) { settings.bigReactions.value = it }
     Header("Double click on a message")
     val options = listOf(
         DoubleClickAction.Reaction to "Reaction",
