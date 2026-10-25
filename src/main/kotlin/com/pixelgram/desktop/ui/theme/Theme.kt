@@ -118,7 +118,7 @@ enum class ColorStyle(val title: String) {
         return when (this) {
             TonalSpot -> SchemeTonalSpot(hct, dark, 0.0, modern, platform)
             Expressive -> SchemeExpressive(hct, dark, 0.0, modern, platform)
-            Vibrant -> SchemeVibrant(hct, dark, 0.0, modern, platform)
+            Vibrant -> SchemeVibrant(hct, dark, 0.0, ColorSpec.SpecVersion.SPEC_2021, platform)
             FruitSalad -> SchemeFruitSalad(hct, dark, 0.0, modern, platform)
             Rainbow -> SchemeRainbow(hct, dark, 0.0, modern, platform)
             Content -> SchemeContent(hct, dark, 0.0, modern, platform)

@@ -92,8 +92,9 @@ fun BoxScope.EasterEggOverlay() {
     var flagVisible by remember { mutableStateOf(false) }
     var noticeVisible by remember { mutableStateOf(false) }
     val sway = remember { Animatable(0f) }
+    val seen = remember { EasterEgg.shown }
     LaunchedEffect(EasterEgg.shown) {
-        if (EasterEgg.shown == 0) return@LaunchedEffect
+        if (EasterEgg.shown == seen) return@LaunchedEffect
         flagVisible = true
         noticeVisible = true
         launch {

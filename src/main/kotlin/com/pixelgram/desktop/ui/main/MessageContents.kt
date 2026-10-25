@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import com.pixelgram.desktop.core.Downloads
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.rememberUpdatedState
@@ -454,11 +457,17 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
             val name = document.fileName.ifBlank { "File" }
             val plugin = name.endsWith(".plugin", ignoreCase = true)
             val backup = Backup.isBackup(name)
+            val scope = rememberCoroutineScope()
+            val downloaded = telegram.localPath(document.document)
+            var saved by remember(downloaded) { mutableStateOf(downloaded?.let { Downloads.exported(it, name) }) }
+            LaunchedEffect(downloaded) {
+                if (downloaded != null && saved == null && !message.sending) saved = Downloads.export(downloaded, name)
+            }
             val (busy, open) = rememberOpener(document.document, telegram) { path ->
                 when {
                     plugin -> onPlugin(path)
                     backup -> BackupViewer.path = path
-                    else -> openDocument(path)
+                    else -> scope.launch { openDocument(Downloads.export(path, name)) }
                 }
             }
             val image = PreviewExtensions.any { name.endsWith(it, ignoreCase = true) }
@@ -487,7 +496,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
                 onCancel = {
                     if (message.sending) telegram.cancelSending(message) else telegram.cancelDownload(document.document)
                 },
-                dragPath = telegram.localPath(document.document),
+                dragPath = saved ?: downloaded,
                 onClick = open,
             )
         }

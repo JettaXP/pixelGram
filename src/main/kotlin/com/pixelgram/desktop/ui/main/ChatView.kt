@@ -310,7 +310,9 @@ fun ChatView(
                     is TdApi.MessageVoiceNote -> content.voiceNote.voice
                     else -> message.fullPhoto ?: message.photo
                 }
-                telegram.localPath(file)
+                val path = telegram.localPath(file)
+                val name = (message.content as? TdApi.MessageDocument)?.document?.fileName
+                if (path != null && name != null) com.pixelgram.desktop.core.Downloads.exported(path, name) ?: path else path
             },
             onForward = { forwarding = it },
             onReact = { message, emoji -> telegram.toggleReaction(message, emoji) },
