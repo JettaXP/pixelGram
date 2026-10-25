@@ -137,6 +137,7 @@ class AppSettings private constructor(private val props: Properties) {
 
     val messageFont = string("messageFont", "")
     val messageFontSize = int("messageFontSize", 16)
+    val fontEverywhere = bool("fontEverywhere", true)
     val wallpaper = string("wallpaper", "")
     val wallpaperDim = int("wallpaperDim", 20)
     val wallpaperColors = bool("wallpaperColors", false)
@@ -161,7 +162,7 @@ class AppSettings private constructor(private val props: Properties) {
         doubleClickOwn, doubleClickOther, doubleClickEmoji,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
-        wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize,
+        wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,
         deviceName, israelLogo, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
         stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations,
         apiId, apiHash,

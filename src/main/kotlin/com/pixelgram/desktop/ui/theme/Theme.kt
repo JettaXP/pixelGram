@@ -70,16 +70,18 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     PowerSaving.settings = settings
     com.pixelgram.desktop.core.AudioDevices.settings = settings
     val corners = com.pixelgram.desktop.ui.components.cornerSpec(settings)
+    val font = messageFont(settings)
+    val typography = font.family?.takeIf { font.everywhere }?.let(::typographyWith) ?: PixelTypography
     MaterialExpressiveTheme(
         colorScheme = appColorScheme(settings),
         motionScheme = if (settings.interfaceAnimations.value) MotionScheme.expressive() else InstantMotion,
-        typography = PixelTypography,
+        typography = typography,
         shapes = com.pixelgram.desktop.ui.components.cornerShapes(corners),
     ) {
         CompositionLocalProvider(
             LocalUriHandler provides Links,
             com.pixelgram.desktop.ui.components.LocalCorners provides corners,
-            LocalMessageFont provides messageFont(settings),
+            LocalMessageFont provides font,
             content = content,
         )
     }

@@ -21,7 +21,12 @@ val GoogleSans: FontFamily by lazy {
     )
 }
 
-val PixelTypography: Typography by lazy {
+val PixelTypography: Typography by lazy { typographyWith(GoogleSans) }
+
+private val typographies = HashMap<FontFamily, Typography>()
+
+fun typographyWith(family: FontFamily): Typography = typographies.getOrPut(family) {
+    val GoogleSans = family
     val base = Typography()
     Typography(
         displayLarge = base.displayLarge.copy(fontFamily = GoogleSans, fontWeight = FontWeight.SemiBold),

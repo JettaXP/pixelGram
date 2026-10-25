@@ -570,6 +570,7 @@ private fun QuickTile(icon: ImageVector, label: String, active: Boolean, modifie
 }
 
 private val TileHeight = 64.dp
+private val DrawerBannerHeight = 120.dp
 private val TileCorner = 20.dp
 private val TileActiveCorner = 32.dp
 private val TilePressedCorner = 12.dp
@@ -635,6 +636,16 @@ private fun AccountHeader(
         contentColor = colors.onPrimaryContainer,
         modifier = Modifier.width(AccountsWidth).padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
     ) {
+      Box {
+        if (com.pixelgram.desktop.core.Banners.banner(me.id) != null) {
+            com.pixelgram.desktop.ui.profile.ProfileBanner(
+                me.id,
+                telegram,
+                DrawerBannerHeight,
+                RoundedCornerShape(topStart = com.pixelgram.desktop.ui.components.LocalCorners.current.cards, topEnd = com.pixelgram.desktop.ui.components.LocalCorners.current.cards),
+                colors.primaryContainer,
+            )
+        }
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Box(Modifier.clip(CircleShape).background(colors.surface.copy(alpha = 0.35f)).padding(4.dp)) {
@@ -664,6 +675,7 @@ private fun AccountHeader(
                 }
             }
         }
+      }
     }
 }
 

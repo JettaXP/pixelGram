@@ -13,7 +13,7 @@ import com.pixelgram.desktop.core.AppSettings
 import org.jetbrains.skia.FontMgr
 import java.io.File
 
-class MessageFont(val family: FontFamily?, val size: Int)
+class MessageFont(val family: FontFamily?, val size: Int, val everywhere: Boolean = false)
 
 val LocalMessageFont = compositionLocalOf { MessageFont(null, DefaultMessageSize) }
 
@@ -34,11 +34,31 @@ object MessageFonts {
             value.isBlank() -> null
             value.startsWith(FilePrefix) -> runCatching {
                 val file = File(value.removePrefix(FilePrefix))
-                FontFamily(Font(file, FontWeight.Normal))
+                val files = siblings(file)
+                FontFamily(files.map { Font(it, FontWeight(weightOf(it))) })
             }.getOrNull()
-            else -> FontFamily(SystemFont(value, FontWeight.Normal), SystemFont(value, FontWeight.Bold))
+            else -> FontFamily(AllWeights.map { SystemFont(value, it) })
         }
     }
+
+    fun siblings(file: File): List<File> {
+        val family = familyOf(file) ?: return listOf(file)
+        val others = file.parentFile?.listFiles()?.filter {
+            it != file && it.extension.lowercase() in FontExtensions && familyOf(it) == family
+        }.orEmpty()
+        return listOf(file) + others
+    }
+
+    private fun familyOf(file: File): String? = runCatching {
+        FontMgr.default.makeFromFile(file.absolutePath)!!.familyName
+    }.getOrNull()
+
+    private fun weightOf(file: File): Int = runCatching {
+        FontMgr.default.makeFromFile(file.absolutePath)!!.fontStyle.weight
+    }.getOrDefault(FontWeight.Normal.weight).coerceIn(1, 1000)
+
+    private val AllWeights = (1..9).map { FontWeight(it * 100) }
+    private val FontExtensions = setOf("ttf", "otf")
 
     fun label(value: String): String = when {
         value.isBlank() -> "Google Sans"
@@ -49,7 +69,7 @@ object MessageFonts {
     const val FilePrefix = "file:"
 }
 
-fun messageFont(settings: AppSettings) = MessageFont(MessageFonts.family(settings.messageFont.value), settings.messageFontSize.value)
+fun messageFont(settings: AppSettings) = MessageFont(MessageFonts.family(settings.messageFont.value), settings.messageFontSize.value, settings.fontEverywhere.value)
 
 @Composable
 fun messageTextStyle(): TextStyle {

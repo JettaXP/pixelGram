@@ -1214,9 +1214,11 @@ private fun MessageFontSettings(settings: AppSettings) {
                         type = io.github.vinceglb.filekit.dialogs.FileKitType.File(listOf("ttf", "otf")),
                     )?.file
                 }.getOrNull() ?: return@launch
-                val target = java.io.File(com.pixelgram.desktop.core.AppPaths.dataDir, "fonts").apply { mkdirs() }.resolve(file.name)
-                runCatching { file.copyTo(target, overwrite = true) }.onSuccess {
-                    settings.messageFont.value = com.pixelgram.desktop.ui.theme.MessageFonts.FilePrefix + target.absolutePath
+                val dir = java.io.File(com.pixelgram.desktop.core.AppPaths.dataDir, "fonts/${file.nameWithoutExtension}").apply { mkdirs() }
+                runCatching {
+                    com.pixelgram.desktop.ui.theme.MessageFonts.siblings(file).forEach { it.copyTo(dir.resolve(it.name), overwrite = true) }
+                }.onSuccess {
+                    settings.messageFont.value = com.pixelgram.desktop.ui.theme.MessageFonts.FilePrefix + dir.resolve(file.name).absolutePath
                 }
             }
         }) { Text("From file") }
@@ -1224,6 +1226,14 @@ private fun MessageFontSettings(settings: AppSettings) {
             TextButton(onClick = { settings.messageFont.value = "" }) { Text("Default") }
         }
     }
+    SwitchRow(
+        index = 0,
+        count = 1,
+        title = "Use this font everywhere",
+        subtitle = "Menus, titles, settings and the chat list use it too, not only messages.",
+        checked = settings.fontEverywhere.value,
+        onChange = { settings.fontEverywhere.value = it },
+    )
     Text("Size", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
         Slider(
