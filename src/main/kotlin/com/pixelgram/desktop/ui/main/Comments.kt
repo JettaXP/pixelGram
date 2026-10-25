@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.itemMotion
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,11 +19,11 @@ import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
 import com.pixelgram.desktop.ui.icons.automirrored.filled.KeyboardArrowRight
 import com.pixelgram.desktop.ui.icons.automirrored.filled.Send
 import com.pixelgram.desktop.ui.icons.outlined.ChatBubbleOutline
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilledIconButton
+import com.pixelgram.desktop.ui.components.expressive.Button
+import com.pixelgram.desktop.ui.components.expressive.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -132,6 +133,7 @@ fun CommentsView(post: UiMessage, telegram: Telegram, settings: AppSettings, onB
                         }
                         items(telegram.threadMessages, key = { it.key }) { message ->
                             MessageBubble(
+                                modifier = itemMotion(),
                                 message = message,
                                 senderName = if (message.isOutgoing) null else telegram.senderName(message),
                                 settings = settings,

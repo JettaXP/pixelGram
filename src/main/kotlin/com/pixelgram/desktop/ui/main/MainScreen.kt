@@ -66,7 +66,7 @@ import com.pixelgram.desktop.ui.icons.outlined.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationItemIconPosition

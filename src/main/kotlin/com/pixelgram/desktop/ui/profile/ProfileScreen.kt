@@ -22,14 +22,14 @@ import com.pixelgram.desktop.ui.icons.outlined.Numbers
 import com.pixelgram.desktop.ui.icons.outlined.Person
 import com.pixelgram.desktop.ui.icons.outlined.Phone
 import com.pixelgram.desktop.ui.icons.outlined.PhotoLibrary
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilledTonalButton
+import com.pixelgram.desktop.ui.components.expressive.AlertDialog
+import com.pixelgram.desktop.ui.components.expressive.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.pixelgram.desktop.ui.components.expressive.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -293,6 +293,5 @@ private fun EditDialog(
             ) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        shape = MaterialTheme.shapes.extraLarge,
     )
 }

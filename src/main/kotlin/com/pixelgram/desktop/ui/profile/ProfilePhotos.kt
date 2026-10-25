@@ -1,6 +1,6 @@
 package com.pixelgram.desktop.ui.profile
 
-import androidx.compose.material3.AlertDialog
+import com.pixelgram.desktop.ui.components.expressive.AlertDialog
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -20,15 +20,15 @@ import com.pixelgram.desktop.ui.icons.automirrored.rounded.KeyboardArrowLeft
 import com.pixelgram.desktop.ui.icons.automirrored.rounded.KeyboardArrowRight
 import com.pixelgram.desktop.ui.icons.outlined.Delete
 import com.pixelgram.desktop.ui.icons.outlined.Star
-import androidx.compose.material3.BasicAlertDialog
+import com.pixelgram.desktop.ui.components.expressive.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
+import com.pixelgram.desktop.ui.components.expressive.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue

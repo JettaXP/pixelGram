@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.itemMotion
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -44,11 +45,11 @@ import com.pixelgram.desktop.ui.icons.rounded.Close
 import com.pixelgram.desktop.ui.icons.rounded.Description
 import com.pixelgram.desktop.ui.icons.rounded.Link
 import com.pixelgram.desktop.ui.icons.rounded.PlayArrow
-import androidx.compose.material3.BasicAlertDialog
+import com.pixelgram.desktop.ui.components.expressive.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -195,7 +196,7 @@ private fun MediaGrid(items: List<UiMessage>, tab: MediaTab, telegram: Telegram,
     ) {
         months.forEach { (month, list) ->
             item(key = "m$month", span = { GridItemSpan(maxLineSpan) }) { MonthHeader(month) }
-            items(list, key = { it.id }) { message -> MediaCell(message, tab, telegram) }
+            items(list, key = { it.id }) { message -> Box(itemMotion()) { MediaCell(message, tab, telegram) } }
         }
     }
 }
@@ -412,8 +413,8 @@ fun SavedMessagesDialog(chat: com.pixelgram.desktop.telegram.ChatState, telegram
                     Box(Modifier.weight(1f)) {
                         if (selected == 0) {
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxSize()) {
-                                itemsIndexed(topics) { index, item ->
-                                    SavedTopicRow(item, telegram, settings, groupShape(index, topics.size)) { topic = item }
+                                itemsIndexed(topics, key = { _, item -> item.id }) { index, item ->
+                                    Box(itemMotion()) { SavedTopicRow(item, telegram, settings, groupShape(index, topics.size)) { topic = item } }
                                 }
                             }
                         } else {
@@ -511,7 +512,7 @@ private fun SavedTopicView(chat: com.pixelgram.desktop.telegram.ChatState, topic
                 modifier = Modifier.fillMaxSize(),
             ) {
                 items(messages, key = { it.id }) { message ->
-                    MessageBubble(message, null, settings, telegram = telegram)
+                    MessageBubble(message, null, settings, modifier = itemMotion(), telegram = telegram)
                 }
             }
         }

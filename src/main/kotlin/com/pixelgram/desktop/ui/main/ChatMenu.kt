@@ -62,8 +62,8 @@ import com.pixelgram.desktop.ui.icons.outlined.NotificationsOff
 import com.pixelgram.desktop.ui.icons.outlined.PushPin
 import com.pixelgram.desktop.ui.icons.outlined.Search
 import com.pixelgram.desktop.ui.icons.outlined.Unarchive
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BasicAlertDialog
+import com.pixelgram.desktop.ui.components.expressive.AlertDialog
+import com.pixelgram.desktop.ui.components.expressive.BasicAlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -72,7 +72,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue

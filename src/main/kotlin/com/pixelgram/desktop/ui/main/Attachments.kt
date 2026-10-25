@@ -30,9 +30,9 @@ import com.pixelgram.desktop.ui.icons.filled.Close
 import com.pixelgram.desktop.ui.icons.outlined.Add
 import com.pixelgram.desktop.ui.icons.outlined.Description
 import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.FilledTonalIconButton
+import com.pixelgram.desktop.ui.components.expressive.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard

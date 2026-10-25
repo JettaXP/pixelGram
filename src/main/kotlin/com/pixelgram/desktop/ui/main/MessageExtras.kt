@@ -31,7 +31,7 @@ import com.pixelgram.desktop.ui.icons.filled.KeyboardArrowDown
 import com.pixelgram.desktop.ui.icons.filled.KeyboardArrowUp
 import com.pixelgram.desktop.ui.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -250,7 +250,7 @@ object TopNotice {
 fun BotAnswer(answer: Pair<String, Boolean>?, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val (text, alert) = answer ?: (null to false)
     if (text != null && alert) {
-        androidx.compose.material3.AlertDialog(
+        com.pixelgram.desktop.ui.components.expressive.AlertDialog(
             onDismissRequest = onDismiss,
             text = { EmojiText(text) },
             confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("OK") } },

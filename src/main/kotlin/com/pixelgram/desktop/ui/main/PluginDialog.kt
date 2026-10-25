@@ -11,11 +11,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.filled.Extension
 import com.pixelgram.desktop.ui.icons.outlined.FolderOpen
-import androidx.compose.material3.BasicAlertDialog
+import com.pixelgram.desktop.ui.components.expressive.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
+import com.pixelgram.desktop.ui.components.expressive.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text

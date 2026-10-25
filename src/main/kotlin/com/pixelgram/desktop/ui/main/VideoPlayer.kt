@@ -28,10 +28,10 @@ import com.pixelgram.desktop.ui.icons.rounded.Close
 import com.pixelgram.desktop.ui.icons.rounded.Pause
 import com.pixelgram.desktop.ui.icons.rounded.PlayArrow
 import com.pixelgram.desktop.ui.icons.rounded.Replay
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalIconButton
+import com.pixelgram.desktop.ui.components.expressive.FilledIconButton
+import com.pixelgram.desktop.ui.components.expressive.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme

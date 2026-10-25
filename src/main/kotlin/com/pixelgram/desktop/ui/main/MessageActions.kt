@@ -42,7 +42,7 @@ import com.pixelgram.desktop.ui.icons.automirrored.outlined.Reply
 import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
 import com.pixelgram.desktop.ui.icons.outlined.Delete
 import com.pixelgram.desktop.ui.icons.outlined.Edit
-import androidx.compose.material3.AlertDialog
+import com.pixelgram.desktop.ui.components.expressive.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -51,7 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf

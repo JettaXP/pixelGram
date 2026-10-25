@@ -7,7 +7,7 @@ import com.pixelgram.desktop.ui.icons.outlined.Description
 import com.pixelgram.desktop.ui.icons.outlined.Language
 import com.pixelgram.desktop.ui.icons.outlined.PermMedia
 import com.pixelgram.desktop.ui.icons.outlined.Storage
-import androidx.compose.material3.Button
+import com.pixelgram.desktop.ui.components.expressive.Button
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text

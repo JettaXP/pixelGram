@@ -5,7 +5,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.expandHorizontally
 import com.pixelgram.desktop.ui.icons.outlined.KeyboardHide
 import com.pixelgram.desktop.ui.icons.outlined.Keyboard
-import androidx.compose.material3.FilledTonalButton
+import com.pixelgram.desktop.ui.components.expressive.FilledTonalButton
 import com.pixelgram.desktop.telegram.BotCommandItem
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.core.AvatarKind
@@ -93,9 +93,9 @@ import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.automirrored.filled.Send
 import com.pixelgram.desktop.ui.icons.outlined.AttachFile
 import com.pixelgram.desktop.ui.icons.outlined.EmojiEmotions
-import androidx.compose.material3.FilledIconButton
+import com.pixelgram.desktop.ui.components.expressive.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
@@ -163,9 +163,9 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.material3.TextButton
+import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.AlertDialog
+import com.pixelgram.desktop.ui.components.expressive.AlertDialog
 import com.pixelgram.desktop.core.PowerSaving
 import com.pixelgram.desktop.ui.components.OfficialBadge
 import androidx.compose.ui.input.pointer.isPrimaryPressed
@@ -769,7 +769,24 @@ fun ChatView(
                 modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp),
             )
         }
-        if (selecting) {
+        val barMode = when {
+            selecting -> BarMode.Select
+            telegram.isBlocked(chat) -> BarMode.Blocked
+            telegram.isLeft(chat) -> BarMode.Join
+            !telegram.canPost(chat) -> BarMode.Mute
+            else -> BarMode.Compose
+        }
+        val barFadeIn = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+        val barSlide = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+        val barFadeOut = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+        AnimatedContent(
+            targetState = barMode,
+            transitionSpec = {
+                (fadeIn(barFadeIn) + slideInVertically(barSlide) { it / 2 }) togetherWith
+                    fadeOut(barFadeOut) using SizeTransform(clip = false)
+            },
+        ) { mode ->
+        if (mode == BarMode.Select) {
             SelectionBar(
                 count = selected.size,
                 onForward = { forwardingSelected = true },
@@ -777,15 +794,15 @@ fun ChatView(
                 onShot = { shot = true },
                 onCancel = { selected.clear() },
             )
-        } else if (telegram.isBlocked(chat)) {
+        } else if (mode == BarMode.Blocked) {
             ComposerBar("UNBLOCK", accent = true) { telegram.unblock(chat) }
-        } else if (telegram.isLeft(chat)) {
+        } else if (mode == BarMode.Join) {
             var joining by remember(chat.id) { mutableStateOf(false) }
             ComposerBar(if (chat.isChannel) "JOIN CHANNEL" else "JOIN GROUP", accent = true, enabled = !joining) {
                 joining = true
                 telegram.joinChat(chat.id) { joining = false }
             }
-        } else if (!telegram.canPost(chat)) {
+        } else if (mode == BarMode.Mute) {
             val muted = telegram.isMuted(chat)
             ComposerBar(if (muted) "UNMUTE" else "MUTE") { telegram.setMuted(chat, !muted) }
         } else Composer(
@@ -837,6 +854,7 @@ fun ChatView(
                 }
             },
         )
+        }
     }
     AnimatedVisibility(
         visible = commentsFor != null,
@@ -850,6 +868,8 @@ fun ChatView(
     }
     }
 }
+
+private enum class BarMode { Select, Blocked, Join, Mute, Compose }
 
 @Composable
 private fun ComposerBar(label: String, accent: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {

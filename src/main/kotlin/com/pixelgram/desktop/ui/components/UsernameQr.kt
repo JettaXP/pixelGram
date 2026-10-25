@@ -5,12 +5,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.outlined.QrCode
-import androidx.compose.material3.AlertDialog
+import com.pixelgram.desktop.ui.components.expressive.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf

@@ -52,7 +52,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.filled.Close
-import androidx.compose.material3.FilledTonalIconButton
+import com.pixelgram.desktop.ui.components.expressive.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme

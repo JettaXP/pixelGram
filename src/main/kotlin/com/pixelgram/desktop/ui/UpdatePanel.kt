@@ -7,14 +7,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.outlined.SystemUpdate
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import com.pixelgram.desktop.ui.components.expressive.AlertDialog
+import com.pixelgram.desktop.ui.components.expressive.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.pixelgram.desktop.ui.components.expressive.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -85,6 +85,5 @@ fun UpdateDialog(onBeforeExit: () -> Unit, onDismiss: () -> Unit) {
         text = { UpdatePanel(onBeforeExit, showActions = false) },
         confirmButton = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { UpdateActions(onBeforeExit) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
-        shape = MaterialTheme.shapes.extraLarge,
     )
 }

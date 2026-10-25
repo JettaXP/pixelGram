@@ -428,7 +428,7 @@ private fun ScheduleDialog(onDismiss: () -> Unit, onPick: (Int) -> Unit) {
             dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") } },
         ) { androidx.compose.material3.DatePicker(dateState) }
     } else {
-        androidx.compose.material3.AlertDialog(
+        com.pixelgram.desktop.ui.components.expressive.AlertDialog(
             onDismissRequest = onDismiss,
             title = { Text("Send at") },
             text = { androidx.compose.material3.TimePicker(timeState) },

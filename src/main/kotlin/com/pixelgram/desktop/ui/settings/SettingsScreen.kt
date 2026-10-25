@@ -2,7 +2,7 @@ package com.pixelgram.desktop.ui.settings
 
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.BasicAlertDialog
+import com.pixelgram.desktop.ui.components.expressive.BasicAlertDialog
 import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.UpdatePanel
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
@@ -93,18 +93,18 @@ import com.pixelgram.desktop.ui.icons.outlined.QrCode
 import com.pixelgram.desktop.ui.icons.outlined.Search
 import com.pixelgram.desktop.ui.icons.outlined.Translate
 import com.pixelgram.desktop.ui.icons.outlined.Tune
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import com.pixelgram.desktop.ui.components.expressive.AlertDialog
+import com.pixelgram.desktop.ui.components.expressive.Button
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.pixelgram.desktop.ui.components.expressive.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Slider
@@ -112,7 +112,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect

@@ -1,7 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.itemMotion
 import com.pixelgram.desktop.ui.components.groupShapes
-import androidx.compose.material3.FilledTonalIconButton
+import com.pixelgram.desktop.ui.components.expressive.FilledTonalIconButton
 import com.pixelgram.desktop.ui.icons.outlined.SystemUpdate
 import com.pixelgram.desktop.ui.UpdateDialog
 import com.pixelgram.desktop.core.UpdateState
@@ -59,7 +60,7 @@ import com.pixelgram.desktop.ui.icons.filled.Menu
 import com.pixelgram.desktop.ui.icons.outlined.Archive
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
@@ -234,7 +235,7 @@ private fun ChatListBody(
                     item(key = "archive-gap") { Spacer(Modifier.height(GroupGap)) }
                 }
                 itemsIndexed(pinned, key = { _, chat -> chat.id }) { index, chat ->
-                    ChatRow(chat, index, pinned.size, chat.id == selectedChatId, telegram, settings, key) {
+                    ChatRow(chat, index, pinned.size, chat.id == selectedChatId, telegram, settings, key, itemMotion()) {
                         onOpen(chat.id)
                     }
                 }
@@ -242,7 +243,7 @@ private fun ChatListBody(
                     item(key = "pinned-gap") { Spacer(Modifier.height(GroupGap)) }
                 }
                 itemsIndexed(rest, key = { _, chat -> chat.id }) { index, chat ->
-                    ChatRow(chat, index, rest.size, chat.id == selectedChatId, telegram, settings, key) {
+                    ChatRow(chat, index, rest.size, chat.id == selectedChatId, telegram, settings, key, itemMotion()) {
                         onOpen(chat.id)
                     }
                 }
@@ -333,7 +334,7 @@ private fun CompactChatList(
             }
             items(chatsFor(listKey), key = { it.id }) { chat ->
                 Box(
-                    Modifier
+                    itemMotion()
                         .size(CompactItemSize)
                         .clip(MaterialTheme.shapes.large)
                         .background(if (chat.id == selectedChatId) colors.secondaryContainer else Color.Transparent)
@@ -367,6 +368,7 @@ private fun ChatRow(
     telegram: Telegram,
     settings: AppSettings,
     listKey: ChatListKey,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -374,7 +376,7 @@ private fun ChatRow(
     var menuAt by remember { mutableStateOf<DpOffset?>(null) }
     val density = LocalDensity.current
     Box(
-        Modifier.pointerInput(chat.id) {
+        modifier.pointerInput(chat.id) {
             awaitPointerEventScope {
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
