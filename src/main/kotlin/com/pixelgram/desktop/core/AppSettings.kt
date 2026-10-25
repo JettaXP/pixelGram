@@ -7,7 +7,7 @@ import java.util.Properties
 
 enum class ThemeMode { System, Light, Dark }
 
-enum class EmojiStyle { Noto, Noto3D }
+enum class EmojiStyle { Noto, Noto3D, Apple }
 
 enum class ToastSide { Left, Right, Top, Bottom }
 

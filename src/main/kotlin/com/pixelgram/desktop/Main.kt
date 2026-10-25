@@ -139,7 +139,7 @@ fun main(args: Array<String>) {
 @Composable
 private fun ApplicationScope.PixelApp() {
     val settings = remember {
-        Emoji3D.removeOldFont()
+        com.pixelgram.desktop.ui.theme.removeOldEmojiFont()
         Attachments.cleanTemp()
         runCatching { FileKit.init("com.pixelgram.desktop") }
         Sounds.warmUp()

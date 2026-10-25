@@ -808,14 +808,15 @@ private fun AppearanceSection(settings: AppSettings) {
 @Composable
 private fun EmojiStyleChoice(settings: AppSettings) {
     ConnectedChoice(
-        options = listOf(EmojiStyle.Noto to "Noto", EmojiStyle.Noto3D to "Noto 3D"),
+        options = listOf(EmojiStyle.Noto to "Noto", EmojiStyle.Noto3D to "Noto 3D", EmojiStyle.Apple to "Apple"),
         selected = settings.emojiStyle.value,
         onSelect = { settings.emojiStyle.value = it },
     )
     EmojiText("😀 😍 🥳 🫠 🤔 👍 🎉 ❤️ 🔥 🐱 🍕 🚀", fontSize = 30.sp, modifier = Modifier.padding(vertical = 4.dp))
     Description(
         "Noto is Google's latest emoji set and is built in. Noto 3D is the new style " +
-            "from Android 17: each emoji is loaded from Google the first time it is shown."
+            "from Android 17: each emoji is loaded from Google the first time it is shown. " +
+            "Apple is the iOS set (Emoji 16), loaded the same way."
     )
 }
 

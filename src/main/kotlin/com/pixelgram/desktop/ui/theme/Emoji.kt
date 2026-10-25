@@ -55,40 +55,38 @@ internal val FlatEmoji: FontFamily by lazy {
     FontFamily(listOfNotNull(fontBytes("NotoColorEmoji")?.let { Font("NotoColorEmoji", it) }))
 }
 
-object Emoji3D {
-    private const val BaseUrl = "https://raw.githubusercontent.com/googlefonts/noto-emoji/main/3D/png/128/"
-    private const val MaxDownloads = 6
-
-    private val dir: File get() = File(AppPaths.dataDir, "emoji/3d")
+class ImageEmoji(
+    private val folder: String,
+    private val label: String,
+    private val names: (IntArray) -> List<String>,
+    private val url: (String) -> String,
+) {
+    private val dir: File get() = File(AppPaths.dataDir, "emoji/$folder")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val gate = Semaphore(MaxDownloads)
     private val pending = ConcurrentHashMap<String, Deferred<File?>>()
     private val missing: MutableSet<String> = ConcurrentHashMap.newKeySet()
-
-    private fun fileName(emoji: String): String = "emoji_u" + emoji.codePoints()
-        .filter { it != VariationSelector }
-        .toArray()
-        .joinToString("_") { "%04x".format(it) } + ".png"
-
     private val onDisk = ConcurrentHashMap<String, File>()
 
-    fun cached(emoji: String): File? = onDisk[emoji] ?: File(dir, fileName(emoji)).takeIf { it.isFile }?.also {
-        onDisk[emoji] = it
-    }
+    private fun candidates(emoji: String) = names(emoji.codePoints().toArray())
+
+    fun cached(emoji: String): File? = onDisk[emoji] ?: candidates(emoji).firstNotNullOfOrNull { name ->
+        File(dir, name).takeIf { it.isFile }
+    }?.also { onDisk[emoji] = it }
 
     suspend fun file(emoji: String): File? {
         cached(emoji)?.let { return it }
-        val name = fileName(emoji)
-        if (name in missing) return null
-        return pending.getOrPut(name) {
+        val first = candidates(emoji).firstOrNull() ?: return null
+        return pending.getOrPut(first) {
             scope.async {
-                gate.withPermit { download(name) }.also { pending.remove(name) }
+                gate.withPermit { candidates(emoji).firstNotNullOfOrNull { name -> if (name in missing) null else download(name) } }
+                    .also { pending.remove(first) }
             }
-        }.await()
+        }.await()?.also { onDisk[emoji] = it }
     }
 
     private fun download(name: String): File? = try {
-        val connection = URI(BaseUrl + name).toURL().openConnection() as HttpURLConnection
+        val connection = URI(url(name)).toURL().openConnection() as HttpURLConnection
         if (connection.responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
             missing += name
             null
@@ -100,19 +98,46 @@ object Emoji3D {
             if (part.renameTo(target)) target else null
         }
     } catch (e: Exception) {
-        AppLog.write("Noto 3D emoji $name failed to download", e)
+        AppLog.write("$label emoji $name failed to download", e)
         null
     }
 
-    fun removeOldFont() {
-        File(AppPaths.dataDir, "emoji/Noto-3D.ttf").delete()
+    private companion object {
+        const val MaxDownloads = 6
     }
+}
+
+val Emoji3D = ImageEmoji(
+    folder = "3d",
+    label = "Noto 3D",
+    names = { points -> listOf("emoji_u" + points.filter { it != VariationSelector }.joinToString("_") { "%04x".format(it) } + ".png") },
+    url = { name -> "https://raw.githubusercontent.com/googlefonts/noto-emoji/main/3D/png/128/$name" },
+)
+
+val AppleEmoji = ImageEmoji(
+    folder = "apple-$AppleEmojiVersion",
+    label = "Apple",
+    names = { points ->
+        val exact = points.joinToString("-") { "%x".format(it) }
+        val bare = points.filter { it != VariationSelector }.joinToString("-") { "%x".format(it) }
+        val qualified = if (points.size == 1) "$bare-fe0f" else exact
+        listOf(exact, qualified, bare).distinct().map { "$it.png" }
+    },
+    url = { name -> "https://cdn.jsdelivr.net/npm/emoji-datasource-apple@$AppleEmojiVersion/img/apple/64/$name" },
+)
+
+private const val AppleEmojiVersion = "16.0.0"
+
+fun removeOldEmojiFont() {
+    File(AppPaths.dataDir, "emoji/Noto-3D.ttf").delete()
 }
 
 object EmojiFonts {
     var settings: AppSettings? = null
 
-    val use3D: Boolean get() = settings?.emojiStyle?.value == EmojiStyle.Noto3D
+    val use3D: Boolean get() = settings?.emojiStyle?.value.let { it == EmojiStyle.Noto3D || it == EmojiStyle.Apple }
+
+    val images: ImageEmoji get() = if (settings?.emojiStyle?.value == EmojiStyle.Apple) AppleEmoji else Emoji3D
 
     val flat: FontFamily get() = FlatEmoji
 }
@@ -294,8 +319,9 @@ private val EmojiSize = 1.2.em
 
 @Composable
 private fun Emoji3DImage(emoji: String) = key(emoji) {
-    val file by produceState(Emoji3D.cached(emoji), emoji) {
-        if (value == null) value = Emoji3D.file(emoji)
+    val source = EmojiFonts.images
+    val file by produceState(source.cached(emoji), emoji, source) {
+        if (value == null) value = source.file(emoji)
     }
     val image by produceState<ImageBitmap?>(null, file) {
         file?.let { loadImage(it.absolutePath) }?.let { value = it }
