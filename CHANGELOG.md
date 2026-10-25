@@ -16,6 +16,12 @@
 - The menu next to search has Edit profile and Log out.
 - Advanced has the window title options (chat name, account, unread count, system frame) and system integration: tray icon, monochrome tray icon, launch at login and launch minimized.
 
+### More
+- Slide up while recording a voice message to lock it, the button turns into Send, and the cancel hint stops where releasing cancels.
+- Verified badge for verified people and channels, channel profiles show their link, every username and the description.
+- Always big reactions in Chat Settings.
+- A menorah badge, and the pixelGram channel got its own banner.
+
 ### Fixes
 - Badges no longer shift when you click them.
 - Slider thumbs stay in place when you grab them.
