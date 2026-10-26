@@ -234,6 +234,7 @@ class Telegram(
     val chats = mutableStateMapOf<Long, ChatState>()
     val users = mutableStateMapOf<Long, TdApi.User>()
     val unread = mutableStateMapOf<ChatListKey, UnreadCount>()
+    val unreadMessages = mutableStateMapOf<ChatListKey, UnreadCount>()
     val statuses = mutableStateMapOf<Long, TdApi.UserStatus>()
     private val chatActions = mutableStateMapOf<Long, List<Pair<TdApi.MessageSender, TdApi.ChatAction>>>()
     val emojiClicks = mutableStateMapOf<Pair<Long, Long>, TdApi.Sticker>()
@@ -936,6 +937,10 @@ class Telegram(
             is TdApi.UpdateUnreadChatCount -> ChatListKey.of(update.chatList)?.let { key ->
                 unread[key] = UnreadCount(update.unreadCount, update.unreadUnmutedCount)
             }
+            is TdApi.UpdateUnreadMessageCount -> ChatListKey.of(update.chatList)?.let { key ->
+                unreadMessages[key] = UnreadCount(update.unreadCount, update.unreadUnmutedCount)
+            }
+            is TdApi.UpdateReactionNotificationSettings -> reactionNotifications = update.notificationSettings
             is TdApi.UpdateChatReadOutbox -> chats[update.chatId]?.lastReadOutbox = update.lastReadOutboxMessageId
             is TdApi.UpdateMessageSendFailed -> messages[update.message.chatId]?.let { list ->
                 val index = list.indexOfFirst { it.id == update.oldMessageId }
@@ -987,7 +992,6 @@ class Telegram(
                     markRead(update.message.chatId, listOf(update.message.id))
                 }
                 if (shouldNotify(update.message)) {
-                    Sounds.newMessage()
                     Notifications.onMessage?.invoke(this, update.message)
                 }
             }
@@ -1206,7 +1210,9 @@ class Telegram(
     fun messages(chatId: Long): SnapshotStateList<UiMessage> =
         messages.getOrPut(chatId) { mutableStateListOf() }
 
-    private val scopeNotifications = mutableMapOf<Class<*>, TdApi.ScopeNotificationSettings>()
+    private val scopeNotifications = mutableStateMapOf<Class<*>, TdApi.ScopeNotificationSettings>()
+    var reactionNotifications by mutableStateOf<TdApi.ReactionNotificationSettings?>(null)
+        private set
     private var openChatId = 0L
 
     var windowFocused = true
@@ -1222,10 +1228,74 @@ class Telegram(
     }
 
     private fun shouldNotify(message: TdApi.Message): Boolean {
-        if (message.isOutgoing || !settings.notificationSound.value || settings.notificationsMuted.value) return false
+        if (message.isOutgoing || settings.notificationsMuted.value) return false
         if (message.chatId == openChatId && windowFocused) return false
         val chat = chats[message.chatId] ?: return false
+        if (message.content is TdApi.MessageContactRegistered && contactJoinedMuted) return false
+        if (message.content is TdApi.MessagePinMessage && scopeSettings(scopeOf(chat))?.disablePinnedMessageNotifications == true) return false
         return !isMuted(chat)
+    }
+
+    fun scopeOf(chat: ChatState): TdApi.NotificationSettingsScope = when {
+        chat.privateUserId != 0L -> TdApi.NotificationSettingsScopePrivateChats()
+        chat.isChannel -> TdApi.NotificationSettingsScopeChannelChats()
+        else -> TdApi.NotificationSettingsScopeGroupChats()
+    }
+
+    fun scopeSettings(scope: TdApi.NotificationSettingsScope): TdApi.ScopeNotificationSettings? = scopeNotifications[scope.javaClass]
+
+    fun setScopeMuted(scope: TdApi.NotificationSettingsScope, muted: Boolean) =
+        updateScope(scope) { muteFor = if (muted) MuteForever else 0 }
+
+    fun setPinnedNotifications(enabled: Boolean) = listOf(
+        TdApi.NotificationSettingsScopePrivateChats(),
+        TdApi.NotificationSettingsScopeGroupChats(),
+        TdApi.NotificationSettingsScopeChannelChats(),
+    ).forEach { scope -> updateScope(scope) { disablePinnedMessageNotifications = !enabled } }
+
+    private fun updateScope(scope: TdApi.NotificationSettingsScope, change: TdApi.ScopeNotificationSettings.() -> Unit) {
+        val current = scopeNotifications[scope.javaClass] ?: TdApi.ScopeNotificationSettings().apply {
+            showPreview = true
+            useDefaultMuteStories = true
+            showStoryPoster = true
+        }
+        val next = TdApi.ScopeNotificationSettings(
+            current.muteFor, current.soundId, current.showPreview, current.useDefaultMuteStories, current.muteStories,
+            current.storySoundId, current.showStoryPoster, current.disablePinnedMessageNotifications, current.disableMentionNotifications,
+        ).apply(change)
+        scopeNotifications[scope.javaClass] = next
+        send(TdApi.SetScopeNotificationSettings(scope, next)) { result ->
+            if (result is TdApi.Error) AppLog.write("Scope notifications failed ${result.code}: ${result.message}")
+        }
+    }
+
+    fun notificationExceptions(scope: TdApi.NotificationSettingsScope, onResult: (Int) -> Unit) {
+        send(TdApi.GetChatNotificationSettingsExceptions(scope, false)) { result -> onResult((result as? TdApi.Chats)?.totalCount ?: 0) }
+    }
+
+    var contactJoinedMuted by mutableStateOf(false)
+        private set
+
+    fun loadContactJoined() {
+        send(TdApi.GetOption("disable_contact_registered_notifications")) { result ->
+            contactJoinedMuted = (result as? TdApi.OptionValueBoolean)?.value == true
+        }
+    }
+
+    fun setContactJoined(enabled: Boolean) {
+        contactJoinedMuted = !enabled
+        send(TdApi.SetOption("disable_contact_registered_notifications", TdApi.OptionValueBoolean(!enabled)))
+    }
+
+    fun setReactionNotifications(enabled: Boolean) {
+        val current = reactionNotifications ?: TdApi.ReactionNotificationSettings().apply {
+            storyReactionSource = TdApi.ReactionNotificationSourceContacts()
+            showPreview = true
+        }
+        val source = if (enabled) TdApi.ReactionNotificationSourceAll() else TdApi.ReactionNotificationSourceNone()
+        val next = TdApi.ReactionNotificationSettings(source, current.storyReactionSource, source, current.soundId, current.showPreview)
+        reactionNotifications = next
+        send(TdApi.SetReactionNotificationSettings(next))
     }
 
     private val muteOverrides = mutableStateMapOf<Long, Boolean>()

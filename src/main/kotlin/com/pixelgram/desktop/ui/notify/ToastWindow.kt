@@ -47,41 +47,53 @@ fun testToast(telegram: Telegram) = ToastData(
     appIcon = true,
 )
 
-private fun positionFor(side: ToastSide): WindowPosition {
-    val config = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
+fun notificationScreens(): List<Pair<String, String>> =
+    GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.mapIndexed { index, device ->
+        val bounds = device.defaultConfiguration.bounds
+        val mode = device.displayMode
+        device.iDstring to "Display ${index + 1} (${mode?.width ?: bounds.width}×${mode?.height ?: bounds.height})"
+    }
+
+private fun positionFor(side: ToastSide, screen: String, height: Int): WindowPosition {
+    val environment = GraphicsEnvironment.getLocalGraphicsEnvironment()
+    val device = environment.screenDevices.firstOrNull { it.iDstring == screen } ?: environment.defaultScreenDevice
+    val config = device.defaultConfiguration
     val bounds = config.bounds
     val insets = Toolkit.getDefaultToolkit().getScreenInsets(config)
     val left = bounds.x + insets.left
     val top = bounds.y + insets.top
     val width = bounds.width - insets.left - insets.right
-    val height = bounds.height - insets.top - insets.bottom
+    val area = bounds.height - insets.top - insets.bottom
     val w = ToastWindowWidth.value.toInt()
-    val h = ToastWindowHeight.value.toInt()
-    val (x, y) = when (side) {
-        ToastSide.Left -> left to top + height - h
-        ToastSide.Right -> left + width - w to top + height - h
-        ToastSide.Top -> left + (width - w) / 2 to top
-        ToastSide.Bottom -> left + (width - w) / 2 to top + height - h
+    val x = when (side.column) {
+        0 -> left
+        2 -> left + width - w
+        else -> left + (width - w) / 2
     }
+    val y = if (side.top) top else top + area - height
     return WindowPosition(x.dp, y.dp)
 }
 
 @Composable
 fun ToastWindow(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) -> Unit) {
     val side = settings.notificationSide.value
+    val screen = settings.notificationScreen.value
+    val count = settings.notificationCount.value.coerceIn(1, MaxCount)
+    stack.max = count
+    val height = toastWindowHeight(count)
     var warm by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         delay(WarmUpMs)
         warm = false
     }
     val showing = stack.entries.isNotEmpty()
-    key(side) {
+    key(side, screen, count) {
         val state = rememberDialogState(
             position = OffScreen,
-            size = DpSize(ToastWindowWidth, ToastWindowHeight),
+            size = DpSize(ToastWindowWidth, height),
         )
         LaunchedEffect(showing) {
-            state.position = if (showing) positionFor(side) else OffScreen
+            state.position = if (showing) positionFor(side, screen, height.value.toInt()) else OffScreen
         }
         DialogWindow(
             onCloseRequest = stack::dismissAll,
@@ -103,3 +115,4 @@ fun ToastWindow(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) ->
 
 private val OffScreen = WindowPosition((-10000).dp, (-10000).dp)
 private const val WarmUpMs = 1500L
+const val MaxCount = 5

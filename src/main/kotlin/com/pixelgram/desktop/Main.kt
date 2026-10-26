@@ -231,15 +231,20 @@ private fun ApplicationScope.PixelApp() {
             raise++
         }
         Notifications.onMessage = { telegram, message ->
-            val card = (if (settings.notificationPopups.value) toastFor(telegram, message) else null)
-                ?.let { if (AppLock.locked) it.copy(text = "") else it }
+            val allowed = (settings.notifyAllAccounts.value || telegram == accounts.active) &&
+                !(settings.respectFocus.value && com.pixelgram.desktop.core.FocusMode.supported && com.pixelgram.desktop.core.FocusMode.active())
+            if (allowed && settings.notificationSound.value) com.pixelgram.desktop.core.Sounds.newMessage(settings.notificationVolume.value)
+            if (allowed && settings.flashTaskbar.value) Notifications.flash()
+            val card = (if (allowed && settings.notificationPopups.value) toastFor(telegram, message) else null)
+                ?.let { if (AppLock.locked || !settings.notifyShowText.value) it.copy(text = "") else it }
+                ?.let { if (settings.notifyShowName.value) it else it.copy(title = "pixelGram", sender = null, appIcon = true) }
             when {
                 card == null -> Unit
                 settings.notificationStyle.value == NotificationStyle.System && SystemNotifications.available ->
                     SystemNotifications.show(
                         title = card.sender?.let { "$it · ${card.title}" } ?: card.title,
                         body = card.text.ifEmpty { LockedBody },
-                        icon = telegram.localPath(card.chat.photo),
+                        icon = if (card.appIcon) null else telegram.localPath(card.chat.photo),
                         onClick = { openFromNotification(card) },
                     )
                 else -> toasts.push(card)
@@ -290,6 +295,10 @@ private fun ApplicationScope.PixelApp() {
         state = windowState,
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
+        DisposableEffect(window) {
+            Notifications.window = window
+            onDispose { if (Notifications.window == window) Notifications.window = null }
+        }
         if (macNativeWindow) {
             LaunchedEffect(Unit) {
                 window.rootPane.putClientProperty("apple.awt.fullWindowContent", true)
@@ -392,7 +401,8 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
     var openChatId by remember { mutableStateOf<Long?>(null) }
     val titleChat = openChatId?.let { id -> telegram.chats[id]?.let(telegram::chatTitle) }
     val titleAccount = telegram.me?.let { listOf(it.firstName, it.lastName).filter(String::isNotBlank).joinToString(" ") }
-    val titleUnread = telegram.unread[com.pixelgram.desktop.telegram.ChatListKey.Main]?.unmuted ?: 0
+    val titleCounts = if (settings.badgeCountMessages.value) telegram.unreadMessages else telegram.unread
+    val titleUnread = titleCounts[com.pixelgram.desktop.telegram.ChatListKey.Main]?.let { if (settings.badgeIncludeMuted.value) it.chats else it.unmuted } ?: 0
     androidx.compose.runtime.SideEffect {
         com.pixelgram.desktop.core.WindowTitle.chat = titleChat
         com.pixelgram.desktop.core.WindowTitle.account = titleAccount

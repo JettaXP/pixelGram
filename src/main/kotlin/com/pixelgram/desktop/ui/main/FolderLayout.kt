@@ -64,10 +64,13 @@ object FolderLayout {
     internal fun tabs(telegram: Telegram, settings: AppSettings): List<FolderTab> {
         val overrides = iconOverrides(settings)
         val byId = telegram.folders.associateBy { it.id }
+        val counted = { key: ChatListKey ->
+            telegram.unread[key]?.let { if (settings.folderIncludeMuted.value) it else UnreadCount(it.unmuted, it.unmuted) }
+        }
         return order(telegram, settings).mapNotNull { key ->
             when (key) {
                 ChatListKey.Main -> if (!settings.hideAllChats.value || telegram.folders.isEmpty()) {
-                    FolderTab(key, com.pixelgram.desktop.core.tr("All chats"), "All", telegram.unread[ChatListKey.Main])
+                    FolderTab(key, com.pixelgram.desktop.core.tr("All chats"), "All", counted(ChatListKey.Main))
                 } else {
                     null
                 }
@@ -82,7 +85,7 @@ object FolderLayout {
                     null
                 }
                 is ChatListKey.Folder -> byId[key.id]?.let { info ->
-                    FolderTab(key, info.title, overrides[info.id] ?: info.icon, telegram.unread[key])
+                    FolderTab(key, info.title, overrides[info.id] ?: info.icon, counted(key))
                 }
                 else -> null
             }

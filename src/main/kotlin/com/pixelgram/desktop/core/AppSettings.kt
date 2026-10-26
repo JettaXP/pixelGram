@@ -9,7 +9,10 @@ enum class ThemeMode { System, Light, Dark }
 
 enum class EmojiStyle { Noto, Noto3D, Apple }
 
-enum class ToastSide { Left, Right, Top, Bottom }
+enum class ToastSide(val top: Boolean, val column: Int) {
+    TopLeft(true, 0), TopCenter(true, 1), TopRight(true, 2),
+    BottomLeft(false, 0), BottomCenter(false, 1), BottomRight(false, 2),
+}
 
 enum class NotificationStyle { System, PixelGram }
 
@@ -82,7 +85,18 @@ class AppSettings private constructor(private val props: Properties) {
     val notificationSound = bool("notificationSound", true)
     val notificationsMuted = bool("notificationsMuted", false)
     val notificationPopups = bool("notificationPopups", true)
-    val notificationSide = enum("notificationSide", ToastSide.Right)
+    val notificationSide = enum("notificationCorner", ToastSide.BottomRight)
+    val notificationScreen = string("notificationScreen", "")
+    val notificationCount = int("notificationCount", 3)
+    val notificationVolume = int("notificationVolume", 100)
+    val notifyAllAccounts = bool("notifyAllAccounts", true)
+    val flashTaskbar = bool("flashTaskbar", true)
+    val notifyShowName = bool("notifyShowName", true)
+    val notifyShowText = bool("notifyShowText", true)
+    val badgeIncludeMuted = bool("badgeIncludeMuted", true)
+    val folderIncludeMuted = bool("folderIncludeMuted", true)
+    val badgeCountMessages = bool("badgeCountMessages", true)
+    val respectFocus = bool("respectFocus", true)
     val notificationStyle = enum("notificationStyle", NotificationStyle.System)
 
     val materialFolders = bool("materialFolders", true)
@@ -186,7 +200,8 @@ class AppSettings private constructor(private val props: Properties) {
 
     private val all: List<Setting<*>> = listOf(
         themeMode, seedColor, colorStyle, matugen, emojiStyle, notificationSound, notificationsMuted,
-        notificationPopups, notificationSide, notificationStyle,
+        notificationPopups, notificationSide, notificationStyle, notificationScreen, notificationCount, notificationVolume,
+        notifyAllAccounts, flashTaskbar, notifyShowName, notifyShowText, badgeIncludeMuted, folderIncludeMuted, badgeCountMessages, respectFocus,
         materialFolders, hideAllChats, folderOrder, folderIcons,
         unreadFolder, unreadFolderName, unreadFolderIcon, mentionsFolder, mentionsFolderName, mentionsFolderIcon,
         capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, checkUpdates,

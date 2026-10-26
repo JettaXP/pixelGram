@@ -93,7 +93,8 @@ val ToastCardWidth = 368.dp
 val ToastCardHeight = 118.dp
 
 val ToastWindowWidth = 400.dp
-val ToastWindowHeight = 470.dp
+
+fun toastWindowHeight(count: Int) = (ToastCardHeight + 8.dp) * count + 76.dp
 
 private val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 private val EmphasizedAccelerate = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
@@ -101,11 +102,10 @@ private val PopEasing = CubicBezierEasing(0.34f, 1.56f, 0.64f, 1f)
 
 private fun enterFor(side: ToastSide): EnterTransition {
     val spec = tween<IntOffset>(550, easing = EmphasizedDecelerate)
-    return fadeIn(tween(150)) + when (side) {
-        ToastSide.Left -> slideInHorizontally(spec) { -it - 32 }
-        ToastSide.Right -> slideInHorizontally(spec) { it + 32 }
-        ToastSide.Top -> slideInVertically(spec) { -it - 32 }
-        ToastSide.Bottom -> slideInVertically(spec) { it + 32 }
+    return fadeIn(tween(150)) + when (side.column) {
+        0 -> slideInHorizontally(spec) { -it - 32 }
+        2 -> slideInHorizontally(spec) { it + 32 }
+        else -> if (side.top) slideInVertically(spec) { -it - 32 } else slideInVertically(spec) { it + 32 }
     }
 }
 
@@ -113,11 +113,10 @@ private fun exitFor(side: ToastSide): ExitTransition {
     val slide = tween<IntOffset>(ExitMs, easing = FastOutSlowInEasing)
     val fade = tween<Float>(ExitMs, easing = LinearEasing)
     val shrink = tween<IntSize>(ExitMs, delayMillis = 150, easing = FastOutSlowInEasing)
-    return fadeOut(fade) + shrinkVertically(shrink) + when (side) {
-        ToastSide.Left -> slideOutHorizontally(slide) { -it - 32 }
-        ToastSide.Right -> slideOutHorizontally(slide) { it + 32 }
-        ToastSide.Top -> slideOutVertically(slide) { -it - 32 }
-        ToastSide.Bottom -> slideOutVertically(slide) { it + 32 }
+    return fadeOut(fade) + shrinkVertically(shrink) + when (side.column) {
+        0 -> slideOutHorizontally(slide) { -it - 32 }
+        2 -> slideOutHorizontally(slide) { it + 32 }
+        else -> if (side.top) slideOutVertically(slide) { -it - 32 } else slideOutVertically(slide) { it + 32 }
     }
 }
 
@@ -130,11 +129,13 @@ class ToastStack {
 
     val entries = mutableStateListOf<Entry>()
 
+    var max = 3
+
     val shown: List<Entry> get() = entries.filter { it.visible.targetState }
 
     fun push(data: ToastData) {
         val showing = shown
-        if (showing.size >= MaxToasts) showing.first().visible.targetState = false
+        showing.dropLast((max - 1).coerceAtLeast(0)).forEach { it.visible.targetState = false }
         entries.add(Entry(data))
     }
 
@@ -149,16 +150,15 @@ class ToastStack {
     }
 }
 
-const val MaxToasts = 3
 
 @Composable
 fun ToastStackContent(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) -> Unit) {
     val side = settings.notificationSide.value
-    val newestFirst = side == ToastSide.Top
+    val newestFirst = side.top
     val entries = if (newestFirst) stack.entries.reversed() else stack.entries.toList()
     val closeAll: @Composable () -> Unit = {
         AnimatedVisibility(
-            visible = stack.shown.size >= MaxToasts,
+            visible = stack.shown.size >= stack.max && stack.max > 1,
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically(),
         ) {
@@ -172,7 +172,11 @@ fun ToastStackContent(stack: ToastStack, settings: AppSettings, onOpen: (ToastDa
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = if (newestFirst) Alignment.TopCenter else Alignment.BottomCenter,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(horizontalAlignment = when (side.column) {
+            0 -> Alignment.Start
+            2 -> Alignment.End
+            else -> Alignment.CenterHorizontally
+        }) {
             if (!newestFirst) closeAll()
             entries.forEach { entry ->
                 key(entry.data.id) {

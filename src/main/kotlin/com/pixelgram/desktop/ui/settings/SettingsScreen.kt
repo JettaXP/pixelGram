@@ -494,7 +494,7 @@ fun SettingsScreen(
                         Section.Folders -> FoldersSection(telegram, settings)
                         Section.Advanced -> AdvancedSection(telegram, settings)
                         Section.Language -> LanguageSection(settings)
-                        Section.Notifications -> NotificationsSection(settings)
+                        Section.Notifications -> NotificationsSection(telegram, settings)
                         Section.Battery -> BatterySection(settings)
                         Section.SpeakersCamera -> DevicesSection(settings)
                     }
@@ -650,7 +650,7 @@ internal fun Header(text: String) {
 internal fun <T> effects() = MaterialTheme.motionScheme.defaultEffectsSpec<T>()
 
 @Composable
-private fun Reveal(visible: Boolean, content: @Composable () -> Unit) {
+internal fun Reveal(visible: Boolean, content: @Composable () -> Unit) {
     AnimatedVisibility(
         visible = visible,
         enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(effects()),
@@ -661,7 +661,7 @@ private fun Reveal(visible: Boolean, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun AnimatedDescription(text: String) {
+internal fun AnimatedDescription(text: String) {
     val fx = effects<Float>()
     val size = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
     AnimatedContent(
@@ -684,7 +684,7 @@ internal fun Description(text: String) {
 }
 
 @Composable
-private fun SwitchRow(
+internal fun SwitchRow(
     index: Int,
     count: Int,
     title: String,
@@ -908,7 +908,7 @@ private fun ThemeModeButtons(settings: AppSettings) = ConnectedChoice(
 )
 
 @Composable
-private fun <T> ConnectedChoice(
+internal fun <T> ConnectedChoice(
     options: List<Pair<T, String>>,
     selected: T,
     onSelect: (T) -> Unit,
@@ -1467,72 +1467,6 @@ private fun DoubleClickEmoji(settings: AppSettings) {
 }
 
 private val QuickReactions = listOf("❤", "❤‍🔥", "👍", "🔥", "😁", "🥰", "👏", "🎉", "🤩", "😢", "🤔", "🤯", "😱", "🙏", "👌", "🕊", "💯", "⚡", "🏆", "💔", "👀")
-
-@Composable
-private fun NotificationsSection(settings: AppSettings) {
-    Reveal(settings.notificationsMuted.value) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Description("Notifications are disabled from the tray menu.")
-            Button(onClick = { settings.notificationsMuted.value = false }, modifier = Modifier.padding(bottom = 8.dp)) {
-                Text("Enable notifications")
-            }
-        }
-    }
-    SwitchRow(
-        index = 0,
-        count = 1,
-        title = "Sound for new messages",
-        subtitle = "Plays when a message arrives in a chat that is not muted.",
-        checked = settings.notificationSound.value,
-        onChange = { settings.notificationSound.value = it },
-    )
-    OutlinedButton(onClick = Sounds::newMessage, modifier = Modifier.padding(top = 8.dp)) { Text("Play sound") }
-
-    Header("Pop-ups")
-    SwitchRow(
-        index = 0,
-        count = 1,
-        title = "Show pop-up notifications",
-        subtitle = "A card with the chat and message, closes by itself or on click.",
-        checked = settings.notificationPopups.value,
-        onChange = { settings.notificationPopups.value = it },
-    )
-    val systemStyle = SystemNotifications.available && settings.notificationStyle.value == NotificationStyle.System
-    if (SystemNotifications.available) {
-        Text("Style", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
-        ConnectedChoice(
-            options = listOf(NotificationStyle.System to "System", NotificationStyle.PixelGram to "pixelGram"),
-            selected = settings.notificationStyle.value,
-            onSelect = { settings.notificationStyle.value = it },
-        )
-        AnimatedDescription(
-            if (systemStyle) "Shown by your desktop's notification daemon (mako, swaync, dunst…)." else
-                "pixelGram's own Material 3 cards."
-        )
-    }
-    Reveal(!systemStyle) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Position", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
-            ConnectedChoice(
-                options = ToastSide.entries.map { it to it.name },
-                selected = settings.notificationSide.value,
-                onSelect = { settings.notificationSide.value = it },
-            )
-        }
-    }
-    OutlinedButton(
-        onClick = {
-            if (systemStyle) {
-                SystemNotifications.show("pixelGram", "This is how new messages will look 🎉", null) {}
-            } else {
-                Notifications.showTest?.invoke()
-            }
-        },
-        modifier = Modifier.padding(top = 8.dp),
-    ) {
-        Text("Show test notification")
-    }
-}
 
 private data class SystemRow(
     val title: String,
