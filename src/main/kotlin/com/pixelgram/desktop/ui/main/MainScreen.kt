@@ -99,6 +99,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
@@ -530,6 +531,7 @@ private fun NewChatFab(onNewChat: (Boolean) -> Unit, onContacts: () -> Unit, mod
             androidx.compose.material3.ToggleFloatingActionButton(
                 checked = expanded,
                 onCheckedChange = { expanded = it },
+                modifier = Modifier.focusProperties { canFocus = false },
             ) {
                 val progress = checkedProgress
                 Icon(

@@ -14,6 +14,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconButtonShapes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Shape
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -138,7 +139,7 @@ fun IconButton(
 ) = androidx.compose.material3.IconButton(
     onClick = onClick,
     shapes = shapes ?: shape?.let { IconButtonDefaults.shapes(it, IconButtonDefaults.mediumPressedShape) } ?: IconButtonDefaults.shapes(),
-    modifier = modifier,
+    modifier = modifier.focusProperties { canFocus = false },
     enabled = enabled,
     colors = colors,
     interactionSource = interactionSource,
@@ -159,7 +160,7 @@ fun FilledIconButton(
 ) = androidx.compose.material3.FilledIconButton(
     onClick = onClick,
     shapes = shapes ?: shape?.let { IconButtonDefaults.shapes(it, IconButtonDefaults.mediumPressedShape) } ?: IconButtonDefaults.shapes(),
-    modifier = modifier,
+    modifier = modifier.focusProperties { canFocus = false },
     enabled = enabled,
     colors = colors,
     interactionSource = interactionSource,
@@ -180,9 +181,24 @@ fun FilledTonalIconButton(
 ) = androidx.compose.material3.FilledTonalIconButton(
     onClick = onClick,
     shapes = shapes ?: shape?.let { IconButtonDefaults.shapes(it, IconButtonDefaults.mediumPressedShape) } ?: IconButtonDefaults.shapes(),
-    modifier = modifier,
+    modifier = modifier.focusProperties { canFocus = false },
     enabled = enabled,
     colors = colors,
     interactionSource = interactionSource,
+    content = content,
+)
+
+@Composable
+fun IconToggleButton(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
+) = androidx.compose.material3.IconToggleButton(
+    checked = checked,
+    onCheckedChange = onCheckedChange,
+    modifier = modifier.focusProperties { canFocus = false },
+    enabled = enabled,
     content = content,
 )

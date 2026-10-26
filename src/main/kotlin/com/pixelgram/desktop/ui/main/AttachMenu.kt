@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.IntOffset
@@ -100,6 +101,13 @@ fun AttachButton(
         }
     }
     LaunchedEffect(shown) { if (shown) expanded = true }
+    val locked = com.pixelgram.desktop.core.AppLock.locked
+    LaunchedEffect(locked) {
+        if (locked) {
+            expanded = false
+            shown = false
+        }
+    }
     var dismissedAt by remember { mutableStateOf(0L) }
     val density = androidx.compose.ui.platform.LocalDensity.current
     val colors = MaterialTheme.colorScheme
@@ -115,6 +123,7 @@ fun AttachButton(
             containerColor = { progress -> androidx.compose.ui.graphics.lerp(Color.Transparent, colors.primaryContainer, progress) },
             containerSize = { MenuButtonSize },
             containerCornerRadius = { progress -> androidx.compose.ui.unit.lerp(MenuButtonSize / 2, MenuButtonCorner, progress) },
+            modifier = Modifier.focusProperties { canFocus = false },
         ) {
             val progress = checkedProgress
             Icon(
@@ -124,7 +133,7 @@ fun AttachButton(
                 modifier = Modifier.animateIcon({ progress }),
             )
         }
-        if (shown) {
+        if (shown && !locked) {
             Popup(
                 alignment = Alignment.BottomStart,
                 offset = IntOffset(0, -with(density) { (MenuButtonSize + MenuGap).roundToPx() }),

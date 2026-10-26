@@ -39,7 +39,7 @@ import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.outlined.Schedule
 import com.pixelgram.desktop.ui.icons.outlined.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconToggleButton
+import com.pixelgram.desktop.ui.components.expressive.IconToggleButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow

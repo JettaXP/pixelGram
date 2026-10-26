@@ -25,7 +25,7 @@ import com.pixelgram.desktop.ui.icons.outlined.EmojiSymbols
 import com.pixelgram.desktop.ui.icons.outlined.Fastfood
 import com.pixelgram.desktop.ui.icons.outlined.SportsBasketball
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconToggleButton
+import com.pixelgram.desktop.ui.components.expressive.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import com.pixelgram.desktop.ui.components.Text

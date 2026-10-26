@@ -101,7 +101,7 @@ import com.pixelgram.desktop.ui.icons.outlined.EmojiEmotions
 import com.pixelgram.desktop.ui.components.expressive.FilledIconButton
 import androidx.compose.material3.Icon
 import com.pixelgram.desktop.ui.components.expressive.IconButton
-import androidx.compose.material3.IconToggleButton
+import com.pixelgram.desktop.ui.components.expressive.IconToggleButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -2121,6 +2121,7 @@ private fun Composer(
                 Icon(Icons.Outlined.EmojiEmotions, contentDescription = "Emoji")
             }
             LaunchedEffect(emojiOpen) { if (!emojiOpen) mediaSearch = null }
+            LaunchedEffect(com.pixelgram.desktop.core.AppLock.locked) { if (com.pixelgram.desktop.core.AppLock.locked) emojiOpen = false }
             if (emojiOpen) OnEscape {
                 emojiOpen = false
                 true

@@ -1,6 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
-import androidx.compose.material3.IconToggleButton
+import com.pixelgram.desktop.ui.components.expressive.IconToggleButton
 import com.pixelgram.desktop.ui.icons.outlined.FavoriteBorder
 import com.pixelgram.desktop.ui.icons.filled.Favorite
 import androidx.compose.material3.WavyProgressIndicatorDefaults
