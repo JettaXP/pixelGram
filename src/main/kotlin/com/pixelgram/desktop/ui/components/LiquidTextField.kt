@@ -1,8 +1,5 @@
 package com.pixelgram.desktop.ui.components
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.VectorConverter
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
@@ -40,9 +37,9 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
@@ -54,7 +51,10 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sqrt
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filterNotNull
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberUpdatedState
 
 @Composable
 fun ComposerField(
@@ -144,28 +144,35 @@ private fun LiquidCaret(
 ) {
     val visible = focused && selection.collapsed && layout != null
     val rect = layout?.let { it.getCursorRect(selection.end.coerceIn(0, it.layoutInput.text.length)) }
-    val head = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
-    val tail = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
-    val height = remember { Animatable(0f) }
-    var ready by remember { mutableStateOf(false) }
-    var moved by remember { mutableLongStateOf(0L) }
     val smooth = settings.smoothCursor.value
     val stiffness = MinStiffness + settings.cursorSpeed.value * StiffnessStep
     val tailStiffness = stiffness * (1f - settings.handleStretch.value / 100f * TailLag)
-    LaunchedEffect(rect?.left, rect?.top, rect?.height, smooth, stiffness) {
-        val target = rect ?: return@LaunchedEffect
-        moved = System.nanoTime()
-        val point = Offset(target.left, target.top)
-        if (!ready || !smooth) {
-            head.snapTo(point)
-            tail.snapTo(point)
-            height.snapTo(target.height)
-            ready = true
-            return@LaunchedEffect
+    val motion = remember { CaretMotion() }
+    var moved by remember { mutableLongStateOf(0L) }
+    val target = rect?.let { Offset(it.left, it.top) to it.height }
+    val latestTarget by rememberUpdatedState(target)
+    LaunchedEffect(target) {
+        if (target != null) moved = System.nanoTime()
+    }
+    LaunchedEffect(smooth, stiffness, tailStiffness) {
+        while (true) {
+            val goal = snapshotFlow { latestTarget }.filterNotNull().first()
+            if (!motion.ready || !smooth) {
+                motion.snap(goal.first, goal.second)
+                snapshotFlow { latestTarget }.filterNotNull().first { it != goal }
+                continue
+            }
+            var last = withFrameNanos { it }
+            while (true) {
+                val settled = withFrameNanos { now ->
+                    val current = latestTarget ?: return@withFrameNanos true
+                    val dt = ((now - last) / 1_000_000_000f).coerceAtMost(MaxFrameSeconds)
+                    last = now
+                    motion.step(current.first, current.second, dt, stiffness, tailStiffness)
+                }
+                if (settled) break
+            }
         }
-        launch { head.animateTo(point, spring(dampingRatio = HeadDamping, stiffness = stiffness)) }
-        launch { tail.animateTo(point, spring(dampingRatio = TailDamping, stiffness = tailStiffness)) }
-        height.animateTo(target.height, spring(dampingRatio = HeadDamping, stiffness = stiffness))
     }
     val blink = settings.cursorBlink.value
     val cycle = settings.blinkCycle.value.coerceAtLeast(MinCycle)
@@ -197,12 +204,12 @@ private fun LiquidCaret(
     val pull = settings.sidePull.value / 100f
     val width = settings.cursorWidth.value.coerceAtLeast(1)
     Canvas(modifier.graphicsLayer()) {
-        if (!visible || !ready || alpha <= 0f) return@Canvas
+        if (!visible || !motion.ready || alpha <= 0f) return@Canvas
         val w = width.dp.toPx()
-        val h = height.value
+        val h = motion.height
         val tint = color.copy(alpha = alpha)
-        val front = head.value
-        var back = tail.value
+        val front = motion.head
+        var back = motion.tail
         val reach = (stretch * StretchUnit).dp.toPx()
         val dx = front.x - back.x
         val dy = front.y - back.y
@@ -215,13 +222,19 @@ private fun LiquidCaret(
         val barHeight = h * (1f - pull * k * BarSquash)
         val barWidth = w * (1f + k * BarSwell)
         if (liquid && span > 0.5f) {
-            drawLine(
-                tint,
-                start = Offset(back.x, back.y + h / 2),
-                end = Offset(front.x, front.y + h / 2),
-                strokeWidth = (w + (barHeight - w) * (1f - pull) * TrailBody).coerceAtLeast(w),
-                cap = StrokeCap.Round,
-            )
+            val body = (w + (barHeight - w) * (1f - pull) * TrailBody).coerceIn(w, barHeight)
+            val ux = (front.x - back.x) / span
+            val uy = (front.y - back.y) / span
+            val mid = h / 2
+            val trail = Path().apply {
+                moveTo(back.x - uy * w / 2, back.y + mid + ux * w / 2)
+                lineTo(front.x - uy * body / 2, front.y + mid + ux * body / 2)
+                lineTo(front.x + uy * body / 2, front.y + mid - ux * body / 2)
+                lineTo(back.x + uy * w / 2, back.y + mid - ux * w / 2)
+                close()
+            }
+            drawPath(trail, tint)
+            drawCircle(tint, radius = w / 2, center = Offset(back.x, back.y + mid))
         }
         drawRoundRect(
             tint,
@@ -231,6 +244,58 @@ private fun LiquidCaret(
         )
     }
 }
+
+private class CaretMotion {
+    var ready by mutableStateOf(false)
+    var head by mutableStateOf(Offset.Zero)
+    var tail by mutableStateOf(Offset.Zero)
+    var height by mutableStateOf(0f)
+    private var headSpeed = Offset.Zero
+    private var tailSpeed = Offset.Zero
+    private var heightSpeed = 0f
+
+    fun snap(point: Offset, size: Float) {
+        head = point
+        tail = point
+        height = size
+        headSpeed = Offset.Zero
+        tailSpeed = Offset.Zero
+        heightSpeed = 0f
+        ready = true
+    }
+
+    fun step(point: Offset, size: Float, dt: Float, stiffness: Float, tailStiffness: Float): Boolean {
+        var left = dt
+        var h = head
+        var t = tail
+        var z = height
+        while (left > 0f) {
+            val step = minOf(left, SubStep)
+            left -= step
+            headSpeed += (point - h) * (stiffness * step) - headSpeed * (damping(stiffness, HeadDamping) * step)
+            h += headSpeed * step
+            tailSpeed += (point - t) * (tailStiffness * step) - tailSpeed * (damping(tailStiffness, TailDamping) * step)
+            t += tailSpeed * step
+            heightSpeed += (size - z) * stiffness * step - heightSpeed * damping(stiffness, HeadDamping) * step
+            z += heightSpeed * step
+        }
+        val done = (h - point).getDistance() < RestDistance && (t - point).getDistance() < RestDistance &&
+            headSpeed.getDistance() < RestSpeed && tailSpeed.getDistance() < RestSpeed && kotlin.math.abs(size - z) < RestDistance
+        if (done) snap(point, size) else {
+            head = h
+            tail = t
+            height = z
+        }
+        return done
+    }
+
+    private fun damping(stiffness: Float, ratio: Float) = 2f * ratio * sqrt(stiffness)
+}
+
+private const val SubStep = 0.004f
+private const val MaxFrameSeconds = 0.2f
+private const val RestDistance = 0.3f
+private const val RestSpeed = 4f
 
 private val FieldMinHeight = 56.dp
 private val FieldMaxHeight = 184.dp

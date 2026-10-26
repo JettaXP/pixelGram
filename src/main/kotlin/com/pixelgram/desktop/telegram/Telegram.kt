@@ -173,6 +173,7 @@ private const val PinnedLimit = 100
 private const val JumpPageSize = 60
 private const val ChatSearchLimit = 20
 private const val PreviewPage = 40
+private const val StickerSearchLimit = 100
 private const val ProfileGiftsLimit = 100
 private const val JumpMinMessages = 20
 private const val JumpAttempts = 3
@@ -231,6 +232,8 @@ class Telegram(
     val users = mutableStateMapOf<Long, TdApi.User>()
     val unread = mutableStateMapOf<ChatListKey, UnreadCount>()
     val statuses = mutableStateMapOf<Long, TdApi.UserStatus>()
+    private val chatActions = mutableStateMapOf<Long, List<Pair<TdApi.MessageSender, TdApi.ChatAction>>>()
+    val emojiClicks = mutableStateMapOf<Pair<Long, Long>, TdApi.Sticker>()
     var clockMinute by mutableStateOf(System.currentTimeMillis() / 60_000)
         private set
 
@@ -647,6 +650,40 @@ class Telegram(
         return "%,d $noun${if (count == 1) "" else "s"}".format(java.util.Locale.US, count).replace(',', ' ')
     }
 
+    fun activity(chat: ChatState): Presence? {
+        val (sender, action) = chatActions[chat.id]?.lastOrNull() ?: return null
+        val label = actionLabel(action) ?: return null
+        if (chat.privateUserId != 0L) return Presence(label, true)
+        return Presence(senderTitle(sender).substringBefore(' ') + ": " + label, true)
+    }
+
+    private fun actionLabel(action: TdApi.ChatAction): String? {
+        val tr = com.pixelgram.desktop.core.I18n::tr
+        return when (action) {
+            is TdApi.ChatActionTyping -> tr("typing…")
+            is TdApi.ChatActionRecordingVoiceNote -> tr("recording a voice message")
+            is TdApi.ChatActionUploadingVoiceNote -> tr("sending a voice message")
+            is TdApi.ChatActionRecordingVideoNote -> tr("recording a video message")
+            is TdApi.ChatActionUploadingVideoNote -> tr("sending a video message")
+            is TdApi.ChatActionRecordingVideo -> tr("recording a video")
+            is TdApi.ChatActionUploadingVideo -> tr("sending a video")
+            is TdApi.ChatActionUploadingPhoto -> tr("sending a photo")
+            is TdApi.ChatActionUploadingDocument -> tr("sending a file")
+            is TdApi.ChatActionChoosingSticker -> tr("choosing a sticker")
+            is TdApi.ChatActionChoosingLocation -> tr("choosing a location")
+            is TdApi.ChatActionChoosingContact -> tr("choosing a contact")
+            is TdApi.ChatActionStartPlayingGame -> tr("playing a game")
+            is TdApi.ChatActionWatchingAnimations -> tr("watching") + " " + action.emoji
+            else -> null
+        }
+    }
+
+    private fun sameSender(a: TdApi.MessageSender, b: TdApi.MessageSender) = when {
+        a is TdApi.MessageSenderUser && b is TdApi.MessageSenderUser -> a.userId == b.userId
+        a is TdApi.MessageSenderChat && b is TdApi.MessageSenderChat -> a.chatId == b.chatId
+        else -> false
+    }
+
     fun presence(chat: ChatState): Presence? {
         val userId = chat.privateUserId
         if (isSavedMessages(chat.id)) return null
@@ -856,6 +893,11 @@ class Telegram(
                 if (index >= 0) list[index] = update.message.toUi().copy(key = list[index].key)
             }
             is TdApi.UpdateUserStatus -> statuses[update.userId] = update.status
+            is TdApi.UpdateChatAction -> {
+                val others = chatActions[update.chatId].orEmpty().filterNot { sameSender(it.first, update.senderId) }
+                chatActions[update.chatId] = if (update.action is TdApi.ChatActionCancel) others else others + (update.senderId to update.action)
+            }
+            is TdApi.UpdateAnimatedEmojiMessageClicked -> emojiClicks[update.chatId to update.messageId] = update.sticker
             is TdApi.UpdateUser -> {
                 users[update.user.id] = update.user
                 update.user.status?.let { statuses[update.user.id] = it }
@@ -1305,6 +1347,27 @@ class Telegram(
         val animation = (message.content as? TdApi.MessageAnimation)?.animation?.animation ?: return
         send(TdApi.AddSavedAnimation(TdApi.InputFileId(animation.id))) { result ->
             com.pixelgram.desktop.ui.main.TopNotice.text = com.pixelgram.desktop.core.tr(if (result is TdApi.Ok) "Saved to GIFs" else "Couldn't save the GIF")
+        }
+    }
+
+    private val searchLanguages: Array<String> get() = listOf(com.pixelgram.desktop.core.I18n.code, "en").distinct().toTypedArray()
+
+    fun searchEmojis(text: String, done: (List<String>) -> Unit) {
+        send(TdApi.SearchEmojis(text, searchLanguages)) { result ->
+            done((result as? TdApi.EmojiKeywords)?.emojiKeywords?.map { it.emoji }?.distinct().orEmpty())
+        }
+    }
+
+    fun searchStickers(query: String, chatId: Long, done: (List<TdApi.Sticker>) -> Unit) {
+        val emoji = com.pixelgram.desktop.ui.theme.emojiRanges(query).sumOf { it.last - it.first + 1 } == query.length
+        send(TdApi.GetStickers(TdApi.StickerTypeRegular(), query, StickerSearchLimit, chatId)) { result ->
+            val installed = (result as? TdApi.Stickers)?.stickers?.toList().orEmpty()
+            val search = if (emoji) TdApi.SearchStickers(TdApi.StickerTypeRegular(), query, "", searchLanguages, 0, StickerSearchLimit)
+            else TdApi.SearchStickers(TdApi.StickerTypeRegular(), "", query, searchLanguages, 0, StickerSearchLimit)
+            send(search) { more ->
+                val extra = (more as? TdApi.Stickers)?.stickers.orEmpty().filter { found -> installed.none { it.sticker.id == found.sticker.id } }
+                done(installed + extra)
+            }
         }
     }
 

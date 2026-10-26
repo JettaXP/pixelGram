@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.35.1 Oval
+
+### Reactions and emoji
+- Reacting shows the animated emoji big right on the reaction with its effect around it, then it shrinks back into the reaction. Always big reactions makes it bigger.
+- When the other person taps a big emoji, you see its effect too.
+- The big emoji effect starts from the emoji itself instead of the empty space next to it.
+- Right click a big emoji to copy it as a normal emoji.
+
+### Chats
+- The chat header shows what the other person is doing: typing, recording a voice message, choosing a sticker, watching 😂 and more.
+- Search in the emoji and sticker panels. GIF search was already there.
+
+### Settings
+- Cursor settings moved to pixelGram Preferences, and the Message bubbles block is gone from Chat Settings.
+- Material shapes in the empty chat area can be turned off in Chat Settings.
+- Launch minimized and the monochrome tray icon appear with an animation.
+- Birthday: day and month take two digits, up to 31 and 12, the year starts at 1877.
+
+### Fixes
+- The liquid cursor keeps up with fast typing instead of leaving a dot behind.
+- Enter no longer opens the emoji and sticker panel after you used it once.
+
 ## 0.35.0 Oval
 
 ### Typing

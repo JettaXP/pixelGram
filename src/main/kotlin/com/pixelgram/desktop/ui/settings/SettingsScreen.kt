@@ -87,6 +87,7 @@ import com.pixelgram.desktop.ui.icons.outlined.ChatBubbleOutline
 import com.pixelgram.desktop.ui.icons.outlined.Devices
 import com.pixelgram.desktop.ui.icons.outlined.Face
 import com.pixelgram.desktop.ui.icons.outlined.RoundedCorner
+import com.pixelgram.desktop.ui.icons.outlined.TextFields
 import com.pixelgram.desktop.ui.icons.outlined.Folder
 import com.pixelgram.desktop.ui.icons.outlined.Headphones
 import com.pixelgram.desktop.ui.icons.outlined.Lock
@@ -190,6 +191,7 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
     Avatars("Avatars", Icons.Outlined.Face, pixel = true),
     Bubbles("Message bubbles", Icons.Outlined.ChatBubbleOutline, pixel = true),
     Corners("Corners", Icons.Outlined.RoundedCorner, pixel = true),
+    Cursor("Cursor", Icons.Outlined.TextFields, pixel = true),
     About("About", Icons.Outlined.Info, pixel = true),
 }
 
@@ -478,13 +480,11 @@ fun SettingsScreen(
                         Section.Avatars -> AvatarsSection(settings)
                         Section.Bubbles -> BubblesSection(settings)
                         Section.Corners -> CornersSection(settings)
+                        Section.Cursor -> CursorSection(settings)
                         Section.About -> AboutSection(telegram, settings, onOpenChat)
                         Section.MyAccount -> AccountSection(telegram, onOpenProfile)
                         Section.Privacy -> PrivacySection(telegram, settings)
-                        Section.ChatSettings -> ChatSettingsSection(settings) {
-                            inPreferences = true
-                            section = Section.Bubbles
-                        }
+                        Section.ChatSettings -> ChatSettingsSection(settings)
                         Section.Folders -> FoldersSection(telegram, settings)
                         Section.Advanced -> AdvancedSection(telegram, settings)
                         Section.Language -> LanguageSection(settings)
@@ -1154,15 +1154,16 @@ private fun AccountSection(telegram: Telegram, onOpenProfile: () -> Unit) {
 }
 
 @Composable
-private fun ChatSettingsSection(settings: AppSettings, onOpenBubbles: () -> Unit) {
+private fun CursorSection(settings: AppSettings) {
+    CursorSettings(settings)
+}
+
+@Composable
+private fun ChatSettingsSection(settings: AppSettings) {
     Header("Theme")
     ThemeModeButtons(settings)
     WallpaperSettings(settings)
     MessageFontSettings(settings)
-    CursorSettings(settings)
-    Header("Message bubbles")
-    Description("Bubble corners, avatar shapes and colors are in pixelGram Preferences.")
-    OutlinedButton(onClick = onOpenBubbles) { Text("Open $PixelPreferencesTitle") }
     Header("Reactions")
     SwitchRow(
         0,
@@ -1171,6 +1172,14 @@ private fun ChatSettingsSection(settings: AppSettings, onOpenBubbles: () -> Unit
         "Every reaction you set plays the big effect, like a long press.",
         settings.bigReactions.value,
     ) { settings.bigReactions.value = it }
+    Header("Empty chat area")
+    SwitchRow(
+        0,
+        1,
+        "Material shapes",
+        "Shapes behind the hint when no chat is open.",
+        settings.emptyShapes.value,
+    ) { settings.emptyShapes.value = it }
     Header("Double click on a message")
     val options = listOf(
         DoubleClickAction.Reaction to "Reaction",
@@ -1506,6 +1515,14 @@ private fun NotificationsSection(settings: AppSettings) {
     }
 }
 
+private data class SystemRow(
+    val title: String,
+    val checked: Boolean,
+    val visible: Boolean,
+    val subtitle: String? = null,
+    val onChange: (Boolean) -> Unit,
+)
+
 @Composable
 private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {
     Header("Window title bar")
@@ -1521,31 +1538,34 @@ private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {
         SwitchRow(index, titleRows.size, title, if (title == "Use system window frame") "Applies after restarting pixelGram." else null, checked, change)
     }
     Header("System integration")
+    val autostart = com.pixelgram.desktop.core.Autostart.supported
     val systemRows = buildList {
-        add(Triple("Show tray icon", settings.trayIcon.value) { value: Boolean -> settings.trayIcon.value = value })
-        if (settings.trayIcon.value) {
-            add(Triple("Use monochrome icon", settings.trayMonochrome.value) { value: Boolean -> settings.trayMonochrome.value = value })
-        }
-        add(Triple("Restore window size and position", settings.restoreWindow.value) { value: Boolean -> settings.restoreWindow.value = value })
-        if (com.pixelgram.desktop.core.Autostart.supported) {
-            add(Triple("Launch pixelGram when system starts", settings.autostart.value) { value: Boolean ->
+        add(SystemRow("Show tray icon", settings.trayIcon.value, true) { settings.trayIcon.value = it })
+        add(SystemRow("Use monochrome icon", settings.trayMonochrome.value, settings.trayIcon.value) { settings.trayMonochrome.value = it })
+        add(SystemRow("Restore window size and position", settings.restoreWindow.value, true) { settings.restoreWindow.value = it })
+        if (autostart) {
+            add(SystemRow("Launch pixelGram when system starts", settings.autostart.value, true) { value ->
                 settings.autostart.value = value
                 Thread { com.pixelgram.desktop.core.Autostart.apply(value) }.start()
             })
-            if (settings.autostart.value) {
-                add(Triple("Launch minimized", settings.launchMinimized.value) { value: Boolean -> settings.launchMinimized.value = value })
-            }
+            add(
+                SystemRow(
+                    "Launch minimized",
+                    settings.launchMinimized.value,
+                    settings.autostart.value,
+                    "pixelGram starts in the tray: notifications work, the window opens from the tray icon.",
+                ) { settings.launchMinimized.value = it },
+            )
         }
     }
-    systemRows.forEachIndexed { index, (title, checked, change) ->
-        SwitchRow(
-            index,
-            systemRows.size,
-            title,
-            if (title == "Launch minimized") "pixelGram starts in the tray: notifications work, the window opens from the tray icon." else null,
-            checked,
-            change,
-        )
+    val shown = systemRows.filter { it.visible }
+    systemRows.forEach { row ->
+        val index = shown.indexOf(row)
+        val last = remember { mutableStateOf(index to shown.size) }
+        if (index >= 0) last.value = index to shown.size
+        Reveal(row.visible) {
+            SwitchRow(last.value.first, last.value.second, row.title, row.subtitle, row.checked, row.onChange)
+        }
     }
     Header("Data and storage")
     MemoryContent(telegram)

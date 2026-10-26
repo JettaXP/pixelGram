@@ -152,6 +152,7 @@ class AppSettings private constructor(private val props: Properties) {
     val autostart = bool("autostart", false)
     val launchMinimized = bool("launchMinimized", false)
     val restoreWindow = bool("restoreWindow", true)
+    val emptyShapes = bool("emptyShapes", true)
     val windowBounds = string("windowBounds", "")
     val autoplayGifs = bool("autoplayGifs", true)
     val autoplayVideos = bool("autoplayVideos", true)
@@ -188,7 +189,7 @@ class AppSettings private constructor(private val props: Properties) {
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,
         deviceName, israelLogo, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
-        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, restoreWindow, windowBounds, autostart, launchMinimized, language, localNames, bigReactions, liquidCursor, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
+        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, restoreWindow, windowBounds, emptyShapes, autostart, launchMinimized, language, localNames, bigReactions, liquidCursor, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
         apiId, apiHash,
         accounts, activeAccount,
     ) + avatarKindShapes.values

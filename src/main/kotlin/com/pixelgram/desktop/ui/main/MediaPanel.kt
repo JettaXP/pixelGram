@@ -17,6 +17,7 @@ import com.pixelgram.desktop.ui.icons.outlined.StarOutline
 import com.pixelgram.desktop.ui.icons.outlined.Star
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,7 +74,7 @@ private val PanelWidth = 380.dp
 private val PanelHeight = 440.dp
 private val StickerCell = 68.dp
 private val GifCell = 112.dp
-private const val GifSearchDelayMs = 400L
+private const val GifPanelSearchDelayMs = 400L
 private const val GifBot = "gif"
 private const val FavoritesId = -1L
 
@@ -99,6 +100,8 @@ fun MediaPanel(
     onSticker: (TdApi.Sticker, StickerSend) -> Unit,
     onGif: (TdApi.Animation) -> Unit,
     onInline: (Long, String) -> Unit,
+    search: String? = null,
+    onSearch: (String?) -> Unit = {},
     whenOnline: Boolean = false,
 ) {
     Surface(
@@ -114,8 +117,16 @@ fun MediaPanel(
                 }
             }
             when (tab) {
-                0 -> EmojiPanel(onPick = onEmoji, modifier = Modifier.weight(1f))
-                1 -> StickersTab(telegram, chatId, whenOnline, onSticker, Modifier.weight(1f))
+                0 -> if (search != null) {
+                    EmojiSearch(telegram, search, onSearch, onEmoji, Modifier.weight(1f))
+                } else {
+                    EmojiPanel(onPick = onEmoji, onSearch = { onSearch("") }, modifier = Modifier.weight(1f))
+                }
+                1 -> if (search != null) {
+                    StickerSearch(telegram, chatId, search, onSearch, onSticker, Modifier.weight(1f))
+                } else {
+                    StickersTab(telegram, chatId, whenOnline, onSticker, { onSearch("") }, Modifier.weight(1f))
+                }
                 else -> GifsTab(telegram, chatId, onGif, onInline, Modifier.weight(1f))
             }
         }
@@ -132,6 +143,7 @@ private fun StickersTab(
     chatId: Long,
     whenOnline: Boolean,
     onSticker: (TdApi.Sticker, StickerSend) -> Unit,
+    onSearch: () -> Unit,
     modifier: Modifier,
 ) {
     var preview by remember { mutableStateOf<TdApi.Sticker?>(null) }
@@ -241,6 +253,11 @@ private fun StickersTab(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
         ) {
+            item(key = "search") {
+                IconButton(onClick = onSearch, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Outlined.Search, contentDescription = "Search stickers")
+                }
+            }
             itemsIndexed(sections, key = { _, (section, _) -> section.id }) { index, (section, _) ->
                 IconToggleButton(
                     checked = index == current,
@@ -324,6 +341,54 @@ private object FullWindow : androidx.compose.ui.window.PopupPositionProvider {
 }
 
 @Composable
+private fun StickerSearch(
+    telegram: Telegram,
+    chatId: Long,
+    query: String,
+    onQuery: (String?) -> Unit,
+    onSticker: (TdApi.Sticker, StickerSend) -> Unit,
+    modifier: Modifier,
+) {
+    var found by remember { mutableStateOf<List<TdApi.Sticker>?>(emptyList()) }
+    LaunchedEffect(query) {
+        if (query.isBlank()) {
+            found = emptyList()
+            return@LaunchedEffect
+        }
+        found = null
+        delay(PanelSearchDelayMs)
+        telegram.searchStickers(query.trim(), chatId) { found = it }
+    }
+    Column(modifier) {
+        PanelSearchField(query, "Search stickers", onQuery)
+        val results = found
+        when {
+            results == null -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
+            query.isNotBlank() && results.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text("Nothing found", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            else -> LazyVerticalGrid(
+                columns = GridCells.Adaptive(StickerCell),
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+            ) {
+                items(results, key = { it.sticker.id }) { sticker ->
+                    Box(
+                        Modifier
+                            .size(StickerCell)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onSticker(sticker, StickerSend()) }
+                            .padding(4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        StickerThumb(sticker, telegram)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun StickerThumb(sticker: TdApi.Sticker, telegram: Telegram) {
     StickerView(sticker, telegram, StickerCell, animate = com.pixelgram.desktop.core.PowerSaving.stickersInPanel)
 }
@@ -348,7 +413,7 @@ private fun GifsTab(
         found = null
         val gifBot = bot ?: return@LaunchedEffect
         if (query.isBlank()) return@LaunchedEffect
-        delay(GifSearchDelayMs)
+        delay(GifPanelSearchDelayMs)
         telegram.inlineResults(gifBot.id, chatId, query.trim()) { found = it }
     }
     Column(modifier) {

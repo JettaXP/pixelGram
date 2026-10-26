@@ -222,6 +222,7 @@ fun ProfileScreen(
             ),
             labels = listOf("Day", "Month", "Year"),
             numbers = true,
+            ranges = listOf(1..31, 1..12, MinBirthYear..java.time.Year.now().value),
             supporting = "Year is optional. Clear the day to remove the birthday.",
             onDismiss = dismiss,
             onSaved = saved,
@@ -231,6 +232,14 @@ fun ProfileScreen(
         null -> Unit
     }
 }
+
+private fun fits(value: String, range: IntRange): Boolean {
+    val number = value.toIntOrNull() ?: return true
+    val digits = range.last.toString().length
+    return number <= range.last && (value.length < digits || number >= range.first)
+}
+
+private const val MinBirthYear = 1877
 
 private fun formatBirthdate(date: TdApi.Birthdate): String {
     val month = Month.of(date.month.coerceIn(1, 12)).getDisplayName(TextStyle.FULL, Locale.ENGLISH)
@@ -248,6 +257,7 @@ private fun EditDialog(
     maxLength: Int = Int.MAX_VALUE,
     singleLine: Boolean = true,
     numbers: Boolean = false,
+    ranges: List<IntRange> = emptyList(),
     onSave: (List<String>, (String?) -> Unit) -> Unit,
 ) {
     var values by remember { mutableStateOf(initial) }
@@ -263,8 +273,9 @@ private fun EditDialog(
                         OutlinedTextField(
                             value = values[index],
                             onValueChange = { value ->
-                                val clean = if (numbers) value.filter(Char::isDigit).take(4) else value.take(maxLength)
-                                values = values.toMutableList().also { it[index] = clean }
+                                val range = ranges.getOrNull(index)
+                                val clean = if (numbers) value.filter(Char::isDigit).take(range?.last?.toString()?.length ?: 4) else value.take(maxLength)
+                                if (range == null || fits(clean, range)) values = values.toMutableList().also { it[index] = clean }
                             },
                             label = { Text(label) },
                             singleLine = singleLine,

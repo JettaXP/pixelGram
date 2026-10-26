@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import com.pixelgram.desktop.telegram.ReactionEffects
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,6 +38,8 @@ import androidx.compose.material3.Surface
 import com.pixelgram.desktop.ui.components.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -131,7 +132,6 @@ fun ReactionChips(
                     withContext(NonCancellable) { pop.snapTo(1f) }
                 }
             }
-            Box {
             Surface(
                 onClick = { onToggle(emoji) },
                 shape = CircleShape,
@@ -151,7 +151,12 @@ fun ReactionChips(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.padding(start = 8.dp, end = 10.dp, top = 3.dp, bottom = 3.dp).animateContentSize(),
                 ) {
-                    EmojiText(emoji, fontSize = 15.sp)
+                    val shot = if (telegram != null) ReactionEffects.pending[owner]?.takeIf { it.emoji == clean } else null
+                    var covered by remember { mutableStateOf(false) }
+                    Box(contentAlignment = Alignment.Center) {
+                        EmojiText(emoji, fontSize = 15.sp, modifier = Modifier.graphicsLayer { alpha = if (covered) 0f else 1f })
+                        if (shot != null && telegram != null) key(shot) { ReactionBurst(owner, shot, telegram) { covered = it } }
+                    }
                     val senders = reaction.recentSenderIds.orEmpty()
                     if (avatars && telegram != null && settings != null && reaction.totalCount <= MaxReactionAvatars && senders.size == reaction.totalCount) {
                         Row(horizontalArrangement = Arrangement.spacedBy(-ReactionAvatarOverlap)) {
@@ -169,39 +174,83 @@ fun ReactionChips(
                     }
                 }
             }
-            if (telegram != null) ReactionEffect(owner, clean, telegram)
-            }
             }
         }
     }
 }
 
 @Composable
-private fun BoxScope.ReactionEffect(owner: Pair<Long, Long>, emoji: String, telegram: Telegram) {
-    val shot = ReactionEffects.pending[owner]?.takeIf { it.emoji == emoji } ?: return
-    var sticker by remember(shot) { mutableStateOf<TdApi.Sticker?>(null) }
+private fun ReactionBurst(owner: Pair<Long, Long>, shot: ReactionEffects.Shot, telegram: Telegram, onCover: (Boolean) -> Unit) {
+    var reaction by remember(shot) { mutableStateOf<TdApi.EmojiReaction?>(null) }
     LaunchedEffect(shot) {
-        telegram.emojiReaction(emoji) { reaction ->
-            val effect = reaction?.effectAnimation ?: reaction?.aroundAnimation
-            if (effect == null) ReactionEffects.done(owner, shot) else sticker = effect
+        telegram.emojiReaction(shot.emoji) { result ->
+            if (result == null) ReactionEffects.done(owner, shot) else reaction = result
         }
+        delay(BurstWaitMs)
+        if (reaction == null) ReactionEffects.done(owner, shot)
     }
-    val shown = sticker ?: return
-    Box(Modifier.align(Alignment.CenterStart).padding(start = 18.dp)) {
-        androidx.compose.ui.window.Popup(alignment = Alignment.Center) {
-            StickerView(
-                shown,
-                telegram,
-                if (shot.big) BigEffectSize else EffectSize,
-                runs = 1,
-                onEnd = { ReactionEffects.done(owner, shot) },
-            )
+    val current = reaction ?: return
+    val center = current.activateAnimation ?: current.centerAnimation
+    val effect = current.effectAnimation ?: current.aroundAnimation
+    val parts = listOfNotNull(center, effect)
+    val ready = parts.all { telegram.localPath(it.sticker) != null }
+    LaunchedEffect(current) {
+        parts.forEach { telegram.download(it.sticker) }
+        delay(BurstWaitMs)
+        if (parts.any { telegram.localPath(it.sticker) == null }) ReactionEffects.done(owner, shot)
+    }
+    if (parts.isEmpty()) {
+        LaunchedEffect(Unit) { ReactionEffects.done(owner, shot) }
+        return
+    }
+    if (!ready) return
+    val effectSize = if (shot.big) BigEffectSize else EffectSize
+    val centerSize = effectSize * CenterShare
+    var centerDone by remember(shot) { mutableStateOf(center == null) }
+    var effectDone by remember(shot) { mutableStateOf(effect == null) }
+    var shrunk by remember(shot) { mutableStateOf(center == null) }
+    val shrink = remember(shot) { Animatable(1f) }
+    DisposableEffect(shot) {
+        onCover(center != null)
+        onDispose { onCover(false) }
+    }
+    LaunchedEffect(centerDone) {
+        if (!centerDone || shrunk) return@LaunchedEffect
+        shrink.animateTo(ChipEmojiSize / centerSize, androidx.compose.animation.core.tween(ShrinkMs))
+        shrunk = true
+        onCover(false)
+    }
+    LaunchedEffect(shrunk, effectDone) {
+        if (shrunk && effectDone) ReactionEffects.done(owner, shot)
+    }
+    androidx.compose.ui.window.Popup(alignment = Alignment.Center) {
+        Box(Modifier.size(effectSize), contentAlignment = Alignment.Center) {
+            if (effect != null && !effectDone) {
+                StickerView(effect, telegram, effectSize, runs = 1, onEnd = { effectDone = true })
+            }
+            if (center != null && !shrunk) {
+                StickerView(
+                    center,
+                    telegram,
+                    centerSize,
+                    Modifier.graphicsLayer {
+                        scaleX = shrink.value
+                        scaleY = shrink.value
+                    },
+                    runs = if (centerDone) 0 else 1,
+                    onEnd = { centerDone = true },
+                )
+            }
         }
     }
 }
 
-private val EffectSize = 96.dp
-private val BigEffectSize = 180.dp
+private val EffectSize = 120.dp
+private val BigEffectSize = 220.dp
+private val ChipEmojiSize = 20.dp
+private const val CenterShare = 0.5f
+private const val ShrinkMs = 260
+private const val BurstWaitMs = 4000L
 
 private const val MaxReactionAvatars = 3
 private val ReactionAvatarSize = 20.dp

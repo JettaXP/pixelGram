@@ -124,6 +124,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
@@ -484,10 +485,10 @@ fun ChatView(
                     EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
                     com.pixelgram.desktop.ui.components.ChatBadges(chat, telegram, 22.dp)
                 }
-                val status = telegram.presence(chat)
+                val status = telegram.activity(chat) ?: telegram.presence(chat)
                 AnimatedContent(status, transitionSpec = { fadeIn() togetherWith fadeOut() }) { text ->
                     if (text != null) {
-                        Text(
+                        EmojiText(
                             text.label,
                             style = MaterialTheme.typography.bodySmall,
                             color = if (text.online) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1702,6 +1703,7 @@ private fun Composer(
     }
     var emojiOpen by remember { mutableStateOf(false) }
     var mediaTab by remember { mutableStateOf(0) }
+    var mediaSearch by remember { mutableStateOf<String?>(null) }
     val focus = remember { FocusRequester() }
     val pickScope = rememberCoroutineScope()
     LaunchedEffect(chatId) { runCatching { focus.requestFocus() } }
@@ -2007,10 +2009,13 @@ private fun Composer(
                 checked = emojiOpen,
                 onCheckedChange = { open ->
                     if (!open || System.currentTimeMillis() - dismissedAt > PanelReopenGuardMs) emojiOpen = open
+                    focus.requestFocus()
                 },
+                modifier = Modifier.focusProperties { canFocus = false },
             ) {
                 Icon(Icons.Outlined.EmojiEmotions, contentDescription = "Emoji")
             }
+            LaunchedEffect(emojiOpen) { if (!emojiOpen) mediaSearch = null }
             if (emojiOpen) OnEscape {
                 emojiOpen = false
                 true
@@ -2024,8 +2029,9 @@ private fun Composer(
                     onDismissRequest = {
                         dismissedAt = System.currentTimeMillis()
                         emojiOpen = false
+                        focus.requestFocus()
                     },
-                    properties = PopupProperties(focusable = mediaTab == GifTab),
+                    properties = PopupProperties(focusable = mediaTab == GifTab || mediaSearch != null),
                 ) {
                     androidx.compose.animation.AnimatedVisibility(
                         visibleState = panelVisible,
@@ -2038,7 +2044,15 @@ private fun Composer(
                         telegram = telegram,
                         chatId = chatId,
                         tab = mediaTab,
-                        onTab = { mediaTab = it },
+                        onTab = {
+                            mediaTab = it
+                            mediaSearch = null
+                        },
+                        search = mediaSearch,
+                        onSearch = { query ->
+                            mediaSearch = query
+                            if (query == null) focus.requestFocus()
+                        },
                         onEmoji = insert,
                         whenOnline = telegram.chats[chatId]?.let { it.privateUserId != 0L && !telegram.isSavedMessages(chatId) && !telegram.isBot(it) } == true,
                         onSticker = { sticker, how ->

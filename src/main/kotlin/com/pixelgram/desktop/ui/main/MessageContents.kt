@@ -212,6 +212,19 @@ private fun AnimatedEmojiView(message: UiMessage, content: TdApi.MessageAnimated
     var playing by remember(key) { mutableStateOf(runs > 0) }
     var effect by remember(key) { mutableStateOf<TdApi.Sticker?>(null) }
     var effectRuns by remember(key) { mutableStateOf(0) }
+    val remote = telegram.emojiClicks[key]
+    LaunchedEffect(remote) {
+        if (remote == null || !animate) return@LaunchedEffect
+        telegram.emojiClicks.remove(key)
+        if (!playing) {
+            playing = true
+            runs++
+        }
+        if (effect == null) {
+            effect = remote
+            effectRuns++
+        }
+    }
     Box {
         StickerView(
             sticker,
@@ -246,7 +259,7 @@ private fun AnimatedEmojiView(message: UiMessage, content: TdApi.MessageAnimated
                     shown,
                     telegram,
                     size * EffectScale,
-                    Modifier.graphicsLayer { if (message.isOutgoing) scaleX = -1f },
+                    Modifier.graphicsLayer { if (!message.isOutgoing) scaleX = -1f },
                     runs = effectRuns,
                     onEnd = { effect = null },
                 )

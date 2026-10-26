@@ -18,6 +18,7 @@ SECTIONS = {
     "AvatarsSection": "Avatars",
     "BubblesSection": "Bubbles",
     "CornersSection": "Corners",
+    "CursorSection": "Cursor",
     "AboutSection": "About",
 }
 

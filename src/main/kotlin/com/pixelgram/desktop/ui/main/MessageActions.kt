@@ -232,6 +232,9 @@ private fun MessageMenu(
     }
     val copies = buildList {
         if (message.text.isNotEmpty()) add(MenuEntry(Icons.Outlined.ContentCopy, "Copy text", onClick = act { copy(message.text) }))
+        (message.content as? TdApi.MessageAnimatedEmoji)?.emoji?.takeIf { message.text.isEmpty() }?.let { emoji ->
+            add(MenuEntry(Icons.Outlined.ContentCopy, "Copy emoji", onClick = act { copy(emoji) }))
+        }
         actions.filePath(message)?.let { path ->
             add(MenuEntry(Icons.Outlined.FolderOpen, "Show in folder", onClick = act { showInFolder(path) }))
             add(MenuEntry(Icons.Outlined.Link, "Copy file path", onClick = act { copy(path) }))

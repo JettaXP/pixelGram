@@ -42,6 +42,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pixelgram.desktop.ui.theme.EmojiText
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import com.pixelgram.desktop.ui.components.expressive.IconButton
+import com.pixelgram.desktop.ui.icons.outlined.Search
+import com.pixelgram.desktop.ui.icons.outlined.Close
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 
 private class EmojiGroup(val name: String, val emoji: List<String>)
 
@@ -67,7 +88,7 @@ private fun groupIcon(name: String): ImageVector = when (name) {
 }
 
 @Composable
-fun EmojiPanel(onPick: (String) -> Unit, modifier: Modifier = Modifier) {
+fun EmojiPanel(onPick: (String) -> Unit, onSearch: () -> Unit, modifier: Modifier = Modifier) {
     val groups = EmojiGroups
     val grid = rememberLazyGridState()
     val scope = rememberCoroutineScope()
@@ -83,6 +104,9 @@ fun EmojiPanel(onPick: (String) -> Unit, modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
+                IconButton(onClick = onSearch, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Outlined.Search, contentDescription = "Search emoji", modifier = Modifier.size(20.dp))
+                }
                 groups.forEachIndexed { index, group ->
                     IconToggleButton(
                         checked = index == current,
@@ -123,5 +147,84 @@ fun EmojiPanel(onPick: (String) -> Unit, modifier: Modifier = Modifier) {
         }
     }
 }
+
+private val EmojiNames: List<Pair<String, String>> by lazy {
+    EmojiGroups.flatMap { it.emoji }.map { emoji ->
+        emoji to emoji.codePoints().toArray()
+            .filter { it != 0xFE0F && it != 0x200D }
+            .mapNotNull { Character.getName(it) }
+            .joinToString(" ")
+            .lowercase()
+    }
+}
+
+private fun localEmojiSearch(query: String): List<String> {
+    val words = query.lowercase().split(' ').filter(String::isNotBlank)
+    if (words.isEmpty()) return emptyList()
+    return EmojiNames.filter { (_, name) -> words.all { word -> name.split(' ').any { it.startsWith(word) } } }.map { it.first }
+}
+
+@Composable
+fun EmojiSearch(telegram: Telegram, query: String, onQuery: (String?) -> Unit, onPick: (String) -> Unit, modifier: Modifier = Modifier) {
+    var found by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(query) {
+        val local = localEmojiSearch(query)
+        found = local
+        if (query.isBlank()) return@LaunchedEffect
+        delay(PanelSearchDelayMs)
+        telegram.searchEmojis(query.trim()) { remote -> found = (remote + local).distinctBy { it.replace("\uFE0F", "") } }
+    }
+    Column(modifier) {
+        PanelSearchField(query, "Search emoji", onQuery)
+        if (query.isNotBlank() && found.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Nothing found", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            LazyVerticalGrid(columns = GridCells.Adaptive(EmojiCell), modifier = Modifier.padding(horizontal = 8.dp)) {
+                items(found) { emoji ->
+                    Box(
+                        Modifier.size(EmojiCell).clip(CircleShape).clickable { onPick(emoji) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        EmojiText(emoji, fontSize = 26.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PanelSearchField(query: String, placeholder: String, onQuery: (String?) -> Unit) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    TextField(
+        value = query,
+        onValueChange = { onQuery(it) },
+        visualTransformation = EmojiVisualTransformation,
+        placeholder = { Text(placeholder) },
+        leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+        trailingIcon = {
+            IconButton(onClick = { onQuery(null) }) { Icon(Icons.Outlined.Close, contentDescription = "Close search") }
+        },
+        singleLine = true,
+        shape = CircleShape,
+        colors = TextFieldDefaults.colors(
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+        ),
+        modifier = Modifier.fillMaxWidth().padding(8.dp).height(52.dp).focusRequester(focus).onPreviewKeyEvent { event ->
+            if (event.type == KeyEventType.KeyDown && event.key == Key.Escape) {
+                onQuery(null)
+                true
+            } else {
+                false
+            }
+        },
+    )
+}
+
+internal const val PanelSearchDelayMs = 250L
 
 private val EmojiCell = 40.dp

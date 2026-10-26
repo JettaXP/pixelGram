@@ -340,7 +340,12 @@ fun MainScreen(
                             androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
                             MiniPlayer(telegram)
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth().weight(1f)) {
-                                EmptyShapes()
+                                androidx.compose.animation.AnimatedVisibility(
+                                    settings.emptyShapes.value,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                    modifier = Modifier.matchParentSize(),
+                                ) { EmptyShapes() }
                                 Surface(
                                     shape = CircleShape,
                                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
