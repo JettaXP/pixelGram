@@ -7,8 +7,8 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.35.2"
-val codename = "I-beam"
+version = "0.35.3"
+val codename = ""
 
 kotlin {
     jvmToolchain(21)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.35.3
+
+### Chats
+- Swipe to reply with a touchpad works like Telegram Desktop: the direction locks at the start so scrolling no longer triggers it, the reply happens when you let go past the threshold so you can pull back to cancel, the message stretches a little past it and the reply icon bounces when you reach it.
+- Drag files onto a chat in the list to open it with the send preview. Holding files over a chat for a moment opens it too.
+- Thanks to Telegram Desktop (GPLv3) for the swipe logic, credited in the README.
+
 ## 0.35.2 I-beam
 
 ### Cursor
