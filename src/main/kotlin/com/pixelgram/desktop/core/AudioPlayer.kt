@@ -127,6 +127,7 @@ object AudioPlayer {
     private fun ui(run: Int, block: () -> Unit) = EventQueue.invokeLater { if (run == generation) block() }
 
     private fun play(run: Int, path: String, fraction: Float) {
+        if (File(path).length() > StreamBytes) return stream(run, path, fraction)
         val pcm = decode(File(path))
         val frames = pcm.samples.size / pcm.channels
         val total = frames.toFloat() / pcm.rate
@@ -145,12 +146,14 @@ object AudioPlayer {
         val sink = line?.let { Sink.Device(it) } ?: Sink.Silent(pcm.rate * frameBytes)
         var index = (fraction * frames).toInt()
         val chunk = pcm.rate / 25
-        val bytes = ByteArray(chunk * frameBytes)
+        var bytes = ByteArray(chunk * frameBytes)
+        val stretch = TimeStretch(pcm.channels, pcm.rate)
         try {
             while (run == generation) {
                 seekTo?.let {
                     index = (it * pcm.rate).toInt().coerceIn(0, frames)
                     seekTo = null
+                    stretch.reset()
                     sink.flush()
                 }
                 if (paused) {
@@ -174,21 +177,24 @@ object AudioPlayer {
                 }
                 val step = speed
                 val gain = if (muted) 0f else volume
-                var o = 0
-                var source = index.toFloat()
-                var written = 0
-                while (written < chunk && source < frames) {
-                    val frame = source.toInt()
-                    for (c in 0 until pcm.channels) {
-                        val sample = (pcm.samples[frame * pcm.channels + c] * gain).toInt()
+                if (step == 1f) {
+                    stretch.reset()
+                    val count = minOf(chunk, frames - index)
+                    var o = 0
+                    for (i in index * pcm.channels until (index + count) * pcm.channels) {
+                        val sample = (pcm.samples[i] * gain).toInt()
                         bytes[o++] = sample.toByte()
                         bytes[o++] = (sample shr 8).toByte()
                     }
-                    source += step
-                    written++
+                    sink.write(bytes, o)
+                    index += count
+                } else {
+                    val need = minOf((chunk * step).toInt(), frames - index)
+                    val out = stretch.process(pcm.samples.copyOfRange(index * pcm.channels, (index + need) * pcm.channels), need, step)
+                    bytes = pack(out, gain, bytes)
+                    sink.write(bytes, out.size * 2)
+                    index += need
                 }
-                sink.write(bytes, written * frameBytes)
-                index = source.toInt()
                 val queued = sink.queued() / frameBytes
                 val now = (index - queued * step).coerceAtLeast(0f) / pcm.rate
                 ui(run) { position = now }
@@ -196,6 +202,110 @@ object AudioPlayer {
         } finally {
             sink.close()
         }
+    }
+
+    private fun stream(run: Int, path: String, fraction: Float) {
+        val grabber = FFmpegFrameGrabber(path).apply {
+            sampleMode = FrameGrabber.SampleMode.SHORT
+            sampleFormat = avutil.AV_SAMPLE_FMT_S16
+        }
+        grabber.start()
+        val channels = grabber.audioChannels.coerceAtLeast(1)
+        val rate = grabber.sampleRate.coerceAtLeast(1)
+        val total = grabber.lengthInTime / MicrosPerSecond
+        ui(run) {
+            duration = total
+            loading = false
+        }
+        if (fraction > 0f) grabber.setTimestamp((fraction * total * MicrosPerSecond).toLong())
+        val format = AudioFormat(rate.toFloat(), 16, channels, true, false)
+        val frameBytes = 2 * channels
+        val line = runCatching {
+            AudioDevices.sourceLine(format).apply {
+                open(format, rate / 5 * frameBytes)
+                start()
+            }
+        }.onFailure { AppLog.write("No audio output, playing silently", it) }.getOrNull()
+        val sink = line?.let { Sink.Device(it) } ?: Sink.Silent(rate * frameBytes)
+        var bytes = ByteArray(0)
+        val stretch = TimeStretch(channels, rate)
+        try {
+            while (run == generation) {
+                seekTo?.let {
+                    grabber.setTimestamp((it * MicrosPerSecond).toLong())
+                    seekTo = null
+                    stretch.reset()
+                    sink.flush()
+                }
+                if (paused) {
+                    Thread.sleep(25)
+                    continue
+                }
+                val frame = grabber.grabSamples()
+                if (frame == null) {
+                    if (repeat) {
+                        grabber.setTimestamp(0)
+                        continue
+                    }
+                    sink.drain()
+                    val finished = current
+                    ui(run) {
+                        playing = false
+                        position = 0f
+                        current = null
+                        finished?.let { onFinished?.invoke(it) }
+                    }
+                    break
+                }
+                val samples = interleaved(frame) ?: continue
+                val count = samples.size / channels
+                val step = speed
+                val gain = if (muted) 0f else volume
+                val out = if (step == 1f) {
+                    stretch.reset()
+                    samples
+                } else {
+                    stretch.process(samples, count, step)
+                }
+                bytes = pack(out, gain, bytes)
+                sink.write(bytes, out.size * 2)
+                val queued = sink.queued() / frameBytes
+                val now = (frame.timestamp / MicrosPerSecond + count.toFloat() / rate - queued * step / rate).coerceAtLeast(0f)
+                ui(run) { position = now }
+            }
+        } finally {
+            sink.close()
+            runCatching { grabber.stop() }
+            runCatching { grabber.release() }
+        }
+    }
+
+    private fun pack(samples: ShortArray, gain: Float, buffer: ByteArray): ByteArray {
+        val bytes = if (buffer.size < samples.size * 2) ByteArray(samples.size * 2) else buffer
+        var o = 0
+        for (value in samples) {
+            val sample = (value * gain).toInt()
+            bytes[o++] = sample.toByte()
+            bytes[o++] = (sample shr 8).toByte()
+        }
+        return bytes
+    }
+
+    private fun interleaved(frame: org.bytedeco.javacv.Frame): ShortArray? {
+        val planes = frame.samples ?: return null
+        val first = planes.firstOrNull() as? ShortBuffer ?: return null
+        if (planes.size == 1) {
+            val chunk = ShortArray(first.remaining())
+            first.duplicate().get(chunk)
+            return chunk
+        }
+        val count = first.remaining()
+        val chunk = ShortArray(count * planes.size)
+        planes.forEachIndexed { c, plane ->
+            val buffer = (plane as ShortBuffer).duplicate()
+            for (i in 0 until count) chunk[i * planes.size + c] = buffer.get()
+        }
+        return chunk
     }
 
     private sealed interface Sink {
@@ -340,5 +450,7 @@ object AudioPlayer {
     }
 
     private const val OpusRate = 48_000
+    private const val StreamBytes = 4L * 1024 * 1024
+    private const val MicrosPerSecond = 1_000_000f
     private const val MaxOpusFrame = 5_760
 }

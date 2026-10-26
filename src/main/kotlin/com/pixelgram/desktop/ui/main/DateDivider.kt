@@ -85,8 +85,14 @@ private fun localDate(unixSeconds: Int): LocalDate =
 
 private fun dayLabel(unixSeconds: Int): String {
     val date = localDate(unixSeconds)
-    val pattern = if (date.year == LocalDate.now().year) "MMMM d" else "MMMM d, yyyy"
-    return date.format(DateTimeFormatter.ofPattern(pattern, Locale.ENGLISH))
+    val code = com.pixelgram.desktop.core.I18n.code
+    val thisYear = date.year == LocalDate.now().year
+    val pattern = when {
+        code == "en" -> if (thisYear) "MMMM d" else "MMMM d, yyyy"
+        code == "he" -> if (thisYear) "d בMMMM" else "d בMMMM yyyy"
+        else -> if (thisYear) "d MMMM" else "d MMMM yyyy"
+    }
+    return date.format(DateTimeFormatter.ofPattern(pattern, Locale.forLanguageTag(code)))
 }
 
 private val WaveHeight = 10.dp

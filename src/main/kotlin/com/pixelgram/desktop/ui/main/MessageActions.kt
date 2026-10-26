@@ -104,6 +104,7 @@ class MessageActions(
     val onSelect: ((UiMessage) -> Unit)? = null,
     val filePath: (UiMessage) -> String? = { null },
     val onSaveGif: ((UiMessage) -> Unit)? = null,
+    val canEdit: (UiMessage, (Boolean) -> Unit) -> Unit = { message, done -> done(message.editable) },
 )
 
 private class MenuTarget(val at: DpOffset, val link: String?, val button: TdApi.InlineKeyboardButton?)
@@ -254,10 +255,14 @@ private fun MessageMenu(
     val buttonUrl = (button?.type as? TdApi.InlineKeyboardButtonTypeUrl)?.url
         ?: (button?.type as? TdApi.InlineKeyboardButtonTypeLoginUrl)?.url
     val copyLink = link ?: buttonUrl
+    var canEdit by remember(message.key) { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(message.key) {
+        if (message.isOutgoing && message.editable) actions.canEdit(message) { canEdit = it }
+    }
     val reply = buildList {
         add(MenuEntry(Icons.AutoMirrored.Outlined.Reply, "Reply", onClick = act { actions.onReply(message) }))
         add(MenuEntry(Icons.AutoMirrored.Outlined.Forward, "Forward", onClick = act { actions.onForward(message) }))
-        if (message.isOutgoing && message.editable) add(MenuEntry(Icons.Outlined.Edit, "Edit", onClick = act { actions.onEdit(message) }))
+        if (canEdit) add(MenuEntry(Icons.Outlined.Edit, "Edit", onClick = act { actions.onEdit(message) }))
         actions.onPin?.takeIf { !message.service }?.let { pin ->
             add(MenuEntry(Icons.Outlined.PushPin, if (message.pinned) "Unpin" else "Pin", onClick = act { pin(message) }))
         }

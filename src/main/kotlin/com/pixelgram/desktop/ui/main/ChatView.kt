@@ -321,6 +321,7 @@ fun ChatView(
             },
             onForward = { forwarding = it },
             onSaveGif = { message -> telegram.saveGif(message) },
+            canEdit = { message, done -> telegram.canEdit(message, done) },
             onReact = { message, emoji -> telegram.toggleReaction(message, emoji) },
             loadReactions = { message, done -> telegram.availableReactions(message, done) },
             canReact = canReact,
@@ -335,8 +336,12 @@ fun ChatView(
                     }
                     DoubleClickAction.Reaction -> if (canReact) telegram.toggleReaction(message, settings.doubleClickEmoji.value)
                     DoubleClickAction.Edit -> if (message.isOutgoing && message.editable) {
-                        replyTo = null
-                        editing = message
+                        telegram.canEdit(message) { allowed ->
+                            if (allowed) {
+                                replyTo = null
+                                editing = message
+                            }
+                        }
                     }
                     DoubleClickAction.Nothing -> Unit
                 }
@@ -564,11 +569,32 @@ fun ChatView(
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
         }
+        val lastPress = remember(chat.id) { longArrayOf(0L) }
         Box(
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
                 .onGloballyPositioned { listOrigin = it.positionInWindow() }
+                .pointerInput(chat.id) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Final)
+                        if (!currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
+                        val pressedAt = down.uptimeMillis
+                        lastPress[0] = pressedAt
+                        var moved = false
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Final)
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) moved = true
+                            if (!change.pressed) break
+                        }
+                        if (moved || selectingState.value) return@awaitEachGesture
+                        scope.launch {
+                            delay(FocusAfterClickMs)
+                            if (lastPress[0] == pressedAt) ComposerFocus.request = chat.id to System.nanoTime()
+                        }
+                    }
+                }
                 .pointerInput(Unit) {
                     val keyAt = { position: androidx.compose.ui.geometry.Offset ->
                         val point = position + listOrigin
@@ -779,6 +805,7 @@ fun ChatView(
                                     onReact = { emoji -> telegram.toggleReaction(message, emoji) },
                                     onButton = { button ->
                                         telegram.pressButton(message, button) { text, alert -> botAnswer = text to alert }
+                                        ComposerFocus.request = chat.id to System.nanoTime()
                                     },
                                     onOrigin = openOrigin,
                                     onVia = { bot -> ComposerInsert.request = chat.id to "$bot " },
@@ -909,6 +936,9 @@ fun ChatView(
                     it.isOutgoing && it.editable && !it.service && !it.sending && !it.failed
                 }?.takeIf { now - it.date < EditWindowSeconds || telegram.isSavedMessages(chat.id) }
                 editing = last
+                last?.let { candidate ->
+                    telegram.canEdit(candidate) { allowed -> if (!allowed && editing?.key == candidate.key) editing = null }
+                }
                 last != null
             },
             onCancelEdit = { editing = null },
@@ -1526,6 +1556,12 @@ object ComposerInsert {
     var request by mutableStateOf<Pair<Long, String>?>(null)
 }
 
+object ComposerFocus {
+    var request by mutableStateOf<Pair<Long, Long>?>(null)
+}
+
+private const val FocusAfterClickMs = 360L
+
 object PluginViewer {
     var path by mutableStateOf<String?>(null)
 }
@@ -1722,6 +1758,7 @@ private fun Composer(
     }
     var suggestions by remember { mutableStateOf(emptyList<Long>()) }
     var suggestionIndex by remember { mutableStateOf(0) }
+    val latestMention by rememberUpdatedState(mentionQuery)
     LaunchedEffect(mentionQuery, chatId) {
         if (mentionQuery == null) {
             suggestions = emptyList()
@@ -1729,6 +1766,7 @@ private fun Composer(
         }
         delay(MentionDelayMs)
         telegram.mentionSuggestions(chatId, inGroup, mentionQuery) {
+            if (latestMention != mentionQuery) return@mentionSuggestions
             suggestions = it
             suggestionIndex = 0
         }
@@ -1736,6 +1774,8 @@ private fun Composer(
     val inlineMatch = InlineQuery.matchEntire(text.text)
     val inlineName = inlineMatch?.groupValues?.get(1)
     val inlineText = inlineMatch?.groupValues?.get(2)
+    val latestInlineName by rememberUpdatedState(inlineName)
+    val latestInlineText by rememberUpdatedState(inlineText)
     var inlineBot by remember(chatId) { mutableStateOf<TdApi.User?>(null) }
     var inlineResults by remember(chatId) { mutableStateOf<TdApi.InlineQueryResults?>(null) }
     var inlineResolving by remember(chatId) { mutableStateOf(false) }
@@ -1747,6 +1787,7 @@ private fun Composer(
         inlineResolving = true
         delay(MentionDelayMs)
         telegram.inlineBot(name) {
+            if (latestInlineName != name) return@inlineBot
             inlineBot = it
             inlineResolving = false
         }
@@ -1756,7 +1797,7 @@ private fun Composer(
         val bot = inlineBot ?: return@LaunchedEffect
         val query = inlineText ?: return@LaunchedEffect
         delay(InlineDelayMs)
-        telegram.inlineResults(bot.id, chatId, query) { inlineResults = it }
+        telegram.inlineResults(bot.id, chatId, query) { if (latestInlineText == query) inlineResults = it }
     }
     val showInline = inlineMatch != null && inlineBot != null
     val inlineLoading = inlineMatch != null && (inlineResolving || inlineBot != null && inlineResults == null)
@@ -1820,12 +1861,23 @@ private fun Composer(
     LaunchedEffect(forwarding) { if (forwarding) runCatching { focus.requestFocus() } }
     val pickScope = rememberCoroutineScope()
     LaunchedEffect(chatId) { runCatching { focus.requestFocus() } }
+    var draftBeforeEdit by remember(chatId) { mutableStateOf<Pair<TextFieldValue, List<FormatSpan>>?>(null) }
     LaunchedEffect(editing?.key) {
         if (editing != null) {
+            if (draftBeforeEdit == null) draftBeforeEdit = text to spans
             text = TextFieldValue(editing.text, TextRange(editing.text.length))
             spans = spansFrom(editing.entities)
             focus.requestFocus()
+        } else {
+            draftBeforeEdit?.let { (value, saved) ->
+                text = value
+                spans = saved
+            }
+            draftBeforeEdit = null
         }
+    }
+    LaunchedEffect(ComposerFocus.request) {
+        if (ComposerFocus.request?.first == chatId) runCatching { focus.requestFocus() }
     }
     LaunchedEffect(ComposerInsert.request) {
         val (target, value) = ComposerInsert.request ?: return@LaunchedEffect

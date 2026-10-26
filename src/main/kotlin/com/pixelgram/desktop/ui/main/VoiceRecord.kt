@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.layout.Column
 import com.pixelgram.desktop.ui.icons.automirrored.filled.Send
 import com.pixelgram.desktop.ui.icons.filled.KeyboardArrowUp
@@ -448,7 +449,7 @@ fun RecordingBar(voice: VoiceRecording, modifier: Modifier = Modifier) {
                     modifier = Modifier.graphicsLayer { alpha = chrome },
                 )
             }
-            Waveform(voice, waveColor, c, Modifier.weight(1f).height(32.dp))
+            Waveform(voice, waveColor, c, Modifier.weight(1f).height(32.dp).clipToBounds())
             if (chrome > 0f) {
                 if (voice.locked) {
                     androidx.compose.material3.TextButton(onClick = { voice.cancel() }, modifier = Modifier.graphicsLayer { alpha = chrome }) {
@@ -457,12 +458,12 @@ fun RecordingBar(voice: VoiceRecording, modifier: Modifier = Modifier) {
                 } else {
                     val cancelPx = with(density) { CancelDistance.toPx() }
                     val armed = -voice.dragX >= cancelPx
+                    val shift = with(density) { ((-voice.dragX).coerceIn(0f, cancelPx) / 2).toDp() }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.graphicsLayer {
-                            alpha = chrome
-                            translationX = voice.dragX.coerceAtLeast(-cancelPx) / 2
-                        },
+                        modifier = Modifier
+                            .padding(end = shift)
+                            .graphicsLayer { alpha = chrome },
                     ) {
                         Icon(
                             if (armed) Icons.Outlined.Delete else Icons.AutoMirrored.Filled.KeyboardArrowLeft,

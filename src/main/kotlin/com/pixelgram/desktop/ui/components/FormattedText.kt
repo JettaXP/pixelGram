@@ -138,7 +138,12 @@ private fun link(url: String, colors: FormatColors, underline: Boolean = true) =
 
 fun formatDateEntity(unixTime: Int): String =
     Instant.ofEpochSecond(unixTime.toLong()).atZone(ZoneId.systemDefault())
-        .format(DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", Locale.ENGLISH))
+        .format(
+            DateTimeFormatter.ofPattern(
+                if (com.pixelgram.desktop.core.I18n.code == "he") "d בMMMM yyyy, HH:mm" else "d MMMM yyyy, HH:mm",
+                Locale.forLanguageTag(com.pixelgram.desktop.core.I18n.code),
+            ),
+        )
 
 private fun ranges(entities: List<TdApi.TextEntity>, length: Int, match: (TdApi.TextEntityType) -> Boolean) =
     entities.filter { match(it.type) }.map { it.offset.coerceIn(0, length) until (it.offset + it.length).coerceIn(0, length) }

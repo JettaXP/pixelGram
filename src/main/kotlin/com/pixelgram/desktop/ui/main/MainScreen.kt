@@ -240,7 +240,7 @@ fun MainScreen(
                                     telegram = telegram,
                                     settings = settings,
                                     onOpen = onOpenChat,
-                                    archivedCount = telegram.chatList(ChatListKey.Archive).size,
+                                    archivedCount = telegram.chatCount(ChatListKey.Archive),
                                     onOpenArchive = { selectedKey = ChatListKey.Archive },
                                     onMenu = if (foldersLeft) null else toggleMenu,
                                     onSearch = { MessageSearch.start(null) },

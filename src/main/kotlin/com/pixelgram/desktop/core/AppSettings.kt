@@ -277,8 +277,18 @@ class AppSettings private constructor(private val props: Properties) {
             val props = pending ?: return
             pending = null
             runCatching {
-                AppPaths.settingsFile.outputStream().use { props.store(it, "pixelGram settings") }
-            }
+                val target = AppPaths.settingsFile
+                val temp = java.io.File(target.parentFile, target.name + ".tmp")
+                java.io.FileOutputStream(temp).use { stream ->
+                    props.store(stream, "pixelGram settings")
+                    stream.fd.sync()
+                }
+                runCatching {
+                    java.nio.file.Files.move(temp.toPath(), target.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+                }.getOrElse {
+                    java.nio.file.Files.move(temp.toPath(), target.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                }
+            }.onFailure { AppLog.write("Settings save failed", it) }
         }
     }
 

@@ -74,7 +74,9 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
     val scope = MessageSearch.scopeChatId
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    val generation = remember { intArrayOf(0) }
     LaunchedEffect(query, scope) {
+        val token = ++generation[0]
         if (query.isBlank()) {
             results = emptyList()
             foundChats = emptyList()
@@ -83,9 +85,11 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
             return@LaunchedEffect
         }
         busy = true
-        if (scope == null) telegram.searchChats(query.trim()) { foundChats = it } else foundChats = emptyList()
+        delay(ChatSearchDelayMs)
+        if (scope == null) telegram.searchChats(query.trim()) { if (token == generation[0]) foundChats = it } else foundChats = emptyList()
         delay(SearchDelayMs)
         telegram.searchMessages(query.trim(), scope) { count, found ->
+            if (token != generation[0]) return@searchMessages
             total = count
             results = found
             busy = false
@@ -228,4 +232,5 @@ private fun snippet(text: String, query: String): String {
 }
 
 private const val SearchDelayMs = 350L
+private const val ChatSearchDelayMs = 150L
 private const val SnippetLead = 12

@@ -6,6 +6,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.pixelgram.desktop.core.AppSettings
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class Accounts(private val settings: AppSettings, private val scope: CoroutineScope) {
     val list = mutableStateListOf<Telegram>()
@@ -64,6 +68,8 @@ class Accounts(private val settings: AppSettings, private val scope: CoroutineSc
 
     fun closeAll() = list.forEach { it.close() }
 
+    val allClosed: Boolean get() = list.all { it.isClosed }
+
     private fun onLoggedOut(telegram: Telegram): Boolean {
         if (list.size < 2) return false
         remove(telegram)
@@ -74,6 +80,19 @@ class Accounts(private val settings: AppSettings, private val scope: CoroutineSc
         list.remove(telegram)
         save()
         if (active == telegram) switchTo(list.first())
+        discard(telegram.account)
+    }
+
+    private fun discard(account: Int) {
+        if (account == 0) return
+        scope.launch {
+            delay(DiscardDelayMs)
+            if (list.any { it.account == account }) return@launch
+            withContext(Dispatchers.IO) {
+                runCatching { com.pixelgram.desktop.core.AppPaths.accountDir(account).deleteRecursively() }
+                    .onFailure { com.pixelgram.desktop.core.AppLog.write("Account folder cleanup failed", it) }
+            }
+        }
     }
 
     private fun save() {
@@ -82,5 +101,6 @@ class Accounts(private val settings: AppSettings, private val scope: CoroutineSc
 
     private companion object {
         const val MaxAccounts = 10
+        const val DiscardDelayMs = 5_000L
     }
 }

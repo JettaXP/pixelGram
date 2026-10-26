@@ -205,6 +205,8 @@ private const val DownloadWaitMs = 200L
 private const val MentionResolveMin = 4
 private const val HistoryPagesMax = 300
 private const val DrainBudgetNs = 8_000_000L
+private const val ChatPage = 100
+private const val RetryAfterMs = 60_000L
 
 private object Tdlib {
     private var factory: ClientFactory? = null
@@ -239,6 +241,9 @@ class Telegram(
     val users = KeyedState<Long, TdApi.User>()
     val unread = mutableStateMapOf<ChatListKey, UnreadCount>()
     val unreadMessages = mutableStateMapOf<ChatListKey, UnreadCount>()
+    private val listTotals = KeyedState<ChatListKey, Int>()
+
+    fun chatCount(key: ChatListKey): Int = maxOf(listTotals[key] ?: 0, chatList(key).size)
     val statuses = KeyedState<Long, TdApi.UserStatus>()
     private val chatActions = mutableStateMapOf<Long, List<Pair<TdApi.MessageSender, TdApi.ChatAction>>>()
     val emojiClicks = KeyedState<Pair<Long, Long>, TdApi.Sticker>()
@@ -342,6 +347,9 @@ class Telegram(
 
     private var exiting = false
     private var loggingOut = false
+    private var closed = false
+
+    val isClosed: Boolean get() = closed || client == null
 
     fun close() {
         exiting = true
@@ -687,7 +695,16 @@ class Telegram(
     private fun memberCount(chat: ChatState): Int? = when {
         chat.basicGroupId != 0L -> basicGroupMembers[chat.basicGroupId]
         chat.supergroupId != 0L -> supergroupMembers[chat.supergroupId] ?: run {
-            if (memberRequests.add(chat.supergroupId)) send(TdApi.GetSupergroupFullInfo(chat.supergroupId))
+            if (memberRequests.add(chat.supergroupId)) {
+                val id = chat.supergroupId
+                send(TdApi.GetSupergroupFullInfo(id)) { result ->
+                    if (result is TdApi.SupergroupFullInfo) {
+                        if (result.memberCount > 0) supergroupMembers[id] = result.memberCount
+                    } else {
+                        retryLater { memberRequests.remove(id) }
+                    }
+                }
+            }
             null
         }
         else -> null
@@ -737,15 +754,16 @@ class Telegram(
         val userId = chat.privateUserId
         if (isSavedMessages(chat.id)) return null
         if (userId == 0L) return membersLabel(chat)?.let { Presence(it, false) }
-        if (users[userId]?.type is TdApi.UserTypeBot) return Presence("bot", false)
+        if (users[userId]?.type is TdApi.UserTypeBot) return Presence(com.pixelgram.desktop.core.I18n.tr("bot"), false)
         clockMinute
+        val tr = com.pixelgram.desktop.core.I18n::tr
         return when (val status = statuses[userId]) {
-            is TdApi.UserStatusOnline -> Presence("online", true)
-            is TdApi.UserStatusOffline -> Presence(lastSeen(status.wasOnline), false)
-            is TdApi.UserStatusRecently -> Presence("last seen recently", false)
-            is TdApi.UserStatusLastWeek -> Presence("last seen within a week", false)
-            is TdApi.UserStatusLastMonth -> Presence("last seen within a month", false)
-            else -> Presence("last seen a long time ago", false)
+            is TdApi.UserStatusOnline -> Presence(tr("online"), true)
+            is TdApi.UserStatusOffline -> Presence(tr(lastSeen(status.wasOnline)), false)
+            is TdApi.UserStatusRecently -> Presence(tr("last seen recently"), false)
+            is TdApi.UserStatusLastWeek -> Presence(tr("last seen within a week"), false)
+            is TdApi.UserStatusLastMonth -> Presence(tr("last seen within a month"), false)
+            else -> Presence(tr("last seen a long time ago"), false)
         }
     }
 
@@ -768,7 +786,16 @@ class Telegram(
 
     fun ensureUser(userId: Long) {
         if (userId == 0L || users[userId] != null || !userRequests.add(userId)) return
-        send(TdApi.GetUser(userId)) { result -> if (result is TdApi.User) users[userId] = result }
+        send(TdApi.GetUser(userId)) { result ->
+            if (result is TdApi.User) users[userId] = result else retryLater { userRequests.remove(userId) }
+        }
+    }
+
+    private fun retryLater(action: () -> Unit) {
+        scope.launch(Dispatchers.Main) {
+            delay(RetryAfterMs)
+            action()
+        }
     }
 
     fun userName(userId: Long): String {
@@ -959,6 +986,7 @@ class Telegram(
             }
             is TdApi.UpdateUnreadChatCount -> ChatListKey.of(update.chatList)?.let { key ->
                 unread[key] = UnreadCount(update.unreadCount, update.unreadUnmutedCount)
+                listTotals[key] = update.totalCount
             }
             is TdApi.UpdateUnreadMessageCount -> ChatListKey.of(update.chatList)?.let { key ->
                 unreadMessages[key] = UnreadCount(update.unreadCount, update.unreadUnmutedCount)
@@ -985,6 +1013,8 @@ class Telegram(
                 val local = file.local
                 if (local != null && local.isDownloadingCompleted) {
                     filePaths[file.id] = local.path
+                } else if (filePaths.remove(file.id) != null) {
+                    requestedFiles.remove(file.id)
                 }
                 val total = maxOf(file.size, file.expectedSize).toFloat()
                 when {
@@ -1011,7 +1041,7 @@ class Telegram(
                         list.add(0, update.message.toUi().copy(fresh = true))
                     }
                 }
-                if (update.message.chatId == openChatId && windowFocused && !update.message.isOutgoing) {
+                if (update.message.chatId in openChats && windowFocused && !update.message.isOutgoing) {
                     markRead(update.message.chatId, listOf(update.message.id))
                 }
                 if (shouldNotify(update.message)) {
@@ -1138,15 +1168,51 @@ class Telegram(
                 users.clear()
                 folders.clear()
                 requestedFiles.clear()
+                forgetSession()
                 me = null
                 myUserId = 0L
                 val removed = loggingOut && onLoggedOut(this)
                 loggingOut = false
+                if (exiting) closed = true
                 if (!exiting && !removed) createClient()
                 AuthState.Starting
             }
             else -> AuthState.Unsupported(state.javaClass.simpleName)
         }
+    }
+
+    private fun forgetSession() {
+        statuses.clear()
+        filePaths.clear()
+        transfers.clear()
+        supergroupInfo.clear()
+        supergroupMembers.clear()
+        basicGroupMembers.clear()
+        forums.clear()
+        officialSupergroups.clear()
+        blockedUsers.clear()
+        customEmojiStickers.clear()
+        customEmojiRequested.clear()
+        replyCache.clear()
+        replyRequests.clear()
+        stickerSets.clear()
+        stickerSetRequests.clear()
+        userRequests.clear()
+        memberRequests.clear()
+        listsLoading.clear()
+        listsComplete.clear()
+        pinnedMessages.clear()
+        detached.clear()
+        botStarts.clear()
+        savedTopics.clear()
+        muteOverrides.clear()
+        chatActions.clear()
+        localDraftDates.clear()
+        historyGeneration.clear()
+        unread.clear()
+        unreadMessages.clear()
+        listTotals.clear()
+        contactIds = null
     }
 
     private fun addChat(chat: TdApi.Chat) {
@@ -1220,16 +1286,19 @@ class Telegram(
         }
     }
 
+    private val listsLoading = HashSet<ChatListKey>()
+    private val listsComplete = HashSet<ChatListKey>()
+
     fun loadChats(key: ChatListKey) {
-        val list: TdApi.ChatList = when (key) {
-            ChatListKey.Main, ChatListKey.Unread, ChatListKey.Mentions -> TdApi.ChatListMain()
-            ChatListKey.Archive -> TdApi.ChatListArchive()
-            is ChatListKey.Folder -> TdApi.ChatListFolder().apply { chatFolderId = key.id }
-        }
+        val source = if (key == ChatListKey.Unread || key == ChatListKey.Mentions) ChatListKey.Main else key
+        if (source in listsComplete || !listsLoading.add(source)) return
         send(TdApi.LoadChats().apply {
-            chatList = list
-            limit = 100
-        })
+            chatList = source.toTd()
+            limit = ChatPage
+        }) { result ->
+            listsLoading.remove(source)
+            if (result is TdApi.Error && result.code == 404) listsComplete.add(source)
+        }
     }
 
     fun messages(chatId: Long): SnapshotStateList<UiMessage> =
@@ -1238,7 +1307,7 @@ class Telegram(
     private val scopeNotifications = mutableStateMapOf<Class<*>, TdApi.ScopeNotificationSettings>()
     var reactionNotifications by mutableStateOf<TdApi.ReactionNotificationSettings?>(null)
         private set
-    private var openChatId = 0L
+    private val openChats = HashMap<Long, Int>()
 
     var windowFocused = true
         set(value) {
@@ -1246,15 +1315,16 @@ class Telegram(
             field = value
         }
 
-    private fun readOpenChat() {
-        val chatId = openChatId.takeIf { it != 0L } ?: return
+    private fun readOpenChat() = openChats.keys.forEach(::readChat)
+
+    private fun readChat(chatId: Long) {
         val ids = messages(chatId).take(50).filter { !it.isOutgoing }.map { it.id }
         if (ids.isNotEmpty()) markRead(chatId, ids)
     }
 
     private fun shouldNotify(message: TdApi.Message): Boolean {
         if (message.isOutgoing || settings.notificationsMuted.value) return false
-        if (message.chatId == openChatId && windowFocused) return false
+        if (message.chatId in openChats && windowFocused) return false
         val chat = chats[message.chatId] ?: return false
         if (message.content is TdApi.MessageContactRegistered && contactJoinedMuted) return false
         if (message.content is TdApi.MessagePinMessage && scopeSettings(scopeOf(chat))?.disablePinnedMessageNotifications == true) return false
@@ -1672,15 +1742,16 @@ class Telegram(
     }
 
     fun openChat(chatId: Long) {
-        openChatId = chatId
+        openChats[chatId] = (openChats[chatId] ?: 0) + 1
         send(TdApi.OpenChat().apply { this.chatId = chatId })
         val list = messages(chatId)
-        if (list.isEmpty()) loadMoreMessages(chatId) else readOpenChat()
+        if (list.isEmpty()) loadMoreMessages(chatId) else if (windowFocused) readChat(chatId)
     }
 
     fun closeChat(chatId: Long) {
-        if (openChatId == chatId) openChatId = 0L
-        if (detached.remove(chatId) == true) resetHistory(chatId)
+        val left = (openChats[chatId] ?: 1) - 1
+        if (left > 0) openChats[chatId] = left else openChats.remove(chatId)
+        if (left <= 0 && detached.remove(chatId) == true) resetHistory(chatId)
         send(TdApi.CloseChat().apply { this.chatId = chatId })
     }
 
@@ -2506,21 +2577,35 @@ class Telegram(
         })
     }
 
+    fun canEdit(message: UiMessage, done: (Boolean) -> Unit) {
+        if (!message.isOutgoing || message.service || message.sending || message.failed) return done(false)
+        if (System.getProperty("pixelgram.demo") == "true") return done(message.editable)
+        send(TdApi.GetMessageProperties(message.chatId, message.id)) { result ->
+            done((result as? TdApi.MessageProperties)?.canBeEdited == true)
+        }
+    }
+
     fun editMessage(message: UiMessage, text: String, entities: Array<TdApi.TextEntity> = emptyArray()) {
         val formatted = TdApi.FormattedText(text, entities)
-        if (message.photo != null) {
+        val report: (TdApi.Object) -> Unit = { result ->
+            if (result is TdApi.Error) {
+                AppLog.write("Edit failed ${result.code}: ${result.message}")
+                com.pixelgram.desktop.ui.main.TopNotice.text = com.pixelgram.desktop.core.tr("Couldn't edit the message") + ": " + friendlyError(result.message)
+            }
+        }
+        if (message.content !is TdApi.MessageText) {
             send(TdApi.EditMessageCaption().apply {
                 chatId = message.chatId
                 messageId = message.id
                 caption = formatted
-            })
+            }, report)
         } else {
             if (text.isBlank()) return
             send(TdApi.EditMessageText().apply {
                 chatId = message.chatId
                 messageId = message.id
                 inputMessageContent = TdApi.InputMessageText().apply { this.text = formatted }
-            })
+            }, report)
         }
     }
 
@@ -2668,7 +2753,8 @@ fun TdApi.Message.toUi(): UiMessage {
         failed = sendingState is TdApi.MessageSendingStateFailed,
         edited = editDate > 0,
         service = isService(content),
-        editable = isOutgoing && (content is TdApi.MessageText || content is TdApi.MessagePhoto),
+        editable = isOutgoing && (content is TdApi.MessageText || content is TdApi.MessagePhoto || content is TdApi.MessageVideo ||
+            content is TdApi.MessageAnimation || content is TdApi.MessageDocument || content is TdApi.MessageAudio || content is TdApi.MessageVoiceNote),
         content = content,
         entities = messageEntities(content),
         forwardOrigin = forwardInfo?.origin,

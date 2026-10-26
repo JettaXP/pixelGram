@@ -173,12 +173,14 @@ object Updater {
         require(uri.scheme == "https" && uri.host == "github.com") { "Unexpected download address" }
         val connection = uri.toURL().openConnection() as HttpURLConnection
         connection.connectTimeout = TimeoutMs
+        connection.readTimeout = TimeoutMs
         connection.instanceFollowRedirects = true
+        if (connection.responseCode != HttpURLConnection.HTTP_OK) error("Download answered ${connection.responseCode}")
         val total = connection.contentLengthLong.takeIf { it > 0 } ?: asset.size
+        var done = 0L
         connection.inputStream.use { input ->
             part.outputStream().use { output ->
                 val buffer = ByteArray(1 shl 16)
-                var done = 0L
                 while (true) {
                     val read = input.read(buffer)
                     if (read < 0) break
@@ -187,6 +189,10 @@ object Updater {
                     if (total > 0) progress = done.toFloat() / total
                 }
             }
+        }
+        if (done == 0L || (total > 0 && done != total)) {
+            part.delete()
+            error("Download was cut off, try again")
         }
         if (!part.renameTo(target)) error("Couldn't save ${asset.name}")
         return UpdateState.Ready(target, manualStep(target))

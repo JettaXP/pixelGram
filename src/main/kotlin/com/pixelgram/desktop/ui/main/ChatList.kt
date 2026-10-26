@@ -59,6 +59,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import com.pixelgram.desktop.ui.icons.Icons
@@ -205,6 +206,7 @@ private fun ChatListBody(
         ) { key ->
             val (pinned, rest) = chatsFor(key).partition { it.pinned[key] == true }
             val listState = rememberLazyListState()
+            LoadMoreChats(listState, key, pinned.size + rest.size, telegram)
             val scrollRequest = ChatListScroll.request
             val seenRequest = remember { intArrayOf(scrollRequest) }
             LaunchedEffect(scrollRequest) {
@@ -270,6 +272,20 @@ private fun ChatListBody(
 
 private val GroupGap = 8.dp
 private const val FollowTopItems = 4
+private const val LoadMoreAhead = 15
+
+@Composable
+private fun LoadMoreChats(listState: androidx.compose.foundation.lazy.LazyListState, key: ChatListKey, count: Int, telegram: Telegram) {
+    val nearEnd by remember(listState) {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            info.totalItemsCount == 0 || (info.visibleItemsInfo.lastOrNull()?.index ?: 0) >= info.totalItemsCount - LoadMoreAhead
+        }
+    }
+    LaunchedEffect(key, nearEnd, count) {
+        if (nearEnd) telegram.loadChats(key)
+    }
+}
 
 @Composable
 private fun OnlineAvatar(chat: ChatState, telegram: Telegram, settings: AppSettings, size: Dp) {
@@ -325,7 +341,10 @@ private fun CompactChatList(
                 Icon(menuIcon(menuOpen), contentDescription = "Menu")
             }
         }
+        val compactState = rememberLazyListState()
+        LoadMoreChats(compactState, listKey, chatsFor(listKey).size, telegram)
         LazyColumn(
+            state = compactState,
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = PaddingValues(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -394,6 +413,7 @@ private fun ChatRow(
 ) {
     val colors = MaterialTheme.colorScheme
     val last = chat.lastMessage
+    val today by remember(telegram) { derivedStateOf { telegram.clockMinute.let { LocalDate.now() } } }
     var menuAt by remember { mutableStateOf<DpOffset?>(null) }
     var preview by remember { mutableStateOf(false) }
     var dropping by remember { mutableStateOf(false) }
@@ -468,15 +488,16 @@ private fun ChatRow(
                             )
                         }
                         Text(
-                            text = last?.let { formatChatDate(it.date) } ?: "",
+                            text = last?.let { message -> remember(message.date, today) { formatChatDate(message.date) } } ?: "",
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
                     if (chat.unreadCount > 0) {
+                        val muted = telegram.isMuted(chat)
                         Badge(
                             modifier = Modifier.padding(top = 6.dp),
-                            containerColor = colors.primary,
-                            contentColor = colors.onPrimary,
+                            containerColor = if (muted) colors.outline else colors.primary,
+                            contentColor = if (muted) colors.surface else colors.onPrimary,
                         ) {
                             Text(if (chat.unreadCount > 999) "999+" else chat.unreadCount.toString())
                         }

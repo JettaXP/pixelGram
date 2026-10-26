@@ -891,3 +891,9 @@ video	видео
 Settings style	Стиль настроек
 Material You	Material You
 Expressive groups the sections into segmented cards. Material You shows a flat list with a highlighted pill, like Android settings.	Выразительный собирает разделы в сегментированные карточки. Material You — плоский список с подсвеченной пилюлей, как в настройках Android.
+last seen {n} min ago	был(а) {n} {минуту|минуты|минут} назад
+last seen today at {n}:{n}	был(а) сегодня в {n}:{n}
+last seen yesterday at {n}:{n}	был(а) вчера в {n}:{n}
+last seen {n}.{n}.{n} at {n}:{n}	был(а) {n}.{n}.{n} в {n}:{n}
+bot	бот
+Couldn't edit the message	Не удалось изменить сообщение

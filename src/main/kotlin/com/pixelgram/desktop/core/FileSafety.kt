@@ -13,6 +13,8 @@ object FileSafety {
         "gadget", "appref-ms", "library-ms", "settingcontent-ms", "search-ms", "ade", "adp", "ins", "isp", "mst", "xll", "docm", "xlsm",
         "pptm", "iso", "img", "vhd", "vhdx", "sh", "bash", "zsh", "csh", "run", "bin", "desktop", "appimage", "deb", "rpm", "command",
         "app", "pkg", "dmg", "workflow", "scpt", "py", "pyw", "pl", "rb", "php", "apk",
+        "msix", "msixbundle", "appx", "appxbundle", "jnlp", "xbap", "wsc", "mde", "hlp", "ps1xml", "ps2", "ps2xml", "psc1", "psc2", "cer", "crt", "der",
+        "terminal", "tool", "action", "elf", "out", "ko",
     )
 
     private val Invisible = Regex("[\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u0000-\\u001F\\u007F]")

@@ -176,9 +176,19 @@ private fun ApplicationScope.PixelApp() {
         if (System.getProperty("pixelgram.demo") == "true") accounts.active.loadDemo()
     }
 
-    val quit = {
-        accounts.closeAll()
-        exitApplication()
+    val exitScope = rememberCoroutineScope()
+    var quitting by remember { mutableStateOf(false) }
+    val quit: () -> Unit = {
+        if (!quitting) {
+            quitting = true
+            accounts.closeAll()
+            exitScope.launch {
+                kotlinx.coroutines.withTimeoutOrNull(QuitGraceMs) {
+                    while (!accounts.allClosed) delay(QuitPollMs)
+                }
+                exitApplication()
+            }
+        }
     }
     val hasTray = remember {
         SystemTray.isSupported() && !(AppPaths.isLinux && System.getenv("WAYLAND_DISPLAY") != null)
@@ -263,6 +273,10 @@ private fun ApplicationScope.PixelApp() {
                 icon = icon,
                 state = rememberWindowState(size = DpSize(520.dp, 720.dp)),
             ) {
+                val windowKey = "chat-${owner.account}-$chatId"
+                val chatFocused = LocalWindowInfo.current.isWindowFocused
+                LaunchedEffect(chatFocused) { FocusedWindows.set(windowKey, chatFocused) }
+                DisposableEffect(windowKey) { onDispose { FocusedWindows.set(windowKey, false) } }
                 PixelTheme(settings) {
                     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
                         if (chat != null) key(shownId) { ChatView(chat, owner, settings, onOpenChat = { shownId = it }) }
@@ -292,7 +306,7 @@ private fun ApplicationScope.PixelApp() {
     Window(
         onCloseRequest = close,
         undecorated = ownTitleBar && !macNativeWindow,
-        visible = visible,
+        visible = visible && !quitting,
         title = com.pixelgram.desktop.core.WindowTitle.text(settings),
         icon = icon,
         state = windowState,
@@ -333,7 +347,8 @@ private fun ApplicationScope.PixelApp() {
             window.isAlwaysOnTop = false
         }
         val focused = LocalWindowInfo.current.isWindowFocused
-        LaunchedEffect(focused) { accounts.list.forEach { it.windowFocused = focused } }
+        LaunchedEffect(focused) { FocusedWindows.set("main", focused) }
+        LaunchedEffect(FocusedWindows.any) { accounts.list.forEach { it.windowFocused = FocusedWindows.any } }
         val chrome = rememberWindowChrome()
         LaunchedEffect(Unit) {
             androidx.compose.runtime.snapshotFlow {
@@ -387,6 +402,8 @@ private fun ApplicationScope.PixelApp() {
 
 private val devScreen: String? = System.getProperty("pixelgram.screen")
 private const val ShutdownGraceMs = 800L
+private const val QuitGraceMs = 2_000L
+private const val QuitPollMs = 50L
 private const val ScreenScaleFrom = 0.94f
 private const val ScreenScaleTo = 1.03f
 
@@ -549,3 +566,12 @@ private const val LockCheckMs = 10_000L
 private const val LockScaleFrom = 1.08f
 
 private const val LockedBody = " "
+
+private object FocusedWindows {
+    private val focused = androidx.compose.runtime.mutableStateMapOf<String, Boolean>()
+    val any: Boolean get() = focused.values.any { it }
+
+    fun set(key: String, value: Boolean) {
+        if (value) focused[key] = true else focused.remove(key)
+    }
+}
