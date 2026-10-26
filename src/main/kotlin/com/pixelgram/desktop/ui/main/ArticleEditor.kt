@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -64,14 +65,12 @@ import com.pixelgram.desktop.ui.components.expressive.IconButton
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.automirrored.filled.Send
 import com.pixelgram.desktop.ui.icons.outlined.AutoAwesome
+import com.pixelgram.desktop.ui.icons.outlined.AttachFile
 import com.pixelgram.desktop.ui.icons.outlined.Close
 import com.pixelgram.desktop.ui.icons.outlined.Delete
 import com.pixelgram.desktop.ui.icons.outlined.EmojiEmotions
-import com.pixelgram.desktop.ui.icons.outlined.FormatBold
 import com.pixelgram.desktop.ui.icons.outlined.FormatListBulleted
 import com.pixelgram.desktop.ui.icons.outlined.Functions
-import com.pixelgram.desktop.ui.icons.outlined.Image
-import com.pixelgram.desktop.ui.icons.outlined.Link
 import com.pixelgram.desktop.ui.icons.outlined.Redo
 import com.pixelgram.desktop.ui.icons.outlined.TableChart
 import com.pixelgram.desktop.ui.icons.outlined.TextFields
@@ -89,14 +88,16 @@ private enum class BlockType(val label: String) {
     Bullet("Bulleted list"),
     Numbered("Numbered list"),
     Quote("Quote"),
+    Pullquote("Pullquote"),
     Code("Code"),
+    Footer("Footer"),
     Math("Formula"),
     Table("Table"),
     Divider("Divider"),
     Photo("Photo"),
 }
 
-private val TextTypes = listOf(BlockType.Title, BlockType.Heading, BlockType.Subheading, BlockType.Paragraph, BlockType.Quote, BlockType.Code)
+private val TextTypes = listOf(BlockType.Heading, BlockType.Paragraph, BlockType.Quote, BlockType.Pullquote, BlockType.Code, BlockType.Footer)
 
 private class ArticleBlock(type: BlockType, text: String = "", val file: File? = null) {
     var type by mutableStateOf(type)
@@ -116,8 +117,13 @@ fun ArticleEditor(telegram: Telegram, chatId: Long, replyToId: Long, onDismiss: 
     var linking by remember { mutableStateOf(false) }
     var emoji by remember { mutableStateOf(false) }
     var ai by remember { mutableStateOf(false) }
-    var premium by remember { mutableStateOf<String?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var toast by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(toast) {
+        if (toast != null) {
+            kotlinx.coroutines.delay(ToastMs)
+            toast = null
+        }
+    }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snapshot = { Snapshot(blocks.map { Triple(it.type, it.value.text, it.file) }) }
@@ -151,13 +157,10 @@ fun ArticleEditor(telegram: Telegram, chatId: Long, replyToId: Long, onDismiss: 
     val dialogState = rememberDialogState(size = DpSize(EditorWidth, EditorHeight))
     DialogWindow(onCloseRequest = onDismiss, state = dialogState, title = "New article") {
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize()) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth().padding(10.dp),
-                ) {
-                    ToolGroup {
+            Box(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize()) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp)) {
+                        Box(Modifier.weight(1f))
                         IconButton(enabled = undo.isNotEmpty(), onClick = {
                             redo.add(snapshot())
                             restore(undo.removeAt(undo.lastIndex))
@@ -167,22 +170,90 @@ fun ArticleEditor(telegram: Telegram, chatId: Long, replyToId: Long, onDismiss: 
                             restore(redo.removeAt(redo.lastIndex))
                         }) { Icon(Icons.Outlined.Redo, contentDescription = "Redo") }
                     }
-                    ToolGroup(Modifier.weight(1f)) {
+                    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        itemsIndexed(blocks, key = { _, block -> block.hashCode() }) { index, block ->
+                            BlockEditor(
+                                block,
+                                number = if (block.type == BlockType.Numbered) blocks.take(index + 1).takeLastWhile { it.type == BlockType.Numbered }.size else 0,
+                                onFocus = { current = index },
+                                onChange = { value ->
+                                    if (value.text != block.value.text && (undo.isEmpty() || value.text.length % WordStep == 0)) remember()
+                                    block.value = value
+                                },
+                                onEnter = {
+                                    val keep = block.type in listOf(BlockType.Bullet, BlockType.Numbered)
+                                    if (keep && block.value.text.isEmpty()) {
+                                        block.type = BlockType.Paragraph
+                                    } else {
+                                        remember()
+                                        val next = ArticleBlock(if (keep) block.type else BlockType.Paragraph)
+                                        blocks.add(index + 1, next)
+                                        current = index + 1
+                                    }
+                                },
+                                onBackspaceEmpty = {
+                                    if (blocks.size > 1 && index > 0) {
+                                        remember()
+                                        blocks.removeAt(index)
+                                        current = (index - 1).coerceAtLeast(0)
+                                    }
+                                },
+                                onRemove = {
+                                    remember()
+                                    blocks.removeAt(index)
+                                    if (blocks.isEmpty()) blocks.add(ArticleBlock(BlockType.Paragraph))
+                                    current = (index - 1).coerceAtLeast(0)
+                                },
+                                onShortcut = { key ->
+                                    when (key) {
+                                        Key.B -> wrap("**", "**")
+                                        Key.I -> wrap("_", "_")
+                                        Key.U -> wrap("__", "__")
+                                        Key.K -> linking = true
+                                        else -> Unit
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    LaunchedEffect(current, blocks.size) { runCatching { blocks.getOrNull(current)?.focus?.requestFocus() } }
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp)) {
+                        IconButton(onClick = { ai = true }) { Icon(Icons.Outlined.AutoAwesome, contentDescription = "Write with AI") }
+                        Box(Modifier.weight(1f))
                         Box {
-                            IconButton(onClick = { typeMenu = true }) { Icon(Icons.Outlined.TextFields, contentDescription = "Text style") }
-                            DropdownMenu(expanded = typeMenu, onDismissRequest = { typeMenu = false }) {
-                                TextTypes.forEach { type ->
-                                    DropdownMenuItem(text = { Text(type.label) }, onClick = {
-                                        typeMenu = false
-                                        focused?.let {
-                                            remember()
-                                            it.type = type
-                                        }
-                                    })
+                            IconButton(onClick = { emoji = !emoji }) { Icon(Icons.Outlined.EmojiEmotions, contentDescription = "Emoji") }
+                            if (emoji) {
+                                Popup(alignment = Alignment.BottomStart, offset = androidx.compose.ui.unit.IntOffset(0, -60), onDismissRequest = { emoji = false }, properties = PopupProperties(focusable = true)) {
+                                    Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp, modifier = Modifier.size(EmojiPanelWidth, EmojiPanelHeight)) {
+                                        EmojiPanel(onPick = { picked ->
+                                            focused?.let { block ->
+                                                val value = block.value
+                                                val text = value.text.substring(0, value.selection.min) + picked + value.text.substring(value.selection.max)
+                                                block.value = TextFieldValue(text, TextRange(value.selection.min + picked.length))
+                                            }
+                                        }, onSearch = {})
+                                    }
                                 }
                             }
                         }
-                        IconButton(onClick = { wrap("**", "**") }) { Icon(Icons.Outlined.FormatBold, contentDescription = "Bold") }
+                        Box {
+                            IconButton(onClick = { typeMenu = true }) { Icon(Icons.Outlined.TextFields, contentDescription = "Text style") }
+                            DropdownMenu(expanded = typeMenu, onDismissRequest = { typeMenu = false }, shape = RoundedCornerShape(16.dp)) {
+                                TextTypes.forEach { type ->
+                                    DropdownMenuItem(
+                                        text = { Text(type.label) },
+                                        leadingIcon = { Text(typeGlyph(type), style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(24.dp)) },
+                                        onClick = {
+                                            typeMenu = false
+                                            focused?.let {
+                                                remember()
+                                                it.type = type
+                                            }
+                                        },
+                                    )
+                                }
+                            }
+                        }
                         IconButton(onClick = {
                             focused?.let {
                                 remember()
@@ -190,122 +261,67 @@ fun ArticleEditor(telegram: Telegram, chatId: Long, replyToId: Long, onDismiss: 
                             }
                         }) { Icon(Icons.Outlined.FormatListBulleted, contentDescription = "List") }
                         IconButton(onClick = { insert(ArticleBlock(BlockType.Table, "Column 1 | Column 2\n | ")) }) { Icon(Icons.Outlined.TableChart, contentDescription = "Table") }
-                        IconButton(onClick = { linking = true }) { Icon(Icons.Outlined.Link, contentDescription = "Link") }
+                        IconButton(onClick = { insert(ArticleBlock(BlockType.Math, "E = mc^2")) }) { Icon(Icons.Outlined.Functions, contentDescription = "Formula") }
                         IconButton(onClick = {
                             scope.launch { Attachments.pick().firstOrNull(Attachments::isPhoto)?.let { insert(ArticleBlock(BlockType.Photo, "", it)) } }
-                        }) { Icon(Icons.Outlined.Image, contentDescription = "Photo") }
-                        IconButton(onClick = { insert(ArticleBlock(BlockType.Math, "E = mc^2")) }) { Icon(Icons.Outlined.Functions, contentDescription = "Formula") }
-                    }
-                    Box {
-                        IconButton(onClick = { emoji = !emoji }) { Icon(Icons.Outlined.EmojiEmotions, contentDescription = "Emoji") }
-                        if (emoji) {
-                            Popup(alignment = Alignment.TopEnd, offset = androidx.compose.ui.unit.IntOffset(0, 120), onDismissRequest = { emoji = false }, properties = PopupProperties(focusable = true)) {
-                                Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp, modifier = Modifier.size(EmojiPanelWidth, EmojiPanelHeight)) {
-                                    EmojiPanel(onPick = { picked ->
-                                        focused?.let { block ->
-                                            val value = block.value
-                                            val text = value.text.substring(0, value.selection.min) + picked + value.text.substring(value.selection.max)
-                                            block.value = TextFieldValue(text, TextRange(value.selection.min + picked.length))
-                                        }
-                                    }, onSearch = {})
-                                }
-                            }
-                        }
-                    }
-                }
-                LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    itemsIndexed(blocks, key = { _, block -> block.hashCode() }) { index, block ->
-                        BlockEditor(
-                            block,
-                            number = if (block.type == BlockType.Numbered) blocks.take(index + 1).takeLastWhile { it.type == BlockType.Numbered }.size else 0,
-                            onFocus = { current = index },
-                            onChange = { value ->
-                                if (value.text != block.value.text && (undo.isEmpty() || value.text.length % WordStep == 0)) remember()
-                                block.value = value
-                            },
-                            onEnter = {
-                                val keep = block.type in listOf(BlockType.Bullet, BlockType.Numbered)
-                                if (keep && block.value.text.isEmpty()) {
-                                    block.type = BlockType.Paragraph
-                                } else {
-                                    remember()
-                                    val next = ArticleBlock(if (keep) block.type else BlockType.Paragraph)
-                                    blocks.add(index + 1, next)
-                                    current = index + 1
+                        }) { Icon(Icons.Outlined.AttachFile, contentDescription = "Photo") }
+                        Box(Modifier.weight(1f))
+                        FilledIconButton(
+                            enabled = !busy && blocks.any { it.value.text.isNotBlank() || it.file != null },
+                            modifier = Modifier.size(SendSize),
+                            onClick = {
+                                busy = true
+                                val content = TdApi.InputMessageRichMessage(
+                                    TdApi.InputRichMessage(TdApi.RichMessageSourceBlocks(buildBlocks(blocks)), false, true),
+                                    true,
+                                )
+                                telegram.sendContent(chatId, content, replyToId) { failure ->
+                                    busy = false
+                                    if (failure == null) onSent() else toast = failure
                                 }
                             },
-                            onBackspaceEmpty = {
-                                if (blocks.size > 1) {
-                                    remember()
-                                    blocks.removeAt(index)
-                                    current = (index - 1).coerceAtLeast(0)
-                                }
-                            },
-                            onRemove = {
-                                remember()
-                                blocks.removeAt(index)
-                                if (blocks.isEmpty()) blocks.add(ArticleBlock(BlockType.Paragraph))
-                                current = (index - 1).coerceAtLeast(0)
-                            },
-                        )
+                        ) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send") }
                     }
                 }
-                LaunchedEffect(current, blocks.size) { runCatching { blocks.getOrNull(current)?.focus?.requestFocus() } }
-                error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 20.dp)) }
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-                    IconButton(onClick = { if (telegram.isPremium) ai = true else premium = "AI writing tools" }) {
-                        Icon(Icons.Outlined.AutoAwesome, contentDescription = "Write with AI")
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = toast != null,
+                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = ToastScale),
+                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = ToastScale),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = ToastBottom),
+                ) {
+                    var shown by remember { mutableStateOf("") }
+                    toast?.let { shown = it }
+                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.inverseSurface, contentColor = MaterialTheme.colorScheme.inverseOnSurface, shadowElevation = 4.dp) {
+                        Text(shown, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
                     }
-                    Box(Modifier.weight(1f))
-                    IconButton(onClick = {
-                        remember()
-                        blocks.clear()
-                        blocks.add(ArticleBlock(BlockType.Title))
-                        blocks.add(ArticleBlock(BlockType.Paragraph))
-                        current = 0
-                    }) { Icon(Icons.Outlined.Delete, contentDescription = "Clear") }
-                    FilledIconButton(
-                        enabled = !busy && blocks.any { it.value.text.isNotBlank() || it.file != null },
-                        onClick = {
-                            busy = true
-                            error = null
-                            val content = TdApi.InputMessageRichMessage(
-                                TdApi.InputRichMessage(TdApi.RichMessageSourceBlocks(buildBlocks(blocks)), false, true),
-                                true,
-                            )
-                            telegram.sendContent(chatId, content, replyToId) { failure ->
-                                busy = false
-                                when {
-                                    failure == null -> onSent()
-                                    failure.contains("PREMIUM", ignoreCase = true) -> premium = "Articles of this size"
-                                    else -> error = failure
-                                }
-                            }
-                        },
-                    ) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send") }
                 }
             }
             if (linking) LinkDialog(onDismiss = { linking = false }) { url ->
                 linking = false
                 wrap("[", "]($url)")
             }
-            if (ai) AiDialog(telegram, onDismiss = { ai = false }) { result ->
+            if (ai) AiDialog(telegram, onDismiss = { ai = false }, onError = { failure ->
+                ai = false
+                toast = failure
+            }) { result ->
                 ai = false
                 remember()
                 blocks.clear()
                 blocks.addAll(fromRich(result))
                 if (blocks.isEmpty()) blocks.add(ArticleBlock(BlockType.Paragraph))
             }
-            premium?.let { feature -> PremiumNeededDialog(feature) { premium = null } }
         }
     }
 }
 
-@Composable
-private fun ToolGroup(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) { content() }
-    }
+private fun typeGlyph(type: BlockType): String = when (type) {
+    BlockType.Heading -> "H"
+    BlockType.Paragraph -> "Aa"
+    BlockType.Quote -> "“"
+    BlockType.Pullquote -> "”"
+    BlockType.Code -> "</>"
+    BlockType.Footer -> "≡"
+    else -> ""
 }
 
 @Composable
@@ -317,6 +333,7 @@ private fun BlockEditor(
     onEnter: () -> Unit,
     onBackspaceEmpty: () -> Unit,
     onRemove: () -> Unit,
+    onShortcut: (Key) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
     val type = MaterialTheme.typography
@@ -325,6 +342,8 @@ private fun BlockEditor(
         BlockType.Heading -> type.titleLarge
         BlockType.Subheading -> type.titleMedium
         BlockType.Quote -> type.bodyLarge.copy(fontStyle = FontStyle.Italic)
+        BlockType.Pullquote -> type.titleLarge.copy(fontStyle = FontStyle.Italic)
+        BlockType.Footer -> type.bodySmall.copy(color = colors.onSurfaceVariant)
         BlockType.Code, BlockType.Math, BlockType.Table -> type.bodyMedium.copy(fontFamily = FontFamily.Monospace)
         else -> type.bodyLarge
     }.copy(color = colors.onSurface)
@@ -338,7 +357,7 @@ private fun BlockEditor(
                 FileImage(block.file?.absolutePath.orEmpty(), Modifier.weight(1f).size(height = PhotoPreview, width = PhotoPreview).clip(RoundedCornerShape(12.dp)), androidx.compose.ui.layout.ContentScale.Crop)
                 IconButton(onClick = onRemove) { Icon(Icons.Outlined.Close, contentDescription = "Remove") }
             }
-            Field(block, type.bodySmall.copy(color = colors.onSurfaceVariant), "Caption", onFocus, onChange, onEnter, onBackspaceEmpty)
+            Field(block, type.bodySmall.copy(color = colors.onSurfaceVariant), "Caption", onFocus, onChange, onEnter, onBackspaceEmpty, onShortcut)
         }
         else -> Row(verticalAlignment = Alignment.Top) {
             val marker = when (block.type) {
@@ -348,9 +367,10 @@ private fun BlockEditor(
                 else -> null
             }
             marker?.let { Text(it, style = style, modifier = Modifier.width(Marker)) }
-            if (block.type == BlockType.Quote) Box(Modifier.width(3.dp).size(width = 3.dp, height = QuoteHeight).background(colors.primary, RoundedCornerShape(2.dp)))
+            if (block.type == BlockType.Quote || block.type == BlockType.Pullquote) Box(Modifier.width(3.dp).size(width = 3.dp, height = QuoteHeight).background(colors.primary, RoundedCornerShape(2.dp)))
             val hint = when (block.type) {
                 BlockType.Title -> "Title"
+                BlockType.Footer -> "Footer"
                 BlockType.Table -> "Cells separated by |, one row per line"
                 BlockType.Math -> "LaTeX formula"
                 else -> "Write something…"
@@ -358,10 +378,10 @@ private fun BlockEditor(
             Box(
                 Modifier.weight(1f).then(
                     if (block.type == BlockType.Code || block.type == BlockType.Table) Modifier.clip(RoundedCornerShape(10.dp)).background(colors.surfaceContainerHighest).padding(10.dp)
-                    else Modifier.padding(start = if (block.type == BlockType.Quote) 10.dp else 0.dp),
+                    else Modifier.padding(start = if (block.type == BlockType.Quote || block.type == BlockType.Pullquote) 10.dp else 0.dp),
                 ),
             ) {
-                Field(block, style, hint, onFocus, onChange, onEnter, onBackspaceEmpty)
+                Field(block, style, hint, onFocus, onChange, onEnter, onBackspaceEmpty, onShortcut)
             }
         }
     }
@@ -376,6 +396,7 @@ private fun Field(
     onChange: (TextFieldValue) -> Unit,
     onEnter: () -> Unit,
     onBackspaceEmpty: () -> Unit,
+    onShortcut: (Key) -> Unit,
 ) {
     val multiline = block.type == BlockType.Code || block.type == BlockType.Table
     Box {
@@ -393,6 +414,10 @@ private fun Field(
                 .onPreviewKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                     when {
+                        event.isCtrlPressed && event.key in listOf(Key.B, Key.I, Key.U, Key.K) -> {
+                            onShortcut(event.key)
+                            true
+                        }
                         event.key == Key.Enter && !event.isShiftPressed && !multiline -> {
                             onEnter()
                             true
@@ -409,7 +434,7 @@ private fun Field(
 }
 
 @Composable
-private fun AiDialog(telegram: Telegram, onDismiss: () -> Unit, onDone: (TdApi.RichMessage) -> Unit) {
+private fun AiDialog(telegram: Telegram, onDismiss: () -> Unit, onError: (String) -> Unit, onDone: (TdApi.RichMessage) -> Unit) {
     var prompt by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -428,7 +453,7 @@ private fun AiDialog(telegram: Telegram, onDismiss: () -> Unit, onDone: (TdApi.R
                 busy = true
                 telegram.composeArticle(prompt.trim()) { result, failure ->
                     busy = false
-                    if (result != null) onDone(result) else error = failure
+                    if (result != null) onDone(result) else onError(failure ?: "Error")
                 }
             }) { Text("Create") }
         },
@@ -443,7 +468,8 @@ private fun fromRich(rich: TdApi.RichMessage): List<ArticleBlock> = rich.blocks.
         is TdApi.PageBlockSubheader -> ArticleBlock(BlockType.Subheading, richPlain(block.subheader))
         is TdApi.PageBlockParagraph -> ArticleBlock(BlockType.Paragraph, richPlain(block.text))
         is TdApi.PageBlockPreformatted -> ArticleBlock(BlockType.Code, richPlain(block.text))
-        is TdApi.PageBlockPullQuote -> ArticleBlock(BlockType.Quote, richPlain(block.text))
+        is TdApi.PageBlockPullQuote -> ArticleBlock(BlockType.Pullquote, richPlain(block.text))
+        is TdApi.PageBlockFooter -> ArticleBlock(BlockType.Footer, richPlain(block.footer))
         is TdApi.PageBlockDivider -> ArticleBlock(BlockType.Divider)
         is TdApi.PageBlockMathematicalExpression -> ArticleBlock(BlockType.Math, block.expression)
         else -> null
@@ -481,7 +507,9 @@ private fun buildBlocks(blocks: List<ArticleBlock>): Array<TdApi.InputPageBlock>
             BlockType.Heading -> if (text.isNotEmpty()) out += TdApi.InputPageBlockSectionHeading(richInline(text), 2)
             BlockType.Subheading -> if (text.isNotEmpty()) out += TdApi.InputPageBlockSectionHeading(richInline(text), 3)
             BlockType.Paragraph -> if (text.isNotEmpty()) out += TdApi.InputPageBlockParagraph(richInline(text))
-            BlockType.Quote -> if (text.isNotEmpty()) out += TdApi.InputPageBlockPullQuote(richInline(text), null)
+            BlockType.Quote -> if (text.isNotEmpty()) out += TdApi.InputPageBlockBlockQuote(arrayOf(TdApi.InputPageBlockParagraph(richInline(text))), null)
+            BlockType.Pullquote -> if (text.isNotEmpty()) out += TdApi.InputPageBlockPullQuote(richInline(text), null)
+            BlockType.Footer -> if (text.isNotEmpty()) out += TdApi.InputPageBlockFooter(richInline(text))
             BlockType.Code -> if (text.isNotEmpty()) out += TdApi.InputPageBlockPreformatted(TdApi.RichTextPlain(block.value.text), "")
             BlockType.Math -> if (text.isNotEmpty()) out += TdApi.InputPageBlockMathematicalExpression(text)
             BlockType.Divider -> out += TdApi.InputPageBlockDivider()
@@ -536,6 +564,10 @@ private fun richInline(text: String): TdApi.RichText {
 }
 
 private const val HistoryLimit = 100
+private const val ToastMs = 3000L
+private const val ToastScale = 0.9f
+private val ToastBottom = 84.dp
+private val SendSize = 52.dp
 private const val WordStep = 8
 private const val HintAlpha = 0.6f
 private val EditorWidth = 520.dp
