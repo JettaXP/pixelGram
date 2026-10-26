@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material3.toShape
 import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
@@ -333,7 +337,10 @@ fun MainScreen(
                         if (shown != null) {
                             ChatView(shown, telegram, settings, onOpenChatInside, onChatBack)
                         } else {
-                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+                            MiniPlayer(telegram)
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                EmptyShapes()
                                 Surface(
                                     shape = CircleShape,
                                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -345,6 +352,7 @@ fun MainScreen(
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                                     )
                                 }
+                            }
                             }
                         }
                     }
@@ -730,3 +738,43 @@ private const val SearchSlideDivisor = 12
 
 private const val MaxListShare = 0.45f
 private val MacPaneCornerRadius = 28.dp
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun EmptyShapes() {
+    val scheme = MaterialTheme.colorScheme
+    val shapes = listOf(
+        EmptyShape(androidx.compose.material3.MaterialShapes.Cookie12Sided, scheme.primaryContainer, -0.28f, -0.22f, 120.dp, 12f),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Flower, scheme.tertiaryContainer, 0.3f, -0.26f, 96.dp, -18f),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Pill, scheme.secondaryContainer, 0.26f, 0.24f, 110.dp, 35f),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Sunny, scheme.primaryContainer, -0.3f, 0.26f, 84.dp, 0f),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Cookie4Sided, scheme.tertiaryContainer, -0.05f, -0.36f, 56.dp, 20f),
+        EmptyShape(androidx.compose.material3.MaterialShapes.SoftBurst, scheme.secondaryContainer, 0.04f, 0.36f, 64.dp, -10f),
+    )
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        shapes.forEach { item ->
+            Box(
+                Modifier
+                    .align(Alignment.Center)
+                    .offset(maxWidth * item.x, maxHeight * item.y)
+                    .size(item.size)
+                    .graphicsLayer {
+                        rotationZ = item.rotation
+                        alpha = EmptyShapeAlpha
+                    }
+                    .background(item.color, item.shape.toShape()),
+            )
+        }
+    }
+}
+
+private class EmptyShape(
+    val shape: androidx.graphics.shapes.RoundedPolygon,
+    val color: androidx.compose.ui.graphics.Color,
+    val x: Float,
+    val y: Float,
+    val size: androidx.compose.ui.unit.Dp,
+    val rotation: Float,
+)
+
+private const val EmptyShapeAlpha = 0.55f
