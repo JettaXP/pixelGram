@@ -177,6 +177,7 @@ private const val StickerSearchLimit = 100
 private val StreamingExtensions = setOf("mp4", "m4v", "mov")
 private const val ProfileGiftsLimit = 100
 private const val StoryPage = 100
+private const val MinPublicSearch = 3
 private const val MembersLimit = 200
 private const val ThumbnailSide = 320
 private const val StoryLimit = 1000
@@ -2146,7 +2147,14 @@ class Telegram(
         onResult(local)
         send(TdApi.SearchChats(query, null, ChatSearchLimit)) { result ->
             val found = (result as? TdApi.Chats)?.chatIds?.toList().orEmpty()
-            onResult((local + found).distinct().filter { chats[it] != null }.take(ChatSearchLimit))
+            val mine = (local + found).distinct().filter { chats[it] != null }.take(ChatSearchLimit)
+            onResult(mine)
+            val username = query.removePrefix("@").trim()
+            if (username.length < MinPublicSearch) return@send
+            send(TdApi.SearchPublicChats().apply { this.query = username }) { public ->
+                val global = (public as? TdApi.Chats)?.chatIds?.toList().orEmpty()
+                onResult((mine + global).distinct().filter { chats[it] != null })
+            }
         }
     }
 

@@ -48,6 +48,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.Icons
@@ -118,7 +119,14 @@ enum class MediaTab(val title: String, val grid: Boolean) {
 }
 
 @Composable
-fun PillTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, trailing: @Composable () -> Unit = {}) {
+fun PillTabs(
+    tabs: List<String>,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    decorations: Map<Int, @Composable () -> Unit> = emptyMap(),
+    trailing: @Composable () -> Unit = {},
+) {
     val colors = MaterialTheme.colorScheme
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -130,13 +138,14 @@ fun PillTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit, modifie
             val container by animateColorAsState(if (active) colors.secondaryContainer else colors.secondaryContainer.copy(alpha = 0f))
             val content by animateColorAsState(if (active) colors.onSecondaryContainer else colors.onSurfaceVariant)
             Surface(onClick = { onSelect(index) }, shape = CircleShape, color = container, contentColor = content) {
-                EmojiText(
-                    title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = content,
-                    maxLines = 1,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                )
+                ) {
+                    EmojiText(title, style = MaterialTheme.typography.labelLarge, color = content, maxLines = 1)
+                    decorations[index]?.invoke()
+                }
             }
         }
         trailing()
@@ -448,11 +457,43 @@ fun CommonGroupsPane(userId: Long, telegram: Telegram, settings: AppSettings, on
 fun SharedMediaSection(chat: com.pixelgram.desktop.telegram.ChatState, telegram: Telegram, settings: AppSettings, onOpenChat: ((Long) -> Unit)?, modifier: Modifier = Modifier) {
     val actions = rememberMediaActions(telegram, settings, onOpenChat, onClose = {})
     val user = chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id) && !telegram.isBot(chat)
-    val titles = MediaTab.entries.map { it.title } + if (user) listOf("Groups") else emptyList()
+    val profile = !telegram.isSavedMessages(chat.id) && (chat.privateUserId != 0L || chat.isChannel)
+    val owner = remember(chat.id) { if (chat.privateUserId != 0L) TdApi.MessageSenderUser(chat.privateUserId) else TdApi.MessageSenderChat(chat.id) }
+    var hasStories by remember(chat.id) { mutableStateOf(false) }
+    var gifts by remember(chat.id) { mutableStateOf<List<TdApi.ReceivedGift>>(emptyList()) }
+    LaunchedEffect(chat.id) {
+        if (!profile) return@LaunchedEffect
+        telegram.postedStories(chat.id) { hasStories = it.isNotEmpty() }
+        telegram.profileGifts(owner) { _, list -> gifts = list }
+    }
+    val extra = buildList {
+        if (hasStories) add("Stories")
+        if (gifts.isNotEmpty()) add("Gifts")
+    }
+    val titles = extra + MediaTab.entries.map { it.title } + if (user) listOf("Groups") else emptyList()
     var selected by remember(chat.id) { mutableIntStateOf(0) }
+    val giftsIndex = extra.indexOf("Gifts")
+    val decorations: Map<Int, @Composable () -> Unit> = if (giftsIndex >= 0) {
+        mapOf(giftsIndex to { GiftPreviews(gifts, telegram) })
+    } else {
+        emptyMap()
+    }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        PillTabs(titles, selected, { selected = it })
-        TabContent(selected, Modifier.fillMaxWidth().height(SectionHeight)) { index ->
+        PillTabs(titles, selected, { selected = it }, decorations = decorations)
+        TabContent(selected, Modifier.fillMaxWidth().height(SectionHeight)) { position ->
+            when (extra.getOrNull(position)) {
+                "Stories" -> {
+                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                        ProfileStories(chat.id, telegram, own = false, modifier = Modifier.fillMaxWidth())
+                    }
+                    return@TabContent
+                }
+                "Gifts" -> {
+                    GiftsPane(owner, gifts, own = false, telegram = telegram, modifier = Modifier.fillMaxSize())
+                    return@TabContent
+                }
+            }
+            val index = position - extra.size
             val tab = MediaTab.entries.getOrNull(index)
             if (tab != null) {
                 SharedMediaPane(chat.id, tab, telegram, Modifier.fillMaxSize(), actions = actions)

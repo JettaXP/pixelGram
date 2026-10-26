@@ -18,6 +18,7 @@ object Links : UriHandler {
     var invite by mutableStateOf<InviteRequest?>(null)
     var confirm by mutableStateOf<String?>(null)
     var nft by mutableStateOf<Pair<Telegram, String>?>(null)
+    var notFound by mutableStateOf<String?>(null)
 
     class InviteRequest(val telegram: Telegram, val link: String, val info: TdApi.ChatInviteLinkInfo)
 
@@ -72,7 +73,7 @@ object Links : UriHandler {
                         type.draftText?.takeIf { it.isNotEmpty() }?.let { text ->
                             SwingUtilities.invokeLater { ComposerInsert.request = chatId to text }
                         }
-                    }, { openBrowser(url) })
+                    }, { SwingUtilities.invokeLater { notFound = type.chatUsername } })
                 is TdApi.InternalLinkTypeBotStart ->
                     telegram.startBot(type.botUsername, type.startParameter, { go(telegram, it) }, { openBrowser(url) })
                 is TdApi.InternalLinkTypeMessage ->

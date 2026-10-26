@@ -438,7 +438,7 @@ fun ChatInfoDialog(
                                 bio,
                                 entities = bioEntities,
                                 onMention = { username ->
-                                    telegram.openPublicChat(username, { id -> telegram.chats[id]?.let { mentioned = it } }, {})
+                                    telegram.openPublicChat(username, { id -> telegram.chats[id]?.let { mentioned = it } }, { Links.notFound = username })
                                 },
                             )
                         )
@@ -448,15 +448,6 @@ fun ChatInfoDialog(
                 if (chat.privateUserId != 0L) ProfileMusic(telegram, settings, chat.privateUserId, own = false, modifier = Modifier.padding(top = 8.dp))
                 Box(Modifier.fillMaxWidth().padding(top = 8.dp)) { InfoGroup(rows) }
                 ChatMemberRows(chat, telegram, Modifier.fillMaxWidth().padding(top = 8.dp))
-                if (!telegram.isSavedMessages(chat.id) && (chat.privateUserId != 0L || chat.isChannel)) {
-                    val owner = remember(chat.id) {
-                        if (chat.privateUserId != 0L) it.tdlight.jni.TdApi.MessageSenderUser(chat.privateUserId) else it.tdlight.jni.TdApi.MessageSenderChat(chat.id)
-                    }
-                    ProfileGifts(owner, telegram, Modifier.fillMaxWidth().padding(top = 8.dp))
-                }
-                if (!telegram.isSavedMessages(chat.id) && (chat.privateUserId != 0L || chat.isChannel)) {
-                    ProfileStories(chat.id, telegram, own = false, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-                }
                 if (personalChannel != 0L) {
                     PersonalChannelCard(
                         personalChannel,

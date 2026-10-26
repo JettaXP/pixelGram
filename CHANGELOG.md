@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.38.0 U
+
+### Calls
+- Voice and video calls in private chats: call and video call buttons in the chat header, a Material 3 call window with mute, camera, screen sharing by display and end call.
+- Incoming calls ring and can be accepted or declined. Four encryption emojis show once the call is connected.
+- Calls use NTgCalls. Its library is downloaded from the official release on the first call and checked before use.
+
+### Video messages
+- Click the mic to switch to the camera, hold to record a round video. A live preview in the middle of the window and a ring show the 60 second limit; lock and slide to cancel work like voice messages.
+
+### Profiles
+- Stories with albums, a story viewer with progress bars and the Story Archive for your own stories.
+- Stories and Gifts are tabs next to Photos, Videos and Links, with gift previews on the tab.
+- Gifts: collections, unique gifts on their backdrop with the symbol pattern and their number.
+- Collectible gifts: t.me/nft links and unique gifts open a card with the owner, the model, backdrop and symbol chances, how many were issued and a copy link button.
+- Groups show Members with the member list. Channels you manage show Subscribers and Administrators.
+- Right click your own badge to set an emoji or custom emoji and a caption for it.
+- Badges next to your name in the side menu.
+
+### Notifications and Sounds
+- Rebuilt like the official app: all accounts, taskbar flash, sound volume, name and text in previews, per chat type toggles with exceptions, reactions, events, badge counters and system Focus mode.
+- Choose the display, one of six screen positions and how many pop-ups stack.
+
+### Search
+- Chat search also finds public users, groups and channels by username.
+- A username that doesn't exist shows a "not found" dialog instead of opening the browser, also from bios.
+
+### Speed
+- The side menu slides over the chats instead of relaying out the whole window.
+- The blinking caret, animated stickers, GIFs and live wallpapers no longer keep the window redrawing all the time; they pause while pixelGram is in the background.
+- Wallpapers are scaled once to the chat size.
+
+### Look and feel
+- Photo and video viewers open over the app on a translucent backdrop, without a system window frame.
+- Videos show download progress and their size in MB or GB; video messages show progress too.
+- Tabs are plain pills, Add Account moved to the settings menu and the My Account page is gone.
+- Vibrant colors are vivid again.
+- Videos show their first frame and length before sending.
+
+### Fixes
+- Quotes no longer wrap early and their background covers the whole quote across the bubble.
+- No stray corners under the profile banner and under the mini player.
+- Enter no longer reopens the attach menu or the new chat menu after clicking them.
+
 ## 0.37.0 Burst
 
 ### Attach menu

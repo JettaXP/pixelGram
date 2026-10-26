@@ -30,6 +30,14 @@ fun LinkDialogs(settings: AppSettings, onOpenChat: (Long) -> Unit) {
     Links.invite?.let { request -> InviteDialog(request, settings, onOpenChat) { Links.invite = null } }
     Links.confirm?.let { url -> OpenLinkDialog(url) { Links.confirm = null } }
     Links.nft?.let { (telegram, name) -> NftDialog(telegram, name) { Links.nft = null } }
+    Links.notFound?.let { username ->
+        AlertDialog(
+            onDismissRequest = { Links.notFound = null },
+            title = { Text("Not found") },
+            text = { Text("Username @$username not found.") },
+            confirmButton = { TextButton(onClick = { Links.notFound = null }) { Text("OK") } },
+        )
+    }
     FileSafety.pending?.let { path -> DangerousFileDialog(path) { FileSafety.pending = null } }
 }
 

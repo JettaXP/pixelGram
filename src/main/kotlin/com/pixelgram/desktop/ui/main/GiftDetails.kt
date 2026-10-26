@@ -231,34 +231,44 @@ private fun giftSticker(gift: TdApi.ReceivedGift): TdApi.Sticker? = when (val se
 
 @Composable
 private fun GiftsDialog(owner: TdApi.MessageSender, all: List<TdApi.ReceivedGift>, own: Boolean, telegram: Telegram, onDismiss: () -> Unit) {
+    GridDialog("Gifts", onDismiss = onDismiss) {
+        GiftsPane(owner, all, own, telegram, scroll = false)
+    }
+}
+
+@Composable
+fun GiftPreviews(gifts: List<TdApi.ReceivedGift>, telegram: Telegram) {
+    androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy((-4).dp)) {
+        gifts.take(GiftPreviews).forEach { gift -> StickerView(giftSticker(gift), telegram, 18.dp, animate = false) }
+    }
+}
+
+@Composable
+fun GiftsPane(owner: TdApi.MessageSender, all: List<TdApi.ReceivedGift>, own: Boolean, telegram: Telegram, modifier: Modifier = Modifier, scroll: Boolean = true) {
     var collections by remember(owner) { mutableStateOf<List<TdApi.GiftCollection>>(emptyList()) }
     var selected by remember(owner) { mutableStateOf(0) }
-    var shown by remember(owner) { mutableStateOf(all) }
+    var shown by remember(owner, all) { mutableStateOf(all) }
     var adding by remember { mutableStateOf(false) }
     var reload by remember { mutableStateOf(0) }
     LaunchedEffect(owner, reload) { telegram.giftCollections(owner) { collections = it } }
-    LaunchedEffect(owner, selected, collections) {
+    LaunchedEffect(owner, selected, collections, all) {
         val collection = collections.getOrNull(selected - 1)
         if (collection == null) shown = all else telegram.collectionGifts(owner, collection.id) { shown = it }
     }
-    GridDialog(
-        "Gifts",
-        onDismiss = onDismiss,
-        header = {
-            if (own || collections.isNotEmpty()) {
-                AlbumTabs(listOf("All Gifts") + collections.map { it.name }, selected, onSelect = { selected = it }, addLabel = if (own) "Add Collection" else null, onAdd = { adding = true })
-            }
-        },
+    Column(
+        modifier.then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        if (own || collections.isNotEmpty()) {
+            AlbumTabs(listOf("All Gifts") + collections.map { it.name }, selected, onSelect = { selected = it }, addLabel = if (own) "Add Collection" else null, onAdd = { adding = true })
+        }
         if (shown.isEmpty()) {
             Text("No gifts here yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            shown.chunked(GiftColumns).forEach { row ->
-                androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    row.forEach { gift -> GiftCell(gift, telegram, Modifier.weight(1f)) }
-                    repeat(GiftColumns - row.size) { androidx.compose.foundation.layout.Spacer(Modifier.weight(1f)) }
-                }
+        shown.chunked(GiftColumns).forEach { row ->
+            androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { gift -> GiftCell(gift, telegram, Modifier.weight(1f)) }
+                repeat(GiftColumns - row.size) { androidx.compose.foundation.layout.Spacer(Modifier.weight(1f)) }
             }
         }
     }

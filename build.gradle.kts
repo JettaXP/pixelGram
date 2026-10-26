@@ -7,8 +7,8 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.37.0"
-val codename = "Burst"
+version = "0.38.0"
+val codename = "U"
 
 kotlin {
     jvmToolchain(21)
