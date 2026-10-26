@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.offset
@@ -196,30 +197,7 @@ fun MainScreen(
             val compact = dragWidth < CompactThreshold.value
             val listWidth = if (compact) CompactWidth else dragWidth.coerceAtMost(maxListWidth).dp
             Row(Modifier.fillMaxSize()) {
-                AnimatedVisibility(
-                    visible = foldersLeft || menuOpen,
-                    enter = expandHorizontally(railSpec) + fadeIn(fade),
-                    exit = shrinkHorizontally(railSpec) + fadeOut(fade),
-                ) {
-                    PixelRail(
-                        accounts = accounts,
-                        state = railState,
-                        expanded = menuOpen,
-                        showFolders = foldersLeft,
-                        showMenuButton = foldersLeft,
-                        telegram = telegram,
-                        settings = settings,
-                        tabs = tabs,
-                        selected = selectedKey,
-                        onToggleMenu = toggleMenu,
-                        onSelect = { key -> closeMenuAnd { if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
-                        onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
-                        onOpenSaved = {
-                            closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
-                        },
-                        onNewChat = { channel -> closeMenuAnd { newChat = channel } },
-                    )
-                }
+                if (foldersLeft) Spacer(Modifier.width(RailWidth))
                 Column(
                     Modifier
                         .width(listWidth)
@@ -364,6 +342,41 @@ fun MainScreen(
                         }
                     }
                 }
+            }
+            val scrim by animateFloatAsState(if (menuOpen) RailScrimAlpha else 0f, fade)
+            if (scrim > 0f) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = scrim }
+                        .background(Color.Black)
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { scope.launch { railState.collapse() } },
+                )
+            }
+            AnimatedVisibility(
+                visible = foldersLeft || menuOpen,
+                modifier = Modifier.zIndex(1f),
+                enter = expandHorizontally(railSpec) + fadeIn(fade),
+                exit = shrinkHorizontally(railSpec) + fadeOut(fade),
+            ) {
+                PixelRail(
+                    accounts = accounts,
+                    state = railState,
+                    expanded = menuOpen,
+                    showFolders = foldersLeft,
+                    showMenuButton = foldersLeft,
+                    telegram = telegram,
+                    settings = settings,
+                    tabs = tabs,
+                    selected = selectedKey,
+                    onToggleMenu = toggleMenu,
+                    onSelect = { key -> closeMenuAnd { if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
+                    onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
+                    onOpenSaved = {
+                        closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
+                    },
+                    onNewChat = { channel -> closeMenuAnd { newChat = channel } },
+                )
             }
         }
     }
@@ -690,7 +703,17 @@ private fun AccountHeader(
                 }
             }
             Column {
-                EmojiText(name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    EmojiText(
+                        name,
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    telegram.chats[me.id]?.let { own -> com.pixelgram.desktop.ui.components.ChatBadges(own, telegram, 22.dp) }
+                        ?: com.pixelgram.desktop.ui.components.UserBadge.of(me.id)?.let { com.pixelgram.desktop.ui.components.UserBadgeView(it, telegram, 22.dp) }
+                }
                 me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
                     PhoneText(
                         it,
@@ -738,6 +761,7 @@ private const val RailFadeInMs = 180
 private const val RailResizeMs = 280
 private val MinChatWidth = 380.dp
 private val RailWidth = 96.dp
+private const val RailScrimAlpha = 0.32f
 private val CompactWidth = 88.dp
 private val CompactThreshold = 220.dp
 private val DividerWidth = 8.dp

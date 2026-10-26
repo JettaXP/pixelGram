@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlin.math.roundToInt
 import androidx.compose.foundation.Image
@@ -153,10 +155,23 @@ fun ChatWallpaper(chat: ChatState, telegram: Telegram, settings: AppSettings, da
             own != null -> TelegramBackground(own, telegram, dark, chat.background?.darkThemeDimming ?: 0)
             settings.wallpaper.value.isNotBlank() -> {
                 val path = settings.wallpaper.value
-                val image by produceState<ImageBitmap?>(null, path) {
+                val source by produceState<ImageBitmap?>(null, path) {
                     value = loadImage(Wallpapers.poster(path), maxSize = WallpaperMaxSize)
                 }
-                image?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val width = constraints.maxWidth
+                    val height = constraints.maxHeight
+                    val fitted by produceState<ImageBitmap?>(null, source, width, height) {
+                        val original = source ?: return@produceState
+                        kotlinx.coroutines.delay(ResizeSettleMs)
+                        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { cropTo(original, width, height) }
+                    }
+                    val shown = fitted?.takeIf { it.width == width && it.height == height }
+                    when {
+                        shown != null -> Image(shown, contentDescription = null, contentScale = ContentScale.None, modifier = Modifier.fillMaxSize())
+                        source != null -> Image(source!!, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    }
+                }
                 if (Wallpapers.isVideo(path)) InlineVideo(path, Modifier.fillMaxSize(), maxWidth = LiveWallpaperWidth)
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (dark) dim else dim / 2)))
             }
@@ -200,3 +215,25 @@ private fun rgb(color: Int) = Color(0xFF000000.toInt() or color)
 private const val WallpaperMaxSize = 2048
 
 private const val LiveWallpaperWidth = 1920
+
+private const val ResizeSettleMs = 150L
+
+private fun cropTo(image: ImageBitmap, width: Int, height: Int): ImageBitmap? {
+    if (width <= 0 || height <= 0) return null
+    val skia = org.jetbrains.skia.Image.makeFromBitmap(image.asSkiaBitmap())
+    val scale = maxOf(width / skia.width.toFloat(), height / skia.height.toFloat())
+    val srcWidth = width / scale
+    val srcHeight = height / scale
+    val left = (skia.width - srcWidth) / 2f
+    val top = (skia.height - srcHeight) / 2f
+    val surface = org.jetbrains.skia.Surface.makeRasterN32Premul(width, height)
+    surface.canvas.drawImageRect(
+        skia,
+        org.jetbrains.skia.Rect.makeXYWH(left, top, srcWidth, srcHeight),
+        org.jetbrains.skia.Rect.makeWH(width.toFloat(), height.toFloat()),
+        org.jetbrains.skia.SamplingMode.LINEAR,
+        null,
+        true,
+    )
+    return surface.makeImageSnapshot().toComposeImageBitmap()
+}

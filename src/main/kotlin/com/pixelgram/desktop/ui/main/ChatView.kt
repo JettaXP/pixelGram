@@ -10,6 +10,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.expandHorizontally
 import com.pixelgram.desktop.ui.icons.outlined.KeyboardHide
 import com.pixelgram.desktop.ui.icons.outlined.Keyboard
+import com.pixelgram.desktop.ui.components.drawQuote
 import com.pixelgram.desktop.ui.components.expressive.FilledTonalButton
 import com.pixelgram.desktop.telegram.BotCommandItem
 import com.pixelgram.desktop.ui.components.Avatar
@@ -1439,12 +1440,17 @@ private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @
     }
     var textLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val quoteAtEnd = remember(text, entities) { endsWithQuote(text, entities) }
+    val quotes = remember(text, entities) { com.pixelgram.desktop.ui.components.quoteRanges(text, entities) }
+    val quoteColor = MaterialTheme.colorScheme.primary
     Layout(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().drawBehind {
+            val current = textLayout ?: return@drawBehind
+            quotes.forEach { range -> drawQuote(current, range, quoteColor, size.width) }
+        },
         content = {
             if (text.isNotEmpty()) {
                 SelectionContainer {
-                    FormattedText(text, entities, style = com.pixelgram.desktop.ui.theme.messageTextStyle(), onTextLayout = { textLayout = it })
+                    FormattedText(text, entities, style = com.pixelgram.desktop.ui.theme.messageTextStyle(), onTextLayout = { textLayout = it }, quoteBackground = false)
                 }
             } else {
                 Box {}

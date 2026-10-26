@@ -68,6 +68,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.ui.layout.layout
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -151,6 +152,7 @@ fun FormattedText(
     style: TextStyle = LocalTextStyle.current,
     color: Color = Color.Unspecified,
     onTextLayout: (TextLayoutResult) -> Unit = {},
+    quoteBackground: Boolean = true,
 ) {
     val scheme = MaterialTheme.colorScheme
     val colors = FormatColors(scheme.primary, scheme.onSurface.copy(alpha = 0.1f), scheme.primary)
@@ -224,10 +226,11 @@ fun FormattedText(
                 onTextLayout(it)
             },
             modifier = Modifier
+                .then(if (quotes.isNotEmpty()) Modifier.quoteWidth(QuoteIndent) else Modifier)
                 .drawWithContent {
                     val current = layout
                     if (current != null) {
-                        quotes.forEach { range -> drawQuote(current, range, colors.quote) }
+                        if (quoteBackground) quotes.forEach { range -> drawQuote(current, range, colors.quote, size.width) }
                         hidden.forEach { range -> drawPath(pillPath(current, range.first, range.last + 1, this), colors.accent.copy(alpha = 0.3f)) }
                         fading?.let { range ->
                             drawPath(pillPath(current, range.first, range.last + 1, this), colors.accent.copy(alpha = 0.3f * (1f - fade.value)))
@@ -394,14 +397,25 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawWavyStrike(
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawQuote(layout: TextLayoutResult, range: IntRange, color: Color) {
+private fun Modifier.quoteWidth(indent: androidx.compose.ui.unit.TextUnit): Modifier = layout { measurable, constraints ->
+    val extra = indent.roundToPx()
+    val natural = measurable.maxIntrinsicWidth(constraints.maxHeight) + extra
+    val width = natural.coerceIn(constraints.minWidth, constraints.maxWidth)
+    val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+}
+
+fun quoteRanges(text: String, entities: List<TdApi.TextEntity>): List<IntRange> =
+    ranges(entities, text.length) { it is TdApi.TextEntityTypeBlockQuote || it is TdApi.TextEntityTypeExpandableBlockQuote }
+
+fun androidx.compose.ui.graphics.drawscope.DrawScope.drawQuote(layout: TextLayoutResult, range: IntRange, color: Color, width: Float) {
     val length = layout.layoutInput.text.length
     val from = range.first.coerceIn(0, length)
     val to = (range.last + 1).coerceIn(0, length)
     if (from >= to) return
     val top = layout.getLineTop(layout.getLineForOffset(from)) + QuoteGap.toPx()
     val bottom = layout.getLineBottom(layout.getLineForOffset(to - 1))
-    drawRoundRect(color.copy(alpha = 0.1f), topLeft = Offset(0f, top), size = Size(size.width, bottom - top), cornerRadius = CornerRadius(8.dp.toPx()))
+    drawRoundRect(color.copy(alpha = 0.1f), topLeft = Offset(0f, top), size = Size(width, bottom - top), cornerRadius = CornerRadius(8.dp.toPx()))
     drawRoundRect(color, topLeft = Offset(0f, top), size = Size(3.dp.toPx(), bottom - top), cornerRadius = CornerRadius(2.dp.toPx()))
 }
 

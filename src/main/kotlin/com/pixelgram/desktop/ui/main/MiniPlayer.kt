@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.draw.drawWithContent
 import com.pixelgram.desktop.ui.components.expressive.IconToggleButton
 import com.pixelgram.desktop.ui.icons.outlined.FavoriteBorder
 import com.pixelgram.desktop.ui.icons.filled.Favorite
@@ -153,7 +154,27 @@ fun MiniPlayer(telegram: Telegram) {
         val hover = remember { MutableInteractionSource() }
         val hovered by hover.collectIsHoveredAsState()
         val key = AudioPlayer.current
-        Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().hoverable(hover)) {
+        val bar = MaterialTheme.colorScheme.surfaceContainer
+        Surface(
+            color = bar,
+            modifier = Modifier
+                .fillMaxWidth()
+                .hoverable(hover)
+                .drawWithContent {
+                    drawContent()
+                    val radius = FilletRadius.toPx()
+                    val top = size.height
+                    listOf(0f to radius, size.width to size.width - radius).forEach { (edge, center) ->
+                        val corner = androidx.compose.ui.graphics.Path().apply {
+                            addRect(androidx.compose.ui.geometry.Rect(minOf(edge, center), top, maxOf(edge, center), top + radius))
+                        }
+                        val round = androidx.compose.ui.graphics.Path().apply {
+                            addOval(androidx.compose.ui.geometry.Rect(androidx.compose.ui.geometry.Offset(center, top + radius), radius))
+                        }
+                        drawPath(androidx.compose.ui.graphics.Path.combine(androidx.compose.ui.graphics.PathOperation.Difference, corner, round), bar)
+                    }
+                },
+        ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp).height(BarHeight)) {
                     MorphControls(
@@ -381,3 +402,5 @@ fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = M
         modifier = modifier.height(28.dp),
     )
 }
+
+private val FilletRadius = 24.dp

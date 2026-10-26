@@ -159,9 +159,10 @@ fun LottieView(path: String, modifier: Modifier, play: Boolean = true, runs: Int
         }
     }
     val ended by rememberUpdatedState(onEnd)
-    val frame by produceState(0, animation, play, runs) {
+    val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
+    val frame by produceState(0, animation, play, runs, focused) {
         val current = animation ?: return@produceState
-        if (!play || runs == 0) {
+        if (!play || runs == 0 || (!focused && runs < 0)) {
             value = 0
             return@produceState
         }
@@ -846,7 +847,22 @@ fun MediaContent(message: UiMessage, telegram: Telegram, width: Dp, corner: Dp) 
                 TransferRing(telegram.progress(file), Color.White, { telegram.cancelSending(message) }, 44.dp)
             }
         } else if (!inline) {
-            PlayBadge(busy)
+            val progress = telegram.progress(file)
+            val loading = path == null && (busy || (autoplay && progress != null))
+            if (loading) {
+                Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                    TransferRing(progress, Color.White, {
+                        telegram.cancelDownload(file)
+                        started = false
+                    }, 44.dp)
+                }
+            } else {
+                PlayBadge(false)
+            }
+            val total = file?.let { maxOf(it.size, it.expectedSize) } ?: 0L
+            if (total > 0 && path == null) {
+                SizePill(if (loading) "${formatSize((total * (progress ?: 0f)).toLong())} / ${formatSize(total)}" else formatSize(total), Modifier.align(Alignment.BottomStart).padding(8.dp))
+            }
         }
         Surface(
             shape = CircleShape,
@@ -897,6 +913,13 @@ private const val RingFlattenFrom = 0.8f
 private const val MinRingProgress = 0.02f
 
 @Composable
+fun SizePill(text: String, modifier: Modifier = Modifier) {
+    Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.45f), contentColor = Color.White, modifier = modifier) {
+        Text(text, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+    }
+}
+
+@Composable
 fun PlayBadge(busy: Boolean) {
     Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
         if (busy) LoadingIndicator(Modifier.size(34.dp), color = Color.White) else
@@ -928,7 +951,13 @@ fun BareContent(message: UiMessage, telegram: Telegram) {
                 contentAlignment = Alignment.Center,
             ) {
                 ThumbImage(note.thumbnail?.file, note.minithumbnail, telegram, Modifier.fillMaxSize())
-                PlayBadge(busy)
+                if (busy) {
+                    Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                        TransferRing(telegram.progress(note.video), Color.White, { telegram.cancelDownload(note.video) }, 44.dp)
+                    }
+                } else {
+                    PlayBadge(false)
+                }
             }
         }
         else -> Unit

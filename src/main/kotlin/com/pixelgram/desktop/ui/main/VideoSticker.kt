@@ -116,16 +116,17 @@ fun VideoStickerView(path: String, modifier: Modifier, play: Boolean = true) {
     BoxWithConstraints(modifier) {
         val side = with(LocalDensity.current) { minOf(maxWidth, maxHeight).roundToPx() }
         val clip by produceState<StickerClip?>(null, path, side) { value = VideoStickers.clip(path, side) }
-        val index by produceState(0, clip, play) {
+        val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
+        val index by produceState(0, clip, play, focused) {
             val current = clip ?: return@produceState
-            if (!play) return@produceState
-            val start = withFrameNanos { it }
+            if (!play || !focused) return@produceState
+            val start = System.nanoTime() - current.times.getOrElse(value) { 0L } * 1_000_000
             while (true) {
-                withFrameNanos { now ->
-                    val at = (now - start) / 1_000_000 % current.durationMs
-                    val next = current.times.indexOfLast { it <= at }.coerceAtLeast(0)
-                    if (next != value) value = next
-                }
+                val at = (System.nanoTime() - start) / 1_000_000 % current.durationMs
+                val next = current.times.indexOfLast { it <= at }.coerceAtLeast(0)
+                if (next != value) value = next
+                val nextAt = current.times.getOrNull(next + 1) ?: current.durationMs
+                kotlinx.coroutines.delay((nextAt - at).coerceAtLeast(1L))
             }
         }
         Canvas(Modifier.matchParentSize().graphicsLayer()) {

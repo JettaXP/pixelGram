@@ -177,6 +177,7 @@ private const val StickerSearchLimit = 100
 private val StreamingExtensions = setOf("mp4", "m4v", "mov")
 private const val ProfileGiftsLimit = 100
 private const val StoryPage = 100
+private const val MembersLimit = 200
 private const val ThumbnailSide = 320
 private const val StoryLimit = 1000
 private const val JumpMinMessages = 20
@@ -1359,6 +1360,38 @@ class Telegram(
             else -> false
         }
     }
+    fun isAdmin(chat: ChatState): Boolean = when (supergroupInfo[chat.supergroupId]?.status) {
+        is TdApi.ChatMemberStatusCreator, is TdApi.ChatMemberStatusAdministrator -> true
+        else -> false
+    }
+
+    fun membersCount(chat: ChatState): Int? = memberCount(chat)
+
+    fun administratorCount(chat: ChatState, onResult: (Int) -> Unit) {
+        if (chat.supergroupId == 0L) return onResult(0)
+        send(TdApi.GetSupergroupFullInfo(chat.supergroupId)) { result -> onResult((result as? TdApi.SupergroupFullInfo)?.administratorCount ?: 0) }
+    }
+
+    fun chatMembers(chat: ChatState, admins: Boolean, onResult: (List<TdApi.ChatMember>) -> Unit) {
+        val deliver = { list: List<TdApi.ChatMember> ->
+            list.forEach { member -> (member.memberId as? TdApi.MessageSenderUser)?.let { ensureUser(it.userId) } }
+            onResult(list)
+        }
+        when {
+            chat.basicGroupId != 0L -> send(TdApi.GetBasicGroupFullInfo(chat.basicGroupId)) { result ->
+                val members = (result as? TdApi.BasicGroupFullInfo)?.members?.toList().orEmpty()
+                deliver(if (admins) members.filter { it.status is TdApi.ChatMemberStatusCreator || it.status is TdApi.ChatMemberStatusAdministrator } else members)
+            }
+            chat.supergroupId != 0L -> {
+                val filter = if (admins) TdApi.SupergroupMembersFilterAdministrators() else TdApi.SupergroupMembersFilterRecent()
+                send(TdApi.GetSupergroupMembers(chat.supergroupId, filter, 0, MembersLimit)) { result ->
+                    deliver((result as? TdApi.ChatMembers)?.members?.toList().orEmpty())
+                }
+            }
+            else -> onResult(emptyList())
+        }
+    }
+
     private val officialSupergroups = mutableStateMapOf<Long, Boolean>()
 
     fun isOfficial(chat: ChatState): Boolean =

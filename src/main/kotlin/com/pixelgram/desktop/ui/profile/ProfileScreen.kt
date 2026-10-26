@@ -108,7 +108,7 @@ fun ProfileScreen(
                 me.id,
                 telegram,
                 BannerHeight,
-                MaterialTheme.shapes.extraLarge,
+                MaterialTheme.shapes.extraLarge.copy(bottomStart = androidx.compose.foundation.shape.CornerSize(0), bottomEnd = androidx.compose.foundation.shape.CornerSize(0)),
                 MaterialTheme.colorScheme.surfaceContainer,
                 editable = true,
             )

@@ -114,7 +114,7 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
     LaunchedEffect(shown.isIdle, shown.currentState) {
         if (shown.isIdle && !shown.currentState && PhotoViewer.current === photo) PhotoViewer.current = null
     }
-    val screen = remember { GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration.bounds }
+    val screen = remember { viewerBounds() }
     val telegram = photo.telegram
     val photos = remember(photo) {
         if (photo.chatId == 0L) emptyList() else telegram.messages(photo.chatId).filter { it.photo != null }.reversed()
@@ -145,7 +145,7 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
         ),
         title = "pixelGram photo",
         undecorated = true,
-        transparent = false,
+        transparent = true,
         resizable = false,
         alwaysOnTop = true,
         onKeyEvent = { event ->
@@ -168,12 +168,12 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
         },
     ) {
         PixelTheme(settings) {
-            Box(Modifier.fillMaxSize().background(Color.Black)) {
+            Box(Modifier.fillMaxSize()) {
             AnimatedVisibility(shown, enter = fadeIn(), exit = fadeOut()) {
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.9f))
+                        .background(Color.Black.copy(alpha = ScrimAlpha))
                         .pointerInput(Unit) {
                             awaitPointerEventScope {
                                 while (true) {

@@ -141,26 +141,35 @@ private fun rememberBlink(visible: Boolean, moved: Long, settings: AppSettings):
     val blink = settings.cursorBlink.value
     val cycle = settings.blinkCycle.value.coerceAtLeast(MinCycle)
     val softness = settings.blinkSmoothness.value / 100f
-    return produceState(1f, visible, moved, blink, cycle, softness) {
+    val windowFocused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
+    return produceState(1f, visible, moved, blink, cycle, softness, windowFocused) {
         value = 1f
-        if (!visible || !blink) return@produceState
+        if (!visible || !blink || !windowFocused) return@produceState
         delay(BlinkRestMs)
-        if (softness <= 0f) {
+        val half = cycle / 2L
+        val fade = (half * softness).toLong().coerceIn(0L, half)
+        val hold = half - fade
+        suspend fun ease(from: Float, to: Float) {
+            if (fade <= 0L) {
+                value = to
+                return
+            }
+            val start = withFrameNanos { it }
             while (true) {
-                value = 0f
-                delay(cycle / 2L)
-                value = 1f
-                delay(cycle / 2L)
+                val done = withFrameNanos { now ->
+                    val progress = ((now - start) / 1_000_000f / fade).coerceIn(0f, 1f)
+                    val curve = 0.5f - 0.5f * cos(PI * progress).toFloat()
+                    value = from + (to - from) * curve
+                    progress >= 1f
+                }
+                if (done) break
             }
         }
-        val start = withFrameNanos { it }
         while (true) {
-            withFrameNanos { now ->
-                val phase = ((now - start) / 1_000_000L % cycle) / cycle.toFloat()
-                val hard = if (phase < 0.5f) 1f else 0f
-                val soft = 0.5f + 0.5f * cos(2 * PI * phase).toFloat()
-                value = hard + (soft - hard) * softness
-            }
+            delay(hold)
+            ease(1f, 0f)
+            delay(hold)
+            ease(0f, 1f)
         }
     }
 }

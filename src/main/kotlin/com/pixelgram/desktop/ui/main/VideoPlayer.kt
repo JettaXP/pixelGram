@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -116,7 +118,13 @@ object VideoPlayer {
 }
 
 private const val SeekStepMs = 5_000L
-private const val ViewerShare = 0.8f
+internal const val ScrimAlpha = 0.72f
+internal val MediaInsetX = 72.dp
+internal val MediaInsetY = 56.dp
+
+internal fun viewerBounds(): java.awt.Rectangle =
+    com.pixelgram.desktop.telegram.Notifications.window?.takeIf { it.isShowing }?.bounds
+        ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration.bounds
 private const val ControlsHideMs = 2_500L
 private const val LateFrameUs = 120_000L
 private const val AudioBufferSeconds = 0.4
@@ -327,19 +335,17 @@ fun VideoPlayerWindow(request: VideoRequest, settings: AppSettings) {
     val path = request.telegram.localPath(request.file)
     val engine = remember(path) { path?.let { VideoEngine(it, request.loop).apply { start() } } }
     DisposableEffect(engine) { onDispose { engine?.close() } }
-    val screen = remember { GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration.bounds }
-    val windowWidth = (screen.width * ViewerShare).toInt()
-    val windowHeight = (screen.height * ViewerShare).toInt()
+    val bounds = remember { viewerBounds() }
     Window(
         onCloseRequest = close,
         state = rememberWindowState(
-            position = WindowPosition((screen.x + (screen.width - windowWidth) / 2).dp, (screen.y + (screen.height - windowHeight) / 2).dp),
-            size = DpSize(windowWidth.dp, windowHeight.dp),
+            position = WindowPosition(bounds.x.dp, bounds.y.dp),
+            size = DpSize(bounds.width.dp, bounds.height.dp),
         ),
         title = "pixelGram video",
-        undecorated = false,
-        transparent = false,
-        resizable = true,
+        undecorated = true,
+        transparent = true,
+        resizable = false,
         alwaysOnTop = true,
         onKeyEvent = { event ->
             if (event.type != KeyEventType.KeyDown) return@Window false
@@ -355,7 +361,7 @@ fun VideoPlayerWindow(request: VideoRequest, settings: AppSettings) {
         },
     ) {
         PixelTheme(settings) {
-            Box(Modifier.fillMaxSize().background(Color.Black)) {
+            Box(Modifier.fillMaxSize()) {
             AnimatedVisibility(shown, enter = fadeIn(), exit = fadeOut()) {
                 VideoSurface(request, engine, close)
             }
@@ -379,16 +385,29 @@ private fun VideoSurface(request: VideoRequest, engine: VideoEngine?, close: () 
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.92f))
+            .background(Color.Black.copy(alpha = ScrimAlpha))
             .onPointerEvent(PointerEventType.Move) { lastMove = System.currentTimeMillis() }
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { engine?.toggle() },
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = close),
         contentAlignment = Alignment.Center,
     ) {
         val frame = engine?.frame
+        val media = Modifier
+            .fillMaxSize()
+            .padding(horizontal = MediaInsetX, vertical = MediaInsetY)
         if (frame != null) {
-            Image(frame, contentDescription = "Video", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+            Box(media, contentAlignment = Alignment.Center) {
+                Image(
+                    frame,
+                    contentDescription = "Video",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .aspectRatio(frame.width.toFloat() / frame.height.coerceAtLeast(1))
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { engine.toggle() },
+                )
+            }
         } else {
-            ThumbImage(request.thumb, request.mini, request.telegram, Modifier.fillMaxSize(), ContentScale.Fit)
+            ThumbImage(request.thumb, request.mini, request.telegram, media, ContentScale.Fit)
             if (engine?.failed == true) {
                 Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.errorContainer) {
                     Text("Can't play this video", modifier = Modifier.padding(16.dp))
@@ -483,6 +502,8 @@ private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
 fun InlineVideo(path: String, modifier: Modifier = Modifier, maxWidth: Int = InlineDecodeWidth) {
     val engine = remember(path) { VideoEngine(path, loop = true, sound = false, maxWidth = maxWidth).apply { start() } }
     DisposableEffect(engine) { onDispose { engine.close() } }
+    val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
+    LaunchedEffect(engine, focused) { if (engine.playing != focused) engine.toggle() }
     engine.frame?.let { frame ->
         Image(frame, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier)
     }

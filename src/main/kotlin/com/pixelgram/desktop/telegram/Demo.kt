@@ -173,6 +173,12 @@ fun Telegram.loadDemo() {
         messages(100L).add(0, UiMessage(6, 100, 2, 0, false, now - 5, text, entities = entities))
     }
     run {
+        val quote = "3g0th2002 - Topic - что ты хочешь_.m4a"
+        val text = "$quote\nчто это"
+        val entities = listOf(TdApi.TextEntity(0, quote.length, TdApi.TextEntityTypeBold()), TdApi.TextEntity(0, quote.length, TdApi.TextEntityTypeBlockQuote()))
+        messages(100L).add(0, UiMessage(12, 100, 2, 0, false, now - 4, text, entities = entities))
+    }
+    run {
         val code = "import random\n\n# pick a cat\ndef cat(names):\n    return random.choice(names) + \" says hi\"\n\nprint(cat([\"Tom\", \"Luna\"]), 42)"
         val text = "Here is some Python:\n$code"
         val entities = listOf(TdApi.TextEntity(text.indexOf(code), code.length, TdApi.TextEntityTypePreCode("python")))
