@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.37.0 Burst
+
+### Attach menu
+- The paperclip turns into a Material 3 menu: Photo or video, Document, Poll, Checklist, Article, Location and Music.
+- Music sends tracks from your profile music.
+- Location sends coordinates you paste, including from map links.
+
+### Polls
+- New poll editor with a description, photos on the description and options, and up to 12 options.
+- Groups: Show Who Voted, Allow Multiple Answers, Allow Adding Options, Allow Revoting, Shuffle Options, Set Correct Answer and Limit Duration.
+- Channels: Allow Multiple Answers, Allow Revoting, Shuffle Options, Set Correct Answer, Restrict to Subscribers, Limit by Country and Limit Duration.
+- Polls are offered only in groups and channels. Polls show their description, and Retract vote appears only when revoting is allowed.
+
+### Checklists and articles
+- Create checklists with up to 30 tasks and choose whether others can add tasks or mark them as done. Sending a checklist needs Telegram Premium.
+- Write articles in a separate editor with titles, headings, bold, lists, tables, links, photos, formulas and emoji, with undo and redo. Writing with AI needs Telegram Premium.
+- Checklists and articles from others are shown in chats. You can tick tasks, and long articles open in full.
+
+### Fixes
+- Your own posts in channels look like regular posts instead of outgoing bubbles.
+- Enter sends a forwarded message instead of opening the forward options.
+
 ## 0.36.0 Boom
 
 ### Bots
