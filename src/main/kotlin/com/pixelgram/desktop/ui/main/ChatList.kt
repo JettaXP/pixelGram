@@ -1,5 +1,10 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import kotlinx.coroutines.withTimeoutOrNull
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import it.tdlight.jni.TdApi
 import com.pixelgram.desktop.telegram.isService
 import androidx.compose.runtime.mutableIntStateOf
@@ -390,9 +395,23 @@ private fun ChatRow(
     val colors = MaterialTheme.colorScheme
     val last = chat.lastMessage
     var menuAt by remember { mutableStateOf<DpOffset?>(null) }
+    var preview by remember { mutableStateOf(false) }
     val density = LocalDensity.current
     Box(
         modifier.pointerInput(chat.id) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                if (!currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
+                val released = withTimeoutOrNull(PreviewHoldMs) { waitForUpOrCancellation(PointerEventPass.Initial) }
+                if (released != null) return@awaitEachGesture
+                preview = true
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    event.changes.forEach { it.consume() }
+                    if (event.changes.none { it.pressed }) break
+                }
+            }
+        }.pointerInput(chat.id) {
             awaitPointerEventScope {
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -406,6 +425,7 @@ private fun ChatRow(
         },
     ) {
         ChatActions(chat, telegram, settings, menuAt, onDismiss = { menuAt = null }, listKey = listKey)
+        if (preview) ChatPreview(chat, telegram, settings, onOpen = onClick) { preview = false }
         SegmentedListItem(
             selected = selected,
             onClick = onClick,
@@ -517,3 +537,5 @@ private fun LockButton() {
 private const val LockAnimationMs = 260L
 
 private const val ChatRowType = "chat"
+
+private const val PreviewHoldMs = 450L

@@ -172,6 +172,7 @@ private const val AUTH_TIMEOUT_MS = 30_000L
 private const val PinnedLimit = 100
 private const val JumpPageSize = 60
 private const val ChatSearchLimit = 20
+private const val PreviewPage = 40
 private const val ProfileGiftsLimit = 100
 private const val JumpMinMessages = 20
 private const val JumpAttempts = 3
@@ -1574,6 +1575,29 @@ class Telegram(
             }
             if (loaded == 0) return
         }
+    }
+
+    fun previewHistory(chatId: Long, fromId: Long, onResult: (List<UiMessage>) -> Unit) {
+        val local = if (fromId == 0L) messages(chatId).toList() else emptyList()
+        if (local.isNotEmpty()) onResult(local)
+        if (client == null) return
+        send(TdApi.GetChatHistory().apply {
+            this.chatId = chatId
+            fromMessageId = fromId
+            offset = 0
+            limit = PreviewPage
+            onlyLocal = false
+        }) { result ->
+            val loaded = (result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty()
+            loaded.forEach { message -> (message.senderId as? TdApi.MessageSenderUser)?.let { ensureUser(it.userId) } }
+            if (loaded.isNotEmpty() || local.isEmpty()) onResult(loaded.sortedByDescending { it.id }.map { it.toUi() })
+        }
+    }
+
+    fun markChatRead(chat: ChatState) {
+        val last = chat.lastMessage?.id ?: return
+        markRead(chat.id, listOf(last))
+        if (chat.markedUnread) send(TdApi.ToggleChatIsMarkedAsUnread(chat.id, false))
     }
 
     private fun markRead(chatId: Long, ids: List<Long>) {
