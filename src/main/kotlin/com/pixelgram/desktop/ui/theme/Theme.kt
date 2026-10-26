@@ -70,6 +70,7 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     PowerSaving.settings = settings
     com.pixelgram.desktop.core.I18n.settings = settings
     com.pixelgram.desktop.core.WindowTitle.settings = settings
+    com.pixelgram.desktop.core.LocalNames.settings = settings
     com.pixelgram.desktop.core.AudioDevices.settings = settings
     val corners = com.pixelgram.desktop.ui.components.cornerSpec(settings)
     val font = messageFont(settings)

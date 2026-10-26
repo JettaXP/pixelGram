@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.icons.outlined.Edit
+import com.pixelgram.desktop.ui.icons.outlined.DriveFileRenameOutline
+import com.pixelgram.desktop.ui.icons.outlined.PersonAdd
 import com.pixelgram.desktop.ui.icons.outlined.Link
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -120,6 +123,8 @@ fun ChatActions(
 ) {
     var confirm by remember(chat.id) { mutableStateOf<Confirm?>(null) }
     var profile by remember(chat.id) { mutableStateOf(false) }
+    var contactEdit by remember(chat.id) { mutableStateOf(false) }
+    var renaming by remember(chat.id) { mutableStateOf(false) }
     LaunchedEffect(chat.id, at != null) {
         if (at != null && chat.privateUserId != 0L) telegram.userFullInfo(chat.privateUserId) {}
     }
@@ -167,6 +172,16 @@ fun ChatActions(
                                 add(MenuEntry(Icons.Outlined.CreateNewFolder, "Add to folder", trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight) { folders = true })
                             }
                         }
+                        val people = buildList {
+                            if (chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id) && !telegram.isBot(chat)) {
+                                if (telegram.isContact(chat)) {
+                                    add(MenuEntry(Icons.Outlined.Edit, "Edit contact", onClick = act { contactEdit = true }))
+                                } else {
+                                    add(MenuEntry(Icons.Outlined.PersonAdd, "Add to contacts", onClick = act { contactEdit = true }))
+                                }
+                                add(MenuEntry(Icons.Outlined.DriveFileRenameOutline, "Rename", onClick = act { renaming = true }))
+                            }
+                        }
                         val danger = buildList {
                             if (chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id)) {
                                 if (telegram.isBlocked(chat)) {
@@ -183,7 +198,7 @@ fun ChatActions(
                                 onClick = act { confirm = Confirm.Delete },
                             ))
                         }
-                        MenuGroups(listOf(window, main, organize, danger))
+                        MenuGroups(listOf(window, main, people, organize, danger))
                     }
                 }
             }
@@ -225,6 +240,71 @@ fun ChatActions(
         )
     }
     if (profile) ChatInfoDialog(chat, telegram, settings, onOpenChat) { profile = false }
+    if (contactEdit) ContactDialog(chat, telegram) { contactEdit = false }
+    if (renaming) RenameDialog(chat, telegram) { renaming = false }
+}
+
+@Composable
+private fun ContactDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> Unit) {
+    val user = telegram.users[chat.privateUserId]
+    val existing = telegram.isContact(chat)
+    var first by remember { mutableStateOf(user?.firstName.orEmpty()) }
+    var last by remember { mutableStateOf(user?.lastName.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (existing) "Edit contact" else "Add to contacts") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.OutlinedTextField(first, { first = it }, label = { Text("First name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                androidx.compose.material3.OutlinedTextField(last, { last = it }, label = { Text("Last name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                if (existing) {
+                    TextButton(onClick = {
+                        telegram.removeContact(chat.privateUserId)
+                        onDismiss()
+                    }) { Text("Delete contact", color = MaterialTheme.colorScheme.error) }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = first.isNotBlank(), onClick = {
+                telegram.saveContact(chat.privateUserId, first.trim(), last.trim())
+                onDismiss()
+            }) { Text("Done") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun RenameDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> Unit) {
+    val current = com.pixelgram.desktop.core.LocalNames.get(chat.privateUserId)
+    val user = telegram.users[chat.privateUserId]
+    var first by remember { mutableStateOf(current?.substringBefore(' ') ?: user?.firstName.orEmpty()) }
+    var last by remember { mutableStateOf(current?.substringAfter(' ', "") ?: user?.lastName.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Only you will see this name. They stay out of your contacts.", style = MaterialTheme.typography.bodyMedium)
+                androidx.compose.material3.OutlinedTextField(first, { first = it }, label = { Text("First name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                androidx.compose.material3.OutlinedTextField(last, { last = it }, label = { Text("Last name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                if (current != null) {
+                    TextButton(onClick = {
+                        com.pixelgram.desktop.core.LocalNames.set(chat.privateUserId, null)
+                        onDismiss()
+                    }) { Text("Restore original name") }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = first.isNotBlank(), onClick = {
+                com.pixelgram.desktop.core.LocalNames.set(chat.privateUserId, listOf(first.trim(), last.trim()).filter(String::isNotBlank).joinToString(" "))
+                onDismiss()
+            }) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 

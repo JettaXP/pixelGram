@@ -133,6 +133,7 @@ class AppSettings private constructor(private val props: Properties) {
     val interfaceAnimations = bool("interfaceAnimations", true)
     val language = string("language", "en")
     val bigReactions = bool("bigReactions", false)
+    val localNames = string("localNames", "")
     val liquidCursor = bool("liquidCursor", true)
     val cursorStretch = int("cursorStretch", 40)
     val handleStretch = int("handleStretch", 60)

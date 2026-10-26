@@ -466,8 +466,11 @@ class Telegram(
         message.sendingState is TdApi.MessageSendingStateFailed,
     )
 
-    fun chatTitle(chat: ChatState): String =
-        if (isSavedMessages(chat.id)) SavedMessagesTitle else chat.title
+    fun chatTitle(chat: ChatState): String = when {
+        isSavedMessages(chat.id) -> SavedMessagesTitle
+        chat.privateUserId != 0L -> com.pixelgram.desktop.core.LocalNames.get(chat.privateUserId) ?: chat.title
+        else -> chat.title
+    }
 
     fun openSavedMessages(onChat: (Long) -> Unit) {
         if (myUserId != 0L) openPrivateChat(myUserId, onChat)
@@ -683,6 +686,7 @@ class Telegram(
 
     fun userName(userId: Long): String {
         ensureUser(userId)
+        com.pixelgram.desktop.core.LocalNames.get(userId)?.let { return it }
         return users[userId]?.fullName() ?: ""
     }
 
@@ -1259,6 +1263,17 @@ class Telegram(
 
     fun animatedEmoji(emoji: String, done: (TdApi.Sticker?) -> Unit) {
         send(TdApi.GetAnimatedEmoji(emoji)) { result -> done((result as? TdApi.AnimatedEmoji)?.sticker) }
+    }
+
+    fun isContact(chat: ChatState): Boolean = chat.privateUserId != 0L && users[chat.privateUserId]?.isContact == true
+
+    fun saveContact(userId: Long, firstName: String, lastName: String, onDone: (Boolean) -> Unit = {}) {
+        val phone = users[userId]?.phoneNumber.orEmpty()
+        send(TdApi.AddContact(userId, TdApi.ImportedContact(phone, firstName, lastName, null), false)) { result -> onDone(result is TdApi.Ok) }
+    }
+
+    fun removeContact(userId: Long) {
+        send(TdApi.RemoveContacts(longArrayOf(userId)))
     }
 
     fun senderPhoto(sender: TdApi.MessageSender?): TdApi.File? = when (sender) {
