@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.main
 
+import kotlin.math.roundToInt
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.draw.drawBehind
 import com.pixelgram.desktop.ui.components.expressive.Slider
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.animation.AnimatedVisibility
@@ -504,9 +508,25 @@ fun InlineVideo(path: String, modifier: Modifier = Modifier, maxWidth: Int = Inl
     DisposableEffect(engine) { onDispose { engine.close() } }
     val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
     LaunchedEffect(engine, focused) { if (engine.playing != focused) engine.toggle() }
-    engine.frame?.let { frame ->
-        Image(frame, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier)
-    }
+    VideoFrame(engine, modifier)
+}
+
+@Composable
+internal fun VideoFrame(engine: VideoEngine, modifier: Modifier) {
+    androidx.compose.foundation.layout.Spacer(
+        modifier.drawBehind {
+            val image = engine.frame ?: return@drawBehind
+            val scale = maxOf(size.width / image.width, size.height / image.height)
+            val sourceWidth = (size.width / scale).roundToInt().coerceIn(1, image.width)
+            val sourceHeight = (size.height / scale).roundToInt().coerceIn(1, image.height)
+            drawImage(
+                image,
+                srcOffset = IntOffset((image.width - sourceWidth) / 2, (image.height - sourceHeight) / 2),
+                srcSize = IntSize(sourceWidth, sourceHeight),
+                dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+            )
+        },
+    )
 }
 
 private const val InlineDecodeWidth = 640

@@ -46,6 +46,26 @@ class ActiveCall(val telegram: Telegram, val userId: Long, val outgoing: Boolean
     internal val callbacks = ArrayList<Any>()
     internal var lastRemote = 0L
     internal var lastLocal = 0L
+    private val retiredRemote = ArrayDeque<Image>()
+    private val retiredLocal = ArrayDeque<Image>()
+
+    internal fun retire(image: Image, remote: Boolean) {
+        val queue = if (remote) retiredRemote else retiredLocal
+        queue.addLast(image)
+        while (queue.size > KeptFrames) queue.removeFirst().close()
+    }
+
+    internal fun releaseFrames() {
+        remoteFrame = null
+        localFrame = null
+        (retiredRemote + retiredLocal).forEach { it.close() }
+        retiredRemote.clear()
+        retiredLocal.clear()
+    }
+
+    private companion object {
+        const val KeptFrames = 6
+    }
 }
 
 object Calls {
@@ -292,15 +312,21 @@ object Calls {
             if (now - (if (remote) call.lastRemote else call.lastLocal) < FrameEveryMs) return@NtgFramesCallback
             val frame = NtgFrame(pointer)
             frame.read()
-            val bitmap = i420(frame) ?: return@NtgFramesCallback
+            val image = i420(frame) ?: return@NtgFramesCallback
+            val bitmap = image.toComposeImageBitmap()
             if (remote) call.lastRemote = now else call.lastLocal = now
             main {
+                if (call.phase == CallPhase.Ended) {
+                    image.close()
+                    return@main
+                }
                 if (remote) {
                     call.remoteFrame = bitmap
                     call.remoteVideo = true
                 } else {
                     call.localFrame = bitmap
                 }
+                call.retire(image, remote)
             }
         }
         val remoteSource = NtgRemoteSourceCallback { _, _, source, _ ->
@@ -471,11 +497,14 @@ object Calls {
         }
         Thread {
             Thread.sleep(EndedHoldMs)
-            main { if (current == call) current = null }
+            main {
+                if (current == call) current = null
+                call.releaseFrames()
+            }
         }.apply { isDaemon = true }.start()
     }
 
-    private fun i420(frame: NtgFrame): ImageBitmap? {
+    private fun i420(frame: NtgFrame): Image? {
         val width = frame.frame_data.width.toInt() and 0xFFFF
         val height = frame.frame_data.height.toInt() and 0xFFFF
         val data = frame.data ?: return null
@@ -509,6 +538,6 @@ object Calls {
             }
         }
         val info = ImageInfo(outWidth, outHeight, ColorType.BGRA_8888, ColorAlphaType.OPAQUE)
-        return Image.makeRaster(info, pixels, outWidth * 4).toComposeImageBitmap()
+        return Image.makeRaster(info, pixels, outWidth * 4)
     }
 }

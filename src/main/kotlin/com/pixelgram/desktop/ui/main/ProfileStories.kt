@@ -428,7 +428,7 @@ private fun StoryMedia(story: TdApi.Story, telegram: Telegram, onProgress: (Floa
                 if (path != null) {
                     val engine = remember(path) { VideoEngine(path, loop = false).apply { start() } }
                     DisposableEffect(engine) { onDispose { engine.close() } }
-                    engine.frame?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                    VideoFrame(engine, Modifier.fillMaxSize())
                     LaunchedEffect(engine) {
                         while (!engine.ended && !engine.failed) {
                             if (engine.duration > 0) onProgress(engine.position.toFloat() / engine.duration)

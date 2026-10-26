@@ -151,12 +151,13 @@ fun StickerView(
 
 @Composable
 fun LottieView(path: String, modifier: Modifier, play: Boolean = true, runs: Int = -1, onEnd: () -> Unit = {}) {
-    val animation by produceState<Animation?>(null, path) {
+    val animation by produceState(LottieCache.get(path), path) {
+        if (value != null) return@produceState
         value = withContext(Dispatchers.IO) {
-            runCatching {
+            LottieCache.get(path) ?: runCatching {
                 val json = GZIPInputStream(File(path).inputStream()).use { it.readBytes().decodeToString() }
                 Animation.makeFromString(json)
-            }.onFailure { AppLog.write("Sticker animation failed", it) }.getOrNull()
+            }.onFailure { AppLog.write("Sticker animation failed", it) }.getOrNull()?.also { LottieCache.put(path, it) }
         }
     }
     val ended by rememberUpdatedState(onEnd)
@@ -190,14 +191,31 @@ fun LottieView(path: String, modifier: Modifier, play: Boolean = true, runs: Int
     }
     Canvas(modifier.graphicsLayer()) {
         val current = animation ?: return@Canvas
-        current.seekFrame(frame.toFloat())
         drawIntoCanvas { canvas ->
-            current.render(canvas.nativeCanvas, Rect.makeWH(size.width, size.height))
+            synchronized(current) {
+                current.seekFrame(frame.toFloat())
+                current.render(canvas.nativeCanvas, Rect.makeWH(size.width, size.height))
+            }
         }
     }
 }
 
 private const val DefaultLottieFps = 60f
+
+private object LottieCache {
+    private const val MaxEntries = 96
+    private val cache = object : LinkedHashMap<String, Animation>(MaxEntries, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Animation>) = size > MaxEntries
+    }
+
+    @Synchronized
+    fun get(path: String): Animation? = cache[path]
+
+    @Synchronized
+    fun put(path: String, animation: Animation) {
+        cache[path] = animation
+    }
+}
 private const val AutoplayVideoBytes = 20L * 1024 * 1024
 
 @Composable

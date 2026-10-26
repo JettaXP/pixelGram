@@ -1443,19 +1443,19 @@ private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @
         TextWithCode(text, entities, meta)
         return
     }
-    var textLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val layoutRef = remember { arrayOfNulls<TextLayoutResult>(1) }
     val quoteAtEnd = remember(text, entities) { endsWithQuote(text, entities) }
     val quotes = remember(text, entities) { com.pixelgram.desktop.ui.components.quoteRanges(text, entities) }
     val quoteColor = MaterialTheme.colorScheme.primary
     Layout(
         modifier = Modifier.fillMaxWidth().drawBehind {
-            val current = textLayout ?: return@drawBehind
+            val current = layoutRef[0] ?: return@drawBehind
             quotes.forEach { range -> drawQuote(current, range, quoteColor, size.width) }
         },
         content = {
             if (text.isNotEmpty()) {
                 SelectionContainer {
-                    FormattedText(text, entities, style = com.pixelgram.desktop.ui.theme.messageTextStyle(), onTextLayout = { textLayout = it }, quoteBackground = false)
+                    FormattedText(text, entities, style = com.pixelgram.desktop.ui.theme.messageTextStyle(), onTextLayout = { layoutRef[0] = it }, quoteBackground = false)
                 }
             } else {
                 Box {}
@@ -1468,7 +1468,7 @@ private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @
                 val textPlaceable = measurables[0].measure(loose)
                 val metaPlaceable = measurables[1].measure(loose)
                 val gap = MetaGap.roundToPx()
-                val lines = textLayout?.takeIf { text.isNotEmpty() }
+                val lines = layoutRef[0]?.takeIf { text.isNotEmpty() }
                 val lastLineRight = lines?.let { it.getLineRight(it.lineCount - 1).toInt() } ?: 0
                 val sameLine = text.isEmpty() || (!quoteAtEnd && lastLineRight + gap + metaPlaceable.width <= constraints.maxWidth)
                 val width: Int

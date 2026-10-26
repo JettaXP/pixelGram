@@ -204,6 +204,7 @@ private const val DownloadWaitSteps = 600
 private const val DownloadWaitMs = 200L
 private const val MentionResolveMin = 4
 private const val HistoryPagesMax = 300
+private const val DrainBudgetNs = 8_000_000L
 
 private object Tdlib {
     private var factory: ClientFactory? = null
@@ -235,12 +236,12 @@ class Telegram(
     private var authRequest = 0
 
     val chats = mutableStateMapOf<Long, ChatState>()
-    val users = mutableStateMapOf<Long, TdApi.User>()
+    val users = KeyedState<Long, TdApi.User>()
     val unread = mutableStateMapOf<ChatListKey, UnreadCount>()
     val unreadMessages = mutableStateMapOf<ChatListKey, UnreadCount>()
-    val statuses = mutableStateMapOf<Long, TdApi.UserStatus>()
+    val statuses = KeyedState<Long, TdApi.UserStatus>()
     private val chatActions = mutableStateMapOf<Long, List<Pair<TdApi.MessageSender, TdApi.ChatAction>>>()
-    val emojiClicks = mutableStateMapOf<Pair<Long, Long>, TdApi.Sticker>()
+    val emojiClicks = KeyedState<Pair<Long, Long>, TdApi.Sticker>()
     var clockMinute by mutableStateOf(System.currentTimeMillis() / 60_000)
         private set
 
@@ -255,8 +256,8 @@ class Telegram(
     var connection by mutableStateOf(ConnectionStatus.Ready)
         internal set
     val folders = mutableStateListOf<FolderInfo>()
-    private val filePaths = mutableStateMapOf<Int, String>()
-    private val transfers = mutableStateMapOf<Int, Float>()
+    private val filePaths = KeyedState<Int, String>()
+    private val transfers = KeyedState<Int, Float>()
 
     fun progress(file: TdApi.File?): Float? = file?.let { transfers[it.id] }
 
@@ -348,8 +349,27 @@ class Telegram(
         send(TdApi.Close())
     }
 
+    private val inbox = java.util.concurrent.ConcurrentLinkedQueue<() -> Unit>()
+    private val draining = java.util.concurrent.atomic.AtomicBoolean(false)
+
     private fun onMain(block: () -> Unit) {
-        scope.launch(Dispatchers.Main) { block() }
+        inbox.add(block)
+        if (draining.compareAndSet(false, true)) scheduleDrain()
+    }
+
+    private fun scheduleDrain() {
+        scope.launch(Dispatchers.Main) { drain() }
+    }
+
+    private fun drain() {
+        val started = System.nanoTime()
+        while (System.nanoTime() - started < DrainBudgetNs) {
+            val block = inbox.poll() ?: break
+            runCatching(block).onFailure { AppLog.write("TDLib result handling failed", it) }
+        }
+        if (inbox.isNotEmpty()) return scheduleDrain()
+        draining.set(false)
+        if (inbox.isNotEmpty() && draining.compareAndSet(false, true)) scheduleDrain()
     }
 
     fun <R : TdApi.Object> send(
@@ -660,8 +680,8 @@ class Telegram(
         return statuses[userId] is TdApi.UserStatusOnline
     }
 
-    private val supergroupMembers = mutableStateMapOf<Long, Int>()
-    private val basicGroupMembers = mutableStateMapOf<Long, Int>()
+    private val supergroupMembers = KeyedState<Long, Int>()
+    private val basicGroupMembers = KeyedState<Long, Int>()
     private val memberRequests = mutableSetOf<Long>()
 
     private fun memberCount(chat: ChatState): Int? = when {
@@ -1350,8 +1370,8 @@ class Telegram(
 
     fun isBot(chat: ChatState): Boolean = users[chat.privateUserId]?.type is TdApi.UserTypeBot
 
-    private val forums = mutableStateMapOf<Long, Boolean>()
-    private val supergroupInfo = mutableStateMapOf<Long, TdApi.Supergroup>()
+    private val forums = KeyedState<Long, Boolean>()
+    private val supergroupInfo = KeyedState<Long, TdApi.Supergroup>()
 
     fun canPost(chat: ChatState): Boolean {
         if (!chat.isChannel) return true
@@ -1393,7 +1413,7 @@ class Telegram(
         }
     }
 
-    private val officialSupergroups = mutableStateMapOf<Long, Boolean>()
+    private val officialSupergroups = KeyedState<Long, Boolean>()
 
     fun isOfficial(chat: ChatState): Boolean =
         chat.supergroupId != 0L && officialSupergroups[chat.supergroupId] == true ||
@@ -1431,7 +1451,7 @@ class Telegram(
         else -> AvatarKind.Private
     }
 
-    private val blockedUsers = mutableStateMapOf<Long, Boolean>()
+    private val blockedUsers = KeyedState<Long, Boolean>()
 
     fun isBlocked(chat: ChatState): Boolean = chat.privateUserId != 0L && blockedUsers[chat.privateUserId] == true
 
@@ -1952,7 +1972,7 @@ class Telegram(
         })
     }
 
-    private val stickerSets = mutableStateMapOf<String, TdApi.StickerSet>()
+    private val stickerSets = KeyedState<String, TdApi.StickerSet>()
     private val stickerSetRequests = HashSet<String>()
 
     fun stickerFromSet(name: String, index: Int): TdApi.Sticker? {
@@ -2059,7 +2079,7 @@ class Telegram(
 
     val pinnedMessages = mutableStateMapOf<Long, List<UiMessage>>()
 
-    private val customEmojiStickers = mutableStateMapOf<Long, TdApi.Sticker>()
+    private val customEmojiStickers = KeyedState<Long, TdApi.Sticker>()
     private val customEmojiQueue = LinkedHashSet<Long>()
     private val customEmojiRequested = HashSet<Long>()
 
@@ -2511,7 +2531,7 @@ class Telegram(
         send(TdApi.DeleteMessages(chatId, ids, revoke))
     }
 
-    private val replyCache = mutableStateMapOf<Pair<Long, Long>, UiMessage>()
+    private val replyCache = KeyedState<Pair<Long, Long>, UiMessage>()
     private val replyRequests = HashSet<Pair<Long, Long>>()
 
     fun replyPreview(chatId: Long, id: Long): UiMessage? {
@@ -2535,58 +2555,60 @@ class Telegram(
         entities: Array<TdApi.TextEntity> = emptyArray(),
     ) {
         if (System.getProperty("pixelgram.demo") == "true") return demoSendFiles(chatId, files, caption)
-        files.chunked(AlbumSize).forEachIndexed { chunkIndex, chunk ->
-            val contents = chunk.mapIndexed { index, file ->
-                val first = chunkIndex == 0 && index == 0
-                val text = TdApi.FormattedText(if (first) caption else "", if (first) entities else arrayOf())
-                val input = TdApi.InputFileLocal(file.absolutePath)
-                if (asPhotos && com.pixelgram.desktop.ui.main.Attachments.isVideo(file)) {
-                    val info = com.pixelgram.desktop.ui.main.Attachments.videoInfo(file)
-                    TdApi.InputMessageVideo().apply {
-                        video = TdApi.InputVideo().apply {
-                            video = input
-                            thumbnail = info.poster?.let { poster ->
-                                val (w, h) = imageSize(poster)
-                                TdApi.InputThumbnail(TdApi.InputFileLocal(poster.absolutePath), w, h)
+        scope.launch(Dispatchers.IO) {
+            files.chunked(AlbumSize).forEachIndexed { chunkIndex, chunk ->
+                val contents = chunk.mapIndexed { index, file ->
+                    val first = chunkIndex == 0 && index == 0
+                    val text = TdApi.FormattedText(if (first) caption else "", if (first) entities else arrayOf())
+                    val input = TdApi.InputFileLocal(file.absolutePath)
+                    if (asPhotos && com.pixelgram.desktop.ui.main.Attachments.isVideo(file)) {
+                        val info = com.pixelgram.desktop.ui.main.Attachments.videoInfo(file)
+                        TdApi.InputMessageVideo().apply {
+                            video = TdApi.InputVideo().apply {
+                                video = input
+                                thumbnail = info.poster?.let { poster ->
+                                    val (w, h) = imageSize(poster)
+                                    TdApi.InputThumbnail(TdApi.InputFileLocal(poster.absolutePath), w, h)
+                                }
+                                addedStickerFileIds = IntArray(0)
+                                duration = info.duration
+                                width = info.width
+                                height = info.height
+                                supportsStreaming = file.extension.lowercase() in StreamingExtensions
                             }
-                            addedStickerFileIds = IntArray(0)
-                            duration = info.duration
-                            width = info.width
-                            height = info.height
-                            supportsStreaming = file.extension.lowercase() in StreamingExtensions
+                            this.caption = text
                         }
-                        this.caption = text
-                    }
-                } else if (asPhotos) {
-                    val (width, height) = imageSize(file)
-                    TdApi.InputMessagePhoto().apply {
-                        photo = TdApi.InputPhoto().apply {
-                            photo = input
-                            addedStickerFileIds = IntArray(0)
-                            this.width = width
-                            this.height = height
+                    } else if (asPhotos) {
+                        val (width, height) = imageSize(file)
+                        TdApi.InputMessagePhoto().apply {
+                            photo = TdApi.InputPhoto().apply {
+                                photo = input
+                                addedStickerFileIds = IntArray(0)
+                                this.width = width
+                                this.height = height
+                            }
+                            this.caption = text
                         }
-                        this.caption = text
-                    }
-                } else {
-                    TdApi.InputMessageDocument().apply {
-                        document = TdApi.InputDocument().apply { document = input }
-                        this.caption = text
+                    } else {
+                        TdApi.InputMessageDocument().apply {
+                            document = TdApi.InputDocument().apply { document = input }
+                            this.caption = text
+                        }
                     }
                 }
-            }
-            if (contents.size == 1) {
-                send(TdApi.SendMessage().apply {
-                    this.chatId = chatId
-                    if (chunkIndex == 0) replyTo = replyInput(replyToId)
-                    inputMessageContent = contents.single()
-                })
-            } else {
-                send(TdApi.SendMessageAlbum().apply {
-                    this.chatId = chatId
-                    if (chunkIndex == 0) replyTo = replyInput(replyToId)
-                    inputMessageContents = contents.toTypedArray()
-                })
+                if (contents.size == 1) {
+                    send(TdApi.SendMessage().apply {
+                        this.chatId = chatId
+                        if (chunkIndex == 0) replyTo = replyInput(replyToId)
+                        inputMessageContent = contents.single()
+                    })
+                } else {
+                    send(TdApi.SendMessageAlbum().apply {
+                        this.chatId = chatId
+                        if (chunkIndex == 0) replyTo = replyInput(replyToId)
+                        inputMessageContents = contents.toTypedArray()
+                    })
+                }
             }
         }
     }
