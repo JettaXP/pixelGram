@@ -100,6 +100,7 @@ internal val SettingsIndex = listOf(
     "Advanced" to "System integration",
     "Advanced" to "Show tray icon",
     "Advanced" to "Use monochrome icon",
+    "Advanced" to "Restore window size and position",
     "Advanced" to "Launch pixelGram when system starts",
     "Advanced" to "Launch minimized",
     "Advanced" to "Data and storage",

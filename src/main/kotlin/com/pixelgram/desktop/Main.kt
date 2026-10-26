@@ -42,6 +42,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import com.pixelgram.desktop.ui.main.ChatView
 import com.pixelgram.desktop.ui.main.ChatWindows
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.runtime.mutableIntStateOf
 import io.github.vinceglb.filekit.FileKit
 import androidx.compose.animation.AnimatedContent
@@ -275,7 +276,11 @@ private fun ApplicationScope.PixelApp() {
     val close = { if (trayOn) visible = false else quit() }
     val ownTitleBar = remember { settings.customTitleBar.value }
     val macNativeWindow = AppPaths.isMac
-    val windowState = rememberWindowState(size = DpSize(1180.dp, 760.dp))
+    val savedBounds = remember { com.pixelgram.desktop.core.WindowBounds.load(settings) }
+    val windowState = rememberWindowState(
+        size = savedBounds?.size ?: DpSize(1180.dp, 760.dp),
+        position = savedBounds?.position ?: androidx.compose.ui.window.WindowPosition.PlatformDefault,
+    )
     Window(
         onCloseRequest = close,
         undecorated = ownTitleBar && !macNativeWindow,
@@ -318,6 +323,15 @@ private fun ApplicationScope.PixelApp() {
         val focused = LocalWindowInfo.current.isWindowFocused
         LaunchedEffect(focused) { accounts.list.forEach { it.windowFocused = focused } }
         val chrome = rememberWindowChrome()
+        LaunchedEffect(Unit) {
+            androidx.compose.runtime.snapshotFlow {
+                Triple(windowState.position, windowState.size, chrome.maximized || windowState.placement != androidx.compose.ui.window.WindowPlacement.Floating)
+            }.collectLatest { (_, _, maximized) ->
+                delay(BoundsSaveDelayMs)
+                if (maximized || window.extendedState and java.awt.Frame.MAXIMIZED_BOTH != 0) return@collectLatest
+                com.pixelgram.desktop.core.WindowBounds.save(settings, window.x, window.y, window.width, window.height)
+            }
+        }
         val rootFocus = remember { FocusRequester() }
         var focusInside by remember { mutableStateOf(false) }
         val focusScope = rememberCoroutineScope()
@@ -513,6 +527,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
     }
 }
 
+private const val BoundsSaveDelayMs = 600L
 private const val RaiseHoldMs = 150L
 private const val RenderApiLogDelayMs = 3_000L
 private const val UpdatedNoticeDelayMs = 1500L

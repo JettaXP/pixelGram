@@ -151,6 +151,8 @@ class AppSettings private constructor(private val props: Properties) {
     val trayMonochrome = bool("trayMonochrome", false)
     val autostart = bool("autostart", false)
     val launchMinimized = bool("launchMinimized", false)
+    val restoreWindow = bool("restoreWindow", true)
+    val windowBounds = string("windowBounds", "")
     val autoplayGifs = bool("autoplayGifs", true)
     val autoplayVideos = bool("autoplayVideos", true)
 
@@ -186,12 +188,12 @@ class AppSettings private constructor(private val props: Properties) {
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,
         deviceName, israelLogo, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
-        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, bigReactions, liquidCursor, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
+        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, restoreWindow, windowBounds, autostart, launchMinimized, language, localNames, bigReactions, liquidCursor, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
         apiId, apiHash,
         accounts, activeAccount,
     ) + avatarKindShapes.values
 
-    private val localOnly = setOf(apiId, apiHash, accounts, activeAccount, outputDevice, inputDevice, cameraDevice)
+    private val localOnly = setOf(apiId, apiHash, accounts, activeAccount, outputDevice, inputDevice, cameraDevice, windowBounds, autostart, launchMinimized)
 
     fun resetAll() {
         val keep = localOnly + setOf(passcodeHash, passcodeSalt, autoLockMinutes, deviceName)

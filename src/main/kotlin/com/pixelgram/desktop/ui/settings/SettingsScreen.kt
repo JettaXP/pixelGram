@@ -1526,6 +1526,7 @@ private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {
         if (settings.trayIcon.value) {
             add(Triple("Use monochrome icon", settings.trayMonochrome.value) { value: Boolean -> settings.trayMonochrome.value = value })
         }
+        add(Triple("Restore window size and position", settings.restoreWindow.value) { value: Boolean -> settings.restoreWindow.value = value })
         if (com.pixelgram.desktop.core.Autostart.supported) {
             add(Triple("Launch pixelGram when system starts", settings.autostart.value) { value: Boolean ->
                 settings.autostart.value = value
