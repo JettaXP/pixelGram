@@ -446,6 +446,13 @@ fun ChatView(
         )
     }
 
+    val dropped = DroppedFiles.pending
+    LaunchedEffect(chat.id, dropped) {
+        if (dropped == null || dropped.chatId != chat.id) return@LaunchedEffect
+        DroppedFiles.pending = null
+        attach(dropped.files)
+        asFiles = dropped.files.any { !Attachments.isPhoto(it) }
+    }
     FileDropArea(onDrop = { files, asDocuments ->
         attach(files)
         asFiles = asDocuments || files.any { !Attachments.isPhoto(it) }

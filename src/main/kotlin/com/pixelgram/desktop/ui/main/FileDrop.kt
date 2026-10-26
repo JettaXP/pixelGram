@@ -53,6 +53,11 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.io.File
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.rememberCoroutineScope
 import java.net.URI
 
 private enum class DropZone(val title: String, val subtitle: String, val icon: ImageVector) {
@@ -77,6 +82,55 @@ private fun DragAndDropEvent.files(): List<File>? = runCatching {
         runCatching { File(URI(uri)) }.getOrNull()?.takeIf { it.isFile }
     }
 }.getOrNull()
+
+object DroppedFiles {
+    class Drop(val chatId: Long, val files: List<File>)
+
+    var pending by mutableStateOf<Drop?>(null)
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+@Composable
+fun Modifier.chatDropTarget(chatId: Long, onHover: (Boolean) -> Unit, onOpen: () -> Unit): Modifier {
+    val scope = rememberCoroutineScope()
+    val hover by rememberUpdatedState(onHover)
+    val open by rememberUpdatedState(onOpen)
+    val target = remember(chatId) {
+        object : DragAndDropTarget {
+            var timer: Job? = null
+
+            fun leave() {
+                timer?.cancel()
+                hover(false)
+            }
+
+            override fun onEntered(event: DragAndDropEvent) {
+                hover(true)
+                timer?.cancel()
+                timer = scope.launch {
+                    delay(DropOpenDelayMs)
+                    open()
+                }
+            }
+
+            override fun onExited(event: DragAndDropEvent) = leave()
+
+            override fun onEnded(event: DragAndDropEvent) = leave()
+
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                leave()
+                val files = event.files().orEmpty()
+                if (files.isEmpty()) return false
+                DroppedFiles.pending = DroppedFiles.Drop(chatId, files)
+                open()
+                return true
+            }
+        }
+    }
+    return dragAndDropTarget(shouldStartDragAndDrop = { it.dragData() is DragData.FilesList }, target = target)
+}
+
+private const val DropOpenDelayMs = 900L
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable

@@ -396,9 +396,10 @@ private fun ChatRow(
     val last = chat.lastMessage
     var menuAt by remember { mutableStateOf<DpOffset?>(null) }
     var preview by remember { mutableStateOf(false) }
+    var dropping by remember { mutableStateOf(false) }
     val density = LocalDensity.current
     Box(
-        modifier.pointerInput(chat.id) {
+        modifier.chatDropTarget(chat.id, onHover = { dropping = it }, onOpen = onClick).pointerInput(chat.id) {
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 if (!currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
@@ -427,7 +428,7 @@ private fun ChatRow(
         ChatActions(chat, telegram, settings, menuAt, onDismiss = { menuAt = null }, listKey = listKey)
         if (preview) ChatPreview(chat, telegram, settings, onOpen = onClick) { preview = false }
         SegmentedListItem(
-            selected = selected,
+            selected = selected || dropping,
             onClick = onClick,
             shapes = groupShapes(index, count),
             leadingContent = {
