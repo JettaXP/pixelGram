@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.DpOffset
 import com.pixelgram.desktop.ui.components.FormattedText
 import com.pixelgram.desktop.ui.components.endsWithQuote
 import com.pixelgram.desktop.ui.icons.filled.Search
+import com.pixelgram.desktop.ui.icons.filled.Videocam
+import com.pixelgram.desktop.ui.icons.filled.Call
 import com.pixelgram.desktop.telegram.isRich
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
@@ -504,6 +506,14 @@ fun ChatView(
                     }
                 }
             }
+            }
+            if (chat.privateUserId != 0L && com.pixelgram.desktop.calls.Calls.canCall(telegram, chat.privateUserId)) {
+                IconButton(onClick = { com.pixelgram.desktop.calls.Calls.start(telegram, chat.privateUserId, video = false) }) {
+                    Icon(Icons.Filled.Call, contentDescription = "Call")
+                }
+                IconButton(onClick = { com.pixelgram.desktop.calls.Calls.start(telegram, chat.privateUserId, video = true) }) {
+                    Icon(Icons.Filled.Videocam, contentDescription = "Video call")
+                }
             }
             IconButton(onClick = { MessageSearch.start(chat.id) }) {
                 Icon(Icons.Filled.Search, contentDescription = "Search in chat")

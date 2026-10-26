@@ -278,6 +278,8 @@ private fun ApplicationScope.PixelApp() {
         key(video) { VideoPlayerWindow(video, settings) }
     }
     ToastWindow(toasts, settings, onOpen = openFromNotification)
+    com.pixelgram.desktop.calls.Calls.settings = settings
+    com.pixelgram.desktop.ui.main.CallWindow(settings, icon)
 
     val close = { if (trayOn) visible = false else quit() }
     val ownTitleBar = remember { settings.customTitleBar.value }

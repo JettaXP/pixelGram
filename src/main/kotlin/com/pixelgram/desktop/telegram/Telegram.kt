@@ -996,6 +996,8 @@ class Telegram(
                     Notifications.onMessage?.invoke(this, update.message)
                 }
             }
+            is TdApi.UpdateCall -> com.pixelgram.desktop.calls.Calls.onUpdate(this, update.call)
+            is TdApi.UpdateNewCallSignalingData -> com.pixelgram.desktop.calls.Calls.onSignaling(this, update.callId, update.data)
             is TdApi.UpdateChatNotificationSettings -> {
                 muteOverrides.remove(update.chatId)
                 chats[update.chatId]?.notifications = update.notificationSettings

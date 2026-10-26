@@ -108,6 +108,7 @@ The previous C++ version (AyuGram Desktop fork) is kept in the `legacy-cpp` bran
 - [end-4/dots-hyprland](https://github.com/end-4/dots-hyprland): the password field with Material shapes comes from its lock screen.
 - [Telegram Desktop](https://github.com/telegramdesktop/tdesktop) (GPLv3): swipe to reply with a touchpad follows its `swipe_handler.cpp`: direction lock, reply on release, damped overswipe and the bounce at the threshold.
 - [kitty](https://github.com/kovidgoyal/kitty) by Kovid Goyal (GPLv3): the Kitty trail cursor style is ported from its `cursor_trail.c`.
+- [NTgCalls](https://github.com/pytgcalls/ntgcalls) by the PyTgCalls team (LGPL-3.0): voice and video calls and screen sharing. pixelGram downloads its unmodified shared library from the official release on the first call and checks its SHA-256.
 
 ## License
 
