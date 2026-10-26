@@ -23,11 +23,12 @@ class CameraSession private constructor(private val grabber: FFmpegFrameGrabber)
     @Volatile private var running = true
     private var pixels = ByteArray(0)
 
-    fun run(onFrame: (Image) -> Unit) {
+    fun run(onRaw: (Frame) -> Unit = {}, onFrame: (Image) -> Unit) {
         try {
             grabber.start()
             while (running) {
                 val frame = grabber.grabImage() ?: continue
+                onRaw(frame)
                 toImage(frame)?.let { image ->
                     latest = image
                     onFrame(image)

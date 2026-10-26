@@ -158,6 +158,7 @@ private fun ApplicationScope.PixelApp() {
         Attachments.cleanTemp()
         runCatching { FileKit.init("com.pixelgram.desktop") }
         Sounds.warmUp()
+        com.pixelgram.desktop.core.VideoNoteRecorder.warmUp()
         AppSettings.load().also { EmojiFonts.settings = it }
     }
     val accounts = remember {

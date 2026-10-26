@@ -1939,17 +1939,26 @@ private fun Composer(
         }
     }
     val voice = remember(chatId) { VoiceRecording() }
+    voice.camera = settings.cameraDevice.value
     val voiceScope = rememberCoroutineScope()
     val releaseVoice: (Boolean) -> Unit = { cancel ->
         if (cancel) {
             voice.cancel()
         } else {
             voiceScope.launch {
-                voice.finish()?.let { note ->
-                    telegram.sendVoice(chatId, note, replyTo?.id ?: 0)
-                    onCancelReply()
+                when (val recorded = voice.finish()) {
+                    is Recorded.Voice -> telegram.sendVoice(chatId, recorded.note, replyTo?.id ?: 0)
+                    is Recorded.Round -> telegram.sendVideoNote(chatId, recorded.note, replyTo?.id ?: 0)
+                    null -> return@launch
                 }
+                onCancelReply()
             }
+        }
+    }
+    LaunchedEffect(voice.limitReached) {
+        if (voice.limitReached && voice.active && !voice.collapsing) {
+            voice.locked = false
+            releaseVoice(false)
         }
     }
     Box(Modifier.fillMaxWidth()) {

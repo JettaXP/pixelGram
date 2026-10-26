@@ -177,6 +177,7 @@ private const val StickerSearchLimit = 100
 private val StreamingExtensions = setOf("mp4", "m4v", "mov")
 private const val ProfileGiftsLimit = 100
 private const val StoryPage = 100
+private const val ThumbnailSide = 320
 private const val StoryLimit = 1000
 private const val JumpMinMessages = 20
 private const val JumpAttempts = 3
@@ -2275,6 +2276,21 @@ class Telegram(
                 caption = TdApi.FormattedText("", arrayOf())
             }
         })
+    }
+
+    fun sendVideoNote(chatId: Long, note: com.pixelgram.desktop.core.VideoNote, replyToId: Long = 0) {
+        send(TdApi.SendMessage().apply {
+            this.chatId = chatId
+            replyTo = replyInput(replyToId)
+            inputMessageContent = TdApi.InputMessageVideoNote().apply {
+                videoNote = TdApi.InputVideoNote().apply {
+                    videoNote = TdApi.InputFileLocal(note.file.absolutePath)
+                    thumbnail = note.thumbnail?.let { TdApi.InputThumbnail(TdApi.InputFileLocal(it.absolutePath), ThumbnailSide, ThumbnailSide) }
+                    duration = note.duration
+                    length = note.length
+                }
+            }
+        }) { result -> if (result is TdApi.Error) AppLog.write("Video note failed ${result.code}: ${result.message}") }
     }
 
     fun sendAnimation(chatId: Long, animation: TdApi.Animation, replyToId: Long = 0) {

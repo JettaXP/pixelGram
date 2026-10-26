@@ -55,6 +55,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -93,10 +94,22 @@ private const val LockHintOffset = 64f
 private const val LockTravel = 60f
 private val CollapseLift = 48.dp
 
+sealed interface Recorded {
+    class Voice(val note: VoiceNote) : Recorded
+    class Round(val note: com.pixelgram.desktop.core.VideoNote) : Recorded
+}
+
 @Stable
 class VoiceRecording {
     var recorder by mutableStateOf<VoiceRecorder?>(null)
         private set
+    var video by mutableStateOf<com.pixelgram.desktop.core.VideoNoteRecorder?>(null)
+        private set
+    var preview by mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+        private set
+    var limitReached by mutableStateOf(false)
+        private set
+    var camera = ""
     var active by mutableStateOf(false)
         private set
     var collapsing by mutableStateOf(false)
@@ -112,8 +125,10 @@ class VoiceRecording {
         private set
     val levels = mutableStateListOf<Float>()
 
-    fun start() {
+    fun start(mode: RecordMode = RecordMode.Voice) {
         if (active) return
+        preview = null
+        limitReached = false
         levels.clear()
         level = 0f
         elapsedMs = 0
@@ -123,11 +138,16 @@ class VoiceRecording {
         cancelled = false
         collapsing = false
         active = true
-        recorder = VoiceRecorder.start { error ->
+        val failed = { error: String ->
             javax.swing.SwingUtilities.invokeLater {
                 TopNotice.text = error
                 cancel()
             }
+        }
+        if (mode == RecordMode.Round) {
+            video = com.pixelgram.desktop.core.VideoNoteRecorder.start(camera, failed)
+        } else {
+            recorder = VoiceRecorder.start(failed)
         }
     }
 
@@ -135,11 +155,30 @@ class VoiceRecording {
         locked = false
         recorder?.cancel()
         recorder = null
+        video?.cancel()
+        video = null
+        preview = null
         cancelled = true
         active = false
     }
 
-    suspend fun finish(): VoiceNote? = coroutineScope {
+    suspend fun finish(): Recorded? = coroutineScope {
+        video?.let { round ->
+            if (round.elapsedMs < com.pixelgram.desktop.core.VideoNoteRecorder.MinDurationMs) {
+                cancel()
+                TopNotice.text = "Hold to record a video message"
+                return@coroutineScope null
+            }
+            collapsing = true
+            val note = async(Dispatchers.IO) { round.stop() }
+            delay(CollapseMs.toLong())
+            val result = note.await()
+            video = null
+            preview = null
+            active = false
+            collapsing = false
+            return@coroutineScope result?.let { Recorded.Round(it) }
+        }
         val current = recorder ?: return@coroutineScope null
         if (current.elapsedMs < VoiceRecorder.MinDurationMs) {
             cancel()
@@ -153,17 +192,26 @@ class VoiceRecording {
         recorder = null
         active = false
         collapsing = false
-        result
+        result?.let { Recorded.Voice(it) }
     }
 
     suspend fun sample() {
         var last = 0L
+        var lastFrame = 0L
         while (true) {
             val now = withFrameNanos { it } / 1_000_000
-            val current = recorder ?: return
+            val voiceNow = recorder
+            val videoNow = video
+            if (voiceNow == null && videoNow == null) return
             if (collapsing) return
-            level += (current.level - level) * LevelSmoothing
-            elapsedMs = current.elapsedMs
+            val currentLevel = voiceNow?.level ?: videoNow?.level ?: 0f
+            level += (currentLevel - level) * LevelSmoothing
+            elapsedMs = voiceNow?.elapsedMs ?: videoNow?.elapsedMs ?: 0L
+            videoNow?.preview?.let { image -> if (preview == null || now - lastFrame >= FrameEveryMs) {
+                preview = image.toComposeImageBitmap()
+                lastFrame = now
+            } }
+            if (videoNow?.limitReached == true) limitReached = true
             if (now - last >= SampleEveryMs) {
                 last = now
                 levels += level
@@ -276,13 +324,7 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
                         hovered = true
                         return@awaitEachGesture
                     }
-                    if (RecordButton.mode == RecordMode.Round) {
-                        TopNotice.text = "Video messages aren't supported yet"
-                        waitForUpOrCancellation()
-                        pressed = false
-                        return@awaitEachGesture
-                    }
-                    voice.start()
+                    voice.start(RecordButton.mode)
                     while (true) {
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
@@ -359,7 +401,8 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
 fun RecordingBar(voice: VoiceRecording, modifier: Modifier = Modifier) {
     val collapse = remember { Animatable(0f) }
     val spec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
-    LaunchedEffect(voice.recorder) { voice.sample() }
+    LaunchedEffect(voice.recorder, voice.video) { voice.sample() }
+    if (voice.video != null) RoundPreview(voice)
     LaunchedEffect(voice.collapsing) {
         if (voice.collapsing) collapse.animateTo(1f, tween(CollapseMs)) else collapse.snapTo(0f)
     }
@@ -437,6 +480,49 @@ fun RecordingBar(voice: VoiceRecording, modifier: Modifier = Modifier) {
         }
     }
 }
+
+@Composable
+private fun RoundPreview(voice: VoiceRecording) {
+    val scheme = MaterialTheme.colorScheme
+    val progress = (voice.elapsedMs.toFloat() / com.pixelgram.desktop.core.VideoNoteRecorder.MaxDurationMs).coerceIn(0f, 1f)
+    androidx.compose.ui.window.Popup(
+        alignment = Alignment.BottomCenter,
+        offset = androidx.compose.ui.unit.IntOffset(0, -RoundLift),
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(RoundSize + 12.dp).popIn()) {
+            Canvas(Modifier.fillMaxSize()) {
+                drawCircle(scheme.surfaceContainerHigh)
+                drawArc(
+                    scheme.primary,
+                    startAngle = -90f,
+                    sweepAngle = 360f * progress,
+                    useCenter = false,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                )
+            }
+            Box(
+                Modifier
+                    .size(RoundSize)
+                    .clip(CircleShape)
+                    .background(scheme.surfaceContainerHighest),
+                contentAlignment = Alignment.Center,
+            ) {
+                voice.preview?.let { frame ->
+                    androidx.compose.foundation.Image(
+                        frame,
+                        contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = -1f },
+                    )
+                } ?: Icon(Icons.Filled.Videocam, contentDescription = null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(48.dp))
+            }
+        }
+    }
+}
+
+private val RoundSize = 240.dp
+private const val RoundLift = 96
+private const val FrameEveryMs = 33L
 
 @Composable
 private fun Waveform(voice: VoiceRecording, color: androidx.compose.ui.graphics.Color, collapse: Float, modifier: Modifier) {
