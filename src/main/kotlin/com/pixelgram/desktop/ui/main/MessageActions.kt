@@ -119,6 +119,7 @@ fun MessageGestures(
     val scope = rememberCoroutineScope()
     val shift = remember { Animatable(0f) }
     val threshold = with(LocalDensity.current) { SwipeThreshold.toPx() }
+    val step = with(LocalDensity.current) { ScrollUnit.toPx() * SwipeSlow }
     var settle by remember { mutableStateOf<Job?>(null) }
     var menuAt by remember { mutableStateOf<MenuTarget?>(null) }
     var lastPress by remember { mutableStateOf(0L to Offset.Zero) }
@@ -186,7 +187,7 @@ fun MessageGestures(
                                 swipe.active = true
                                 swipe.startY = change.position.y
                             }
-                            swipe.add(delta.x * TouchpadFactor * (if (rtl) -1 else 1), delta.y * TouchpadFactor)
+                            swipe.add(delta.x * step * (if (rtl) -1 else 1), delta.y * step)
                             if (swipe.horizontal) {
                                 change.consume()
                                 show(swipe.ratio(threshold))
@@ -411,7 +412,8 @@ private fun dampedOverswipe(dp: Float): Float = if (dp <= 0f) 0f else OverswipeL
 private const val Horizontal = 1
 private const val Vertical = 2
 private val SwipeThreshold = 50.dp
-private const val TouchpadFactor = 2.4f
+private val ScrollUnit = 64.dp
+private const val SwipeSlow = 0.2f
 private const val SettleMs = 180L
 private const val OrientationThreshold = 1f
 private const val MaxSwipeRatio = 1.5f
