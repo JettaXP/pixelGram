@@ -185,7 +185,7 @@ fun MainScreen(
     LaunchedEffect(selectedKey) { telegram.loadChats(selectedKey) }
     LaunchedEffect(Unit) { telegram.loadChats(ChatListKey.Archive) }
 
-    val foldersLeft = settings.materialFolders.value && !settings.capsuleFolders.value
+    val foldersLeft = settings.materialFolders.value && !settings.capsuleFolders.value && tabs.size > 1
     val railSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
     val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val density = LocalDensity.current

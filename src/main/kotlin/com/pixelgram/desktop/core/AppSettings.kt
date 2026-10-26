@@ -16,7 +16,7 @@ enum class ToastSide(val top: Boolean, val column: Int) {
 
 enum class NotificationStyle { System, PixelGram }
 
-enum class DoubleClickAction { Nothing, Reply, Reaction }
+enum class DoubleClickAction { Nothing, Reply, Reaction, Edit }
 
 enum class CursorStyle { Liquid, Kitty }
 

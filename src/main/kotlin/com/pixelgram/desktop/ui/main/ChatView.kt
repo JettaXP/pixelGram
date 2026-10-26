@@ -334,6 +334,10 @@ fun ChatView(
                         replyTo = message
                     }
                     DoubleClickAction.Reaction -> if (canReact) telegram.toggleReaction(message, settings.doubleClickEmoji.value)
+                    DoubleClickAction.Edit -> if (message.isOutgoing && message.editable) {
+                        replyTo = null
+                        editing = message
+                    }
                     DoubleClickAction.Nothing -> Unit
                 }
             },
@@ -601,6 +605,7 @@ fun ChatView(
                                     break
                                 }
                                 pointer = change.position
+                                if (!moved && (pointer - down.position).getDistance() < viewConfiguration.touchSlop) continue
                                 if (!wasSelecting && !moved) {
                                     val current = keyAt(pointer)
                                     if (current == null || current == start) continue

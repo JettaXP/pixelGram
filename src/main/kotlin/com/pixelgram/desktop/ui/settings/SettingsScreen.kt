@@ -1174,8 +1174,9 @@ private fun ChatSettingsSection(settings: AppSettings) {
         DoubleClickAction.Reply to "Reply",
         DoubleClickAction.Nothing to "Nothing",
     )
+    val ownOptions = options.take(2) + (DoubleClickAction.Edit to "Edit") + options.drop(2)
     Text("Your messages", style = MaterialTheme.typography.bodyLarge)
-    ConnectedChoice(options, settings.doubleClickOwn.value, { settings.doubleClickOwn.value = it })
+    ConnectedChoice(ownOptions, settings.doubleClickOwn.value, { settings.doubleClickOwn.value = it })
     Text("Other people's messages", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
     ConnectedChoice(options, settings.doubleClickOther.value, { settings.doubleClickOther.value = it })
     Reveal(DoubleClickAction.Reaction in listOf(settings.doubleClickOwn.value, settings.doubleClickOther.value)) {
