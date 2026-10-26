@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.hoverable
 import com.pixelgram.desktop.ui.icons.outlined.CardGiftcard
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
@@ -231,8 +233,8 @@ private fun giftSticker(gift: TdApi.ReceivedGift): TdApi.Sticker? = when (val se
 
 @Composable
 private fun GiftsDialog(owner: TdApi.MessageSender, all: List<TdApi.ReceivedGift>, own: Boolean, telegram: Telegram, onDismiss: () -> Unit) {
-    GridDialog("Gifts", onDismiss = onDismiss) {
-        GiftsPane(owner, all, own, telegram, scroll = false)
+    GridDialog("Gifts", onDismiss = onDismiss, scrollable = false) {
+        GiftsPane(owner, all, own, telegram)
     }
 }
 
@@ -244,7 +246,7 @@ fun GiftPreviews(gifts: List<TdApi.ReceivedGift>, telegram: Telegram) {
 }
 
 @Composable
-fun GiftsPane(owner: TdApi.MessageSender, all: List<TdApi.ReceivedGift>, own: Boolean, telegram: Telegram, modifier: Modifier = Modifier, scroll: Boolean = true) {
+fun GiftsPane(owner: TdApi.MessageSender, all: List<TdApi.ReceivedGift>, own: Boolean, telegram: Telegram, modifier: Modifier = Modifier) {
     var collections by remember(owner) { mutableStateOf<List<TdApi.GiftCollection>>(emptyList()) }
     var selected by remember(owner) { mutableStateOf(0) }
     var shown by remember(owner, all) { mutableStateOf(all) }
@@ -255,22 +257,22 @@ fun GiftsPane(owner: TdApi.MessageSender, all: List<TdApi.ReceivedGift>, own: Bo
         val collection = collections.getOrNull(selected - 1)
         if (collection == null) shown = all else telegram.collectionGifts(owner, collection.id) { shown = it }
     }
-    Column(
-        modifier.then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+    val full = { _: androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope -> androidx.compose.foundation.lazy.grid.GridItemSpan(GiftColumns) }
+    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(GiftColumns),
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (own || collections.isNotEmpty()) {
-            AlbumTabs(listOf("All Gifts") + collections.map { it.name }, selected, onSelect = { selected = it }, addLabel = if (own) "Add Collection" else null, onAdd = { adding = true })
-        }
-        if (shown.isEmpty()) {
-            Text("No gifts here yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        shown.chunked(GiftColumns).forEach { row ->
-            androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { gift -> GiftCell(gift, telegram, Modifier.weight(1f)) }
-                repeat(GiftColumns - row.size) { androidx.compose.foundation.layout.Spacer(Modifier.weight(1f)) }
+            item(span = full) {
+                AlbumTabs(listOf("All Gifts") + collections.map { it.name }, selected, onSelect = { selected = it }, addLabel = if (own) "Add Collection" else null, onAdd = { adding = true })
             }
         }
+        if (shown.isEmpty()) {
+            item(span = full) { Text("No gifts here yet", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+        items(shown.size, contentType = { GiftCellType }) { index -> GiftCell(shown[index], telegram, Modifier) }
     }
     if (adding) {
         NameDialog("New collection", "Collection name", onDismiss = { adding = false }) { name, done ->
@@ -287,17 +289,20 @@ private fun GiftCell(gift: TdApi.ReceivedGift, telegram: Telegram, modifier: Mod
     val upgraded = (gift.gift as? TdApi.SentGiftUpgraded)?.gift
     var open by remember { mutableStateOf(false) }
     val shape = MaterialTheme.shapes.large
+    val hover = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val hovered by hover.collectIsHoveredAsState()
     Box(
         modifier
             .aspectRatio(1f)
+            .hoverable(hover)
             .clip(shape)
             .then(if (upgraded != null) Modifier.clickable { open = true } else Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)),
         contentAlignment = Alignment.Center,
     ) {
         if (upgraded != null) {
-            UniqueGiftArt(upgraded, telegram, Modifier.fillMaxWidth(), shape = shape, animate = false)
+            UniqueGiftArt(upgraded, telegram, Modifier.fillMaxWidth(), shape = shape, animate = hovered)
         } else {
-            StickerView(giftSticker(gift), telegram, 88.dp)
+            StickerView(giftSticker(gift), telegram, 88.dp, animate = hovered)
         }
         gift.senderId?.let { sender ->
             com.pixelgram.desktop.ui.components.AvatarImage(
@@ -329,3 +334,4 @@ private fun GiftCell(gift: TdApi.ReceivedGift, telegram: Telegram, modifier: Mod
 
 private const val GiftPreviews = 3
 private const val GiftColumns = 3
+private const val GiftCellType = "gift"

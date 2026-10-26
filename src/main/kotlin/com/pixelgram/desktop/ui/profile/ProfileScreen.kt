@@ -73,6 +73,15 @@ fun ProfileScreen(
     onOpenChat: (Long) -> Unit,
     onBack: () -> Unit,
 ) {
+    PageScaffold("My Profile", onBack) { ProfileContent(telegram, settings, onOpenChat) }
+}
+
+@Composable
+fun ProfileContent(
+    telegram: Telegram,
+    settings: AppSettings,
+    onOpenChat: (Long) -> Unit,
+) {
     val me = telegram.me
     var fullInfo by remember { mutableStateOf<TdApi.UserFullInfo?>(null) }
     var refresh by remember { mutableIntStateOf(0) }
@@ -97,10 +106,14 @@ fun ProfileScreen(
         if (isVideoFile(file)) telegram.setProfileVideo(file.absolutePath, done) else telegram.setProfilePhoto(file.absolutePath, done)
     }
 
-    PageScaffold("My Profile", onBack) {
+    androidx.compose.foundation.layout.Column(
+        Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         if (me == null) {
             Text("Not signed in")
-            return@PageScaffold
+            return@Column
         }
         val name = me.fullName()
         Box(Modifier.fillMaxWidth().height(BannerHeight + AvatarOverlap)) {

@@ -44,6 +44,7 @@ internal val SettingsIndex = listOf(
     "ChatSettings" to "Empty chat area",
     "ChatSettings" to "Material shapes",
     "Appearance" to "Settings style",
+    "Appearance" to "Side menu",
     "ChatSettings" to "Double click on a message",
     "ChatSettings" to "Reaction",
     "ChatSettings" to "Reply",

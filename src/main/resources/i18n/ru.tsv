@@ -897,3 +897,7 @@ last seen yesterday at {n}:{n}	был(а) вчера в {n}:{n}
 last seen {n}.{n}.{n} at {n}:{n}	был(а) {n}.{n}.{n} в {n}:{n}
 bot	бот
 Couldn't edit the message	Не удалось изменить сообщение
+Side menu	Боковое меню
+Over the chats	Поверх чатов
+Push aside	Сдвигать чаты
+Over the chats keeps the window still and dims it. Push aside moves the chats to make room for the menu.	Поверх чатов — меню открывается над затемнённым окном. Сдвигать чаты — чаты отъезжают вправо и освобождают место для меню.

@@ -895,3 +895,7 @@ last seen yesterday at {n}:{n}	נראה לאחרונה אתמול ב־{n}:{n}
 last seen {n}.{n}.{n} at {n}:{n}	נראה לאחרונה ב־{n}.{n}.{n} בשעה {n}:{n}
 bot	בוט
 Couldn't edit the message	לא ניתן לערוך את ההודעה
+Side menu	תפריט צד
+Over the chats	מעל הצ'אטים
+Push aside	הזזת הצ'אטים
+Over the chats keeps the window still and dims it. Push aside moves the chats to make room for the menu.	מעל הצ'אטים — התפריט נפתח מעל חלון מעומעם. הזזת הצ'אטים — הצ'אטים זזים ומפנים מקום לתפריט.

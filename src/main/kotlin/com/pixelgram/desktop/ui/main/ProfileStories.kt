@@ -238,7 +238,7 @@ fun StoryArchiveRow(chatId: Long, telegram: Telegram, index: Int, count: Int, mo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GridDialog(title: String, onDismiss: () -> Unit, header: @Composable () -> Unit = {}, content: @Composable () -> Unit) {
+fun GridDialog(title: String, onDismiss: () -> Unit, header: @Composable () -> Unit = {}, scrollable: Boolean = true, content: @Composable () -> Unit) {
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
@@ -251,7 +251,7 @@ fun GridDialog(title: String, onDismiss: () -> Unit, header: @Composable () -> U
                     IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, contentDescription = "Close") }
                 }
                 header()
-                Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState())) { content() }
+                Column(Modifier.heightIn(max = 560.dp).then(if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier)) { content() }
             }
         }
     }

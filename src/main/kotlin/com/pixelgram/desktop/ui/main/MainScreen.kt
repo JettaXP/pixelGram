@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.size
@@ -190,14 +191,19 @@ fun MainScreen(
     val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val density = LocalDensity.current
     var dragWidth by remember { mutableStateOf(settings.chatListWidth.value.toFloat()) }
+    var railWidthPx by remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val maxListWidth = minOf((maxWidth - MinChatWidth - RailWidth).value, maxWidth.value * MaxListShare).coerceAtLeast(CompactWidth.value)
             val compact = dragWidth < CompactThreshold.value
             val listWidth = if (compact) CompactWidth else dragWidth.coerceAtMost(maxListWidth).dp
+            val push = settings.sideMenuStyle.value == com.pixelgram.desktop.core.SideMenuStyle.Push
             Row(Modifier.fillMaxSize()) {
-                if (foldersLeft) Spacer(Modifier.width(RailWidth))
+                when {
+                    push -> Spacer(Modifier.width(with(density) { railWidthPx.toDp() }.coerceAtLeast(if (foldersLeft) RailWidth else 0.dp)))
+                    foldersLeft -> Spacer(Modifier.width(RailWidth))
+                }
                 Column(
                     Modifier
                         .width(listWidth)
@@ -343,7 +349,7 @@ fun MainScreen(
                     }
                 }
             }
-            val scrim by animateFloatAsState(if (menuOpen) RailScrimAlpha else 0f, fade)
+            val scrim by animateFloatAsState(if (menuOpen && !push) RailScrimAlpha else 0f, fade)
             if (scrim > 0f) {
                 Box(
                     Modifier
@@ -355,7 +361,7 @@ fun MainScreen(
             }
             AnimatedVisibility(
                 visible = foldersLeft || menuOpen,
-                modifier = Modifier.zIndex(1f),
+                modifier = Modifier.zIndex(1f).onSizeChanged { railWidthPx = it.width },
                 enter = expandHorizontally(railSpec) + fadeIn(fade),
                 exit = shrinkHorizontally(railSpec) + fadeOut(fade),
             ) {

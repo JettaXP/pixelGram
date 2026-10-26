@@ -60,6 +60,7 @@ private const val PatternPerRing = 8
 private const val PatternAlpha = 0.35f
 private const val ModelScale = 0.62f
 private const val SymbolScale = 0.11f
+private const val PatternImageSize = 96
 
 fun giftColor(rgb: Int) = Color(0xFF000000.toInt() or rgb)
 
@@ -92,8 +93,36 @@ fun UniqueGiftArt(gift: TdApi.UpgradedGift, telegram: Telegram, modifier: Modifi
     ) {
         val side = minOf(maxWidth, maxHeight)
         val symbol = gift.symbol?.sticker
-        if (symbol != null) {
-            val tint = colors?.let { giftColor(it.symbolColor) } ?: MaterialTheme.colorScheme.onSurfaceVariant
+        val tint = colors?.let { giftColor(it.symbolColor) } ?: MaterialTheme.colorScheme.onSurfaceVariant
+        val thumb = symbol?.thumbnail?.file
+        if (thumb != null) {
+            LaunchedEffect(thumb.id) { telegram.download(thumb) }
+            val path = telegram.localPath(thumb)
+            val image by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, path) {
+                value = path?.let { com.pixelgram.desktop.ui.components.loadImage(it, maxSize = PatternImageSize) }
+            }
+            val filter = remember(tint) { androidx.compose.ui.graphics.ColorFilter.tint(tint, BlendMode.SrcIn) }
+            androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
+                val picture = image ?: return@Canvas
+                val box = minOf(size.width, size.height)
+                val mark = (box * SymbolScale).toInt().coerceAtLeast(1)
+                repeat(PatternRings) { ring ->
+                    val radius = box * (0.3f + ring * 0.14f)
+                    repeat(PatternPerRing) { index ->
+                        val angle = (index + ring * 0.5) * 2 * Math.PI / PatternPerRing
+                        val x = size.width / 2 + radius * cos(angle).toFloat() - mark / 2f
+                        val y = size.height / 2 + radius * sin(angle).toFloat() - mark / 2f
+                        drawImage(
+                            picture,
+                            dstOffset = androidx.compose.ui.unit.IntOffset(x.toInt(), y.toInt()),
+                            dstSize = androidx.compose.ui.unit.IntSize(mark, mark),
+                            alpha = PatternAlpha,
+                            colorFilter = filter,
+                        )
+                    }
+                }
+            }
+        } else if (symbol != null) {
             val size = side * SymbolScale
             repeat(PatternRings) { ring ->
                 val radius = side * (0.3f + ring * 0.14f)

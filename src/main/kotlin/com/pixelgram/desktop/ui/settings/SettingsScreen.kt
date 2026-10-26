@@ -4,6 +4,7 @@ import kotlin.math.roundToInt
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.focusRequester
 import com.pixelgram.desktop.ui.icons.outlined.Edit
+import com.pixelgram.desktop.ui.icons.outlined.Person
 import com.pixelgram.desktop.ui.icons.outlined.PersonAdd
 import com.pixelgram.desktop.ui.icons.outlined.RestartAlt
 import io.github.vinceglb.filekit.dialogs.openFilePicker
@@ -179,6 +180,7 @@ import java.awt.datatransfer.StringSelection
 import java.net.URI
 
 private enum class Section(val title: String, val icon: ImageVector, val pixel: Boolean = false) {
+    Profile("My Profile", Icons.Outlined.Person),
     Notifications("Notifications and Sounds", Icons.Outlined.Notifications),
     Privacy("Privacy and Security", Icons.Outlined.Lock),
     ChatSettings("Chat Settings", Icons.Outlined.ChatBubbleOutline),
@@ -252,7 +254,7 @@ fun SettingsScreen(
         val initial = System.getProperty("pixelgram.section")
         mutableStateOf(
             Section.entries.firstOrNull { it.name == initial }
-                ?: if (startInPreferences) Section.Appearance else Section.Notifications
+                ?: if (startInPreferences) Section.Appearance else Section.Profile
         )
     }
     var inPreferences by rememberSaveable { mutableStateOf(section.pixel) }
@@ -279,7 +281,7 @@ fun SettingsScreen(
             query = ""
         } else if (inPreferences) {
             inPreferences = false
-            section = Section.Notifications
+            section = Section.Profile
         } else {
             onBack()
         }
@@ -298,7 +300,7 @@ fun SettingsScreen(
                     IconButton(onClick = {
                         if (inPreferences) {
                             inPreferences = false
-                            section = Section.Notifications
+                            section = Section.Profile
                         } else {
                             onBack()
                         }
@@ -344,7 +346,7 @@ fun SettingsScreen(
                                             },
                                             com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Edit, "Edit profile") {
                                                 menuOpen = false
-                                                onOpenProfile()
+                                                section = Section.Profile
                                             },
                                         ),
                                         listOf(
@@ -406,7 +408,7 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).focusRequester(searchFocus),
                         )
                     }
-                    val items = if (query.isBlank()) Section.entries.filter { !it.pixel } else emptyList()
+                    val items = if (query.isBlank()) Section.entries.filter { !it.pixel && it != Section.Profile } else emptyList()
                     val results = remember(query, com.pixelgram.desktop.core.I18n.code) { searchSettings(query) }
                     if (query.isNotBlank()) {
                         if (results.isEmpty()) {
@@ -420,7 +422,7 @@ fun SettingsScreen(
                     }
                     Reveal(query.isBlank()) {
                         Column {
-                            ProfileCard(telegram, settings, onOpenProfile)
+                            ProfileCard(telegram, settings, selected = section == Section.Profile) { section = Section.Profile }
                             Spacer(Modifier.height(12.dp))
                             PreferencesEntry {
                                 inPreferences = true
@@ -479,7 +481,10 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    Text(shown.title, style = MaterialTheme.typography.headlineSmall)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(shown.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                        if (shown == Section.Profile) AccountMenuButton(telegram, onAddAccount)
+                    }
                     Spacer(Modifier.height(8.dp))
                     androidx.compose.runtime.CompositionLocalProvider(com.pixelgram.desktop.ui.components.LocalHighlightText provides highlight) {
                     when (shown) {
@@ -494,6 +499,7 @@ fun SettingsScreen(
                         Section.Folders -> FoldersSection(telegram, settings)
                         Section.Advanced -> AdvancedSection(telegram, settings)
                         Section.Language -> LanguageSection(settings)
+                        Section.Profile -> com.pixelgram.desktop.ui.profile.ProfileContent(telegram, settings, onOpenChat)
                         Section.Notifications -> NotificationsSection(telegram, settings)
                         Section.Battery -> BatterySection(settings)
                         Section.SpeakersCamera -> DevicesSection(settings)
@@ -507,14 +513,18 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun ProfileCard(telegram: Telegram, settings: AppSettings, onClick: () -> Unit) {
+private fun ProfileCard(telegram: Telegram, settings: AppSettings, selected: Boolean, onClick: () -> Unit) {
     val me = telegram.me ?: return
     val username = me.usernames?.activeUsernames?.firstOrNull()
     var showQr by remember { mutableStateOf(false) }
+    val container by androidx.compose.animation.animateColorAsState(
+        if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+        MaterialTheme.motionScheme.defaultEffectsSpec(),
+    )
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = container,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -572,6 +582,37 @@ private fun PreferencesHeader(telegram: Telegram) {
 internal fun SegmentedGroup(content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
         content()
+    }
+}
+
+@Composable
+private fun AccountMenuButton(telegram: Telegram, onAddAccount: (() -> Unit)?) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(Icons.Filled.MoreVert, contentDescription = "More")
+        }
+        com.pixelgram.desktop.ui.components.GroupedMenu(expanded = open, onDismiss = { open = false }) {
+            com.pixelgram.desktop.ui.components.MenuGroups(
+                listOf(
+                    listOfNotNull(
+                        onAddAccount?.let { add ->
+                            com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.PersonAdd, "Add Account") {
+                                open = false
+                                add()
+                            }
+                        },
+                    ),
+                    listOf(
+                        com.pixelgram.desktop.ui.components.MenuEntry(Icons.AutoMirrored.Outlined.Logout, "Log out", MaterialTheme.colorScheme.error) {
+                            open = false
+                            telegram.logOut()
+                        },
+                    ),
+                ),
+                width = SettingsMenuWidth,
+            )
+        }
     }
 }
 
@@ -754,6 +795,14 @@ private fun AppearanceSection(settings: AppSettings) {
     var capsulePreview by remember { mutableIntStateOf(0) }
     Header("Theme")
     ThemeModeButtons(settings)
+
+    Header("Side menu")
+    Description("Over the chats keeps the window still and dims it. Push aside moves the chats to make room for the menu.")
+    ConnectedChoice(
+        listOf(com.pixelgram.desktop.core.SideMenuStyle.Overlay to "Over the chats", com.pixelgram.desktop.core.SideMenuStyle.Push to "Push aside"),
+        settings.sideMenuStyle.value,
+        { settings.sideMenuStyle.value = it },
+    )
 
     Header("Settings style")
     Description("Expressive groups the sections into segmented cards. Material You shows a flat list with a highlighted pill, like Android settings.")
