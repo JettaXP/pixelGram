@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pixelGram</title>
+  <meta name="description" content="pixelGram is a Telegram client for Windows and Linux with Material 3 Expressive, built with Kotlin, Compose Multiplatform and TDLib.">
+  <meta name="theme-color" content="#141218">
+  <meta property="og:title" content="pixelGram">
+  <meta property="og:description" content="Telegram for desktop in Material 3 Expressive. Windows and Linux, free and open source.">
+  <meta property="og:image" content="assets/img/og.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" sizes="256x256" href="assets/img/icon.png">
+  <link rel="apple-touch-icon" href="assets/img/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0&display=block">
+  <link rel="stylesheet" href="assets/style.css">
+  <script type="module" src="assets/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="pixelGram">
+      <span class="brand-mark" data-shape="Cookie12Sided"><svg class="plane" viewBox="0 0 11 11" aria-hidden="true"><rect x="0.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="1.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="1.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="1.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="2.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="2.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="2.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="7.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="8.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="7.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="8.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="9.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="7.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="0.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="9.08" y="0.58" width=".84" height=".84" rx=".22"/><rect x="9.08" y="1.58" width=".84" height=".84" rx=".22"/></svg></span>
+      <span class="brand-name">pixelGram</span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="#try" data-i18n="nav.try">Try it</a>
+      <a href="#screens" data-i18n="nav.screens">Screenshots</a>
+      <a href="#download" data-i18n="nav.download">Download</a>
+    </nav>
+    <div class="actions">
+      <md-outlined-segmented-button-set id="lang" aria-label="Language">
+        <md-outlined-segmented-button data-lang="en" label="EN" no-checkmark></md-outlined-segmented-button>
+        <md-outlined-segmented-button data-lang="ru" label="RU" no-checkmark></md-outlined-segmented-button>
+      </md-outlined-segmented-button-set>
+      <md-icon-button id="mode" data-i18n-attr="aria-label:a11y.theme" aria-label="Switch theme"><md-icon>brightness_auto</md-icon></md-icon-button>
+      <md-icon-button href="https://github.com/JettaXP/pixelGram" target="_blank" aria-label="GitHub">
+        <svg class="gh" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      </md-icon-button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="hero-copy">
+        <a class="version-chip" href="https://github.com/JettaXP/pixelGram/releases/latest" target="_blank">
+          <md-ripple></md-ripple><md-focus-ring></md-focus-ring>
+          <md-icon>new_releases</md-icon>
+          <span><span data-version>v0.30.0</span> · <span data-codename>Bye...</span></span>
+        </a>
+        <h1 data-i18n="hero.title">Telegram, in <em>Material&nbsp;3 Expressive</em></h1>
+        <p class="lead" data-i18n="hero.lead">pixelGram is a desktop Telegram client for Windows and Linux. Kotlin, Compose Multiplatform and TDLib underneath, Google's Material Design on top.</p>
+        <div class="cta">
+          <md-filled-button href="#download"><md-icon slot="icon">download</md-icon><span data-i18n="hero.download">Download</span></md-filled-button>
+          <md-filled-tonal-button href="https://t.me/pixelgramclient" target="_blank"><md-icon slot="icon">send</md-icon><span data-i18n="hero.channel">Telegram channel</span></md-filled-tonal-button>
+          <md-outlined-button href="https://github.com/JettaXP/pixelGram" target="_blank"><md-icon slot="icon">code</md-icon><span data-i18n="hero.source">Source code</span></md-outlined-button>
+        </div>
+        <p class="platforms">
+          <span><md-icon>desktop_windows</md-icon>Windows</span>
+          <span><md-icon>terminal</md-icon>Linux</span>
+          <span><md-icon>deployed_code</md-icon>Arch</span>
+          <span><md-icon>favorite</md-icon><span data-i18n="hero.free">Free, GPLv3</span></span>
+        </p>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="hero-logo">
+          <svg id="hero-shape" viewBox="0 0 1 1"><path/></svg>
+          <svg class="plane" viewBox="0 0 11 11"><rect x="0.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="1.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="1.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="1.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="2.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="2.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="2.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="7.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="8.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="7.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="8.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="9.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="7.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="0.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="9.08" y="0.58" width=".84" height=".84" rx=".22"/><rect x="9.08" y="1.58" width=".84" height=".84" rx=".22"/></svg>
+        </div>
+        <img class="hero-shot" src="assets/img/chat.png" alt="" width="1180" height="760">
+      </div>
+    </section>
+
+    <section id="features" class="section">
+      <h2 class="reveal" data-i18n="features.title">Everything you use every day</h2>
+      <p class="section-lead reveal" data-i18n="features.lead">Chats, groups, channels and bots, with the details that make Telegram feel like Telegram.</p>
+      <div class="features">
+        <article class="feature wide reveal" data-shape="Cookie9Sided" data-tone="primary">
+          <md-icon>palette</md-icon>
+          <h3 data-i18n="f.color.t">Material You colors</h3>
+          <p data-i18n="f.color.d">The whole color scheme is generated from one accent with Google's Material color utilities. On Linux it can follow your wallpaper through matugen.</p>
+        </article>
+        <article class="feature reveal" data-shape="Clover4Leaf" data-tone="tertiary">
+          <md-icon>interests</md-icon>
+          <h3 data-i18n="f.shapes.t">Expressive shapes</h3>
+          <p data-i18n="f.shapes.d">Avatars, QR codes and the lock screen use the official MaterialShapes.</p>
+        </article>
+        <article class="feature reveal" data-shape="Sunny" data-tone="secondary">
+          <md-icon>mic</md-icon>
+          <h3 data-i18n="f.voice.t">Voice and music</h3>
+          <p data-i18n="f.voice.d">Record voice messages with a live waveform. Play Opus, MP3, M4A and FLAC in the mini player.</p>
+        </article>
+        <article class="feature reveal" data-shape="Cookie6Sided" data-tone="secondary">
+          <md-icon>add_reaction</md-icon>
+          <h3 data-i18n="f.stickers.t">Stickers and emoji</h3>
+          <p data-i18n="f.stickers.d">Animated TGS and WebM video stickers, GIFs, custom emoji, Noto or Noto 3D emoji.</p>
+        </article>
+        <article class="feature reveal" data-shape="Arrow" data-tone="primary">
+          <md-icon>forward</md-icon>
+          <h3 data-i18n="f.forward.t">Forwarding done right</h3>
+          <p data-i18n="f.forward.d">A forward bar above the message field. Hide the sender or the caption, or change the recipient.</p>
+        </article>
+        <article class="feature reveal" data-shape="Pill" data-tone="tertiary">
+          <md-icon>folder_special</md-icon>
+          <h3 data-i18n="f.folders.t">Folders</h3>
+          <p data-i18n="f.folders.d">In a navigation rail or as tabs, with icons, Unread and Mentions folders.</p>
+        </article>
+        <article class="feature reveal" data-shape="Gem" data-tone="primary">
+          <md-icon>forum</md-icon>
+          <h3 data-i18n="f.comments.t">Comments and bots</h3>
+          <p data-i18n="f.comments.d">Channel comments, inline bots, keyboards and command menus.</p>
+        </article>
+        <article class="feature reveal" data-shape="Puffy" data-tone="secondary">
+          <md-icon>account_circle</md-icon>
+          <h3 data-i18n="f.profile.t">Profiles</h3>
+          <p data-i18n="f.profile.d">Profile banners, profile music, username QR codes and clickable @usernames in bios.</p>
+        </article>
+        <article class="feature wide reveal" data-shape="Cookie4Sided" data-tone="tertiary">
+          <md-icon>lock</md-icon>
+          <h3 data-i18n="f.privacy.t">Privacy and passcode</h3>
+          <p data-i18n="f.privacy.d">Privacy rules, active sessions, blocking, and a local passcode with a lock screen built from Material shapes.</p>
+        </article>
+        <article class="feature reveal" data-shape="SoftBurst" data-tone="primary">
+          <md-icon>system_update</md-icon>
+          <h3 data-i18n="f.update.t">Updates itself</h3>
+          <p data-i18n="f.update.d">New versions come straight from GitHub Releases.</p>
+        </article>
+        <article class="feature wide reveal" data-shape="Flower" data-tone="secondary">
+          <md-icon>notifications</md-icon>
+          <h3 data-i18n="f.notify.t">Notifications</h3>
+          <p data-i18n="f.notify.d">System notifications over D-Bus or notify-send, or pixelGram's own pop-ups.</p>
+        </article>
+        <article class="feature wide reveal" data-shape="Cookie7Sided" data-tone="tertiary">
+          <md-icon>battery_saver</md-icon>
+          <h3 data-i18n="f.battery.t">Battery saver</h3>
+          <p data-i18n="f.battery.d">Turn down animations and background work on a laptop.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="try" class="section">
+      <h2 class="reveal" data-i18n="try.title">Try it right here</h2>
+      <p class="section-lead reveal" data-i18n="try.lead">These demos use the same shapes, colors and drawing code as the app.</p>
+      <div class="demo reveal">
+        <md-tabs id="demo-tabs" aria-label="Demos">
+          <md-primary-tab><md-icon slot="icon">qr_code_2</md-icon><span data-i18n="try.qr">QR code</span></md-primary-tab>
+          <md-primary-tab><md-icon slot="icon">category</md-icon><span data-i18n="try.shapes">Shapes</span></md-primary-tab>
+          <md-primary-tab><md-icon slot="icon">format_color_fill</md-icon><span data-i18n="try.color">Accent color</span></md-primary-tab>
+          <md-primary-tab><md-icon slot="icon">chat_bubble</md-icon><span data-i18n="try.bubbles">Bubbles</span></md-primary-tab>
+        </md-tabs>
+
+        <div class="demo-panel">
+          <div class="demo-text">
+            <h3 data-i18n="qr.title">Username QR codes</h3>
+            <p data-i18n="qr.lead">Every profile, group and channel has a QR code made of Material shapes, with eyes that slowly spin. The sign-in QR code looks the same. Type any username and scan it with your phone.</p>
+            <md-outlined-text-field id="qr-username" data-i18n-attr="label:qr.field" label="Username" prefix-text="@" value="pixelgramclient" spellcheck="false" autocomplete="off"></md-outlined-text-field>
+          </div>
+          <div class="qr-card">
+            <span class="qr-avatar" data-shape="Cookie12Sided"><svg class="plane" viewBox="0 0 11 11" aria-hidden="true"><rect x="0.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="1.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="1.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="1.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="2.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="2.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="2.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="7.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="8.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="7.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="8.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="9.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="7.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="0.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="9.08" y="0.58" width=".84" height=".84" rx=".22"/><rect x="9.08" y="1.58" width=".84" height=".84" rx=".22"/></svg></span>
+            <canvas id="qr" role="img" aria-label="QR code"></canvas>
+            <span id="qr-label" class="qr-label">@pixelgramclient</span>
+          </div>
+        </div>
+
+        <div class="demo-panel" hidden>
+          <div class="demo-text">
+            <h3 data-i18n="shapes.title">Avatar shapes</h3>
+            <p><span data-i18n="shapes.lead1">pixelGram has all</span> <b id="shape-count">35</b> <span data-i18n="shapes.lead2">official Material 3 Expressive shapes for avatars, plus a custom corner radius. Pick one.</span></p>
+            <div class="shape-preview">
+              <div class="avatar-big">
+                <svg id="shape-big" viewBox="0 0 1 1" aria-hidden="true"><path/></svg>
+                <span>P</span>
+              </div>
+              <span id="shape-title" class="shape-title"></span>
+            </div>
+          </div>
+          <div id="shape-grid" class="shape-grid"></div>
+        </div>
+
+        <div class="demo-panel" hidden>
+          <div class="demo-text">
+            <h3 data-i18n="color.title">Accent color</h3>
+            <p data-i18n="color.lead">In pixelGram the whole color scheme comes from one color. Pick one, and this page recolors itself the same way the app does.</p>
+            <div id="swatches" class="swatches"></div>
+            <label class="custom-color">
+              <input id="custom-color" type="color" value="#6750A4">
+              <span data-i18n="color.custom">Any color</span>
+            </label>
+          </div>
+          <div class="palette">
+            <div class="role" style="--bg: var(--md-sys-color-primary); --fg: var(--md-sys-color-on-primary)">Primary</div>
+            <div class="role" style="--bg: var(--md-sys-color-primary-container); --fg: var(--md-sys-color-on-primary-container)">Primary container</div>
+            <div class="role" style="--bg: var(--md-sys-color-secondary); --fg: var(--md-sys-color-on-secondary)">Secondary</div>
+            <div class="role" style="--bg: var(--md-sys-color-secondary-container); --fg: var(--md-sys-color-on-secondary-container)">Secondary container</div>
+            <div class="role" style="--bg: var(--md-sys-color-tertiary); --fg: var(--md-sys-color-on-tertiary)">Tertiary</div>
+            <div class="role" style="--bg: var(--md-sys-color-tertiary-container); --fg: var(--md-sys-color-on-tertiary-container)">Tertiary container</div>
+            <div class="role wide" style="--bg: var(--md-sys-color-surface-container-highest); --fg: var(--md-sys-color-on-surface)">Surface container</div>
+          </div>
+        </div>
+
+        <div class="demo-panel" hidden>
+          <div class="demo-text">
+            <h3 data-i18n="bubbles.title">Bubble corners</h3>
+            <p data-i18n="bubbles.lead">Message bubbles have their own corner and tail radius, with a live preview in the settings.</p>
+            <label class="slider-label"><span data-i18n="bubbles.corner">Corner radius</span>
+              <md-slider id="bubble-corner" min="4" max="24" value="18" labeled></md-slider>
+            </label>
+            <label class="slider-label"><span data-i18n="bubbles.tail">Tail radius</span>
+              <md-slider id="bubble-tail" min="0" max="24" value="6" labeled></md-slider>
+            </label>
+          </div>
+          <div id="bubbles" class="bubbles">
+            <div class="bubble in"><span data-i18n="b.1">Did you see the new build? 👀</span><time>19:36</time></div>
+            <div class="bubble in"><span data-i18n="b.2">The shapes are everywhere now</span><time>19:36</time></div>
+            <div class="bubble out"><span data-i18n="b.3">Yes! Video stickers finally play 🎉</span><time>19:37 <md-icon>done_all</md-icon></time></div>
+            <div class="bubble out"><span data-i18n="b.4">Changing the bubble corners right now</span><time>19:37 <md-icon>done_all</md-icon></time></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="screens" class="section">
+      <h2 class="reveal" data-i18n="screens.title">Screenshots</h2>
+      <p class="section-lead reveal" data-i18n="screens.lead">Taken from pixelGram itself. Click to open full size.</p>
+      <div class="gallery">
+        <figure class="shot reveal"><md-ripple></md-ripple><img src="assets/img/player.png" alt="Music player" loading="lazy"><figcaption data-i18n="s.player">Music player with morphing Material 3 controls</figcaption></figure>
+        <figure class="shot reveal"><md-ripple></md-ripple><img src="assets/img/menu.png" alt="Message menu" loading="lazy"><figcaption data-i18n="s.menu">Reactions and message actions</figcaption></figure>
+        <figure class="shot reveal"><md-ripple></md-ripple><img src="assets/img/types.png" alt="Message types" loading="lazy"><figcaption data-i18n="s.types">Polls, calls, voice messages and files</figcaption></figure>
+        <figure class="shot reveal"><md-ripple></md-ripple><img src="assets/img/qr.png" alt="QR sign in" loading="lazy"><figcaption data-i18n="s.qr">Sign in with a QR code</figcaption></figure>
+        <figure class="shot reveal"><md-ripple></md-ripple><img src="assets/img/settings_appearance.png" alt="Appearance settings" loading="lazy"><figcaption data-i18n="s.appearance">Appearance settings</figcaption></figure>
+        <figure class="shot reveal"><md-ripple></md-ripple><img src="assets/img/settings_avatars.png" alt="Avatar shapes" loading="lazy"><figcaption data-i18n="s.avatars">Every Material 3 Expressive shape for avatars</figcaption></figure>
+        <figure class="shot reveal"><md-ripple></md-ripple><img src="assets/img/settings_bubbles.png" alt="Bubble settings" loading="lazy"><figcaption data-i18n="s.bubbles">Bubble corners with a live preview</figcaption></figure>
+        <figure class="shot reveal"><md-ripple></md-ripple><img src="assets/img/chats_light.png" alt="Light theme" loading="lazy"><figcaption data-i18n="s.light">Light theme with a blue accent</figcaption></figure>
+        <figure class="shot reveal"><md-ripple></md-ripple><img src="assets/img/chats_green.png" alt="Bot keyboard" loading="lazy"><figcaption data-i18n="s.green">Bot keyboards, here with a green accent</figcaption></figure>
+        <figure class="shot reveal"><md-ripple></md-ripple><img src="assets/img/settings_folders.png" alt="Folders" loading="lazy"><figcaption data-i18n="s.folders">Folders with icons, Unread and Mentions</figcaption></figure>
+        <figure class="shot reveal"><md-ripple></md-ripple><img src="assets/img/settings_privacy.png" alt="Privacy" loading="lazy"><figcaption data-i18n="s.privacy">Privacy, passcode and active sessions</figcaption></figure>
+        <figure class="shot reveal"><md-ripple></md-ripple><img src="assets/img/settings_battery.png" alt="Battery" loading="lazy"><figcaption data-i18n="s.battery">Battery and animations</figcaption></figure>
+
+      </div>
+    </section>
+
+    <section id="download" class="section">
+      <h2 class="reveal" data-i18n="dl.title">Download</h2>
+      <p class="section-lead reveal"><span data-i18n="dl.lead">Latest version:</span> <b><span data-version>v0.30.0</span> <span data-codename>Bye...</span></b><span class="muted"> · <span id="release-date"></span></span></p>
+      <div class="downloads">
+        <article class="platform reveal">
+          <div class="platform-head"><md-icon>desktop_windows</md-icon><h3>Windows</h3></div>
+          <p data-i18n="dl.win">Windows 10 and 11, 64-bit. The installer adds pixelGram to the Start menu, the portable version keeps all data next to the app.</p>
+          <div class="buttons">
+            <md-filled-button data-asset="windows-x64\.msi$" href="https://github.com/JettaXP/pixelGram/releases/latest"><md-icon slot="icon">install_desktop</md-icon><span data-i18n="dl.msi">Installer (.msi)</span> <span class="size"></span></md-filled-button>
+            <md-outlined-button data-asset="portable\.zip$" href="https://github.com/JettaXP/pixelGram/releases/latest"><md-icon slot="icon">folder_zip</md-icon><span data-i18n="dl.zip">Portable (.zip)</span> <span class="size"></span></md-outlined-button>
+          </div>
+        </article>
+        <article class="platform reveal">
+          <div class="platform-head"><md-icon>terminal</md-icon><h3>Linux</h3></div>
+          <p data-i18n="dl.linux">Any distribution with OpenSSL 3. AppImage runs as is, the archive is for those who like to unpack things themselves.</p>
+          <div class="buttons">
+            <md-filled-button data-asset="\.AppImage$" href="https://github.com/JettaXP/pixelGram/releases/latest"><md-icon slot="icon">rocket_launch</md-icon>AppImage <span class="size"></span></md-filled-button>
+            <md-outlined-button data-asset="linux-x86_64\.tar\.gz$" href="https://github.com/JettaXP/pixelGram/releases/latest"><md-icon slot="icon">inventory_2</md-icon>.tar.gz <span class="size"></span></md-outlined-button>
+          </div>
+          <div class="command"><code>chmod +x pixelGram-*.AppImage &amp;&amp; ./pixelGram-*.AppImage</code><md-icon-button class="copy" aria-label="Copy"><md-icon>content_copy</md-icon></md-icon-button></div>
+        </article>
+        <article class="platform reveal">
+          <div class="platform-head"><md-icon>deployed_code</md-icon><h3>Arch Linux</h3></div>
+          <p data-i18n="dl.arch">A native package for Arch and its derivatives.</p>
+          <div class="buttons">
+            <md-filled-button data-asset="\.pkg\.tar\.zst$" href="https://github.com/JettaXP/pixelGram/releases/latest"><md-icon slot="icon">package_2</md-icon>.pkg.tar.zst <span class="size"></span></md-filled-button>
+          </div>
+          <div class="command"><code>sudo pacman -U pixelgram-*.pkg.tar.zst</code><md-icon-button class="copy" aria-label="Copy"><md-icon>content_copy</md-icon></md-icon-button></div>
+        </article>
+      </div>
+      <div class="more-links reveal">
+        <md-text-button href="https://github.com/JettaXP/pixelGram/releases/tag/nightly" target="_blank"><md-icon slot="icon">nightlight</md-icon><span data-i18n="dl.nightly">Nightly build</span></md-text-button>
+        <md-text-button href="https://github.com/JettaXP/pixelGram/releases" target="_blank"><md-icon slot="icon">history</md-icon><span data-i18n="dl.all">All releases</span></md-text-button>
+        <md-text-button href="https://github.com/JettaXP/pixelGram/blob/main/CHANGELOG.md" target="_blank"><md-icon slot="icon">list_alt</md-icon><span data-i18n="dl.changes">What's new</span></md-text-button>
+        <md-text-button href="https://github.com/JettaXP/pixelGram#building" target="_blank"><md-icon slot="icon">build</md-icon><span data-i18n="dl.build">Build from source</span></md-text-button>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="channel reveal">
+        <div class="channel-art" data-shape="Cookie12Sided"><md-icon>campaign</md-icon></div>
+        <div class="channel-copy">
+          <h2 data-i18n="ch.title">Follow the development</h2>
+          <p data-i18n="ch.lead">News, new builds and previews of what's coming next, in the pixelGram channel.</p>
+        </div>
+        <div class="channel-actions">
+          <md-filled-button href="https://t.me/pixelgramclient" target="_blank"><md-icon slot="icon">send</md-icon>@pixelgramclient</md-filled-button>
+          <md-outlined-button href="https://github.com/JettaXP/pixelGram" target="_blank"><md-icon slot="icon">star</md-icon><span data-i18n="ch.star">Star on GitHub</span></md-outlined-button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-brand">
+      <span class="brand-mark" data-shape="Cookie12Sided"><svg class="plane" viewBox="0 0 11 11" aria-hidden="true"><rect x="0.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="1.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="1.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="1.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="2.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="2.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="2.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="3.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="4.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="7.58" width=".84" height=".84" rx=".22"/><rect x="5.08" y="8.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="7.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="8.58" width=".84" height=".84" rx=".22"/><rect x="6.08" y="9.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="5.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="6.58" width=".84" height=".84" rx=".22"/><rect x="7.08" y="7.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="0.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="1.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="2.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="3.58" width=".84" height=".84" rx=".22"/><rect x="8.08" y="4.58" width=".84" height=".84" rx=".22"/><rect x="9.08" y="0.58" width=".84" height=".84" rx=".22"/><rect x="9.08" y="1.58" width=".84" height=".84" rx=".22"/></svg></span>
+      <div>
+        <b>pixelGram</b>
+        <p data-i18n="foot.about">Made by jettax. Free software under the GPLv3. Not affiliated with Telegram or Google.</p>
+      </div>
+    </div>
+    <div class="footer-links">
+      <div>
+        <h4 data-i18n="foot.project">Project</h4>
+        <a href="https://github.com/JettaXP/pixelGram" target="_blank">GitHub</a>
+        <a href="https://github.com/JettaXP/pixelGram/releases" target="_blank" data-i18n="foot.releases">Releases</a>
+        <a href="https://t.me/pixelgramclient" target="_blank" data-i18n="foot.channel">Telegram channel</a>
+        <a href="https://github.com/JettaXP/pixelGram/blob/main/LICENSE" target="_blank" data-i18n="foot.license">License</a>
+      </div>
+      <div>
+        <h4 data-i18n="foot.built">Built with</h4>
+        <a href="https://www.jetbrains.com/compose-multiplatform/" target="_blank">Compose Multiplatform</a>
+        <a href="https://m3.material.io/" target="_blank">Material 3 Expressive</a>
+        <a href="https://github.com/tdlight-team/tdlight-java" target="_blank">TDLib · TDLight</a>
+        <a href="https://github.com/material-components/material-web" target="_blank">Material Web</a>
+      </div>
+      <div>
+        <h4 data-i18n="foot.thanks">Thanks to</h4>
+        <a href="https://github.com/MG-Devs-Team/Mategram" target="_blank">Mategram</a>
+        <a href="https://github.com/YouRooni/plugins/tree/master/plugins/md3_player" target="_blank">Material Player</a>
+        <a href="https://github.com/end-4/dots-hyprland" target="_blank">end-4/dots-hyprland</a>
+        <a href="https://www.nayuki.io/page/qr-code-generator-library" target="_blank">QR Code generator</a>
+      </div>
+    </div>
+  </footer>
+
+  <md-dialog id="viewer" class="viewer">
+    <div slot="content" class="viewer-content">
+      <img id="viewer-image" alt="">
+      <p id="viewer-caption"></p>
+    </div>
+    <div slot="actions"><md-text-button id="viewer-close" data-i18n="close">Close</md-text-button></div>
+  </md-dialog>
+</body>
+</html>
