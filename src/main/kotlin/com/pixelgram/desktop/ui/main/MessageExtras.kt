@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import com.pixelgram.desktop.telegram.ReactionEffects
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -111,7 +113,8 @@ fun ReactionChips(
             val emoji = (reaction.type as? TdApi.ReactionTypeEmoji)?.emoji ?: return@forEach
             key(emoji) {
             val chosen = reaction.isChosen
-            val fresh = remember { known != null && emoji !in known }
+            val clean = emoji.replace("\uFE0F", "")
+            val fresh = remember { known != null && clean !in known }
             val pop = remember { Animatable(if (fresh) 0f else 1f) }
             LaunchedEffect(Unit) {
                 if (fresh) pop.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 400f))
@@ -128,6 +131,7 @@ fun ReactionChips(
                     withContext(NonCancellable) { pop.snapTo(1f) }
                 }
             }
+            Box {
             Surface(
                 onClick = { onToggle(emoji) },
                 shape = CircleShape,
@@ -165,10 +169,39 @@ fun ReactionChips(
                     }
                 }
             }
+            if (telegram != null) ReactionEffect(owner, clean, telegram)
+            }
             }
         }
     }
 }
+
+@Composable
+private fun BoxScope.ReactionEffect(owner: Pair<Long, Long>, emoji: String, telegram: Telegram) {
+    val shot = ReactionEffects.pending[owner]?.takeIf { it.emoji == emoji } ?: return
+    var sticker by remember(shot) { mutableStateOf<TdApi.Sticker?>(null) }
+    LaunchedEffect(shot) {
+        telegram.emojiReaction(emoji) { reaction ->
+            val effect = reaction?.effectAnimation ?: reaction?.aroundAnimation
+            if (effect == null) ReactionEffects.done(owner, shot) else sticker = effect
+        }
+    }
+    val shown = sticker ?: return
+    Box(Modifier.align(Alignment.CenterStart).padding(start = 18.dp)) {
+        androidx.compose.ui.window.Popup(alignment = Alignment.Center) {
+            StickerView(
+                shown,
+                telegram,
+                if (shot.big) BigEffectSize else EffectSize,
+                runs = 1,
+                onEnd = { ReactionEffects.done(owner, shot) },
+            )
+        }
+    }
+}
+
+private val EffectSize = 96.dp
+private val BigEffectSize = 180.dp
 
 private const val MaxReactionAvatars = 3
 private val ReactionAvatarSize = 20.dp
@@ -310,12 +343,16 @@ object ReactionMemory {
 
     fun known(owner: Pair<Long, Long>): Set<String>? = seen[owner]
 
+    fun forget(owner: Pair<Long, Long>) {
+        if (seen[owner]?.isNotEmpty() == true) seen[owner] = emptySet()
+    }
+
     fun store(owner: Pair<Long, Long>, reactions: List<TdApi.MessageReaction>) {
         seen[owner] = emojis(reactions)
     }
 
     private fun emojis(reactions: List<TdApi.MessageReaction>) =
-        reactions.mapNotNullTo(HashSet()) { (it.type as? TdApi.ReactionTypeEmoji)?.emoji }
+        reactions.mapNotNullTo(HashSet()) { (it.type as? TdApi.ReactionTypeEmoji)?.emoji?.replace("\uFE0F", "") }
 
     private const val MaxMessages = 4000
 }

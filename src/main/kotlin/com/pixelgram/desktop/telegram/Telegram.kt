@@ -1308,6 +1308,17 @@ class Telegram(
         }
     }
 
+    private val emojiReactions = java.util.concurrent.ConcurrentHashMap<String, TdApi.EmojiReaction>()
+
+    fun emojiReaction(emoji: String, done: (TdApi.EmojiReaction?) -> Unit) {
+        emojiReactions[emoji]?.let { return done(it) }
+        send(TdApi.GetEmojiReaction(emoji)) { result ->
+            val reaction = result as? TdApi.EmojiReaction
+            if (reaction != null) emojiReactions[emoji] = reaction
+            scope.launch(Dispatchers.Main) { done(reaction) }
+        }
+    }
+
     fun clickAnimatedEmoji(chatId: Long, messageId: Long, done: (TdApi.Sticker?) -> Unit) {
         send(TdApi.ClickAnimatedEmojiMessage(chatId, messageId)) { result -> done(result as? TdApi.Sticker) }
     }
@@ -2063,9 +2074,11 @@ class Telegram(
             if (index >= 0) list[index] = list[index].copy(reactions = reactions)
         }
         replace(after)
+        val big = com.pixelgram.desktop.core.PowerSaving.settings?.bigReactions?.value == true
+        if (!chosen && com.pixelgram.desktop.core.PowerSaving.stickersInChat) ReactionEffects.play(message.chatId to message.id, clean, big)
         send(
             if (chosen) TdApi.RemoveMessageReaction(message.chatId, message.id, type)
-            else TdApi.AddMessageReaction(message.chatId, message.id, type, com.pixelgram.desktop.core.PowerSaving.settings?.bigReactions?.value == true, true)
+            else TdApi.AddMessageReaction(message.chatId, message.id, type, big, true)
         ) { result ->
             if (result is TdApi.Error) {
                 AppLog.write("Reaction $clean failed ${result.code}: ${result.message}")

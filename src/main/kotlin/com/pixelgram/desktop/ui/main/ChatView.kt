@@ -982,6 +982,7 @@ fun MessageBubble(
 ) {
     val seconds = settings.messageSeconds.value
     remember(message.chatId, message.id) { ReactionMemory.note(message) }
+    if (message.reactions.isEmpty()) ReactionMemory.forget(message.chatId to message.id)
     if (message.service) {
         ServiceMessage(
             listOfNotNull(senderName?.takeIf { it.isNotBlank() }, message.text).joinToString(" · "),
@@ -1265,6 +1266,7 @@ private fun BareMessage(
     onReact: ((String) -> Unit)?,
 ) {
     remember(message.chatId, message.id) { ReactionMemory.note(message) }
+    if (message.reactions.isEmpty()) ReactionMemory.forget(message.chatId to message.id)
     Box(modifier.fillMaxWidth(), contentAlignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart) {
         Column(
             horizontalAlignment = if (message.isOutgoing) Alignment.End else Alignment.Start,
