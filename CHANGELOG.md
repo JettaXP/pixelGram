@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.39.0 MD
+
+### Look and feel
+- Settings style: Expressive segmented cards or a flat Material You list with a highlighted pill, in Appearance.
+- Side menu: open it over the chats or let it push them aside, in Appearance.
+- Settings open on My Profile, with Add Account and Log out behind the three dots.
+- Muted chats get a grey unread badge.
+
+### Chats
+- The chat list keeps loading while you scroll instead of stopping at the first 100 chats.
+- Drafts come back after you edit or cancel editing a message.
+- Edit only shows up where Telegram allows it and tells you when an edit fails; captions of videos, files and audio can be edited too.
+- The message field takes the cursor back after you click in the chat or press an inline button.
+- Search, mention and inline bot suggestions no longer show results for an older query.
+
+### Media
+- Long audio plays as a stream instead of being decoded into memory first.
+- Faster playback keeps the voice pitch.
+- The gifts grid only builds the gifts you can see, animates them on hover and draws collectible patterns much faster.
+- The "Release to cancel" hint no longer covers the recording.
+
+### Speed
+- A change to one user, status or file no longer redraws every message and chat row.
+- TDLib updates are handled in ordered batches.
+- Message text is laid out in one pass, GIFs and videos in chats redraw without rebuilding the message, sticker animations are cached.
+- Files are prepared for sending off the interface thread, and call video frames are released right away.
+
+### Fixes
+- Images come back after clearing the cache or switching accounts.
+- Updates check that the download is complete and no longer hang on a stalled connection.
+- Chat windows count as focused: their messages get read and they don't notify.
+- Quitting waits for Telegram to close so the last drafts are kept.
+- Settings are saved safely, the archive shows its real size, dates and "last seen" are translated, failed lookups retry, removed accounts leave no folders behind and more unsafe file types ask before opening.
+
 ## 0.38.1
 
 ### Chats
