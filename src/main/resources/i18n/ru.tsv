@@ -827,3 +827,57 @@ Open anyway	Всё равно открыть
 An admin has to approve your request.	Заявку должен одобрить администратор.
 Request to join	Подать заявку
 Join channel	Вступить в канал
+Document	Документ
+Poll	Опрос
+Checklist	Чеклист
+Article	Статья
+Attach	Прикрепить
+Telegram Premium needed	Нужен Telegram Premium
+New poll	Новый опрос
+Question	Вопрос
+Ask a question	Задайте вопрос
+Add Description (optional)	Описание (необязательно)
+Poll options	Варианты ответа
+Add an option…	Добавить вариант…
+Show Who Voted	Показывать проголосовавших
+Display voter name on each option.	Имена проголосовавших видны у каждого варианта.
+Allow Multiple Answers	Несколько ответов
+Voters can select more than one option.	Можно выбрать больше одного варианта.
+Allow Adding Options	Добавление вариантов
+Participants can suggest new options.	Участники могут предлагать варианты.
+Allow Revoting	Переголосование
+Voters can change their vote.	Можно изменить свой голос.
+Shuffle Options	Перемешивать варианты
+Answers appear in random order for each voter.	Варианты показываются каждому в случайном порядке.
+Set Correct Answer	Правильный ответ
+Mark one or more options as the right answer.	Отметьте один или несколько правильных вариантов.
+Explanation (optional)	Пояснение (необязательно)
+Restrict to Subscribers	Только для подписчиков
+Only subscribers who joined 24+ hours ago can vote.	Голосуют только подписчики, вступившие больше суток назад.
+Limit by Country	Ограничить по странам
+Only users from selected countries can vote.	Голосуют только пользователи из выбранных стран.
+Choose countries	Выбрать страны
+Countries	Страны
+Limit Duration	Ограничить время
+Automatically close the poll at a set time.	Опрос закроется автоматически в нужное время.
+New Checklist	Новый чеклист
+Title	Заголовок
+Add a task…	Добавить задачу…
+Allow Others to Add Tasks	Другие могут добавлять задачи
+Allow Others to Mark As Done	Другие могут отмечать выполнение
+Send location	Отправить геопозицию
+Latitude, longitude	Широта, долгота
+Check on the map	Посмотреть на карте
+Music from your profile	Музыка из профиля
+Add music to your profile to send it from here.	Добавьте музыку в профиль, чтобы отправлять её отсюда.
+New article	Новая статья
+Write something…	Напишите что-нибудь…
+Write with AI	Написать с ИИ
+Read the full article	Читать статью целиком
+Heading	Заголовок раздела
+Subheading	Подзаголовок
+Text	Текст
+Formula	Формула
+Table	Таблица
+Bulleted list	Маркированный список
+Numbered list	Нумерованный список

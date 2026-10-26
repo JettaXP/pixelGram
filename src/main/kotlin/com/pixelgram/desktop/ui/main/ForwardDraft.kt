@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
@@ -118,6 +119,7 @@ fun ForwardBar(chatId: Long, telegram: Telegram, settings: AppSettings, onOpenCh
                 .fillMaxWidth()
                 .padding(start = 8.dp, end = 12.dp, top = 8.dp)
                 .clip(RoundedCornerShape(16.dp))
+                .focusProperties { canFocus = false }
                 .clickable { editing = true }
                 .padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
         ) {
@@ -141,7 +143,7 @@ fun ForwardBar(chatId: Long, telegram: Telegram, settings: AppSettings, onOpenCh
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            IconButton(onClick = { PendingForward.drafts.remove(chatId) }) {
+            IconButton(onClick = { PendingForward.drafts.remove(chatId) }, modifier = Modifier.focusProperties { canFocus = false }) {
                 Icon(Icons.Filled.Close, contentDescription = "Cancel forwarding")
             }
         }

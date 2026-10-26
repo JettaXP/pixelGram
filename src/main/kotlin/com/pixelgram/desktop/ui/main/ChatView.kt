@@ -755,7 +755,7 @@ fun ChatView(
                                 MessageBubble(
                                     telegram = telegram,
                                     quote = quote,
-                                    message = message,
+                                    message = if (chat.isChannel && message.isOutgoing) message.copy(isOutgoing = false) else message,
                                     modifier = Modifier.weight(1f),
                                     senderName = if ((groupChat || sentAsChat) && firstInRun) telegram.senderName(message) else null,
                                     settings = settings,
@@ -897,6 +897,10 @@ fun ChatView(
             },
             onCancelEdit = { editing = null },
             onAttach = attach,
+            onAttachDocuments = { files ->
+                attach(files)
+                if (files.isNotEmpty()) asFiles = true
+            },
             onOpenChat = onOpenChat,
             onSend = { text, entities ->
                 val edited = editing
@@ -1589,6 +1593,7 @@ private fun Composer(
     onEditLast: () -> Boolean,
     onCancelEdit: () -> Unit,
     onAttach: (List<File>) -> Unit,
+    onAttachDocuments: (List<File>) -> Unit,
     onSend: (String, Array<TdApi.TextEntity>) -> Unit,
     onOpenChat: (Long) -> Unit = {},
 ) {
@@ -1682,6 +1687,7 @@ private fun Composer(
         onCancelReply()
     }
     val composerChat = telegram.chats[chatId]
+
     var commands by remember(chatId) { mutableStateOf(emptyList<BotCommandItem>()) }
     LaunchedEffect(chatId) {
         val target = telegram.chats[chatId] ?: return@LaunchedEffect
@@ -1730,6 +1736,8 @@ private fun Composer(
     var mediaTab by remember { mutableStateOf(0) }
     var mediaSearch by remember { mutableStateOf<String?>(null) }
     val focus = remember { FocusRequester() }
+    val forwarding = PendingForward.drafts[chatId] != null
+    LaunchedEffect(forwarding) { if (forwarding) runCatching { focus.requestFocus() } }
     val pickScope = rememberCoroutineScope()
     LaunchedEffect(chatId) { runCatching { focus.requestFocus() } }
     LaunchedEffect(editing?.key) {
@@ -1903,9 +1911,14 @@ private fun Composer(
                 }
             }
         }
-        IconButton(onClick = { pickScope.launch { onAttach(Attachments.pick()) } }) {
-            Icon(Icons.Outlined.AttachFile, contentDescription = "Attach files")
-        }
+        AttachButton(
+            chat = composerChat,
+            telegram = telegram,
+            replyToId = replyTo?.id ?: 0,
+            onMedia = onAttach,
+            onDocuments = onAttachDocuments,
+            onSent = onCancelReply,
+        )
         val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
         val selected = { text.text.substring(text.selection.min, text.selection.max) }
         val replaceSelection = { value: String ->

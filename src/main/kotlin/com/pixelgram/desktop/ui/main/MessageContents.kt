@@ -461,7 +461,7 @@ private class FileTransfer(private val file: File) : java.awt.datatransfer.Trans
 private val PreviewExtensions = listOf(".png", ".jpg", ".jpeg", ".webp")
 
 @Composable
-private fun LocalContentColorAlpha(): Color = androidx.compose.material3.LocalContentColor.current.copy(alpha = 0.7f)
+internal fun LocalContentColorAlpha(): Color = androidx.compose.material3.LocalContentColor.current.copy(alpha = 0.7f)
 
 @Composable
 fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> Unit) {
@@ -517,7 +517,9 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
         is TdApi.MessageAudio -> AudioContent(message, content.audio, telegram)
         is TdApi.MessageVoiceNote -> VoiceContent(message, content.voiceNote, telegram)
         is TdApi.MessageCall -> CallContent(content, message.isOutgoing, message.date)
-        is TdApi.MessagePoll -> PollContent(message, content.poll, telegram)
+        is TdApi.MessagePoll -> PollContent(message, content, telegram)
+        is TdApi.MessageChecklist -> ChecklistContent(message, content.list, telegram)
+        is TdApi.MessageRichMessage -> RichMessageContent(message, content.message, telegram)
         is TdApi.MessageContact -> {
             val contact = content.contact
             FileRow(
@@ -718,7 +720,8 @@ private fun callLength(seconds: Int): String = when {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun PollContent(message: UiMessage, poll: TdApi.Poll, telegram: Telegram) {
+private fun PollContent(message: UiMessage, content: TdApi.MessagePoll, telegram: Telegram) {
+    val poll = content.poll
     val scheme = MaterialTheme.colorScheme
     val voted = poll.options.any { it.isChosen }
     val results = poll.isClosed || voted
@@ -726,6 +729,7 @@ private fun PollContent(message: UiMessage, poll: TdApi.Poll, telegram: Telegram
     val picked = remember(poll.id, voted) { androidx.compose.runtime.mutableStateListOf<Int>() }
     Column(Modifier.widthIn(min = 260.dp, max = 360.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         EmojiText(poll.question.text, style = MaterialTheme.typography.titleSmall)
+        content.description?.text?.takeIf { it.isNotBlank() }?.let { EmojiText(it, style = MaterialTheme.typography.bodyMedium) }
         Text(
             when {
                 poll.isClosed -> "Final results"
@@ -796,7 +800,7 @@ private fun PollContent(message: UiMessage, poll: TdApi.Poll, telegram: Telegram
                     onClick = { telegram.votePoll(message.chatId, message.id, picked.sorted().toIntArray()) },
                     enabled = picked.isNotEmpty(),
                 ) { Text("Vote") }
-                voted && !poll.isClosed && poll.type !is TdApi.PollTypeQuiz -> TextButton(
+                voted && !poll.isClosed && poll.type !is TdApi.PollTypeQuiz && poll.allowsRevoting -> TextButton(
                     onClick = { telegram.votePoll(message.chatId, message.id, IntArray(0)) },
                 ) { Text("Retract vote") }
             }

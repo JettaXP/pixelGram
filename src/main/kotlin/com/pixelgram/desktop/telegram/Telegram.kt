@@ -768,6 +768,30 @@ class Telegram(
         send(TdApi.SetProfileAudioPosition(fileId, afterFileId)) { loadMyProfileAudios() }
     }
 
+    val isPremium: Boolean get() = me?.isPremium == true
+
+    fun sendContent(chatId: Long, content: TdApi.InputMessageContent, replyToId: Long = 0, done: (String?) -> Unit = {}) {
+        send(TdApi.SendMessage().apply {
+            this.chatId = chatId
+            replyTo = replyInput(replyToId)
+            inputMessageContent = content
+        }) { result -> done((result as? TdApi.Error)?.message) }
+    }
+
+    fun toggleChecklistTask(message: UiMessage, taskId: Int, done: Boolean) {
+        send(TdApi.MarkChecklistTasksAsDone(message.chatId, message.id, if (done) intArrayOf(taskId) else IntArray(0), if (done) IntArray(0) else intArrayOf(taskId)))
+    }
+
+    fun composeArticle(prompt: String, done: (TdApi.RichMessage?, String?) -> Unit) {
+        send(TdApi.CreateRichMessageWithAi(prompt, com.pixelgram.desktop.core.I18n.code, false)) { result ->
+            done(result as? TdApi.RichMessage, (result as? TdApi.Error)?.message)
+        }
+    }
+
+    fun fullRichMessage(message: UiMessage, done: (TdApi.RichMessage?) -> Unit) {
+        send(TdApi.GetFullRichMessage(message.chatId, message.id)) { result -> done(result as? TdApi.RichMessage) }
+    }
+
     fun sendAudio(chatId: Long, audio: TdApi.Audio) {
         send(TdApi.SendMessage().apply {
             this.chatId = chatId

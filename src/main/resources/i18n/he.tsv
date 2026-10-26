@@ -825,3 +825,57 @@ Open anyway	לפתוח בכל זאת
 An admin has to approve your request.	מנהל צריך לאשר את הבקשה שלך.
 Request to join	בקשת הצטרפות
 Join channel	הצטרפות לערוץ
+Document	מסמך
+Poll	סקר
+Checklist	רשימת משימות
+Article	מאמר
+Attach	צרף
+Telegram Premium needed	נדרש Telegram Premium
+New poll	סקר חדש
+Question	שאלה
+Ask a question	שאל שאלה
+Add Description (optional)	תיאור (אופציונלי)
+Poll options	אפשרויות
+Add an option…	הוסף אפשרות…
+Show Who Voted	הצג מי הצביע
+Display voter name on each option.	שם המצביע מוצג בכל אפשרות.
+Allow Multiple Answers	מספר תשובות
+Voters can select more than one option.	ניתן לבחור יותר מאפשרות אחת.
+Allow Adding Options	הוספת אפשרויות
+Participants can suggest new options.	משתתפים יכולים להציע אפשרויות.
+Allow Revoting	הצבעה מחדש
+Voters can change their vote.	ניתן לשנות את ההצבעה.
+Shuffle Options	ערבוב אפשרויות
+Answers appear in random order for each voter.	התשובות מוצגות בסדר אקראי.
+Set Correct Answer	תשובה נכונה
+Mark one or more options as the right answer.	סמן אפשרות אחת או יותר כנכונה.
+Explanation (optional)	הסבר (אופציונלי)
+Restrict to Subscribers	רק למנויים
+Only subscribers who joined 24+ hours ago can vote.	רק מנויים שהצטרפו לפני 24 שעות ומעלה יכולים להצביע.
+Limit by Country	הגבלה לפי מדינה
+Only users from selected countries can vote.	רק משתמשים מהמדינות שנבחרו יכולים להצביע.
+Choose countries	בחר מדינות
+Countries	מדינות
+Limit Duration	הגבלת זמן
+Automatically close the poll at a set time.	הסקר ייסגר אוטומטית בזמן שנקבע.
+New Checklist	רשימת משימות חדשה
+Title	כותרת
+Add a task…	הוסף משימה…
+Allow Others to Add Tasks	אחרים יכולים להוסיף משימות
+Allow Others to Mark As Done	אחרים יכולים לסמן כבוצע
+Send location	שליחת מיקום
+Latitude, longitude	קו רוחב, קו אורך
+Check on the map	בדוק במפה
+Music from your profile	מוזיקה מהפרופיל שלך
+Add music to your profile to send it from here.	הוסף מוזיקה לפרופיל כדי לשלוח אותה מכאן.
+New article	מאמר חדש
+Write something…	כתוב משהו…
+Write with AI	כתיבה עם בינה מלאכותית
+Read the full article	קרא את המאמר המלא
+Heading	כותרת
+Subheading	כותרת משנה
+Text	טקסט
+Formula	נוסחה
+Table	טבלה
+Bulleted list	רשימת תבליטים
+Numbered list	רשימה ממוספרת
