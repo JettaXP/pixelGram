@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.36.0 Boom
+
+### Bots
+- Bot links no longer start the bot on their own. The chat opens with a big START button at the bottom that shows the start code from the link.
+- Bots you have never started show the START button too.
+
+### Safety
+- Invite links show the chat first: photo, name, members and description, and you join only with the button.
+- Hidden links and bot URL buttons show the real address and ask before opening it.
+- Files that can run programs (.exe, .bat, .ps1, .jar, .msi, .lnk, .sh and more) ask before opening.
+- Invisible and right-to-left characters are removed from file names, so a file can't pretend to have another extension.
+- Only web, TON, mail and phone links go to other apps.
+- Settings backups no longer include the passcode, auto-lock, local names or the device name.
+- Safer handling of the local link port, download names and update downloads.
+
+### Fixes
+- Unknown tg:// links (like proxy links) no longer bounce between the system and pixelGram forever.
+
 ## 0.35.4
 
 ### Fixes
