@@ -52,6 +52,7 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
+import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.WindowsCorners
 import java.awt.Cursor
 import java.awt.Frame
@@ -70,8 +71,23 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
     var maximized by mutableStateOf(false)
         private set
 
+    private var shaped = false
+
     fun updateCorners() {
-        (window as? ComposeWindow)?.let { WindowsCorners.apply(it.windowHandle, round = !maximized) }
+        val compose = window as? ComposeWindow ?: return
+        if (shaped || !WindowsCorners.apply(compose.windowHandle, round = !maximized)) shapeCorners(compose)
+    }
+
+    private fun shapeCorners(frame: ComposeWindow) {
+        if (AppPaths.isMac || !frame.isUndecorated) return
+        val device = frame.graphicsConfiguration?.device ?: return
+        if (!device.isWindowTranslucencySupported(java.awt.GraphicsDevice.WindowTranslucency.PERPIXEL_TRANSPARENT)) return
+        shaped = true
+        val round = !maximized && frame.extendedState and Frame.MAXIMIZED_BOTH == 0
+        val radius = ShapeRadius
+        runCatching {
+            frame.shape = if (round) java.awt.geom.RoundRectangle2D.Double(0.0, 0.0, frame.width.toDouble(), frame.height.toDouble(), radius, radius) else null
+        }.onFailure { com.pixelgram.desktop.core.AppLog.write("Window shape failed", it) }
     }
     private var restoreBounds: Rectangle? = null
     private var nativeRestore: Rectangle? = null
@@ -158,6 +174,7 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
     }
 }
 
+private const val ShapeRadius = 16.0
 private const val FadeMs = 160
 private const val SwapOutMs = 70
 private const val SwapInMs = 140
@@ -175,8 +192,15 @@ fun FrameWindowScope.rememberWindowChrome(): WindowChrome {
             override fun windowOpened(e: WindowEvent) = chrome.updateCorners()
             override fun windowActivated(e: WindowEvent) = chrome.updateCorners()
         }
+        val resize = object : java.awt.event.ComponentAdapter() {
+            override fun componentResized(e: java.awt.event.ComponentEvent) = chrome.updateCorners()
+        }
         window.addWindowListener(listener)
-        onDispose { window.removeWindowListener(listener) }
+        window.addComponentListener(resize)
+        onDispose {
+            window.removeWindowListener(listener)
+            window.removeComponentListener(resize)
+        }
     }
     return chrome
 }

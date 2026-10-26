@@ -56,12 +56,12 @@ object WindowsCorners {
         }.onFailure { AppLog.write("$name is not available", it) }.getOrNull()
     }
 
-    fun apply(windowHandle: Long, round: Boolean) {
-        if (windowHandle == 0L) return
-        val dwm = dwm ?: return
-        runCatching {
-            dwm.DwmSetWindowAttribute(Pointer(windowHandle), CornerPreference, IntByReference(if (round) Round else Square), 4)
-        }
+    fun apply(windowHandle: Long, round: Boolean): Boolean {
+        if (windowHandle == 0L) return false
+        val dwm = dwm ?: return false
+        return runCatching {
+            dwm.DwmSetWindowAttribute(Pointer(windowHandle), CornerPreference, IntByReference(if (round) Round else Square), 4) == 0
+        }.getOrDefault(false)
     }
 
     fun windowRect(windowHandle: Long): Rectangle? {
