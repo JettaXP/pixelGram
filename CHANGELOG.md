@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.35.2 I-beam
+
+### Cursor
+- New Kitty trail cursor style, ported from the kitty terminal's cursor trail. While you type the cursor stays put, on big jumps a trail stretches behind it and pulls in.
+- Pick Liquid or Kitty trail in pixelGram Preferences → Cursor. Kitty trail has its own settings for the trail speed and how far the cursor has to jump before the trail starts.
+- Thanks to Kovid Goyal and kitty (GPLv3), credited in the README.
+
 ## 0.35.1 Oval
 
 ### Reactions and emoji
