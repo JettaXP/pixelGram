@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.35.4
+
+### Fixes
+- Swipe to reply with a touchpad fills about five times faster, the same speed as in Telegram Desktop.
+
 ## 0.35.3
 
 ### Chats
