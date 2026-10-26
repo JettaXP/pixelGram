@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.icons.filled.PlayArrow
+import androidx.compose.foundation.layout.Box
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -62,7 +64,8 @@ object PendingForward {
     val drafts = mutableStateMapOf<Long, ForwardDraft>()
 
     fun start(target: Long, fromChatId: Long, messages: List<UiMessage>) {
-        if (messages.isNotEmpty()) drafts[target] = ForwardDraft(fromChatId, messages.sortedBy { it.id })
+        val all = messages.flatMap { message -> message.album.ifEmpty { listOf(message) } }.distinctBy { it.id }
+        if (all.isNotEmpty()) drafts[target] = ForwardDraft(fromChatId, all.sortedBy { it.id })
     }
 
     fun send(telegram: Telegram, chatId: Long) {
@@ -81,6 +84,13 @@ private fun senderOf(telegram: Telegram, message: UiMessage): String =
     message.forwardOrigin?.let(telegram::forwardName)?.takeIf { it.isNotBlank() }
         ?: telegram.senderName(message).takeIf { it.isNotBlank() && !message.isOutgoing }
         ?: if (message.isOutgoing) "You" else "Unknown"
+
+private fun mediaThumb(message: UiMessage): Pair<TdApi.File?, TdApi.Minithumbnail?>? = when (val content = message.content) {
+    is TdApi.MessageVideo -> content.video.thumbnail?.file to content.video.minithumbnail
+    is TdApi.MessageAnimation -> content.animation.thumbnail?.file to content.animation.minithumbnail
+    is TdApi.MessagePhoto -> (message.photo ?: content.photo.sizes.firstOrNull()?.photo) to content.photo.minithumbnail
+    else -> null
+}
 
 private fun previewOf(message: UiMessage, hideCaption: Boolean): String {
     val media = message.photo != null || message.content !is TdApi.MessageText?
@@ -178,7 +188,28 @@ private fun ForwardOptionsDialog(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        draft.messages.take(PreviewLimit).forEach { message ->
+                        val media = draft.messages.mapNotNull { message -> mediaThumb(message)?.let { message to it } }
+                        if (media.isNotEmpty()) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                media.take(PreviewThumbs).forEach { (message, thumb) ->
+                                    Box(Modifier.size(PreviewThumbSize).clip(RoundedCornerShape(10.dp))) {
+                                        ThumbImage(thumb.first, thumb.second, telegram, Modifier.matchParentSize())
+                                        if (message.content is TdApi.MessageVideo || message.content is TdApi.MessageAnimation) {
+                                            Icon(
+                                                Icons.Filled.PlayArrow,
+                                                contentDescription = null,
+                                                tint = androidx.compose.ui.graphics.Color.White,
+                                                modifier = Modifier.align(Alignment.Center).size(22.dp),
+                                            )
+                                        }
+                                    }
+                                }
+                                if (media.size > PreviewThumbs) {
+                                    Text("+${media.size - PreviewThumbs}", style = MaterialTheme.typography.labelLarge, modifier = Modifier.align(Alignment.CenterVertically))
+                                }
+                            }
+                        }
+                        draft.messages.filter { mediaThumb(it) == null || (!(hideSender && hideCaption) && it.text.isNotBlank()) }.take(PreviewLimit).forEach { message ->
                             EmojiText(
                                 previewOf(message, hideSender && hideCaption).ifBlank { "Message" },
                                 style = MaterialTheme.typography.bodyMedium,
@@ -251,5 +282,7 @@ private fun OptionRow(icon: ImageVector, label: String, danger: Boolean = false,
     }
 }
 
+private const val PreviewThumbs = 4
+private val PreviewThumbSize = 56.dp
 private const val PreviewLimit = 3
 private const val PreviewLines = 6
