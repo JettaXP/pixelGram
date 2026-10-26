@@ -242,7 +242,7 @@ fun ChatView(
         } else {
             files.filter { it !in attachments }.let(attachments::addAll)
         }
-        if (files.any { !Attachments.isPhoto(it) }) asFiles = true
+        if (files.any { !Attachments.isMedia(it) }) asFiles = true
     }
     val placement = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
     val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -452,11 +452,11 @@ fun ChatView(
         if (dropped == null || dropped.chatId != chat.id) return@LaunchedEffect
         DroppedFiles.pending = null
         attach(dropped.files)
-        asFiles = dropped.files.any { !Attachments.isPhoto(it) }
+        asFiles = dropped.files.any { !Attachments.isMedia(it) }
     }
     FileDropArea(onDrop = { files, asDocuments ->
         attach(files)
-        asFiles = asDocuments || files.any { !Attachments.isPhoto(it) }
+        asFiles = asDocuments || files.any { !Attachments.isMedia(it) }
     }) {
     Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
@@ -918,7 +918,7 @@ fun ChatView(
                     telegram.editMessage(edited, text, entities)
                     editing = null
                 } else if (attachments.isNotEmpty()) {
-                    val photos = !asFiles && attachments.all(Attachments::isPhoto)
+                    val photos = !asFiles && attachments.all(Attachments::isMedia)
                     telegram.sendFiles(chat.id, attachments.toList(), photos, text, replyId, entities)
                     attachments.clear()
                     asFiles = false

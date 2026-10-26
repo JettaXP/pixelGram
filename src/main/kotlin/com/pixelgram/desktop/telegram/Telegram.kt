@@ -174,6 +174,7 @@ private const val JumpPageSize = 60
 private const val ChatSearchLimit = 20
 private const val PreviewPage = 40
 private const val StickerSearchLimit = 100
+private val StreamingExtensions = setOf("mp4", "m4v", "mov")
 private const val ProfileGiftsLimit = 100
 private const val JumpMinMessages = 20
 private const val JumpAttempts = 3
@@ -2302,7 +2303,24 @@ class Telegram(
                 val first = chunkIndex == 0 && index == 0
                 val text = TdApi.FormattedText(if (first) caption else "", if (first) entities else arrayOf())
                 val input = TdApi.InputFileLocal(file.absolutePath)
-                if (asPhotos) {
+                if (asPhotos && com.pixelgram.desktop.ui.main.Attachments.isVideo(file)) {
+                    val info = com.pixelgram.desktop.ui.main.Attachments.videoInfo(file)
+                    TdApi.InputMessageVideo().apply {
+                        video = TdApi.InputVideo().apply {
+                            video = input
+                            thumbnail = info.poster?.let { poster ->
+                                val (w, h) = imageSize(poster)
+                                TdApi.InputThumbnail(TdApi.InputFileLocal(poster.absolutePath), w, h)
+                            }
+                            addedStickerFileIds = IntArray(0)
+                            duration = info.duration
+                            width = info.width
+                            height = info.height
+                            supportsStreaming = file.extension.lowercase() in StreamingExtensions
+                        }
+                        this.caption = text
+                    }
+                } else if (asPhotos) {
                     val (width, height) = imageSize(file)
                     TdApi.InputMessagePhoto().apply {
                         photo = TdApi.InputPhoto().apply {

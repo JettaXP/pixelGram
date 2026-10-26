@@ -27,6 +27,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.filled.Close
+import com.pixelgram.desktop.ui.icons.filled.PlayArrow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import com.pixelgram.desktop.ui.icons.outlined.Add
 import com.pixelgram.desktop.ui.icons.outlined.Description
 import androidx.compose.material3.ButtonGroupDefaults
@@ -72,6 +75,44 @@ object Attachments {
     private val tempDir: File get() = File(AppPaths.dataDir, "temp")
 
     fun isPhoto(file: File) = file.extension.lowercase() in PhotoExtensions && file.length() <= MaxPhotoBytes
+
+    private val VideoExtensions = setOf("mp4", "m4v", "mov", "webm", "mkv")
+
+    fun isVideo(file: File) = file.extension.lowercase() in VideoExtensions
+
+    fun isMedia(file: File) = isPhoto(file) || isVideo(file)
+
+    class VideoInfo(val poster: File?, val width: Int, val height: Int, val duration: Int)
+
+    private val videoInfos = java.util.concurrent.ConcurrentHashMap<String, VideoInfo>()
+
+    fun videoInfo(file: File): VideoInfo = videoInfos.getOrPut(file.absolutePath + ":" + file.lastModified()) {
+        runCatching {
+            tempDir.mkdirs()
+            val grabber = org.bytedeco.javacv.FFmpegFrameGrabber(file.absolutePath)
+            grabber.start()
+            val frame = grabber.grabImage()
+            val image = frame?.let { org.bytedeco.javacv.Java2DFrameConverter().convert(it) }
+            val width = grabber.imageWidth
+            val height = grabber.imageHeight
+            val duration = (grabber.lengthInTime / 1_000_000L).toInt()
+            grabber.stop()
+            grabber.release()
+            val poster = image?.let { picture ->
+                val scale = minOf(1.0, PosterMax.toDouble() / maxOf(picture.width, picture.height))
+                val scaled = BufferedImage((picture.width * scale).toInt().coerceAtLeast(1), (picture.height * scale).toInt().coerceAtLeast(1), BufferedImage.TYPE_INT_RGB)
+                scaled.createGraphics().apply {
+                    setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+                    drawImage(picture, 0, 0, scaled.width, scaled.height, null)
+                    dispose()
+                }
+                File(tempDir, "poster-${file.nameWithoutExtension.hashCode()}-${System.nanoTime()}.jpg").also { ImageIO.write(scaled, "jpg", it) }
+            }
+            VideoInfo(poster, width, height, duration)
+        }.onFailure { AppLog.write("Video preview failed", it) }.getOrDefault(VideoInfo(null, 0, 0, 0))
+    }
+
+    private const val PosterMax = 320
 
     suspend fun pick(): List<File> {
         val parent = KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow
@@ -202,7 +243,7 @@ fun AttachmentsPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val canBePhotos = files.all(Attachments::isPhoto)
+    val canBePhotos = files.all(Attachments::isMedia)
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -211,7 +252,12 @@ fun AttachmentsPanel(
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val kind = if (asFiles || !canBePhotos) "file" else "photo"
+                val kind = when {
+                    asFiles || !canBePhotos -> "file"
+                    files.all(Attachments::isVideo) -> "video"
+                    files.all(Attachments::isPhoto) -> "photo"
+                    else -> "media file"
+                }
                 Text(
                     "${files.size} $kind${if (files.size == 1) "" else "s"}",
                     style = MaterialTheme.typography.titleMedium,
@@ -224,7 +270,7 @@ fun AttachmentsPanel(
                         onCheckedChange = { onAsFiles(false) },
                         enabled = canBePhotos,
                         shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
-                    ) { Text("Photo") }
+                    ) { Text("Media") }
                     ToggleButton(
                         checked = asFiles || !canBePhotos,
                         onCheckedChange = { onAsFiles(true) },
@@ -259,19 +305,43 @@ private val TileShape = RoundedCornerShape(20.dp)
 
 @Composable
 private fun AttachmentTile(file: File, showAsPhoto: Boolean, onRemove: () -> Unit) {
-    val image by produceState<ImageBitmap?>(null, file, showAsPhoto) {
-        value = if (showAsPhoto) loadImage(file.absolutePath, maxSize = PreviewSize) else null
+    val video = showAsPhoto && Attachments.isVideo(file)
+    val info by produceState<Attachments.VideoInfo?>(null, file, video) {
+        value = if (video) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Attachments.videoInfo(file) } else null
     }
-    val width = if (showAsPhoto) {
-        val (w, h) = remember(file) { imageSize(file) }
-        if (w > 0 && h > 0) (TileHeight.value * w / h).coerceIn(110f, 320f).dp else TileHeight
-    } else {
-        200.dp
+    val image by produceState<ImageBitmap?>(null, file, showAsPhoto, info) {
+        value = when {
+            !showAsPhoto -> null
+            video -> info?.poster?.let { loadImage(it.absolutePath, maxSize = PreviewSize) }
+            else -> loadImage(file.absolutePath, maxSize = PreviewSize)
+        }
+    }
+    val width = when {
+        video -> info?.takeIf { it.width > 0 && it.height > 0 }?.let { (TileHeight.value * it.width / it.height).coerceIn(110f, 320f).dp } ?: TileHeight
+        showAsPhoto -> {
+            val (w, h) = remember(file) { imageSize(file) }
+            if (w > 0 && h > 0) (TileHeight.value * w / h).coerceIn(110f, 320f).dp else TileHeight
+        }
+        else -> 200.dp
     }
     Box(Modifier.size(width = width, height = TileHeight).clip(TileShape)) {
         val bitmap = image
         if (bitmap != null) {
             Image(bitmap, contentDescription = file.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            if (video) {
+                Surface(shape = CircleShape, color = Color.Black.copy(alpha = VideoBadgeAlpha), contentColor = Color.White, modifier = Modifier.align(Alignment.Center).size(48.dp)) {
+                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(30.dp)) }
+                }
+                info?.duration?.takeIf { it > 0 }?.let { seconds ->
+                    Surface(shape = CircleShape, color = Color.Black.copy(alpha = VideoBadgeAlpha), contentColor = Color.White, modifier = Modifier.align(Alignment.BottomStart).padding(8.dp)) {
+                        Text("%d:%02d".format(seconds / 60, seconds % 60), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                    }
+                }
+            }
+        } else if (video) {
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHighest), contentAlignment = Alignment.Center) {
+                androidx.compose.material3.LoadingIndicator(Modifier.size(40.dp))
+            }
         } else {
             Column(
                 Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHighest).padding(16.dp),
@@ -298,3 +368,4 @@ private fun AttachmentTile(file: File, showAsPhoto: Boolean, onRemove: () -> Uni
 }
 
 private const val PreviewSize = 640
+private const val VideoBadgeAlpha = 0.55f
