@@ -1355,13 +1355,44 @@ private fun MessageFontSettings(settings: AppSettings) {
 private fun CursorSettings(settings: AppSettings) {
     Header("Cursor")
     Description("The text cursor in the message field.")
-    SwitchRow(0, 3, "Liquid cursor", "The cursor stretches like a drop when it moves.", settings.liquidCursor.value) { settings.liquidCursor.value = it }
-    SwitchRow(1, 3, "Smooth cursor", "The cursor glides to its new place instead of jumping.", settings.smoothCursor.value) { settings.smoothCursor.value = it }
-    SwitchRow(2, 3, "Cursor blinking", null, settings.cursorBlink.value) { settings.cursorBlink.value = it }
-    CursorSlider("Cursor stretch", settings.cursorStretch, 0..100, "")
-    CursorSlider("Handle stretch", settings.handleStretch, 0..100, "%")
-    CursorSlider("Side pull", settings.sidePull, 0..100, "%")
-    CursorSlider("Cursor speed", settings.cursorSpeed, 1..100, "")
+    val custom = settings.liquidCursor.value
+    val kitty = settings.cursorStyle.value == com.pixelgram.desktop.core.CursorStyle.Kitty
+    SwitchRow(0, 1, "Animated cursor", "pixelGram draws its own animated cursor.", custom) { settings.liquidCursor.value = it }
+    Reveal(custom) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Cursor style", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+            ConnectedChoice(
+                listOf(com.pixelgram.desktop.core.CursorStyle.Liquid to "Liquid", com.pixelgram.desktop.core.CursorStyle.Kitty to "Kitty trail"),
+                settings.cursorStyle.value,
+                { settings.cursorStyle.value = it },
+            )
+            Description(if (kitty) "A trail follows the cursor on big jumps, the same way the kitty terminal does it." else "The cursor stretches like a drop when it moves.")
+        }
+    }
+    Reveal(custom && !kitty) {
+        Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+            SwitchRow(0, 2, "Smooth cursor", "The cursor glides to its new place instead of jumping.", settings.smoothCursor.value) { settings.smoothCursor.value = it }
+            SwitchRow(1, 2, "Cursor blinking", null, settings.cursorBlink.value) { settings.cursorBlink.value = it }
+        }
+    }
+    Reveal(custom && kitty) {
+        SwitchRow(0, 1, "Cursor blinking", null, settings.cursorBlink.value) { settings.cursorBlink.value = it }
+    }
+    Reveal(custom && !kitty) {
+        Column {
+            CursorSlider("Cursor stretch", settings.cursorStretch, 0..100, "")
+            CursorSlider("Handle stretch", settings.handleStretch, 0..100, "%")
+            CursorSlider("Side pull", settings.sidePull, 0..100, "%")
+            CursorSlider("Cursor speed", settings.cursorSpeed, 1..100, "")
+        }
+    }
+    Reveal(custom && kitty) {
+        Column {
+            CursorSlider("Trail front", settings.trailFast, 20..500, " ms", step = 10)
+            CursorSlider("Trail end", settings.trailSlow, 50..1000, " ms", step = 10)
+            CursorSlider("Trail start distance", settings.trailThreshold, 0..10, "")
+        }
+    }
     CursorSlider("Cursor width", settings.cursorWidth, 1..6, " dp")
     CursorSlider("Blink cycle", settings.blinkCycle, 300..2000, " ms", step = 100)
     CursorSlider("Blink smoothness", settings.blinkSmoothness, 0..100, "%")

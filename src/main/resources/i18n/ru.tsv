@@ -811,3 +811,12 @@ Copy emoji	Копировать эмодзи
 Search emoji	Поиск эмодзи
 Search stickers	Поиск стикеров
 Nothing found	Ничего не найдено
+Animated cursor	Анимированный курсор
+pixelGram draws its own animated cursor.	pixelGram рисует свой анимированный курсор.
+Cursor style	Стиль курсора
+Liquid	Жидкий
+Kitty trail	Шлейф kitty
+A trail follows the cursor on big jumps, the same way the kitty terminal does it.	При больших прыжках за курсором тянется шлейф, как в терминале kitty.
+Trail front	Начало шлейфа
+Trail end	Конец шлейфа
+Trail start distance	Дистанция запуска шлейфа

@@ -809,3 +809,12 @@ Copy emoji	העתק אמוג׳י
 Search emoji	חיפוש אמוג׳י
 Search stickers	חיפוש מדבקות
 Nothing found	לא נמצא דבר
+Animated cursor	סמן מונפש
+pixelGram draws its own animated cursor.	pixelGram מצייר סמן מונפש משלו.
+Cursor style	סגנון סמן
+Liquid	נוזלי
+Kitty trail	שובל kitty
+A trail follows the cursor on big jumps, the same way the kitty terminal does it.	שובל עוקב אחרי הסמן בקפיצות גדולות, כמו במסוף kitty.
+Trail front	תחילת השובל
+Trail end	סוף השובל
+Trail start distance	מרחק התחלת השובל

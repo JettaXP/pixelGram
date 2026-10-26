@@ -106,6 +106,7 @@ The previous C++ version (AyuGram Desktop fork) is kept in the `legacy-cpp` bran
 - [Mategram](https://github.com/MG-Devs-Team/Mategram): the blurred spoiler effect is based on their formatted text rendering.
 - [Material Player](https://github.com/YouRooni/plugins/tree/master/plugins/md3_player) by @RnPlugins: the morphing playback buttons in the mini player follow its controls row.
 - [end-4/dots-hyprland](https://github.com/end-4/dots-hyprland): the password field with Material shapes comes from its lock screen.
+- [kitty](https://github.com/kovidgoyal/kitty) by Kovid Goyal (GPLv3): the Kitty trail cursor style is ported from its `cursor_trail.c`.
 
 ## License
 

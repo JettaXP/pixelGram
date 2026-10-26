@@ -51,6 +51,9 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sqrt
 import kotlinx.coroutines.delay
+import kotlin.math.pow
+import com.pixelgram.desktop.core.CursorStyle
+import androidx.compose.runtime.State
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.filterNotNull
 import androidx.compose.runtime.snapshotFlow
@@ -105,7 +108,7 @@ fun ComposerField(
                     .onFocusChanged { focused = it.isFocused },
             )
             if (images) EmojiOverlay(layout)
-            if (liquid) LiquidCaret(value.selection, layout, focused, settings, colors.primary, Modifier.matchParentSize())
+            if (liquid) CustomCaret(value.selection, layout, focused, settings, colors.primary, Modifier.matchParentSize())
         }
     }
 }
@@ -132,6 +135,173 @@ private fun EmojiOverlay(layout: TextLayoutResult?) {
 }
 
 private const val EmojiScale = 1f
+
+@Composable
+private fun rememberBlink(visible: Boolean, moved: Long, settings: AppSettings): State<Float> {
+    val blink = settings.cursorBlink.value
+    val cycle = settings.blinkCycle.value.coerceAtLeast(MinCycle)
+    val softness = settings.blinkSmoothness.value / 100f
+    return produceState(1f, visible, moved, blink, cycle, softness) {
+        value = 1f
+        if (!visible || !blink) return@produceState
+        delay(BlinkRestMs)
+        if (softness <= 0f) {
+            while (true) {
+                value = 0f
+                delay(cycle / 2L)
+                value = 1f
+                delay(cycle / 2L)
+            }
+        }
+        val start = withFrameNanos { it }
+        while (true) {
+            withFrameNanos { now ->
+                val phase = ((now - start) / 1_000_000L % cycle) / cycle.toFloat()
+                val hard = if (phase < 0.5f) 1f else 0f
+                val soft = 0.5f + 0.5f * cos(2 * PI * phase).toFloat()
+                value = hard + (soft - hard) * softness
+            }
+        }
+    }
+}
+
+@Composable
+private fun CustomCaret(
+    selection: TextRange,
+    layout: TextLayoutResult?,
+    focused: Boolean,
+    settings: AppSettings,
+    color: Color,
+    modifier: Modifier,
+) {
+    if (settings.cursorStyle.value == CursorStyle.Kitty) TrailCaret(selection, layout, focused, settings, color, modifier)
+    else LiquidCaret(selection, layout, focused, settings, color, modifier)
+}
+
+@Composable
+private fun TrailCaret(
+    selection: TextRange,
+    layout: TextLayoutResult?,
+    focused: Boolean,
+    settings: AppSettings,
+    color: Color,
+    modifier: Modifier,
+) {
+    val visible = focused && selection.collapsed && layout != null
+    val rect = layout?.let { it.getCursorRect(selection.end.coerceIn(0, it.layoutInput.text.length)) }
+    val trail = remember { CursorTrail() }
+    var moved by remember { mutableLongStateOf(0L) }
+    val latest by rememberUpdatedState(rect)
+    val width = with(LocalDensity.current) { settings.cursorWidth.value.coerceAtLeast(1).dp.toPx() }
+    val fast = settings.trailFast.value / 1000f
+    val slow = maxOf(settings.trailSlow.value / 1000f, fast)
+    val threshold = settings.trailThreshold.value
+    LaunchedEffect(rect) {
+        if (rect != null) moved = System.nanoTime()
+    }
+    LaunchedEffect(width, fast, slow, threshold) {
+        while (true) {
+            snapshotFlow { latest }.filterNotNull().first { trail.aim(it, width, threshold) }
+            var last = withFrameNanos { it }
+            while (true) {
+                val done = withFrameNanos { now ->
+                    latest?.let { trail.aim(it, width, threshold) }
+                    val dt = ((now - last) / 1_000_000_000f).coerceAtMost(MaxFrameSeconds)
+                    last = now
+                    trail.step(dt, fast, slow)
+                }
+                if (done) break
+            }
+        }
+    }
+    val alpha by rememberBlink(visible, moved, settings)
+    Canvas(modifier.graphicsLayer()) {
+        val target = rect ?: return@Canvas
+        if (!visible) return@Canvas
+        trail.tick
+        if (trail.active) {
+            val path = Path().apply {
+                moveTo(trail.x[0], trail.y[0])
+                for (i in 1 until 4) lineTo(trail.x[i], trail.y[i])
+                close()
+            }
+            drawPath(path, color)
+        }
+        if (alpha > 0f) {
+            drawRect(color.copy(alpha = alpha), topLeft = Offset(target.left, target.top), size = Size(width, target.height))
+        }
+    }
+}
+
+private class CursorTrail {
+    val x = FloatArray(4)
+    val y = FloatArray(4)
+    var active by mutableStateOf(false)
+    private var ready = false
+    private var edges = FloatArray(4)
+    var tick by mutableLongStateOf(0L)
+        private set
+
+    fun aim(rect: androidx.compose.ui.geometry.Rect, width: Float, threshold: Int): Boolean {
+        val next = floatArrayOf(rect.left, rect.top, rect.left + width, rect.bottom)
+        if (ready && next.contentEquals(edges)) return active
+        val cell = rect.height * CellAspect
+        val jumpX = kotlin.math.abs(next[0] - edges[0]) / cell
+        val jumpY = kotlin.math.abs(next[1] - edges[1]) / rect.height.coerceAtLeast(1f)
+        val small = jumpX <= threshold && jumpY < 1f && threshold > 0
+        edges = next
+        if (!ready || (!active && small)) {
+            snap()
+            ready = true
+            return false
+        }
+        active = true
+        return true
+    }
+
+    private fun snap() {
+        for (i in 0 until 4) {
+            x[i] = edges[CornerX[i]]
+            y[i] = edges[CornerY[i]]
+        }
+        active = false
+        tick++
+    }
+
+    fun step(dt: Float, fast: Float, slow: Float): Boolean {
+        val centerX = (edges[0] + edges[2]) / 2
+        val centerY = (edges[1] + edges[3]) / 2
+        val half = sqrt((edges[2] - edges[0]).let { it * it } + (edges[3] - edges[1]).let { it * it }) / 2
+        val dx = FloatArray(4)
+        val dy = FloatArray(4)
+        val dot = FloatArray(4)
+        for (i in 0 until 4) {
+            dx[i] = edges[CornerX[i]] - x[i]
+            dy[i] = edges[CornerY[i]] - y[i]
+            val length = sqrt(dx[i] * dx[i] + dy[i] * dy[i])
+            dot[i] = if (length < 1e-3f || half <= 0f) 0f
+            else (dx[i] * (edges[CornerX[i]] - centerX) + dy[i] * (edges[CornerY[i]] - centerY)) / half / length
+        }
+        val low = dot.min()
+        val high = dot.max()
+        var settled = true
+        for (i in 0 until 4) {
+            if (dx[i] == 0f && dy[i] == 0f) continue
+            val decay = if (high == low) slow else slow + (fast - slow) * (dot[i] - low) / (high - low)
+            val part = 1f - 2f.pow(-10f * dt / decay)
+            x[i] += dx[i] * part
+            y[i] += dy[i] * part
+            if (kotlin.math.abs(edges[CornerX[i]] - x[i]) > RestGap || kotlin.math.abs(edges[CornerY[i]] - y[i]) > RestGap) settled = false
+        }
+        if (settled) snap() else tick++
+        return settled
+    }
+}
+
+private val CornerX = intArrayOf(2, 2, 0, 0)
+private val CornerY = intArrayOf(1, 3, 3, 1)
+private const val CellAspect = 0.5f
+private const val RestGap = 0.5f
 
 @Composable
 private fun LiquidCaret(
@@ -174,31 +344,7 @@ private fun LiquidCaret(
             }
         }
     }
-    val blink = settings.cursorBlink.value
-    val cycle = settings.blinkCycle.value.coerceAtLeast(MinCycle)
-    val softness = settings.blinkSmoothness.value / 100f
-    val alpha by produceState(1f, visible, moved, blink, cycle, softness) {
-        value = 1f
-        if (!visible || !blink) return@produceState
-        delay(BlinkRestMs)
-        if (softness <= 0f) {
-            while (true) {
-                value = 0f
-                delay(cycle / 2L)
-                value = 1f
-                delay(cycle / 2L)
-            }
-        }
-        val start = withFrameNanos { it }
-        while (true) {
-            withFrameNanos { now ->
-                val phase = ((now - start) / 1_000_000L % cycle) / cycle.toFloat()
-                val hard = if (phase < 0.5f) 1f else 0f
-                val soft = 0.5f + 0.5f * cos(2 * PI * phase).toFloat()
-                value = hard + (soft - hard) * softness
-            }
-        }
-    }
+    val alpha by rememberBlink(visible, moved, settings)
     val liquid = settings.liquidCursor.value
     val stretch = settings.cursorStretch.value
     val pull = settings.sidePull.value / 100f

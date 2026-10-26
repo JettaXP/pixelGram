@@ -15,6 +15,8 @@ enum class NotificationStyle { System, PixelGram }
 
 enum class DoubleClickAction { Nothing, Reply, Reaction }
 
+enum class CursorStyle { Liquid, Kitty }
+
 enum class AvatarKind(val title: String) {
     Private("Private chats"),
     Bot("Bots"),
@@ -135,6 +137,10 @@ class AppSettings private constructor(private val props: Properties) {
     val bigReactions = bool("bigReactions", false)
     val localNames = string("localNames", "")
     val liquidCursor = bool("liquidCursor", true)
+    val cursorStyle = enum("cursorStyle", CursorStyle.Liquid)
+    val trailFast = int("trailFast", 100)
+    val trailSlow = int("trailSlow", 400)
+    val trailThreshold = int("trailThreshold", 2)
     val cursorStretch = int("cursorStretch", 40)
     val handleStretch = int("handleStretch", 60)
     val sidePull = int("sidePull", 45)
@@ -189,7 +195,7 @@ class AppSettings private constructor(private val props: Properties) {
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,
         deviceName, israelLogo, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
-        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, restoreWindow, windowBounds, emptyShapes, autostart, launchMinimized, language, localNames, bigReactions, liquidCursor, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
+        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, restoreWindow, windowBounds, emptyShapes, autostart, launchMinimized, language, localNames, bigReactions, liquidCursor, cursorStyle, trailFast, trailSlow, trailThreshold, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
         apiId, apiHash,
         accounts, activeAccount,
     ) + avatarKindShapes.values
