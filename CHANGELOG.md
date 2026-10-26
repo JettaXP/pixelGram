@@ -15,8 +15,15 @@
 
 ### Checklists and articles
 - Create checklists with up to 30 tasks and choose whether others can add tasks or mark them as done. Sending a checklist needs Telegram Premium.
-- Write articles in a separate editor with titles, headings, bold, lists, tables, links, photos, formulas and emoji, with undo and redo. Writing with AI needs Telegram Premium.
+- New article editor laid out like the official one: a title on top, undo and redo, and a bottom bar with AI, emoji, text styles, lists, tables, formulas and photos.
+- Text styles for articles: Heading, Text, Quote, Pullquote, Code and Footer. Ctrl+B, Ctrl+I, Ctrl+U and Ctrl+K work inside the text.
+- Every tool is open to everyone. If Telegram refuses an article or an AI request, its answer, like RICH_MESSAGE_UNSUPPORTED, shows up in a pill.
 - Checklists and articles from others are shown in chats. You can tick tasks, and long articles open in full.
+
+### Code
+- Type three backticks, the language, the code and three backticks again, and it turns into a code block right in the message field, with syntax highlighting.
+- Code blocks in messages show the language on top, a copy button and syntax highlighting for Kotlin, Java, Python, JavaScript, TypeScript, C, C++, C#, Go, Rust, Swift, Dart, PHP, Ruby, Bash, SQL, Lua, JSON, YAML, CSS and HTML.
+- Code block is also in the formatting menu and on Ctrl+Shift+C.
 
 ### Fixes
 - Your own posts in channels look like regular posts instead of outgoing bubbles.
