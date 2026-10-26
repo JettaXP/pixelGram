@@ -91,6 +91,7 @@ data class InfoRow(
     val trailing: (@Composable () -> Unit)? = null,
     val entities: List<TdApi.TextEntity> = emptyList(),
     val onMention: ((String) -> Unit)? = null,
+    val leading: (@Composable () -> Unit)? = null,
 )
 
 private val MentionPattern = Regex("""(?<![\w@])@[A-Za-z][A-Za-z0-9_]{3,31}""")
@@ -125,7 +126,7 @@ fun InfoGroup(rows: List<InfoRow>) {
                 SegmentedListItem(
                     onClick = { row.onEdit?.invoke() ?: copy() },
                     shapes = groupShapes(index, rows.size),
-                    leadingContent = { Icon(row.icon, contentDescription = null) },
+                    leadingContent = row.leading ?: { Icon(row.icon, contentDescription = null) },
                     supportingContent = {
                         Surface(
                             shape = CircleShape,

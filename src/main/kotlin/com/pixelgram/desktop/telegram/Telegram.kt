@@ -172,6 +172,7 @@ private const val AUTH_TIMEOUT_MS = 30_000L
 private const val PinnedLimit = 100
 private const val JumpPageSize = 60
 private const val ChatSearchLimit = 20
+private const val ProfileGiftsLimit = 100
 private const val JumpMinMessages = 20
 private const val JumpAttempts = 3
 private const val SavedTopicsPage = 100
@@ -1258,6 +1259,30 @@ class Telegram(
 
     fun animatedEmoji(emoji: String, done: (TdApi.Sticker?) -> Unit) {
         send(TdApi.GetAnimatedEmoji(emoji)) { result -> done((result as? TdApi.AnimatedEmoji)?.sticker) }
+    }
+
+    fun senderPhoto(sender: TdApi.MessageSender?): TdApi.File? = when (sender) {
+        is TdApi.MessageSenderUser -> users[sender.userId]?.profilePhoto?.small
+        is TdApi.MessageSenderChat -> chats[sender.chatId]?.photo
+        else -> null
+    }
+
+    fun receivedGift(id: String, onResult: (TdApi.ReceivedGift?) -> Unit) {
+        send(TdApi.GetReceivedGift(id)) { onResult(it as? TdApi.ReceivedGift) }
+    }
+
+    fun profileGifts(owner: TdApi.MessageSender, onResult: (Int, List<TdApi.ReceivedGift>) -> Unit) {
+        send(TdApi.GetReceivedGifts().apply {
+            businessConnectionId = ""
+            ownerId = owner
+            excludeUnsaved = owner !is TdApi.MessageSenderUser || (owner as TdApi.MessageSenderUser).userId != myUserId
+            offset = ""
+            limit = ProfileGiftsLimit
+        }) { result ->
+            val gifts = result as? TdApi.ReceivedGifts
+            gifts?.gifts?.forEach { gift -> (gift.senderId as? TdApi.MessageSenderUser)?.let { ensureUser(it.userId) } }
+            onResult(gifts?.totalCount ?: 0, gifts?.gifts?.toList().orEmpty())
+        }
     }
 
     fun saveGif(message: UiMessage) {

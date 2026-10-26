@@ -367,6 +367,12 @@ fun ChatInfoDialog(
                 }
                 if (chat.privateUserId != 0L) ProfileMusic(telegram, settings, chat.privateUserId, own = false, modifier = Modifier.padding(top = 8.dp))
                 Box(Modifier.fillMaxWidth().padding(top = 8.dp)) { InfoGroup(rows) }
+                if (!telegram.isSavedMessages(chat.id) && (chat.privateUserId != 0L || chat.isChannel)) {
+                    val owner = remember(chat.id) {
+                        if (chat.privateUserId != 0L) it.tdlight.jni.TdApi.MessageSenderUser(chat.privateUserId) else it.tdlight.jni.TdApi.MessageSenderChat(chat.id)
+                    }
+                    ProfileGifts(owner, telegram, Modifier.fillMaxWidth().padding(top = 8.dp))
+                }
                 if (personalChannel != 0L) {
                     PersonalChannelCard(
                         personalChannel,

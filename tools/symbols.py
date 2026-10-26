@@ -14,7 +14,7 @@ WEIGHT = int(os.environ.get('SYMBOLS_WEIGHT', '500'))
 RENAMED = {
     'InsertDriveFile': 'description', 'Collections': 'photo_library', 'EmojiEmotions': 'mood',
     'EmojiFlags': 'flag', 'FavoriteBorder': 'favorite', 'Phone': 'call', 'PhoneAndroid': 'mobile',
-    'PhoneIphone': 'mobile_2', 'SystemUpdate': 'mobile_arrow_down',
+    'PhoneIphone': 'mobile_2', 'SystemUpdate': 'mobile_arrow_down', 'CardGiftcard': 'redeem',
 }
 
 

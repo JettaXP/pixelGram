@@ -781,3 +781,6 @@ Cursor speed	Скорость курсора
 Cursor width	Ширина курсора
 Blink cycle	Период мигания
 Blink smoothness	Плавность мигания
+1 gift	1 подарок
+{n} gifts	{n} {подарок|подарка|подарков}
+Owner	Владелец
