@@ -20,6 +20,8 @@ enum class DoubleClickAction { Nothing, Reply, Reaction, Edit }
 
 enum class CursorStyle { Liquid, Kitty }
 
+enum class SettingsStyle { Expressive, MaterialYou }
+
 enum class AvatarKind(val title: String) {
     Private("Private chats"),
     Bot("Bots"),
@@ -116,6 +118,7 @@ class AppSettings private constructor(private val props: Properties) {
     val hidePhone = bool("hidePhone", false)
     val checkUpdates = bool("checkUpdates", true)
     val doubleClickOwn = enum("doubleClickOwn", DoubleClickAction.Reaction)
+    val settingsStyle = enum("settingsStyle", SettingsStyle.Expressive)
     val doubleClickOther = enum("doubleClickOther", DoubleClickAction.Reaction)
     val doubleClickEmoji = string("doubleClickEmoji", "❤")
     val capsuleSpacing = int("capsuleSpacing", 4)
@@ -205,7 +208,7 @@ class AppSettings private constructor(private val props: Properties) {
         materialFolders, hideAllChats, folderOrder, folderIcons,
         unreadFolder, unreadFolderName, unreadFolderIcon, mentionsFolder, mentionsFolderName, mentionsFolderIcon,
         capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, checkUpdates,
-        doubleClickOwn, doubleClickOther, doubleClickEmoji,
+        doubleClickOwn, doubleClickOther, doubleClickEmoji, settingsStyle,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,

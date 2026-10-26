@@ -383,7 +383,7 @@ fun SettingsScreen(
                     val items = Section.entries.filter { it.pixel }
                     SegmentedGroup {
                         items.forEachIndexed { index, item ->
-                            NavItem(index, items.size, item.title, item.icon, item == section) {
+                            NavItem(index, items.size, item.title, item.icon, item == section, settings.settingsStyle.value == com.pixelgram.desktop.core.SettingsStyle.MaterialYou) {
                                 section = item
                             }
                         }
@@ -435,7 +435,7 @@ fun SettingsScreen(
                     ) {
                         items.forEachIndexed { index, item ->
                             key(item) {
-                                NavItem(index, items.size, item.title, item.icon, item == section) {
+                                NavItem(index, items.size, item.title, item.icon, item == section, settings.settingsStyle.value == com.pixelgram.desktop.core.SettingsStyle.MaterialYou) {
                                     section = item
                                 }
                             }
@@ -582,16 +582,51 @@ private fun NavItem(
     title: String,
     icon: ImageVector,
     selected: Boolean,
+    flat: Boolean,
     onClick: () -> Unit,
 ) {
-    SegmentedListItem(
-        selected = selected,
-        onClick = onClick,
-        shapes = groupShapes(index, count),
-        leadingContent = { Icon(icon, contentDescription = null) },
-    ) {
-        Text(title)
+    if (!flat) {
+        SegmentedListItem(
+            selected = selected,
+            onClick = onClick,
+            shapes = groupShapes(index, count),
+            leadingContent = { Icon(icon, contentDescription = null) },
+        ) {
+            Text(title)
+        }
+        return
     }
+    val colors = MaterialTheme.colorScheme
+    val background by androidx.compose.animation.animateColorAsState(
+        if (selected) colors.primaryContainer else Color.Transparent,
+        MaterialTheme.motionScheme.defaultEffectsSpec(),
+    )
+    val content = if (selected) colors.onPrimaryContainer else colors.onSurface
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(FlatNavHeight)
+            .clip(CircleShape)
+            .background(background)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = if (selected) colors.onPrimaryContainer else colors.onSurfaceVariant)
+        Text(title, style = MaterialTheme.typography.titleMedium, color = content, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    }
+}
+
+private val FlatNavHeight = 56.dp
+
+@Composable
+private fun SettingsStyleChoice(settings: AppSettings) {
+    ConnectedChoice(
+        listOf(com.pixelgram.desktop.core.SettingsStyle.Expressive to "Expressive", com.pixelgram.desktop.core.SettingsStyle.MaterialYou to "Material You"),
+        settings.settingsStyle.value,
+        { settings.settingsStyle.value = it },
+    )
 }
 
 @Composable
@@ -719,6 +754,10 @@ private fun AppearanceSection(settings: AppSettings) {
     var capsulePreview by remember { mutableIntStateOf(0) }
     Header("Theme")
     ThemeModeButtons(settings)
+
+    Header("Settings style")
+    Description("Expressive groups the sections into segmented cards. Material You shows a flat list with a highlighted pill, like Android settings.")
+    SettingsStyleChoice(settings)
 
     Header("Privacy")
     SwitchRow(
