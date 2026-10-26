@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.35.0 Oval
+
+### Typing
+- Liquid cursor in the message field: it stretches and flows to its new place, with settings for stretch, side pull, speed, width and smooth blinking in Chat Settings.
+- The message field draws emoji in the chosen Apple or 3D style.
+
+### Chats
+- Hold a chat in the list to preview it without reading it. Scroll up for older messages, mark it as read or open it.
+- Add people to contacts, edit or delete contacts, and rename anyone locally without adding them.
+- Forwarding an album sends every part of it, and the forward preview shows photo and video thumbnails.
+- Without an open chat, the empty area shows the mini player and Material 3 shapes.
+
+### Reactions
+- Reaction effects play over the reaction when you react, bigger with Always big reactions.
+- The reaction pop animation plays every time, not every other time.
+
+### Gifts
+- Profiles show received gifts with sender avatars, and gift details show the sender, the recipient and whether the gift is saved.
+
+### Window
+- pixelGram remembers the window size and position. Turn it off in Advanced.
+- Rounded window corners on systems that do not round them, like Windows 10.
+
+### Fixes
+- The language, local names and launch at login settings are kept after a restart.
+
 ## 0.34.0 Flower
 
 ### Languages
