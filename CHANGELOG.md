@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.38.1
+
+### Chats
+- Double click on your own message can open it for editing: pick Edit under Double click on a message in Chat settings.
+- Photos, videos and GIFs keep their own proportions instead of being cropped into a fixed frame, and the bubble fits them.
+
+### Look and feel
+- Message and chat menus drop the dark backdrop around their segments, with smaller items and the theme's container colors.
+- With only the main folder the folder rail is hidden, the menu button takes its place above the archive.
+
+### Fixes
+- Choosing an item in a menu, like Copy text, no longer crashes the app with "RootNodeOwner is already disposed".
+- Menus close with their animation instead of leaving a Delete item behind for a moment.
+- Double clicking near the edge between two messages no longer starts selecting them.
+
 ## 0.38.0 U
 
 ### Calls
