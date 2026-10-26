@@ -489,6 +489,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
                         onOpenProfile = { navigate(Screen.Profile) },
                         onOpenChat = openChat,
                         onBack = back,
+                        onAddAccount = if (accounts.canAdd) accounts::add else null,
                     )
                     current == Screen.Profile -> ProfileScreen(telegram, settings, openChat, onBack = back)
                     current == Screen.Contacts -> ContactsScreen(telegram, settings, openChat, onBack = back)

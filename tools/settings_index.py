@@ -6,7 +6,6 @@ SETTINGS = os.path.join(ROOT, "ui/settings")
 OUT = os.path.join(SETTINGS, "SettingsIndex.kt")
 
 SECTIONS = {
-    "AccountSection": "MyAccount",
     "NotificationsSection": "Notifications",
     "PrivacySection": "Privacy",
     "ChatSettingsSection": "ChatSettings",

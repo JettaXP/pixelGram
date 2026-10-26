@@ -1,7 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
 internal val SettingsIndex = listOf(
-    "MyAccount" to "Phone",
     "Notifications" to "Enable notifications",
     "Notifications" to "Sound for new messages",
     "Notifications" to "Play sound",

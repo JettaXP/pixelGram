@@ -4,6 +4,7 @@ import kotlin.math.roundToInt
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.focusRequester
 import com.pixelgram.desktop.ui.icons.outlined.Edit
+import com.pixelgram.desktop.ui.icons.outlined.PersonAdd
 import com.pixelgram.desktop.ui.icons.outlined.RestartAlt
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -178,7 +179,6 @@ import java.awt.datatransfer.StringSelection
 import java.net.URI
 
 private enum class Section(val title: String, val icon: ImageVector, val pixel: Boolean = false) {
-    MyAccount("My Account", Icons.Outlined.AccountCircle),
     Notifications("Notifications and Sounds", Icons.Outlined.Notifications),
     Privacy("Privacy and Security", Icons.Outlined.Lock),
     ChatSettings("Chat Settings", Icons.Outlined.ChatBubbleOutline),
@@ -246,12 +246,13 @@ fun SettingsScreen(
     onOpenProfile: () -> Unit,
     onOpenChat: (Long) -> Unit,
     onBack: () -> Unit,
+    onAddAccount: (() -> Unit)? = null,
 ) {
     var section by rememberSaveable {
         val initial = System.getProperty("pixelgram.section")
         mutableStateOf(
             Section.entries.firstOrNull { it.name == initial }
-                ?: if (startInPreferences) Section.Appearance else Section.MyAccount
+                ?: if (startInPreferences) Section.Appearance else Section.Notifications
         )
     }
     var inPreferences by rememberSaveable { mutableStateOf(section.pixel) }
@@ -278,7 +279,7 @@ fun SettingsScreen(
             query = ""
         } else if (inPreferences) {
             inPreferences = false
-            section = Section.MyAccount
+            section = Section.Notifications
         } else {
             onBack()
         }
@@ -297,7 +298,7 @@ fun SettingsScreen(
                     IconButton(onClick = {
                         if (inPreferences) {
                             inPreferences = false
-                            section = Section.MyAccount
+                            section = Section.Notifications
                         } else {
                             onBack()
                         }
@@ -334,7 +335,13 @@ fun SettingsScreen(
                             com.pixelgram.desktop.ui.components.GroupedMenu(expanded = menuOpen, onDismiss = { menuOpen = false }) {
                                 com.pixelgram.desktop.ui.components.MenuGroups(
                                     listOf(
-                                        listOf(
+                                        listOfNotNull(
+                                            onAddAccount?.let { add ->
+                                                com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.PersonAdd, "Add Account") {
+                                                    menuOpen = false
+                                                    add()
+                                                }
+                                            },
                                             com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Edit, "Edit profile") {
                                                 menuOpen = false
                                                 onOpenProfile()
@@ -482,7 +489,6 @@ fun SettingsScreen(
                         Section.Corners -> CornersSection(settings)
                         Section.Cursor -> CursorSection(settings)
                         Section.About -> AboutSection(telegram, settings, onOpenChat)
-                        Section.MyAccount -> AccountSection(telegram, onOpenProfile)
                         Section.Privacy -> PrivacySection(telegram, settings)
                         Section.ChatSettings -> ChatSettingsSection(settings)
                         Section.Folders -> FoldersSection(telegram, settings)
@@ -1132,24 +1138,6 @@ private fun CornerSlider(title: String, description: String, setting: com.pixelg
         )
         Text("${setting.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
         ResetButton(setting)
-    }
-}
-
-@Composable
-private fun AccountSection(telegram: Telegram, onOpenProfile: () -> Unit) {
-    val me = telegram.me
-    if (me != null) {
-        InfoGroup(buildList {
-            me.phoneNumber?.takeIf { it.isNotEmpty() }?.let { add(InfoRow(Icons.Outlined.Phone, "Phone", "+$it", phone = true)) }
-            me.usernames?.activeUsernames?.firstOrNull()?.let {
-                add(InfoRow(Icons.Outlined.AlternateEmail, "Username", "@$it"))
-            }
-            add(InfoRow(Icons.Outlined.Numbers, "ID", me.id.toString()))
-        })
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-        OutlinedButton(onClick = onOpenProfile) { Text("Open profile") }
-        Button(onClick = telegram::logOut) { Text("Log out") }
     }
 }
 

@@ -3,6 +3,9 @@ package com.pixelgram.desktop.ui.main
 import com.pixelgram.desktop.ui.icons.outlined.CardGiftcard
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -181,31 +184,37 @@ private const val CryptoDecimals = 9
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ProfileGifts(owner: TdApi.MessageSender, telegram: Telegram, modifier: Modifier = Modifier) {
+fun ProfileGifts(owner: TdApi.MessageSender, telegram: Telegram, modifier: Modifier = Modifier, own: Boolean = false, index: Int = 0, count: Int = 1) {
     var total by remember(owner) { mutableStateOf(0) }
     var gifts by remember(owner) { mutableStateOf(emptyList<TdApi.ReceivedGift>()) }
     var open by remember(owner) { mutableStateOf(false) }
     LaunchedEffect(owner) {
-        telegram.profileGifts(owner) { count, list ->
-            total = count
+        telegram.profileGifts(owner) { size, list ->
+            total = size
             gifts = list
         }
     }
-    if (gifts.isEmpty()) return
+    if (gifts.isEmpty() && !own) return
     androidx.compose.material3.SegmentedListItem(
         onClick = { open = true },
-        shapes = com.pixelgram.desktop.ui.components.groupShapes(0, 1),
+        shapes = com.pixelgram.desktop.ui.components.groupShapes(index, count),
         leadingContent = { androidx.compose.material3.Icon(Icons.Outlined.CardGiftcard, contentDescription = null) },
         trailingContent = {
-            androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
-                gifts.take(GiftPreviews).forEach { gift -> StickerView(giftSticker(gift), telegram, 28.dp, animate = false) }
+            androidx.compose.foundation.layout.Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+                    gifts.take(GiftPreviews).forEach { gift -> StickerView(giftSticker(gift), telegram, 28.dp, animate = false) }
+                }
+                Text(total.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         modifier = modifier,
     ) {
-        Text(if (total == 1) "1 gift" else "$total gifts")
+        Text("Gifts")
     }
-    if (open) GiftsDialog(owner, gifts, telegram) { open = false }
+    if (open) GiftsDialog(owner, gifts, own, telegram) { open = false }
 }
 
 private fun giftSticker(gift: TdApi.ReceivedGift): TdApi.Sticker? = when (val sent = gift.gift) {
@@ -214,52 +223,95 @@ private fun giftSticker(gift: TdApi.ReceivedGift): TdApi.Sticker? = when (val se
     else -> null
 }
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun GiftsDialog(owner: TdApi.MessageSender, gifts: List<TdApi.ReceivedGift>, telegram: Telegram, onDismiss: () -> Unit) {
-    BasicAlertDialog(onDismissRequest = onDismiss) {
-        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.widthIn(min = 360.dp, max = 480.dp)) {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Gifts", style = MaterialTheme.typography.headlineSmall)
-                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(GiftColumns),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.heightIn(max = GiftGridHeight),
-                ) {
-                    items(gifts.size) { index ->
-                        val gift = gifts[index]
-                        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHighest) {
-                            Box(Modifier.fillMaxWidth().aspectRatio(1f), contentAlignment = Alignment.Center) {
-                                StickerView(giftSticker(gift), telegram, 88.dp)
-                                gift.senderId?.let { sender ->
-                                    com.pixelgram.desktop.ui.components.AvatarImage(
-                                        telegram.senderTitle(sender),
-                                        telegram.senderPhoto(sender),
-                                        telegram,
-                                        androidx.compose.foundation.shape.CircleShape,
-                                        24.dp,
-                                        Modifier.align(Alignment.TopStart).padding(6.dp),
-                                    )
-                                }
-                            }
-                        }
-                    }
+private fun GiftsDialog(owner: TdApi.MessageSender, all: List<TdApi.ReceivedGift>, own: Boolean, telegram: Telegram, onDismiss: () -> Unit) {
+    var collections by remember(owner) { mutableStateOf<List<TdApi.GiftCollection>>(emptyList()) }
+    var selected by remember(owner) { mutableStateOf(0) }
+    var shown by remember(owner) { mutableStateOf(all) }
+    var adding by remember { mutableStateOf(false) }
+    var reload by remember { mutableStateOf(0) }
+    LaunchedEffect(owner, reload) { telegram.giftCollections(owner) { collections = it } }
+    LaunchedEffect(owner, selected, collections) {
+        val collection = collections.getOrNull(selected - 1)
+        if (collection == null) shown = all else telegram.collectionGifts(owner, collection.id) { shown = it }
+    }
+    GridDialog(
+        "Gifts",
+        onDismiss = onDismiss,
+        header = {
+            if (own || collections.isNotEmpty()) {
+                AlbumTabs(listOf("All Gifts") + collections.map { it.name }, selected, onSelect = { selected = it }, addLabel = if (own) "Add Collection" else null, onAdd = { adding = true })
+            }
+        },
+    ) {
+        if (shown.isEmpty()) {
+            Text("No gifts here yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            shown.chunked(GiftColumns).forEach { row ->
+                androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { gift -> GiftCell(gift, telegram, Modifier.weight(1f)) }
+                    repeat(GiftColumns - row.size) { androidx.compose.foundation.layout.Spacer(Modifier.weight(1f)) }
                 }
-                val name = telegram.senderTitle(owner)
-                if (name.isNotBlank()) {
-                    Text(
-                        "These gifts were sent to $name.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+            }
+        }
+    }
+    if (adding) {
+        NameDialog("New collection", "Collection name", onDismiss = { adding = false }) { name, done ->
+            telegram.createGiftCollection(owner, name) { error ->
+                if (error == null) reload++
+                done(error)
             }
         }
     }
 }
 
+@Composable
+private fun GiftCell(gift: TdApi.ReceivedGift, telegram: Telegram, modifier: Modifier) {
+    val upgraded = (gift.gift as? TdApi.SentGiftUpgraded)?.gift
+    val colors = upgraded?.backdrop?.colors
+    val shape = MaterialTheme.shapes.large
+    Box(
+        modifier
+            .aspectRatio(1f)
+            .clip(shape)
+            .background(
+                if (colors != null) {
+                    androidx.compose.ui.graphics.Brush.radialGradient(listOf(argb(colors.centerColor), argb(colors.edgeColor)))
+                } else {
+                    androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.surfaceContainerHighest)
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        StickerView(giftSticker(gift), telegram, 88.dp)
+        gift.senderId?.let { sender ->
+            com.pixelgram.desktop.ui.components.AvatarImage(
+                telegram.senderTitle(sender),
+                telegram.senderPhoto(sender),
+                telegram,
+                androidx.compose.foundation.shape.RoundedCornerShape(6.dp),
+                24.dp,
+                Modifier.align(Alignment.TopStart).padding(6.dp),
+            )
+        }
+        if (upgraded != null) {
+            Text(
+                "#%,d".format(upgraded.number),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(argb(colors?.symbolColor ?: 0x66000000).copy(alpha = 0.85f))
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+        }
+    }
+}
+
+private fun argb(rgb: Int) = Color(0xFF000000.toInt() or rgb)
+
 private const val GiftPreviews = 3
 private const val GiftColumns = 3
-private val GiftGridHeight = 440.dp

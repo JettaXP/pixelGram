@@ -162,6 +162,12 @@ fun ProfileScreen(
         }
         ProfileMusic(telegram, settings, me.id, own = true)
         InfoGroup(rows)
+        androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            val owner = remember(me.id) { TdApi.MessageSenderUser(me.id) }
+            com.pixelgram.desktop.ui.main.ProfileGifts(owner, telegram, Modifier.fillMaxWidth(), own = true, index = 0, count = 2)
+            com.pixelgram.desktop.ui.main.StoryArchiveRow(me.id, telegram, index = 1, count = 2, modifier = Modifier.fillMaxWidth())
+        }
+        com.pixelgram.desktop.ui.main.ProfileStories(me.id, telegram, own = true, modifier = Modifier.fillMaxWidth())
 
         val channelId = fullInfo?.personalChatId ?: 0L
         if (channelId != 0L) {

@@ -176,6 +176,8 @@ private const val PreviewPage = 40
 private const val StickerSearchLimit = 100
 private val StreamingExtensions = setOf("mp4", "m4v", "mov")
 private const val ProfileGiftsLimit = 100
+private const val StoryPage = 100
+private const val StoryLimit = 1000
 private const val JumpMinMessages = 20
 private const val JumpAttempts = 3
 private const val SavedTopicsPage = 100
@@ -1377,6 +1379,7 @@ class Telegram(
     }
 
     fun profileGifts(owner: TdApi.MessageSender, onResult: (Int, List<TdApi.ReceivedGift>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return demoGifts().let { onResult(it.size, it) }
         send(TdApi.GetReceivedGifts().apply {
             businessConnectionId = ""
             ownerId = owner
@@ -1389,6 +1392,72 @@ class Telegram(
             onResult(gifts?.totalCount ?: 0, gifts?.gifts?.toList().orEmpty())
         }
     }
+
+    fun giftCollections(owner: TdApi.MessageSender, onResult: (List<TdApi.GiftCollection>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(demoGiftCollections())
+        send(TdApi.GetGiftCollections(owner)) { result -> onResult((result as? TdApi.GiftCollections)?.collections?.toList().orEmpty()) }
+    }
+
+    fun collectionGifts(owner: TdApi.MessageSender, collectionId: Int, onResult: (List<TdApi.ReceivedGift>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(demoGifts(collectionId))
+        send(TdApi.GetReceivedGifts().apply {
+            businessConnectionId = ""
+            ownerId = owner
+            this.collectionId = collectionId
+            offset = ""
+            limit = ProfileGiftsLimit
+        }) { result ->
+            val gifts = (result as? TdApi.ReceivedGifts)?.gifts?.toList().orEmpty()
+            gifts.forEach { gift -> (gift.senderId as? TdApi.MessageSenderUser)?.let { ensureUser(it.userId) } }
+            onResult(gifts)
+        }
+    }
+
+    fun createGiftCollection(owner: TdApi.MessageSender, name: String, done: (String?) -> Unit) {
+        send(TdApi.CreateGiftCollection(owner, name, emptyArray())) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+    }
+
+    fun postedStories(chatId: Long, onResult: (List<TdApi.Story>) -> Unit) =
+        if (System.getProperty("pixelgram.demo") == "true") onResult(demoStories(chatId)) else pagedStories({ from -> TdApi.GetChatPostedToChatPageStories(chatId, from, StoryPage) }, { _, list -> onResult(list) })
+
+    fun archivedStories(chatId: Long, onResult: (Int, List<TdApi.Story>) -> Unit) =
+        if (System.getProperty("pixelgram.demo") == "true") demoStories(chatId).let { onResult(218, it) } else pagedStories({ from -> TdApi.GetChatArchivedStories(chatId, from, StoryPage) }, onResult)
+
+    private fun pagedStories(
+        request: (Int) -> TdApi.Function<TdApi.Stories>,
+        onResult: (Int, List<TdApi.Story>) -> Unit,
+        from: Int = 0,
+        acc: List<TdApi.Story> = emptyList(),
+    ) {
+        send(request(from)) { result ->
+            val page = result as? TdApi.Stories
+            val stories = acc + page?.stories.orEmpty().filter { story -> acc.none { it.id == story.id } }
+            val last = page?.stories?.lastOrNull()?.id ?: 0
+            if (page == null || page.stories.size < StoryPage || last == 0 || stories.size >= StoryLimit) {
+                onResult(maxOf(page?.totalCount ?: 0, stories.size), stories)
+            } else {
+                pagedStories(request, onResult, last, stories)
+            }
+        }
+    }
+
+    fun storyAlbums(chatId: Long, onResult: (List<TdApi.StoryAlbum>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(demoStoryAlbums())
+        send(TdApi.GetChatStoryAlbums(chatId)) { result -> onResult((result as? TdApi.StoryAlbums)?.albums?.toList().orEmpty()) }
+    }
+
+    fun albumStories(chatId: Long, albumId: Int, onResult: (List<TdApi.Story>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(demoStories(chatId, albumId))
+        send(TdApi.GetStoryAlbumStories(chatId, albumId, 0, StoryLimit)) { result -> onResult((result as? TdApi.Stories)?.stories?.toList().orEmpty()) }
+    }
+
+    fun createStoryAlbum(chatId: Long, name: String, done: (String?) -> Unit) {
+        send(TdApi.CreateStoryAlbum(chatId, name, IntArray(0))) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+    }
+
+    fun openStory(story: TdApi.Story) = send(TdApi.OpenStory(story.posterChatId, story.id)) {}
+
+    fun closeStory(story: TdApi.Story) = send(TdApi.CloseStory(story.posterChatId, story.id)) {}
 
     fun saveGif(message: UiMessage) {
         val animation = (message.content as? TdApi.MessageAnimation)?.animation?.animation ?: return

@@ -118,38 +118,28 @@ enum class MediaTab(val title: String, val grid: Boolean) {
 }
 
 @Composable
-fun PillTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun PillTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, trailing: @Composable () -> Unit = {}) {
     val colors = MaterialTheme.colorScheme
-    Surface(shape = CircleShape, color = colors.surfaceContainerHighest, modifier = modifier) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(4.dp),
-        ) {
-            tabs.forEachIndexed { index, title ->
-                val active = index == selected
-                val container by animateColorAsState(if (active) colors.secondaryContainer else colors.surfaceContainerHighest)
-                val content by animateColorAsState(if (active) colors.onSecondaryContainer else colors.onSurfaceVariant)
-                val interaction = remember { MutableInteractionSource() }
-                val pressed by interaction.collectIsPressedAsState()
-                val corner by animateDpAsState(
-                    if (pressed) PillPressedCorner else PillCorner,
-                    spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium),
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.horizontalScroll(rememberScrollState()),
+    ) {
+        tabs.forEachIndexed { index, title ->
+            val active = index == selected
+            val container by animateColorAsState(if (active) colors.secondaryContainer else colors.secondaryContainer.copy(alpha = 0f))
+            val content by animateColorAsState(if (active) colors.onSecondaryContainer else colors.onSurfaceVariant)
+            Surface(onClick = { onSelect(index) }, shape = CircleShape, color = container, contentColor = content) {
+                EmojiText(
+                    title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = content,
+                    maxLines = 1,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                 )
-                Surface(
-                    onClick = { onSelect(index) },
-                    interactionSource = interaction,
-                    shape = RoundedCornerShape(corner),
-                    color = container,
-                    contentColor = content,
-                ) {
-                    Text(
-                        title,
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    )
-                }
             }
         }
+        trailing()
     }
 }
 
@@ -652,7 +642,5 @@ private fun dayOf(unixSeconds: Int): String = formatChatDate(unixSeconds)
 private val GridCell = 96.dp
 private val CellCorner = 6.dp
 private val RowIcon = 44.dp
-private val PillCorner = 16.dp
-private val PillPressedCorner = 10.dp
 private val SectionHeight = 360.dp
 private val DialogHeight = 640.dp

@@ -393,3 +393,77 @@ fun demoSessions(): List<TdApi.Session> {
         session(4, false, "Telegram Desktop", "6.2.4 x64", "M5506NA", "Windows", "11 x64", TdApi.SessionDeviceTypeWindows(), true, 90_000),
     )
 }
+
+private val demoStoryDir: String? get() = System.getProperty("pixelgram.demo.stories")
+
+fun demoStories(chatId: Long, album: Int = 0): List<TdApi.Story> {
+    val dir = demoStoryDir ?: return emptyList()
+    val now = (System.currentTimeMillis() / 1000).toInt()
+    return (1..8).filter { album == 0 || it % album == 0 }.map { index ->
+        val file = demoFile(950_000 + index, "$dir/story$index.jpg", 120_000)
+        TdApi.Story().apply {
+            id = index
+            posterChatId = chatId
+            posterId = TdApi.MessageSenderUser(chatId)
+            date = now - index * 86_400
+            isPostedToChatPage = true
+            content = if (index % 3 == 1) {
+                TdApi.StoryContentVideo(
+                    TdApi.StoryVideo().apply {
+                        duration = 15.0 + index * 7
+                        width = 720
+                        height = 1280
+                        thumbnail = TdApi.Thumbnail(TdApi.ThumbnailFormatJpeg(), 720, 1280, file)
+                        video = demoFile(951_000 + index, null, 3_000_000)
+                    },
+                    null,
+                )
+            } else {
+                TdApi.StoryContentPhoto(TdApi.Photo(false, null, arrayOf(TdApi.PhotoSize("x", file, 720, 1280, IntArray(0)))))
+            }
+            caption = TdApi.FormattedText(if (index == 2) "Material 3 Expressive everywhere" else "", emptyArray())
+            albumIds = IntArray(0)
+        }
+    }
+}
+
+fun demoStoryAlbums(): List<TdApi.StoryAlbum> =
+    if (demoStoryDir == null) emptyList() else listOf(TdApi.StoryAlbum(2, "banner 3x1", null, null), TdApi.StoryAlbum(3, "#photos", null, null))
+
+fun demoGifts(collection: Int = 0): List<TdApi.ReceivedGift> {
+    val dir = demoStoryDir ?: return emptyList()
+    fun sticker(index: Int) = TdApi.Sticker().apply {
+        id = 960_000L + index
+        width = 256
+        height = 256
+        emoji = "🎁"
+        format = TdApi.StickerFormatWebp()
+        fullType = TdApi.StickerFullTypeRegular()
+        sticker = demoFile(960_000 + index, "$dir/gift$index.png", 40_000)
+    }
+    return (0 until 14).filter { collection == 0 || it % 3 == 0 }.map { i ->
+        val index = i % 6 + 1
+        TdApi.ReceivedGift().apply {
+            receivedGiftId = "demo$i"
+            senderId = TdApi.MessageSenderUser(if (i % 2 == 0) 2 else 3)
+            text = TdApi.FormattedText("", emptyArray())
+            gift = if (i == 4) {
+                TdApi.SentGiftUpgraded(TdApi.UpgradedGift().apply {
+                    title = "Toy Bear"
+                    number = 92_639
+                    model = TdApi.UpgradedGiftModel().apply { name = "Toy"; sticker = sticker(1) }
+                    backdrop = TdApi.UpgradedGiftBackdrop().apply {
+                        name = "Desert"
+                        colors = TdApi.UpgradedGiftBackdropColors(0xB08C6A, 0x6E4E36, 0x4E3624, 0xFFFFFF)
+                    }
+                })
+            } else {
+                TdApi.SentGiftRegular(TdApi.Gift().apply { sticker = sticker(index); starCount = 15 })
+            }
+            collectionIds = IntArray(0)
+        }
+    }
+}
+
+fun demoGiftCollections(): List<TdApi.GiftCollection> =
+    if (demoStoryDir == null) emptyList() else listOf(TdApi.GiftCollection(1, "🧸 мишка фредди", null, 5))

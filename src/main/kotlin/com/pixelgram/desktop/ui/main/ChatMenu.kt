@@ -453,6 +453,9 @@ fun ChatInfoDialog(
                     }
                     ProfileGifts(owner, telegram, Modifier.fillMaxWidth().padding(top = 8.dp))
                 }
+                if (!telegram.isSavedMessages(chat.id) && (chat.privateUserId != 0L || chat.isChannel)) {
+                    ProfileStories(chat.id, telegram, own = false, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                }
                 if (personalChannel != 0L) {
                     PersonalChannelCard(
                         personalChannel,
