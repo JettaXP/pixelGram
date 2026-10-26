@@ -343,5 +343,17 @@
     </div>
     <div slot="actions"><md-text-button id="viewer-close" data-i18n="close">Close</md-text-button></div>
   </md-dialog>
+  <script>
+    (function () {
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      document.querySelectorAll('.feature').forEach(function (card) {
+        card.addEventListener('pointermove', function (event) {
+          var box = card.getBoundingClientRect();
+          card.style.setProperty('--mx', (event.clientX - box.left) + 'px');
+          card.style.setProperty('--my', (event.clientY - box.top) + 'px');
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

@@ -173,12 +173,39 @@ h2 { font-size: clamp(32px, 4.4vw, 52px); line-height: 1.1; letter-spacing: -.8p
 
 .features { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 40px; }
 .feature {
-  position: relative; overflow: hidden;
+  --mx: 50%; --my: 50%; --glow: 0;
+  position: relative; overflow: hidden; isolation: isolate;
   padding: 24px; border-radius: 28px;
   background: var(--md-sys-color-surface-container);
-  transition: border-radius .5s var(--spring), background-color .3s;
+  transition: border-radius .7s var(--emphasized), background-color .4s var(--emphasized), transform .6s var(--emphasized), box-shadow .6s var(--emphasized);
 }
-.feature:hover { border-radius: 44px; background: var(--md-sys-color-surface-container-high); }
+.feature::before, .feature::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  opacity: var(--glow); transition: opacity .5s var(--emphasized);
+}
+.feature::before {
+  z-index: -1;
+  background: radial-gradient(420px circle at var(--mx) var(--my), color-mix(in srgb, var(--tone) 16%, transparent), transparent 65%);
+}
+.feature::after {
+  padding: 1.5px;
+  background: radial-gradient(260px circle at var(--mx) var(--my), color-mix(in srgb, var(--tone) 85%, transparent), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.feature:hover {
+  --glow: 1;
+  border-radius: 44px; background: var(--md-sys-color-surface-container-high);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px -18px color-mix(in srgb, var(--tone) 55%, transparent);
+}
+.feature md-icon { transition: border-radius .7s var(--emphasized), transform .7s var(--spring); }
+.feature:hover md-icon { border-radius: 26px; transform: scale(1.06); }
+@media (prefers-reduced-motion: reduce) {
+  .feature, .feature md-icon, .feature::before, .feature::after { transition: none; }
+  .feature:hover { transform: none; }
+}
 .feature.wide { grid-column: span 2; }
 .feature .shape-bg {
   inset: auto -28px -28px auto; width: 120px; height: 120px;
