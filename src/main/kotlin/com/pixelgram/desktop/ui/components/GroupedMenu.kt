@@ -1,6 +1,7 @@
 package com.pixelgram.desktop.ui.components
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +19,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import com.pixelgram.desktop.ui.components.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -51,29 +54,30 @@ fun MenuGroups(
     leading: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val shown = groups.filter { it.isNotEmpty() }
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
-        shadowElevation = MenuShadow,
-        modifier = Modifier.width(width),
-    ) {
-        Column(Modifier.padding(MenuPadding)) {
-            if (leading != null) {
-                Surface(shape = groupShapes(0, 1).shape, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
-                    Column(content = leading)
-                }
+    val scope = rememberCoroutineScope()
+    Column(Modifier.width(width).padding(MenuShadow), verticalArrangement = Arrangement.spacedBy(GroupGap)) {
+        if (leading != null) {
+            Surface(
+                shape = groupShapes(0, 1).shape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shadowElevation = MenuShadow,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(content = leading)
             }
-            shown.forEachIndexed { groupIndex, entries ->
-                if (groupIndex > 0 || leading != null) Spacer(Modifier.height(GroupGap))
+        }
+        shown.forEach { entries ->
+            Column(verticalArrangement = Arrangement.spacedBy(ItemGap)) {
                 entries.forEachIndexed { index, entry ->
-                    if (index > 0) Spacer(Modifier.height(ItemGap))
                     val tint = if (entry.color == Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else entry.color
                     val shape = groupShapes(index, entries.size).shape
-                    Surface(shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                    Surface(shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = MenuShadow) {
                         DropdownMenuItem(
-                            onClick = entry.onClick,
+                            onClick = { scope.launch { entry.onClick() } },
                             text = { Text(entry.label, color = entry.color) },
                             shape = shape,
+                            contentPadding = PaddingValues(horizontal = ItemPadding),
+                            modifier = Modifier.fillMaxWidth().height(ItemHeight),
                             leadingIcon = entry.icon?.let { icon -> { Icon(icon, contentDescription = null, tint = tint) } },
                             trailingIcon = entry.trailing?.let { icon -> { Icon(icon, contentDescription = null, tint = tint) } },
                         )
@@ -84,8 +88,9 @@ fun MenuGroups(
     }
 }
 
+private val GroupGap = 6.dp
 private val ItemGap = 2.dp
-private val GroupGap = 8.dp
-private val MenuShadow = 6.dp
-private val MenuPadding = 4.dp
-private val MenuWidth = 260.dp
+private val ItemHeight = 40.dp
+private val ItemPadding = 12.dp
+private val MenuShadow = 2.dp
+private val MenuWidth = 240.dp

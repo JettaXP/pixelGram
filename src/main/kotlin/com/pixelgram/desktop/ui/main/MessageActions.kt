@@ -122,6 +122,7 @@ fun MessageGestures(
     val step = with(LocalDensity.current) { ScrollUnit.toPx() * SwipeSlow }
     var settle by remember { mutableStateOf<Job?>(null) }
     var menuAt by remember { mutableStateOf<MenuTarget?>(null) }
+    var menuShown by remember { mutableStateOf(false) }
     var lastPress by remember { mutableStateOf(0L to Offset.Zero) }
     val density = LocalDensity.current
     val slop = LocalViewConfiguration.current.touchSlop
@@ -161,6 +162,7 @@ fun MessageGestures(
                         if (event.type == PointerEventType.Move || event.type == PointerEventType.Enter) lastMove = change.uptimeMillis
                         if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
                             change.consume()
+                            menuShown = true
                             menuAt = MenuTarget(
                                 with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) },
                                 HoverTarget.link,
@@ -232,7 +234,7 @@ fun MessageGestures(
         }
         menuAt?.let { target ->
             Box(Modifier.offset(target.at.x, target.at.y)) {
-                MessageMenu(message, actions, target.link, target.button, onDismiss = { menuAt = null })
+                MessageMenu(message, actions, target.link, target.button, menuShown, onDismiss = { menuShown = false })
             }
         }
     }
@@ -244,6 +246,7 @@ private fun MessageMenu(
     actions: MessageActions,
     link: String?,
     button: TdApi.InlineKeyboardButton?,
+    expanded: Boolean,
     onDismiss: () -> Unit,
 ) {
     val act = { action: () -> Unit -> { onDismiss(); action() } }
@@ -284,14 +287,17 @@ private fun MessageMenu(
         }
         add(MenuEntry(Icons.Outlined.Delete, "Delete", color = MaterialTheme.colorScheme.error, onClick = act { actions.onDelete(message) }))
     }
-    GroupedMenu(expanded = true, onDismiss = onDismiss) {
+    GroupedMenu(expanded = expanded, onDismiss = onDismiss) {
         val reactions: (@Composable ColumnScope.() -> Unit)? = if (!message.service && actions.canReact) {
             {
                 var available by remember(message.key) { mutableStateOf(emptyList<String>()) }
                 androidx.compose.runtime.LaunchedEffect(message.key) { actions.loadReactions(message) { available = it } }
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
                 ReactionPicker(available) { emoji ->
-                    onDismiss()
-                    actions.onReact(message, emoji)
+                    scope.launch {
+                        onDismiss()
+                        actions.onReact(message, emoji)
+                    }
                 }
             }
         } else null

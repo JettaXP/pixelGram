@@ -92,6 +92,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pixelgram.desktop.core.AppLog
@@ -809,15 +810,36 @@ private fun PollContent(message: UiMessage, content: TdApi.MessagePoll, telegram
     }
 }
 
+val MediaMaxWidth = 420.dp
+private val MediaMaxHeight = 520.dp
+private val MediaMinWidth = 160.dp
+private val MediaMinHeight = 64.dp
+
+fun mediaFrame(width: Int, height: Int, fallback: Float): DpSize {
+    val ratio = if (width > 0 && height > 0) width.toFloat() / height else fallback
+    var frameWidth = MediaMaxWidth
+    var frameHeight = frameWidth / ratio
+    if (frameHeight > MediaMaxHeight) {
+        frameHeight = MediaMaxHeight
+        frameWidth = (frameHeight * ratio).coerceAtLeast(MediaMinWidth)
+    }
+    return DpSize(frameWidth, frameHeight.coerceAtLeast(MediaMinHeight))
+}
+
+fun mediaFrameOf(message: UiMessage): DpSize? = when (val content = message.content) {
+    is TdApi.MessageVideo -> mediaFrame(content.video.width, content.video.height, 16f / 9f)
+    is TdApi.MessageAnimation -> mediaFrame(content.animation.width, content.animation.height, 16f / 9f)
+    else -> if (message.photo != null) mediaFrame(message.photoWidth, message.photoHeight, 4f / 3f) else null
+}
+
 @Composable
-fun MediaContent(message: UiMessage, telegram: Telegram, width: Dp, corner: Dp) {
+fun MediaContent(message: UiMessage, telegram: Telegram, corner: Dp) {
     val content = message.content
     val (file, thumb, mini, duration, size) = when (content) {
         is TdApi.MessageVideo -> MediaInfo(content.video.video, content.video.thumbnail?.file, content.video.minithumbnail, content.video.duration, content.video.width to content.video.height)
         is TdApi.MessageAnimation -> MediaInfo(content.animation.animation, content.animation.thumbnail?.file, content.animation.minithumbnail, -1, content.animation.width to content.animation.height)
         else -> return
     }
-    val ratio = if (size.first > 0 && size.second > 0) size.first.toFloat() / size.second else 16f / 9f
     val gif = content is TdApi.MessageAnimation
     val autoplay = !message.sending && if (gif) PowerSaving.autoplayGifs else PowerSaving.autoplayVideos && ((file?.size ?: 0L) in 1..AutoplayVideoBytes)
     var started by remember(file?.id) { mutableStateOf(false) }
@@ -834,7 +856,7 @@ fun MediaContent(message: UiMessage, telegram: Telegram, width: Dp, corner: Dp) 
     val busy = started && path == null
     Box(
         Modifier
-            .size(width, (width / ratio).coerceIn(120.dp, 520.dp))
+            .size(mediaFrame(size.first, size.second, 16f / 9f))
             .clip(RoundedCornerShape(corner))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .clickable { if (inline || autoplay) open() else started = true },

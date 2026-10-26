@@ -1198,7 +1198,7 @@ fun MessageBubble(
                         )
                     }
                     if (media && telegram != null) {
-                        MediaContent(message, telegram, PhotoMaxWidth, (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp))
+                        MediaContent(message, telegram, (settings.bubbleRadius.value.dp - PhotoInset).coerceAtLeast(4.dp))
                     }
                 }
                 if (!(message.captionAbove && hasText)) mediaBlock()
@@ -1206,7 +1206,7 @@ fun MessageBubble(
                     Column(
                         Modifier
                             .padding(horizontal = 12.dp, vertical = 7.dp)
-                            .then(if (photo != null || media || album != null) Modifier.width(PhotoMaxWidth - 24.dp) else Modifier),
+                            .then(if (photo != null || media || album != null) Modifier.width((if (album != null) PhotoMaxWidth else mediaFrameOf(message)?.width ?: PhotoMaxWidth) - 24.dp) else Modifier),
                     ) {
                         if (block && telegram != null) {
                             BlockContent(message, telegram, onPlugin = { PluginViewer.path = it })
@@ -1556,7 +1556,7 @@ fun MessageStatusIcon(status: MessageStatus, color: Color, size: Dp, modifier: M
 }
 
 private val PhotoInset = 4.dp
-private val PhotoMaxWidth = 420.dp
+private val PhotoMaxWidth = MediaMaxWidth
 
 @Composable
 private fun MessagePhoto(
@@ -1571,16 +1571,9 @@ private fun MessagePhoto(
     val image by produceState<ImageBitmap?>(null, path) {
         path?.let { loadImage(it, maxSize = PhotoPixels) }?.let { value = it }
     }
-    val ratio = if (message.photoWidth > 0 && message.photoHeight > 0) {
-        message.photoWidth.toFloat() / message.photoHeight
-    } else {
-        4f / 3f
-    }
-    val width = PhotoMaxWidth
-    val height = (width / ratio).coerceIn(120.dp, 520.dp)
     Box(
         Modifier
-            .size(width, height)
+            .size(mediaFrame(message.photoWidth, message.photoHeight, 4f / 3f))
             .clip(RoundedCornerShape(corner))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .clickable { PhotoViewer.current = ViewedPhoto(telegram, file, message.fullPhoto ?: file, message.text, message.chatId, message.id) },
