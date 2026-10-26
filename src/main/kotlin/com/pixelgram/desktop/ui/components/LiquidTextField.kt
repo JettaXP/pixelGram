@@ -5,6 +5,16 @@ import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.key
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import com.pixelgram.desktop.ui.theme.Emoji3DImage
+import com.pixelgram.desktop.ui.theme.EmojiFonts
+import com.pixelgram.desktop.ui.theme.HiddenEmojiTransformation
+import com.pixelgram.desktop.ui.theme.emojiRanges
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -64,6 +74,10 @@ fun ComposerField(
     val colors = MaterialTheme.colorScheme
     val style = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface)
     val liquid = settings.liquidCursor.value
+    val images = EmojiFonts.use3D
+    val transformation = remember(visualTransformation, images) {
+        if (images) HiddenEmojiTransformation(visualTransformation) else visualTransformation
+    }
     LaunchedEffect(value.selection.end, layout) {
         val current = layout ?: return@LaunchedEffect
         val end = value.selection.end.coerceIn(0, current.layoutInput.text.length)
@@ -83,17 +97,41 @@ fun ComposerField(
                 onValueChange = onValueChange,
                 textStyle = style,
                 cursorBrush = SolidColor(if (liquid) Color.Transparent else colors.primary),
-                visualTransformation = visualTransformation,
+                visualTransformation = transformation,
                 onTextLayout = { layout = it },
                 modifier = modifier
                     .fillMaxWidth()
                     .bringIntoViewRequester(requester)
                     .onFocusChanged { focused = it.isFocused },
             )
+            if (images) EmojiOverlay(layout)
             if (liquid) LiquidCaret(value.selection, layout, focused, settings, colors.primary, Modifier.matchParentSize())
         }
     }
 }
+
+@Composable
+private fun EmojiOverlay(layout: TextLayoutResult?) {
+    val current = layout ?: return
+    val text = current.layoutInput.text.text
+    val ranges = remember(text) { emojiRanges(text) }
+    val density = LocalDensity.current
+    ranges.forEach { range ->
+        val box = current.getBoundingBox(range.first)
+        val side = minOf(box.width, box.height) * EmojiScale
+        with(density) {
+            Box(
+                Modifier
+                    .offset { IntOffset((box.center.x - side / 2).roundToInt(), (box.center.y - side / 2).roundToInt()) }
+                    .size(side.toDp()),
+            ) {
+                key(text.substring(range.first, range.last + 1)) { Emoji3DImage(text.substring(range.first, range.last + 1)) }
+            }
+        }
+    }
+}
+
+private const val EmojiScale = 1f
 
 @Composable
 private fun LiquidCaret(

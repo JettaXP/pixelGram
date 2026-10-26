@@ -318,7 +318,7 @@ const val InlineContentTag = "androidx.compose.foundation.text.inlineContent"
 private val EmojiSize = 1.2.em
 
 @Composable
-private fun Emoji3DImage(emoji: String) {
+fun Emoji3DImage(emoji: String) {
     val source = EmojiFonts.images
     key(emoji, source) { SourceEmojiImage(emoji, source) }
 }
@@ -340,6 +340,23 @@ private fun SourceEmojiImage(emoji: String, source: ImageEmoji) {
             Text(emoji, fontFamily = FlatEmoji, fontSize = size)
         }
     }
+}
+
+class HiddenEmojiTransformation(private val base: VisualTransformation) : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val inner = base.filter(text)
+        val ranges = emojiRanges(inner.text.text)
+        if (ranges.isEmpty()) return inner
+        val hidden = buildAnnotatedString {
+            append(inner.text)
+            ranges.forEach { addStyle(SpanStyle(color = Color.Transparent), it.first, it.last + 1) }
+        }
+        return TransformedText(hidden, inner.offsetMapping)
+    }
+
+    override fun equals(other: Any?) = other is HiddenEmojiTransformation && other.base == base
+
+    override fun hashCode() = base.hashCode()
 }
 
 object EmojiVisualTransformation : VisualTransformation {
