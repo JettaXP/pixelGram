@@ -172,6 +172,12 @@ fun Telegram.loadDemo() {
         )
         messages(100L).add(0, UiMessage(6, 100, 2, 0, false, now - 5, text, entities = entities))
     }
+    run {
+        val code = "import random\n\n# pick a cat\ndef cat(names):\n    return random.choice(names) + \" says hi\"\n\nprint(cat([\"Tom\", \"Luna\"]), 42)"
+        val text = "Here is some Python:\n$code"
+        val entities = listOf(TdApi.TextEntity(text.indexOf(code), code.length, TdApi.TextEntityTypePreCode("python")))
+        messages(100L).add(0, UiMessage(11, 100, 2, 0, false, now - 1, text, entities = entities))
+    }
 }
 
 private fun Telegram.loadHeavyDemo(now: Int) {

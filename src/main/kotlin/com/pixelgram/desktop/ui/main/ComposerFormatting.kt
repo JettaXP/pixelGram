@@ -21,6 +21,7 @@ enum class FormatType(val label: String, val shortcut: String) {
     Strikethrough("Strikethrough", "Ctrl+Shift+X"),
     Quote("Quote", "Ctrl+Shift+."),
     Monospace("Monospace", "Ctrl+Shift+M"),
+    Code("Code block", "Ctrl+Shift+C"),
     Spoiler("Spoiler", "Ctrl+Shift+P"),
     Link("Create link", "Ctrl+K"),
     Date("Date", "Ctrl+Shift+D"),
@@ -88,7 +89,9 @@ fun spansFrom(entities: List<TdApi.TextEntity>): List<FormatSpan> = entities.map
         is TdApi.TextEntityTypeUnderline -> FormatSpan(entity.offset, end, FormatType.Underline)
         is TdApi.TextEntityTypeStrikethrough -> FormatSpan(entity.offset, end, FormatType.Strikethrough)
         is TdApi.TextEntityTypeBlockQuote, is TdApi.TextEntityTypeExpandableBlockQuote -> FormatSpan(entity.offset, end, FormatType.Quote)
-        is TdApi.TextEntityTypeCode, is TdApi.TextEntityTypePre, is TdApi.TextEntityTypePreCode -> FormatSpan(entity.offset, end, FormatType.Monospace)
+        is TdApi.TextEntityTypeCode -> FormatSpan(entity.offset, end, FormatType.Monospace)
+        is TdApi.TextEntityTypePre -> FormatSpan(entity.offset, end, FormatType.Code)
+        is TdApi.TextEntityTypePreCode -> FormatSpan(entity.offset, end, FormatType.Code, url = type.language)
         is TdApi.TextEntityTypeSpoiler -> FormatSpan(entity.offset, end, FormatType.Spoiler)
         is TdApi.TextEntityTypeTextUrl -> FormatSpan(entity.offset, end, FormatType.Link, url = type.url)
         is TdApi.TextEntityTypeDateTime -> FormatSpan(entity.offset, end, FormatType.Date, time = type.unixTime)
@@ -108,6 +111,7 @@ fun toEntities(spans: List<FormatSpan>, shift: Int, length: Int): Array<TdApi.Te
         FormatType.Strikethrough -> TdApi.TextEntityTypeStrikethrough()
         FormatType.Quote -> TdApi.TextEntityTypeBlockQuote()
         FormatType.Monospace -> TdApi.TextEntityTypeCode()
+        FormatType.Code -> if (span.url.isBlank()) TdApi.TextEntityTypePre() else TdApi.TextEntityTypePreCode(span.url)
         FormatType.Spoiler -> TdApi.TextEntityTypeSpoiler()
         FormatType.Link -> TdApi.TextEntityTypeTextUrl(span.url)
         FormatType.Mention -> TdApi.TextEntityTypeMentionName(span.userId)
@@ -119,7 +123,26 @@ fun toEntities(spans: List<FormatSpan>, shift: Int, length: Int): Array<TdApi.Te
     TdApi.TextEntity(start, end - start, type)
 }.toTypedArray()
 
-class FormatTransformation(private val spans: List<FormatSpan>, private val accent: Color) : VisualTransformation {
+private val CodeFence = Regex("```(?:([A-Za-z0-9_+#.-]+)[ \\t]*\\n)?\\n?([\\s\\S]*?)\\n?```")
+
+fun autoCodeBlock(text: String, spans: List<FormatSpan>, cursor: Int): Triple<String, List<FormatSpan>, Int>? {
+    val match = CodeFence.find(text) ?: return null
+    val code = match.groupValues[2]
+    if (code.isBlank()) return null
+    val language = match.groupValues[1]
+    val start = match.range.first
+    val end = match.range.last + 1
+    val updated = text.substring(0, start) + code + text.substring(end)
+    val shifted = shiftSpans(spans, text, updated).filterNot { it.end > start && it.start < start + code.length && it.type == FormatType.Code }
+    val newCursor = when {
+        cursor <= start -> cursor
+        cursor >= end -> cursor - (end - start - code.length)
+        else -> start + code.length
+    }
+    return Triple(updated, shifted + FormatSpan(start, start + code.length, FormatType.Code, url = language), newCursor)
+}
+
+class FormatTransformation(private val spans: List<FormatSpan>, private val accent: Color, private val code: com.pixelgram.desktop.ui.components.CodeColors? = null) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val builder = AnnotatedString.Builder(emojiText(text.text))
         val length = text.length
@@ -133,16 +156,19 @@ class FormatTransformation(private val spans: List<FormatSpan>, private val acce
                 FormatType.Underline -> SpanStyle(textDecoration = TextDecoration.Underline)
                 FormatType.Strikethrough -> SpanStyle(textDecoration = TextDecoration.LineThrough)
                 FormatType.Quote -> SpanStyle(fontStyle = FontStyle.Italic, background = accent.copy(alpha = 0.12f))
-                FormatType.Monospace -> SpanStyle(fontFamily = FontFamily.Monospace, background = accent.copy(alpha = 0.12f))
+                FormatType.Monospace, FormatType.Code -> SpanStyle(fontFamily = FontFamily.Monospace, background = accent.copy(alpha = 0.12f))
                 FormatType.Spoiler -> SpanStyle(background = accent.copy(alpha = 0.3f))
                 FormatType.Link -> SpanStyle(color = accent, textDecoration = TextDecoration.Underline)
                 FormatType.Date, FormatType.Mention -> SpanStyle(color = accent)
             }
             builder.addStyle(style, start, end)
+            if (span.type == FormatType.Code && code != null) {
+                com.pixelgram.desktop.ui.components.highlightSpans(builder, text.text.substring(start, end), start, span.url, code)
+            }
         }
         return TransformedText(builder.toAnnotatedString(), OffsetMapping.Identity)
     }
 
-    override fun equals(other: Any?) = other is FormatTransformation && other.spans == spans && other.accent == accent
+    override fun equals(other: Any?) = other is FormatTransformation && other.spans == spans && other.accent == accent && other.code == code
     override fun hashCode() = spans.hashCode() * 31 + accent.hashCode()
 }

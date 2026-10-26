@@ -1366,8 +1366,67 @@ private fun formatViews(count: Int): String = when {
     else -> count.toString()
 }
 
+private sealed class TextPart {
+    class Plain(val text: String, val entities: List<TdApi.TextEntity>) : TextPart()
+    class Code(val code: String, val language: String) : TextPart()
+}
+
+private fun splitCode(text: String, entities: List<TdApi.TextEntity>): List<TextPart> {
+    val blocks = entities.filter { it.type is TdApi.TextEntityTypePre || it.type is TdApi.TextEntityTypePreCode }.sortedBy { it.offset }
+    val parts = mutableListOf<TextPart>()
+    var cursor = 0
+    fun plain(from: Int, to: Int) {
+        var start = from
+        var end = to
+        while (start < end && text[start] == '\n') start++
+        while (end > start && text[end - 1] == '\n') end--
+        if (start >= end) return
+        val inside = entities.filter { it !in blocks && it.offset < end && it.offset + it.length > start }.map { entity ->
+            val a = maxOf(entity.offset, start)
+            val b = minOf(entity.offset + entity.length, end)
+            TdApi.TextEntity(a - start, b - a, entity.type)
+        }
+        parts += TextPart.Plain(text.substring(start, end), inside)
+    }
+    blocks.forEach { block ->
+        val start = block.offset.coerceIn(cursor, text.length)
+        val end = (block.offset + block.length).coerceIn(start, text.length)
+        plain(cursor, start)
+        parts += TextPart.Code(text.substring(start, end).trimEnd('\n'), (block.type as? TdApi.TextEntityTypePreCode)?.language.orEmpty())
+        cursor = end
+    }
+    plain(cursor, text.length)
+    return parts
+}
+
+@Composable
+private fun TextWithCode(text: String, entities: List<TdApi.TextEntity>, meta: @Composable () -> Unit) {
+    val parts = remember(text, entities) { splitCode(text, entities) }
+    val style = com.pixelgram.desktop.ui.theme.messageTextStyle()
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        parts.forEachIndexed { index, part ->
+            val last = index == parts.lastIndex
+            when (part) {
+                is TextPart.Plain -> if (last) {
+                    TextWithMeta(part.text, part.entities, meta)
+                } else {
+                    SelectionContainer { FormattedText(part.text, part.entities, style = style) }
+                }
+                is TextPart.Code -> com.pixelgram.desktop.ui.components.CodeBlock(part.code, part.language, style, Modifier.widthIn(min = CodeMinWidth))
+            }
+        }
+        if (parts.lastOrNull() !is TextPart.Plain) Box(Modifier.align(Alignment.End)) { meta() }
+    }
+}
+
+private val CodeMinWidth = 220.dp
+
 @Composable
 private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @Composable () -> Unit) {
+    if (entities.any { it.type is TdApi.TextEntityTypePre || it.type is TdApi.TextEntityTypePreCode }) {
+        TextWithCode(text, entities, meta)
+        return
+    }
     var textLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val quoteAtEnd = remember(text, entities) { endsWithQuote(text, entities) }
     Layout(
@@ -1632,8 +1691,15 @@ private fun Composer(
     var linkFor by remember { mutableStateOf<TextRange?>(null) }
     var dateFor by remember { mutableStateOf<TextRange?>(null) }
     val setText = { value: TextFieldValue ->
-        spans = shiftSpans(spans, text.text, value.text)
-        text = value
+        val shifted = shiftSpans(spans, text.text, value.text)
+        val fenced = if (value.text.contains("```")) autoCodeBlock(value.text, shifted, value.selection.end) else null
+        if (fenced != null) {
+            spans = fenced.second
+            text = TextFieldValue(fenced.first, TextRange(fenced.third))
+        } else {
+            spans = shifted
+            text = value
+        }
     }
     val mentionQuery = if (text.selection.collapsed) {
         MentionQuery.find(text.text.substring(0, text.selection.start.coerceAtMost(text.text.length)))?.groupValues?.get(1)
@@ -1966,7 +2032,7 @@ private fun Composer(
                 value = text,
                 onValueChange = setText,
                 placeholder = if (hasAttachments) "Add a caption" else "Message",
-                visualTransformation = FormatTransformation(spans, MaterialTheme.colorScheme.primary),
+                visualTransformation = FormatTransformation(spans, MaterialTheme.colorScheme.primary, com.pixelgram.desktop.ui.components.codeColors()),
                 settings = settings,
                 shape = MaterialTheme.shapes.extraLarge,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -1978,6 +2044,7 @@ private fun Composer(
                                 event.isShiftPressed && event.key == Key.X -> FormatType.Strikethrough
                                 event.isShiftPressed && event.key == Key.Period -> FormatType.Quote
                                 event.isShiftPressed && event.key == Key.M -> FormatType.Monospace
+                                event.isShiftPressed && event.key == Key.C -> FormatType.Code
                                 event.isShiftPressed && event.key == Key.P -> FormatType.Spoiler
                                 event.isShiftPressed && event.key == Key.D -> FormatType.Date
                                 !event.isShiftPressed && event.key == Key.B -> FormatType.Bold
