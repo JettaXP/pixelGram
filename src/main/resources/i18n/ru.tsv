@@ -767,3 +767,17 @@ Link	Ссылка
 Description	Описание
 Open	Открыть
 Verified	Подтверждён
+Cursor	Курсор
+The text cursor in the message field.	Курсор в поле ввода сообщения.
+Liquid cursor	Жидкий курсор
+The cursor stretches like a drop when it moves.	Курсор тянется каплей при движении.
+Smooth cursor	Плавный курсор
+The cursor glides to its new place instead of jumping.	Курсор плавно переезжает, а не прыгает.
+Cursor blinking	Мигание курсора
+Cursor stretch	Растяжение курсора
+Handle stretch	Растяжение хвоста
+Side pull	Боковое поджатие
+Cursor speed	Скорость курсора
+Cursor width	Ширина курсора
+Blink cycle	Период мигания
+Blink smoothness	Плавность мигания

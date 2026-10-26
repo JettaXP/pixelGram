@@ -766,3 +766,17 @@ Link	קישור
 Description	תיאור
 Open	פתח
 Verified	מאומת
+Cursor	סמן
+The text cursor in the message field.	סמן הטקסט בשדה ההודעה.
+Liquid cursor	סמן נוזלי
+The cursor stretches like a drop when it moves.	הסמן נמתח כמו טיפה כשהוא זז.
+Smooth cursor	סמן חלק
+The cursor glides to its new place instead of jumping.	הסמן גולש למקומו החדש במקום לקפוץ.
+Cursor blinking	הבהוב הסמן
+Cursor stretch	מתיחת הסמן
+Handle stretch	מתיחת הזנב
+Side pull	משיכה צידית
+Cursor speed	מהירות הסמן
+Cursor width	רוחב הסמן
+Blink cycle	מחזור הבהוב
+Blink smoothness	רכות ההבהוב

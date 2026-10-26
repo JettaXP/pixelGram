@@ -1920,21 +1920,15 @@ private fun Composer(
                     onClear = { spans = clearFormat(spans, text.selection) },
                 )
             }
-            TextField(
+            com.pixelgram.desktop.ui.components.ComposerField(
                 value = text,
                 onValueChange = setText,
-                placeholder = { Text(if (hasAttachments) "Add a caption" else "Message") },
+                placeholder = if (hasAttachments) "Add a caption" else "Message",
                 visualTransformation = FormatTransformation(spans, MaterialTheme.colorScheme.primary),
-                maxLines = 6,
+                settings = settings,
                 shape = MaterialTheme.shapes.extraLarge,
-                colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                ),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .focusRequester(focus)
                     .onPreviewKeyEvent { event ->
                         val shortcut = if (event.type == KeyEventType.KeyDown && (event.isCtrlPressed || event.isMetaPressed)) {

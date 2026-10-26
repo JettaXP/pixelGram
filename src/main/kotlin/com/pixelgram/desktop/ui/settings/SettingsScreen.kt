@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
+import kotlin.math.roundToInt
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.focusRequester
 import com.pixelgram.desktop.ui.icons.outlined.Edit
@@ -1158,6 +1159,7 @@ private fun ChatSettingsSection(settings: AppSettings, onOpenBubbles: () -> Unit
     ThemeModeButtons(settings)
     WallpaperSettings(settings)
     MessageFontSettings(settings)
+    CursorSettings(settings)
     Header("Message bubbles")
     Description("Bubble corners, avatar shapes and colors are in pixelGram Preferences.")
     OutlinedButton(onClick = onOpenBubbles) { Text("Open $PixelPreferencesTitle") }
@@ -1338,6 +1340,37 @@ private fun MessageFontSettings(settings: AppSettings) {
         ResetButton(settings.messageFontSize)
     }
     if (choosing) FontPickerDialog(settings) { choosing = false }
+}
+
+@Composable
+private fun CursorSettings(settings: AppSettings) {
+    Header("Cursor")
+    Description("The text cursor in the message field.")
+    SwitchRow(0, 3, "Liquid cursor", "The cursor stretches like a drop when it moves.", settings.liquidCursor.value) { settings.liquidCursor.value = it }
+    SwitchRow(1, 3, "Smooth cursor", "The cursor glides to its new place instead of jumping.", settings.smoothCursor.value) { settings.smoothCursor.value = it }
+    SwitchRow(2, 3, "Cursor blinking", null, settings.cursorBlink.value) { settings.cursorBlink.value = it }
+    CursorSlider("Cursor stretch", settings.cursorStretch, 0..100, "")
+    CursorSlider("Handle stretch", settings.handleStretch, 0..100, "%")
+    CursorSlider("Side pull", settings.sidePull, 0..100, "%")
+    CursorSlider("Cursor speed", settings.cursorSpeed, 1..100, "")
+    CursorSlider("Cursor width", settings.cursorWidth, 1..6, " dp")
+    CursorSlider("Blink cycle", settings.blinkCycle, 300..2000, " ms", step = 100)
+    CursorSlider("Blink smoothness", settings.blinkSmoothness, 0..100, "%")
+}
+
+@Composable
+private fun CursorSlider(title: String, setting: com.pixelgram.desktop.core.Setting<Int>, range: IntRange, unit: String, step: Int = 1) {
+    Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Slider(
+            value = setting.value.toFloat(),
+            onValueChange = { setting.value = (it / step).roundToInt() * step },
+            valueRange = range.first.toFloat()..range.last.toFloat(),
+            modifier = Modifier.weight(1f),
+        )
+        Text("${setting.value}$unit", modifier = Modifier.width(72.dp).padding(start = 12.dp))
+        ResetButton(setting)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

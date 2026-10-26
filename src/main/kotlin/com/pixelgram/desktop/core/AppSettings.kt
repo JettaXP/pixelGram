@@ -133,6 +133,16 @@ class AppSettings private constructor(private val props: Properties) {
     val interfaceAnimations = bool("interfaceAnimations", true)
     val language = string("language", "en")
     val bigReactions = bool("bigReactions", false)
+    val liquidCursor = bool("liquidCursor", true)
+    val cursorStretch = int("cursorStretch", 40)
+    val handleStretch = int("handleStretch", 60)
+    val sidePull = int("sidePull", 45)
+    val smoothCursor = bool("smoothCursor", true)
+    val cursorSpeed = int("cursorSpeed", 25)
+    val cursorWidth = int("cursorWidth", 2)
+    val cursorBlink = bool("cursorBlink", true)
+    val blinkCycle = int("blinkCycle", 1000)
+    val blinkSmoothness = int("blinkSmoothness", 100)
     val titleChatName = bool("titleChatName", true)
     val titleAccount = bool("titleAccount", true)
     val titleUnread = bool("titleUnread", true)
@@ -175,7 +185,7 @@ class AppSettings private constructor(private val props: Properties) {
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,
         deviceName, israelLogo, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
-        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, bigReactions,
+        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, bigReactions, liquidCursor, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
         apiId, apiHash,
         accounts, activeAccount,
     ) + avatarKindShapes.values
