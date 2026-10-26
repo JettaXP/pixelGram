@@ -33,6 +33,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.loadSvgPainter
@@ -100,20 +104,42 @@ enum class UserBadge(val userId: Long, val notice: String) {
 }
 
 @Composable
-fun UserBadgeView(badge: UserBadge, size: Dp = 18.dp, modifier: Modifier = Modifier) {
+fun UserBadgeView(badge: UserBadge, telegram: com.pixelgram.desktop.telegram.Telegram?, size: Dp = 18.dp, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
+    val custom = com.pixelgram.desktop.core.CustomBadges.of(badge.userId)
+    val editable = badge.userId in com.pixelgram.desktop.core.CustomBadges.Owners && telegram?.me?.id == badge.userId
     var tip by remember { mutableStateOf<String?>(null) }
+    var editing by remember { mutableStateOf(false) }
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .size(size)
-            .clip(MaterialShapes.Cookie12Sided.toShape())
-            .background(scheme.primary)
+            .then(if (custom == null) Modifier.clip(MaterialShapes.Cookie12Sided.toShape()).background(scheme.primary) else Modifier)
+            .then(if (editable) Modifier.onSecondaryPress { editing = true } else Modifier)
             .pointerHoverIcon(PointerIcon.Hand)
-            .clickable { tip = badge.notice },
+            .clickable { tip = custom?.text?.takeIf { it.isNotBlank() } ?: badge.notice },
     ) {
         BadgeTip(tip) { tip = null }
-        Icon(badge.icon, contentDescription = badge.notice, tint = scheme.onPrimary, modifier = Modifier.size(size * LogoScale))
+        if (custom != null) {
+            com.pixelgram.desktop.ui.main.BadgeEmoji(custom, size)
+        } else {
+            Icon(badge.icon, contentDescription = badge.notice, tint = scheme.onPrimary, modifier = Modifier.size(size * LogoScale))
+        }
+        if (editing && telegram != null) {
+            com.pixelgram.desktop.ui.main.BadgeEditor(telegram, badge.userId, custom) { editing = false }
+        }
+    }
+}
+
+private fun Modifier.onSecondaryPress(action: () -> Unit): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                event.changes.first().consume()
+                action()
+            }
+        }
     }
 }
 
@@ -135,7 +161,7 @@ fun VerifiedBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
 fun ChatBadges(chat: com.pixelgram.desktop.telegram.ChatState, telegram: com.pixelgram.desktop.telegram.Telegram, size: Dp) {
     if (telegram.isOfficial(chat)) OfficialBadge(size)
     if (telegram.isVerified(chat)) VerifiedBadge(size)
-    UserBadge.of(chat.privateUserId)?.let { UserBadgeView(it, size) }
+    UserBadge.of(chat.privateUserId)?.let { UserBadgeView(it, telegram, size) }
 }
 
 private val CodeSlash: ImageVector by lazy {

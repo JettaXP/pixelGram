@@ -2,6 +2,7 @@
 
 A Cloudflare Worker behind @pixelGramCI_bot. pixelGram sends the bot a JPEG with `/banner` in the caption, or `/remove`.
 The worker checks the file and commits `Banners/<userId>.jpg` and `Banners/index.json` in one commit marked `[skip ci]`.
+`/badge <custom emoji id or 0> <emoji> <text>` from a user listed in `BADGE_OWNERS` writes their custom badge to `Banners/badges.tsv`; `/badge` alone removes it.
 The build workflow also ignores `Banners/**`, so banner commits never start a build.
 
 ## Setup

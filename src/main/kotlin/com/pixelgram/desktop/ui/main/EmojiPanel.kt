@@ -64,9 +64,9 @@ import androidx.compose.ui.input.key.type
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 
-private class EmojiGroup(val name: String, val emoji: List<String>)
+internal class EmojiGroup(val name: String, val emoji: List<String>)
 
-private val EmojiGroups: List<EmojiGroup> by lazy {
+internal val EmojiGroups: List<EmojiGroup> by lazy {
     val text = EmojiGroup::class.java.getResourceAsStream("/emoji/emoji.txt")
         ?.bufferedReader(Charsets.UTF_8)?.readLines().orEmpty()
     text.filter { !it.startsWith("#") && it.isNotBlank() }
@@ -75,7 +75,7 @@ private val EmojiGroups: List<EmojiGroup> by lazy {
         .map { (name, emoji) -> EmojiGroup(name.removePrefix("@"), emoji.split(' ').filter(String::isNotEmpty)) }
 }
 
-private fun groupIcon(name: String): ImageVector = when (name) {
+internal fun groupIcon(name: String): ImageVector = when (name) {
     "Smileys & Emotion" -> Icons.Outlined.EmojiEmotions
     "People & Body" -> Icons.Outlined.EmojiPeople
     "Animals & Nature" -> Icons.Outlined.EmojiNature
@@ -158,7 +158,7 @@ private val EmojiNames: List<Pair<String, String>> by lazy {
     }
 }
 
-private fun localEmojiSearch(query: String): List<String> {
+internal fun localEmojiSearch(query: String): List<String> {
     val words = query.lowercase().split(' ').filter(String::isNotBlank)
     if (words.isEmpty()) return emptyList()
     return EmojiNames.filter { (_, name) -> words.all { word -> name.split(' ').any { it.startsWith(word) } } }.map { it.first }

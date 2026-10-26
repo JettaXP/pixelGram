@@ -531,6 +531,17 @@ class Telegram(
         }
     }
 
+    fun sendBadge(badge: com.pixelgram.desktop.core.CustomBadge?, done: (String?) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return done(null)
+        send(TdApi.SearchPublicChat().apply { username = com.pixelgram.desktop.core.Banners.Bot }) { chat ->
+            if (chat !is TdApi.Chat) return@send done("Couldn't reach @${com.pixelgram.desktop.core.Banners.Bot}")
+            send(TdApi.SendMessage().apply {
+                chatId = chat.id
+                inputMessageContent = TdApi.InputMessageText().apply { text = TdApi.FormattedText(badge?.command() ?: "/badge", emptyArray()) }
+            }) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+        }
+    }
+
     fun internalLinkType(url: String, onResult: (TdApi.InternalLinkType?) -> Unit) {
         send(TdApi.GetInternalLinkType(url)) { result -> onResult(result as? TdApi.InternalLinkType) }
     }
@@ -2051,6 +2062,25 @@ class Telegram(
     fun installedStickerSets(onResult: (List<TdApi.StickerSetInfo>) -> Unit) {
         send(TdApi.GetInstalledStickerSets(TdApi.StickerTypeRegular())) { result ->
             onResult((result as? TdApi.StickerSets)?.sets?.toList().orEmpty())
+        }
+    }
+
+    fun customEmojiSets(onResult: (List<TdApi.StickerSetInfo>) -> Unit) {
+        send(TdApi.GetInstalledStickerSets(TdApi.StickerTypeCustomEmoji())) { result ->
+            onResult((result as? TdApi.StickerSets)?.sets?.toList().orEmpty())
+        }
+    }
+
+    fun searchCustomEmoji(query: String, done: (List<TdApi.Sticker>) -> Unit) {
+        val emoji = com.pixelgram.desktop.ui.theme.emojiRanges(query).sumOf { it.last - it.first + 1 } == query.length
+        send(TdApi.GetStickers(TdApi.StickerTypeCustomEmoji(), query, StickerSearchLimit, 0)) { result ->
+            val installed = (result as? TdApi.Stickers)?.stickers?.toList().orEmpty()
+            val search = if (emoji) TdApi.SearchStickers(TdApi.StickerTypeCustomEmoji(), query, "", searchLanguages, 0, StickerSearchLimit)
+            else TdApi.SearchStickers(TdApi.StickerTypeCustomEmoji(), "", query, searchLanguages, 0, StickerSearchLimit)
+            send(search) { more ->
+                val extra = (more as? TdApi.Stickers)?.stickers.orEmpty().filter { found -> installed.none { it.sticker.id == found.sticker.id } }
+                done(installed + extra)
+            }
         }
     }
 
