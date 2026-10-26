@@ -13,6 +13,11 @@ import com.pixelgram.desktop.ui.icons.outlined.CheckCircle
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.pixelgram.desktop.ui.components.HoverTarget
 import it.tdlight.jni.TdApi
+import androidx.compose.ui.input.pointer.areAnyPressed
+import kotlin.math.ln
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
 import com.pixelgram.desktop.telegram.Telegram
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -114,23 +119,34 @@ fun MessageGestures(
     val scope = rememberCoroutineScope()
     val shift = remember { Animatable(0f) }
     val threshold = with(LocalDensity.current) { SwipeThreshold.toPx() }
-    var fired by remember { mutableStateOf(false) }
     var settle by remember { mutableStateOf<Job?>(null) }
     var menuAt by remember { mutableStateOf<MenuTarget?>(null) }
     var lastPress by remember { mutableStateOf(0L to Offset.Zero) }
     val density = LocalDensity.current
     val slop = LocalViewConfiguration.current.touchSlop
-    val move = { delta: Float ->
-        val next = (shift.value + delta).coerceIn(-threshold * 1.4f, 0f)
-        scope.launch { shift.snapTo(next) }
-        if (!fired && -next >= threshold) {
-            fired = true
-            actions.onReply(message)
+    val reach = remember { Animatable(0f) }
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val swipe = remember { ReplySwipe() }
+    val show = { ratio: Float ->
+        val clamped = ratio.coerceAtLeast(0f)
+        val over = (clamped - 1f).coerceAtLeast(0f) * threshold
+        val pixels = minOf(clamped, 1f) * threshold + with(density) { dampedOverswipe(over.toDp().value).dp.toPx() }
+        scope.launch { shift.snapTo(-pixels) }
+        if (!swipe.reached && clamped >= 1f) {
+            swipe.reached = true
+            scope.launch {
+                reach.snapTo(0f)
+                reach.animateTo(1f, tween(ReachBounceMs))
+            }
+        } else if (swipe.reached && clamped < ResetReachedOn) {
+            swipe.reached = false
         }
     }
-    val release = {
-        fired = false
-        scope.launch { shift.animateTo(0f) }
+    val finish = {
+        val ratio = swipe.ratio(threshold).coerceIn(0f, MaxSwipeRatio)
+        if (swipe.horizontal && ratio >= 1f) actions.onReply(message)
+        swipe.reset()
+        scope.launch { shift.animateTo(0f, tween((minOf(1f, ratio) * SwipeEndMs).roundToInt())) }
     }
     Box(
         modifier
@@ -158,16 +174,27 @@ fun MessageGestures(
                             } else {
                                 lastPress = now to change.position
                             }
+                        } else if (event.type == PointerEventType.Move && swipe.horizontal) {
+                            if (abs(change.position.y - swipe.startY) > slop) {
+                                settle?.cancel()
+                                finish()
+                            }
                         } else if (event.type == PointerEventType.Scroll) {
                             val delta = change.scrollDelta
-                            if (abs(delta.x) > abs(delta.y) * HorizontalDominance && abs(delta.x) >= MinHorizontalScroll) {
+                            if (event.buttons.areAnyPressed) continue
+                            if (!swipe.active) {
+                                swipe.active = true
+                                swipe.startY = change.position.y
+                            }
+                            swipe.add(delta.x * TouchpadFactor * (if (rtl) -1 else 1), delta.y * TouchpadFactor)
+                            if (swipe.horizontal) {
                                 change.consume()
-                                move(-delta.x * TouchpadFactor)
-                                settle?.cancel()
-                                settle = scope.launch {
-                                    delay(SettleMs)
-                                    release()
-                                }
+                                show(swipe.ratio(threshold))
+                            }
+                            settle?.cancel()
+                            settle = scope.launch {
+                                delay(SettleMs)
+                                finish()
                             }
                         }
                     }
@@ -177,13 +204,14 @@ fun MessageGestures(
         val progress = (-shift.value / threshold).coerceIn(0f, 1f)
         Box(
             Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 8.dp)
+                .align(if (rtl) Alignment.CenterStart else Alignment.CenterEnd)
+                .padding(horizontal = 8.dp)
                 .size(40.dp)
                 .graphicsLayer {
+                    val bounce = reach.value.let { value -> if (value > BouncePart) BouncePart * 2 - value else value }.coerceIn(0f, 1f)
                     alpha = (progress * 2).coerceAtMost(1f)
-                    scaleX = 0.6f + progress * 0.4f
-                    scaleY = 0.6f + progress * 0.4f
+                    scaleX = 0.6f + progress * 0.4f + bounce * BounceScale
+                    scaleY = 0.6f + progress * 0.4f + bounce * BounceScale
                 },
             contentAlignment = Alignment.Center,
         ) {
@@ -198,7 +226,7 @@ fun MessageGestures(
                 modifier = Modifier.size(18.dp),
             )
         }
-        Box(Modifier.offset { IntOffset(shift.value.roundToInt(), 0) }) {
+        Box(Modifier.offset { IntOffset((if (rtl) -shift.value else shift.value).roundToInt(), 0) }) {
             content()
         }
         menuAt?.let { target ->
@@ -347,8 +375,50 @@ fun ReplyQuote(
 }
 
 private val ReplyThumbSize = 32.dp
-private val SwipeThreshold = 48.dp
+private class ReplySwipe {
+    var active = false
+    var startY = 0f
+    var reached = false
+    private var orientation = 0
+    private var x = 0f
+    private var y = 0f
+    val horizontal: Boolean get() = orientation == Horizontal
+
+    fun add(dx: Float, dy: Float) {
+        if (orientation == Vertical) return
+        x += dx
+        y += dy
+        if (orientation == 0) {
+            val diff = abs(x) - abs(y)
+            if (diff > OrientationThreshold) orientation = Horizontal
+            else if (diff < -OrientationThreshold) orientation = Vertical
+        }
+    }
+
+    fun ratio(threshold: Float) = x / threshold
+
+    fun reset() {
+        active = false
+        reached = false
+        orientation = 0
+        x = 0f
+        y = 0f
+    }
+}
+
+private fun dampedOverswipe(dp: Float): Float = if (dp <= 0f) 0f else OverswipeLogA * ln(1f + dp / OverswipeLogB)
+
+private const val Horizontal = 1
+private const val Vertical = 2
+private val SwipeThreshold = 50.dp
 private const val TouchpadFactor = 2.4f
 private const val SettleMs = 180L
-private const val HorizontalDominance = 1.3f
-private const val MinHorizontalScroll = 0.2f
+private const val OrientationThreshold = 1f
+private const val MaxSwipeRatio = 1.5f
+private const val ResetReachedOn = 0.95f
+private const val SwipeEndMs = 200
+private const val ReachBounceMs = 500
+private const val BouncePart = 0.25f
+private const val BounceScale = 0.6f
+private const val OverswipeLogA = 16f
+private const val OverswipeLogB = 10f
