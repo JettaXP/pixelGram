@@ -485,10 +485,7 @@ fun RecordingBar(voice: VoiceRecording, modifier: Modifier = Modifier) {
 private fun RoundPreview(voice: VoiceRecording) {
     val scheme = MaterialTheme.colorScheme
     val progress = (voice.elapsedMs.toFloat() / com.pixelgram.desktop.core.VideoNoteRecorder.MaxDurationMs).coerceIn(0f, 1f)
-    androidx.compose.ui.window.Popup(
-        alignment = Alignment.BottomCenter,
-        offset = androidx.compose.ui.unit.IntOffset(0, -RoundLift),
-    ) {
+    androidx.compose.ui.window.Popup(popupPositionProvider = CenterOfWindow) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(RoundSize + 12.dp).popIn()) {
             Canvas(Modifier.fillMaxSize()) {
                 drawCircle(scheme.surfaceContainerHigh)
@@ -521,7 +518,17 @@ private fun RoundPreview(voice: VoiceRecording) {
 }
 
 private val RoundSize = 240.dp
-private const val RoundLift = 96
+private object CenterOfWindow : androidx.compose.ui.window.PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: androidx.compose.ui.unit.IntRect,
+        windowSize: androidx.compose.ui.unit.IntSize,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        popupContentSize: androidx.compose.ui.unit.IntSize,
+    ) = androidx.compose.ui.unit.IntOffset(
+        (windowSize.width - popupContentSize.width) / 2,
+        (windowSize.height - popupContentSize.height) / 2,
+    )
+}
 private const val FrameEveryMs = 33L
 
 @Composable

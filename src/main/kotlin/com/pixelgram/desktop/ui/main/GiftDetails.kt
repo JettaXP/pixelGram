@@ -4,6 +4,8 @@ import com.pixelgram.desktop.ui.icons.outlined.CardGiftcard
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.heightIn
@@ -159,7 +161,11 @@ fun GiftDetailsDialog(message: UiMessage, telegram: Telegram, onDismiss: () -> U
                     is TdApi.MessageGiftedPremium -> content.sticker
                     else -> null
                 }
-                StickerView(sticker, telegram, 140.dp)
+                if (content is TdApi.MessageUpgradedGift) {
+                    UniqueGiftArt(content.gift, telegram, Modifier.size(180.dp), shape = MaterialTheme.shapes.extraLarge)
+                } else {
+                    StickerView(sticker, telegram, 140.dp)
+                }
                 EmojiText(giftTitle(message) ?: "Gift", style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
                 (content as? TdApi.MessageGift)?.text?.text?.takeIf { it.isNotBlank() }?.let {
                     EmojiText(it, style = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Center))
@@ -269,22 +275,20 @@ private fun GiftsDialog(owner: TdApi.MessageSender, all: List<TdApi.ReceivedGift
 @Composable
 private fun GiftCell(gift: TdApi.ReceivedGift, telegram: Telegram, modifier: Modifier) {
     val upgraded = (gift.gift as? TdApi.SentGiftUpgraded)?.gift
-    val colors = upgraded?.backdrop?.colors
+    var open by remember { mutableStateOf(false) }
     val shape = MaterialTheme.shapes.large
     Box(
         modifier
             .aspectRatio(1f)
             .clip(shape)
-            .background(
-                if (colors != null) {
-                    androidx.compose.ui.graphics.Brush.radialGradient(listOf(argb(colors.centerColor), argb(colors.edgeColor)))
-                } else {
-                    androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.surfaceContainerHighest)
-                },
-            ),
+            .then(if (upgraded != null) Modifier.clickable { open = true } else Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)),
         contentAlignment = Alignment.Center,
     ) {
-        StickerView(giftSticker(gift), telegram, 88.dp)
+        if (upgraded != null) {
+            UniqueGiftArt(upgraded, telegram, Modifier.fillMaxWidth(), shape = shape, animate = false)
+        } else {
+            StickerView(giftSticker(gift), telegram, 88.dp)
+        }
         gift.senderId?.let { sender ->
             com.pixelgram.desktop.ui.components.AvatarImage(
                 telegram.senderTitle(sender),
@@ -304,14 +308,14 @@ private fun GiftCell(gift: TdApi.ReceivedGift, telegram: Telegram, modifier: Mod
                     .align(Alignment.TopEnd)
                     .padding(6.dp)
                     .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(argb(colors?.symbolColor ?: 0x66000000).copy(alpha = 0.85f))
+                    .background(giftColor(upgraded.backdrop?.colors?.symbolColor ?: 0x333333).copy(alpha = 0.85f))
                     .padding(horizontal = 6.dp, vertical = 2.dp),
             )
         }
     }
+    if (open && upgraded != null) NftDialog(telegram, upgraded.name) { open = false }
 }
 
-private fun argb(rgb: Int) = Color(0xFF000000.toInt() or rgb)
 
 private const val GiftPreviews = 3
 private const val GiftColumns = 3

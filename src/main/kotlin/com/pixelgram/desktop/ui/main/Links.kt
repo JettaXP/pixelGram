@@ -17,6 +17,7 @@ object Links : UriHandler {
     var pending by mutableStateOf<String?>(null)
     var invite by mutableStateOf<InviteRequest?>(null)
     var confirm by mutableStateOf<String?>(null)
+    var nft by mutableStateOf<Pair<Telegram, String>?>(null)
 
     class InviteRequest(val telegram: Telegram, val link: String, val info: TdApi.ChatInviteLinkInfo)
 
@@ -95,6 +96,7 @@ object Links : UriHandler {
                             openBrowser(url)
                         }
                     }
+                is TdApi.InternalLinkTypeUpgradedGift -> SwingUtilities.invokeLater { nft = telegram to type.name }
                 else -> openBrowser(url)
             }
         }

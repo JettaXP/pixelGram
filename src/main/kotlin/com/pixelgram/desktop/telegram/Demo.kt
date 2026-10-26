@@ -450,11 +450,17 @@ fun demoGifts(collection: Int = 0): List<TdApi.ReceivedGift> {
             gift = if (i == 4) {
                 TdApi.SentGiftUpgraded(TdApi.UpgradedGift().apply {
                     title = "Toy Bear"
+                    name = "ToyBear-92639"
                     number = 92_639
-                    model = TdApi.UpgradedGiftModel().apply { name = "Toy"; sticker = sticker(1) }
+                    totalUpgradedCount = 120_481
+                    maxUpgradedCount = 150_000
+                    ownerName = "Jetta"
+                    model = TdApi.UpgradedGiftModel().apply { name = "Toy"; sticker = sticker(1); rarity = TdApi.UpgradedGiftAttributeRarityPerMille(15) }
+                    symbol = TdApi.UpgradedGiftSymbol().apply { name = "Gem"; sticker = sticker(2); rarity = TdApi.UpgradedGiftAttributeRarityPerMille(4) }
                     backdrop = TdApi.UpgradedGiftBackdrop().apply {
                         name = "Desert"
                         colors = TdApi.UpgradedGiftBackdropColors(0xB08C6A, 0x6E4E36, 0x4E3624, 0xFFFFFF)
+                        rarity = TdApi.UpgradedGiftAttributeRarityPerMille(20)
                     }
                 })
             } else {
@@ -467,3 +473,6 @@ fun demoGifts(collection: Int = 0): List<TdApi.ReceivedGift> {
 
 fun demoGiftCollections(): List<TdApi.GiftCollection> =
     if (demoStoryDir == null) emptyList() else listOf(TdApi.GiftCollection(1, "🧸 мишка фредди", null, 5))
+
+fun demoUpgradedGift(): TdApi.UpgradedGift? =
+    (demoGifts().firstOrNull { it.gift is TdApi.SentGiftUpgraded }?.gift as? TdApi.SentGiftUpgraded)?.gift

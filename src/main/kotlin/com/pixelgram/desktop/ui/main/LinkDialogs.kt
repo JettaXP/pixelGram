@@ -29,6 +29,7 @@ import javax.swing.SwingUtilities
 fun LinkDialogs(settings: AppSettings, onOpenChat: (Long) -> Unit) {
     Links.invite?.let { request -> InviteDialog(request, settings, onOpenChat) { Links.invite = null } }
     Links.confirm?.let { url -> OpenLinkDialog(url) { Links.confirm = null } }
+    Links.nft?.let { (telegram, name) -> NftDialog(telegram, name) { Links.nft = null } }
     FileSafety.pending?.let { path -> DangerousFileDialog(path) { FileSafety.pending = null } }
 }
 

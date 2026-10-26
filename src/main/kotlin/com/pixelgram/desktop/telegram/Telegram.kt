@@ -1466,6 +1466,15 @@ class Telegram(
         }
     }
 
+    fun upgradedGift(name: String, onResult: (TdApi.UpgradedGift?) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(demoUpgradedGift())
+        send(TdApi.GetUpgradedGift(name)) { result ->
+            val gift = result as? TdApi.UpgradedGift
+            (gift?.ownerId as? TdApi.MessageSenderUser)?.let { ensureUser(it.userId) }
+            onResult(gift)
+        }
+    }
+
     fun giftCollections(owner: TdApi.MessageSender, onResult: (List<TdApi.GiftCollection>) -> Unit) {
         if (System.getProperty("pixelgram.demo") == "true") return onResult(demoGiftCollections())
         send(TdApi.GetGiftCollections(owner)) { result -> onResult((result as? TdApi.GiftCollections)?.collections?.toList().orEmpty()) }
