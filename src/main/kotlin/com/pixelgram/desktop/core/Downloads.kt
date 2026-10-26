@@ -32,7 +32,7 @@ object Downloads {
     }
 
     private fun safeName(name: String, source: File): String =
-        name.ifBlank { source.name }.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim().ifBlank { source.name }
+        FileSafety.clean(name).replace(Regex("[\\\\/:*?\"<>|]"), "_").trim().let { if (it.all { c -> c == '.' }) "" else it.trimEnd('.') }.ifBlank { source.name }
 
     private fun freeName(name: String): File {
         val first = File(dir, name)

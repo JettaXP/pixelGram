@@ -25,7 +25,13 @@ object SingleInstance {
             portFile.writeText(server.localPort.toString())
             Thread {
                 while (true) {
-                    runCatching { server.accept().use { it.getInputStream().bufferedReader().readLine().orEmpty() } }
+                    runCatching {
+                        server.accept().use { socket ->
+                            socket.soTimeout = ReadTimeoutMs
+                            val bytes = socket.getInputStream().readNBytes(MaxLine)
+                            bytes.decodeToString().lineSequence().firstOrNull().orEmpty().trim()
+                        }
+                    }
                         .onSuccess { line ->
                             SwingUtilities.invokeLater {
                                 if (line.isNotBlank() && line != ShowCommand) onOpen?.invoke(line)
@@ -46,4 +52,6 @@ object SingleInstance {
     }.isSuccess
 
     private const val ShowCommand = "show"
+    private const val ReadTimeoutMs = 2000
+    private const val MaxLine = 4096
 }

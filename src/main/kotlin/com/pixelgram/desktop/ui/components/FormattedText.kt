@@ -101,7 +101,12 @@ fun formattedString(text: String, entities: List<TdApi.TextEntity>, colors: Form
                 builder.addStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = colors.code), start, end)
             is TdApi.TextEntityTypeBlockQuote, is TdApi.TextEntityTypeExpandableBlockQuote ->
                 builder.addStyle(ParagraphStyle(textIndent = TextIndent(QuoteIndent, QuoteIndent)), start, end)
-            is TdApi.TextEntityTypeTextUrl -> builder.addLink(link(type.url, colors), start, end)
+            is TdApi.TextEntityTypeTextUrl -> {
+                val shown = text.substring(start, end).trim()
+                val plain = shown.removePrefix("https://").removePrefix("http://").trimEnd('/') ==
+                    type.url.trim().removePrefix("https://").removePrefix("http://").trimEnd('/')
+                if (plain) builder.addLink(link(type.url, colors), start, end) else builder.addLink(hiddenLink(type.url, colors), start, end)
+            }
             is TdApi.TextEntityTypeUrl -> builder.addLink(link(text.substring(start, end).let { if ("://" in it) it else "https://$it" }, colors), start, end)
             is TdApi.TextEntityTypeEmailAddress -> builder.addLink(link("mailto:" + text.substring(start, end), colors), start, end)
             is TdApi.TextEntityTypePhoneNumber -> builder.addLink(link("tel:" + text.substring(start, end), colors), start, end)
@@ -119,6 +124,11 @@ fun formattedString(text: String, entities: List<TdApi.TextEntity>, colors: Form
     }
     return builder.toAnnotatedString()
 }
+
+private fun hiddenLink(url: String, colors: FormatColors) = LinkAnnotation.Clickable(
+    url,
+    TextLinkStyles(SpanStyle(color = colors.accent, textDecoration = TextDecoration.Underline)),
+) { com.pixelgram.desktop.ui.main.Links.confirmOpen(url) }
 
 private fun link(url: String, colors: FormatColors, underline: Boolean = true) = LinkAnnotation.Url(
     url,

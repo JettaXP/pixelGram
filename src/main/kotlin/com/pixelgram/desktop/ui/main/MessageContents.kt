@@ -468,7 +468,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
     when (val content = message.content) {
         is TdApi.MessageDocument -> {
             val document = content.document
-            val name = document.fileName.ifBlank { "File" }
+            val name = com.pixelgram.desktop.core.FileSafety.clean(document.fileName).ifBlank { "File" }
             val plugin = name.endsWith(".plugin", ignoreCase = true)
             val backup = Backup.isBackup(name)
             val scope = rememberCoroutineScope()

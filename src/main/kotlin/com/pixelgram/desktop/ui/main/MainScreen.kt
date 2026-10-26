@@ -164,6 +164,7 @@ fun MainScreen(
     onOpenChatInside: (Long) -> Unit = onOpenChat,
     onChatBack: (() -> Unit)? = null,
 ) {
+    LinkDialogs(settings, onOpenChat)
     val tabs = FolderLayout.tabs(telegram, settings)
     var selectedKey by rememberSaveable { mutableStateOf<ChatListKey>(ChatListKey.Main) }
     if (selectedKey != ChatListKey.Archive && tabs.none { it.key == selectedKey } && tabs.isNotEmpty()) {

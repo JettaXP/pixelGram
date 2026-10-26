@@ -63,6 +63,7 @@ import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes
 import org.intellij.markdown.parser.MarkdownParser
 import java.io.File
+import com.pixelgram.desktop.core.FileSafety
 
 object MarkdownViewer {
     var path by mutableStateOf<String?>(null)
@@ -71,7 +72,11 @@ object MarkdownViewer {
 }
 
 fun openDocument(path: String) {
-    if (MarkdownViewer.accepts(path)) MarkdownViewer.path = path else openFile(path)
+    when {
+        MarkdownViewer.accepts(path) -> MarkdownViewer.path = path
+        FileSafety.dangerous(path) -> FileSafety.pending = path
+        else -> openFile(path)
+    }
 }
 
 private class MdDocument(val source: String, val blocks: List<ASTNode>)

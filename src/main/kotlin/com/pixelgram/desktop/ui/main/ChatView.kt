@@ -154,6 +154,7 @@ import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.components.loadImage
 import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
+import androidx.compose.material3.LocalContentColor
 import java.io.File
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -840,6 +841,7 @@ fun ChatView(
         val barMode = when {
             selecting -> BarMode.Select
             telegram.isBlocked(chat) -> BarMode.Blocked
+            telegram.needsStart(chat) -> BarMode.Start
             telegram.isLeft(chat) -> BarMode.Join
             !telegram.canPost(chat) -> BarMode.Mute
             else -> BarMode.Compose
@@ -865,6 +867,8 @@ fun ChatView(
             )
         } else if (mode == BarMode.Blocked) {
             ComposerBar("UNBLOCK", accent = true) { telegram.unblock(chat) }
+        } else if (mode == BarMode.Start) {
+            ComposerBar("START", accent = true, detail = telegram.botStarts[chat.id]?.takeIf { it.isNotEmpty() }) { telegram.sendStart(chat) }
         } else if (mode == BarMode.Join) {
             var joining by remember(chat.id) { mutableStateOf(false) }
             ComposerBar(if (chat.isChannel) "JOIN CHANNEL" else "JOIN GROUP", accent = true, enabled = !joining) {
@@ -939,10 +943,10 @@ fun ChatView(
     }
 }
 
-private enum class BarMode { Select, Blocked, Join, Mute, Compose }
+private enum class BarMode { Select, Blocked, Start, Join, Mute, Compose }
 
 @Composable
-private fun ComposerBar(label: String, accent: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
+private fun ComposerBar(label: String, accent: Boolean = false, enabled: Boolean = true, detail: String? = null, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
@@ -957,11 +961,25 @@ private fun ComposerBar(label: String, accent: Boolean = false, enabled: Boolean
                 targetState = label,
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
             ) { text ->
-                Text(text, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                    if (detail != null) {
+                        Text(
+                            detail,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = LocalContentColor.current.copy(alpha = DetailAlpha),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                }
             }
         }
     }
 }
+
+private const val DetailAlpha = 0.7f
 
 fun bubbleShape(radius: Int, tailRadius: Int, outgoing: Boolean): Shape {
     val r = radius.dp

@@ -15,6 +15,21 @@ object Links : UriHandler {
     var active: (() -> Telegram?)? = null
     var navigate: ((Telegram, Long) -> Unit)? = null
     var pending by mutableStateOf<String?>(null)
+    var invite by mutableStateOf<InviteRequest?>(null)
+    var confirm by mutableStateOf<String?>(null)
+
+    class InviteRequest(val telegram: Telegram, val link: String, val info: TdApi.ChatInviteLinkInfo)
+
+    private val SafeSchemes = setOf("http", "https", "ton", "mailto", "tel")
+
+    fun safe(url: String): Boolean {
+        val scheme = runCatching { URI(url.trim()).scheme }.getOrNull()?.lowercase() ?: return false
+        return scheme in SafeSchemes
+    }
+
+    fun confirmOpen(url: String) {
+        if (isTelegram(url)) open(url) else confirm = url
+    }
 
     private val TelegramHosts = setOf("t.me", "telegram.me", "telegram.dog")
 
@@ -64,7 +79,13 @@ object Links : UriHandler {
                         if (chatId != 0L) go(telegram, chatId, messageId) else openBrowser(url)
                     }
                 is TdApi.InternalLinkTypeChatInvite ->
-                    telegram.joinByInvite(type.inviteLink) { chatId -> if (chatId != 0L) go(telegram, chatId) else openBrowser(url) }
+                    telegram.checkInvite(type.inviteLink) { info ->
+                        when {
+                            info == null -> openBrowser(url)
+                            info.chatId != 0L -> go(telegram, info.chatId)
+                            else -> SwingUtilities.invokeLater { invite = InviteRequest(telegram, type.inviteLink, info) }
+                        }
+                    }
                 is TdApi.InternalLinkTypeStickerSet ->
                     telegram.searchStickerSet(type.stickerSetName) { set ->
                         val chatId = MessageSearch.lastChat
@@ -80,6 +101,10 @@ object Links : UriHandler {
     }
 
     fun openBrowser(url: String) {
+        if (!safe(url)) {
+            AppLog.write("Blocked link with an unsupported scheme")
+            return
+        }
         Thread {
             runCatching { Desktop.getDesktop().browse(URI(url)) }.recoverCatching {
                 ProcessBuilder("xdg-open", url).start()

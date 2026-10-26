@@ -207,16 +207,22 @@ class AppSettings private constructor(private val props: Properties) {
         all.filter { it !in keep }.forEach { it.reset() }
     }
 
+    private val personal get() = localOnly + setOf(passcodeHash, passcodeSalt, autoLockMinutes, localNames, deviceName)
+
+    private val paths get() = setOf(wallpaper, messageFont)
+
     fun snapshot(): Properties = Properties().apply {
         for (setting in all) {
-            if (setting in localOnly) continue
+            if (setting in personal) continue
             val value = setting.value
             setProperty(setting.key, if (value is Enum<*>) value.name else value.toString())
         }
     }
 
     fun restore(props: Properties): Boolean {
-        val shared = all.filter { it !in localOnly && props.getProperty(it.key) != null }
+        val hidden = personal
+        val shared = all.filter { it !in hidden && props.getProperty(it.key) != null }
+            .filter { it !in paths || props.getProperty(it.key).let { path -> path.isBlank() || java.io.File(path).isFile } }
         shared.forEach { it.load(props.getProperty(it.key)) }
         return shared.isNotEmpty()
     }

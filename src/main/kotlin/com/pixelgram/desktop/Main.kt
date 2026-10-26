@@ -133,8 +133,8 @@ fun main(args: Array<String>) {
             return
         }
     }
-    link?.let { Links.pending = it }
-    SingleInstance.onOpen = { Links.pending = it }
+    link?.takeIf(Links::isTelegram)?.let { Links.pending = it }
+    SingleInstance.onOpen = { if (Links.isTelegram(it)) Links.pending = it }
     UrlScheme.register()
     if (AppPaths.isMac) {
         MacSystem.openLink = { url ->

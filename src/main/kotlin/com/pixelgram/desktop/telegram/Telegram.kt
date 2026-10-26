@@ -486,14 +486,28 @@ class Telegram(
         }
     }
 
+    val botStarts = mutableStateMapOf<Long, String>()
+
     fun startBot(username: String, parameter: String, onChat: (Long) -> Unit, onFail: () -> Unit) {
         send(TdApi.SearchPublicChat().apply { this.username = username }) { result ->
             val chat = result as? TdApi.Chat ?: return@send onFail()
-            val botId = (chat.type as? TdApi.ChatTypePrivate)?.userId ?: return@send onFail()
+            if (chat.type !is TdApi.ChatTypePrivate) return@send onFail()
+            botStarts[chat.id] = parameter
             onChat(chat.id)
-            send(TdApi.SendBotStartMessage(botId, chat.id, parameter)) { sent ->
+        }
+    }
+
+    fun needsStart(chat: ChatState): Boolean =
+        isBot(chat) && !isBlocked(chat) && (botStarts.containsKey(chat.id) || (chat.lastMessage == null && messages(chat.id).isEmpty()))
+
+    fun sendStart(chat: ChatState) {
+        val parameter = botStarts.remove(chat.id).orEmpty()
+        if (parameter.isNotEmpty()) {
+            send(TdApi.SendBotStartMessage(chat.privateUserId, chat.id, parameter)) { sent ->
                 if (sent is TdApi.Error) AppLog.write("Bot start failed ${sent.code}: ${sent.message}")
             }
+        } else {
+            sendText(chat.id, "/start")
         }
     }
 
@@ -527,15 +541,12 @@ class Telegram(
         }
     }
 
+    fun checkInvite(link: String, done: (TdApi.ChatInviteLinkInfo?) -> Unit) {
+        send(TdApi.CheckChatInviteLink(link)) { result -> done(result as? TdApi.ChatInviteLinkInfo) }
+    }
+
     fun joinByInvite(link: String, onChat: (Long) -> Unit) {
-        send(TdApi.CheckChatInviteLink(link)) { result ->
-            val info = result as? TdApi.ChatInviteLinkInfo
-            when {
-                info == null -> onChat(0L)
-                info.chatId != 0L -> onChat(info.chatId)
-                else -> send(TdApi.JoinChatByInviteLink(link)) { joined -> onChat((joined as? TdApi.Chat)?.id ?: 0L) }
-            }
-        }
+        send(TdApi.JoinChatByInviteLink(link)) { joined -> onChat((joined as? TdApi.Chat)?.id ?: 0L) }
     }
 
     fun searchStickerSet(name: String, onResult: (TdApi.StickerSet?) -> Unit) {
@@ -2189,8 +2200,8 @@ class Telegram(
                         is TdApi.Error -> if (result.code != 502) onAnswer(result.message, false)
                     }
                 }
-            is TdApi.InlineKeyboardButtonTypeUrl -> com.pixelgram.desktop.ui.main.openUrl(type.url)
-            is TdApi.InlineKeyboardButtonTypeLoginUrl -> com.pixelgram.desktop.ui.main.openUrl(type.url)
+            is TdApi.InlineKeyboardButtonTypeUrl -> com.pixelgram.desktop.ui.main.Links.confirmOpen(type.url)
+            is TdApi.InlineKeyboardButtonTypeLoginUrl -> com.pixelgram.desktop.ui.main.Links.confirmOpen(type.url)
             is TdApi.InlineKeyboardButtonTypeCopyText -> {
                 java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(java.awt.datatransfer.StringSelection(type.text), null)
                 onAnswer("Copied", false)

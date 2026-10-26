@@ -134,8 +134,10 @@ object Updater {
         return UpdateState.Available(commit.take(7), asset, version)
     }
 
+    private val SafeAssetName = Regex("""[A-Za-z0-9._+-]+""")
+
     private fun pickAsset(assets: List<UpdateAsset>): UpdateAsset? {
-        fun find(predicate: (String) -> Boolean) = assets.firstOrNull { predicate(it.name.lowercase()) }
+        fun find(predicate: (String) -> Boolean) = assets.firstOrNull { it.name.matches(SafeAssetName) && predicate(it.name.lowercase()) }
         return when {
             AppPaths.isWindows && AppPaths.isPortable -> find { it.endsWith("portable.zip") }
             AppPaths.isWindows -> find { it.endsWith(".msi") }
@@ -167,7 +169,9 @@ object Updater {
         dir.listFiles()?.forEach { it.delete() }
         val target = File(dir, asset.name)
         val part = File(dir, asset.name + ".part")
-        val connection = URI(asset.url).toURL().openConnection() as HttpURLConnection
+        val uri = URI(asset.url)
+        require(uri.scheme == "https" && uri.host == "github.com") { "Unexpected download address" }
+        val connection = uri.toURL().openConnection() as HttpURLConnection
         connection.connectTimeout = TimeoutMs
         connection.instanceFollowRedirects = true
         val total = connection.contentLengthLong.takeIf { it > 0 } ?: asset.size
