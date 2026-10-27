@@ -1008,3 +1008,98 @@ Reply sent	Ответ отправлен
 No views yet	Пока нет просмотров
 Like	Нравится
 Unlike	Убрать отметку
+Undo	Отменить
+Redo	Повторить
+List	Список
+Caption	Подпись
+What should the article be about?	О чём будет статья?
+Error	Ошибка
+Divider	Разделитель
+Remove photo	Убрать фото
+Attach photo	Прикрепить фото
+Remove option	Удалить вариант
+You have added the maximum number of options.	Добавлено максимальное число вариантов.
+Remove task	Удалить задачу
+Checklists	Чек-листы
+Badge text	Текст значка
+Reset badge	Сбросить значок
+Save badge	Сохранить значок
+Checksum mismatch	Контрольная сумма не совпадает
+Library not found in the archive	Библиотека не найдена в архиве
+Downloading call components…	Загрузка компонентов звонков…
+Requesting…	Запрос…
+Ringing…	Вызов…
+Incoming video call	Входящий видеозвонок
+Exchanging encryption keys…	Обмен ключами шифрования…
+Call ended	Звонок завершён
+Decline	Отклонить
+Turn camera off	Выключить камеру
+Turn camera on	Включить камеру
+End call	Завершить звонок
+Stop sharing	Остановить демонстрацию
+Share screen	Демонстрация экрана
+Nothing to share	Нечего показывать
+Calls aren't available on this device	Звонки недоступны на этом устройстве
+Call declined	Звонок отклонён
+No answer	Нет ответа
+Disconnected	Соединение прервано
+Couldn't connect	Не удалось подключиться
+Couldn't start the call	Не удалось начать звонок
+Telegram doesn't share this list	Telegram не показывает этот список
+Delete for everyone	Удалить для всех
+Call	Позвонить
+Video call	Видеозвонок
+All Gifts	Все подарки
+Add Collection	Добавить коллекцию
+No gifts here yet	Здесь пока нет подарков
+New collection	Новая коллекция
+Collection name	Название коллекции
+Not found	Не найдено
+Notifications for chats	Уведомления из чатов
+Events	События
+Contact joined Telegram	Контакт присоединился к Telegram
+Pinned messages	Закреплённые сообщения
+Badge counter	Счётчик на значке
+Include muted chats in unread count	Учитывать чаты без звука в счётчике
+Include muted chats in folder counters	Учитывать чаты без звука в счётчиках папок
+Count unread messages	Считать непрочитанные сообщения
+Use system notifications	Системные уведомления
+Respect system Focus mode	Учитывать режим «Не беспокоить»
+No pop-ups or sounds while Do Not Disturb is on.	Без всплывающих окон и звуков, пока включён режим «Не беспокоить».
+Display for notifications	Экран для уведомлений
+Location on the screen	Расположение на экране
+Notifications count	Количество уведомлений
+Show notifications from	Показывать уведомления из
+All accounts	Всех аккаунтов
+Turn this off if you want to receive notifications only from the account you are currently using.	Отключите, чтобы получать уведомления только из текущего аккаунта.
+Global settings	Общие настройки
+Desktop notifications	Уведомления на рабочем столе
+Flash the taskbar icon	Мигать значком на панели задач
+Allow sound	Разрешить звук
+Volume	Громкость
+Enter the code you received.	Введите полученный код.
+All Stories	Все истории
+Add Album	Добавить альбом
+No stories here yet	Здесь пока нет историй
+New album	Новый альбом
+Album name	Название альбома
+Story Archive	Архив историй
+You haven't posted any stories yet	Вы ещё не публиковали историй
+This story isn't supported yet	Эта история пока не поддерживается
+Live	Живые
+Add image or video	Добавить фото или видео
+Stories	Истории
+This collectible wasn't found	Коллекционный подарок не найден
+Link copied	Ссылка скопирована
+Quantity	Количество
+Uncommon	Необычный
+Rare	Редкий
+Epic	Эпический
+Legendary	Легендарный
+Hold to record a video message	Удерживайте, чтобы записать кружок
+Slide up to lock	Проведите вверх, чтобы закрепить
+Hold to record a voice message, click for a video message	Удерживайте для голосового, нажмите для кружка
+Hold to record a video message, click for a voice message	Удерживайте для кружка, нажмите для голосового
+Paste coordinates or a map link, for example 55.7539, 37.6208.	Вставьте координаты или ссылку на карту, например 55.7539, 37.6208.
+API ID	API ID
+API hash	API hash

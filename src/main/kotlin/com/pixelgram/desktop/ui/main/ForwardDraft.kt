@@ -183,7 +183,7 @@ private fun ForwardOptionsDialog(
                     Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         AnimatedVisibility(!hideSender) {
                             EmojiText(
-                                "Forwarded from " + draft.messages.map { senderOf(telegram, it) }.distinct().joinToString(", "),
+                                com.pixelgram.desktop.core.tr("Forwarded from") + " " + draft.messages.map { senderOf(telegram, it) }.distinct().joinToString(", "),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary,
                                 maxLines = 1,

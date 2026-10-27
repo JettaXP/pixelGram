@@ -1006,3 +1006,98 @@ Reply sent	התגובה נשלחה
 No views yet	אין צפיות עדיין
 Like	אהבתי
 Unlike	ביטול אהבתי
+Undo	ביטול
+Redo	ביצוע מחדש
+List	רשימה
+Caption	כיתוב
+What should the article be about?	על מה המאמר?
+Error	שגיאה
+Divider	מפריד
+Remove photo	הסרת תמונה
+Attach photo	צירוף תמונה
+Remove option	הסרת אפשרות
+You have added the maximum number of options.	הוספת את מספר האפשרויות המרבי.
+Remove task	הסרת משימה
+Checklists	רשימות משימות
+Badge text	טקסט התג
+Reset badge	איפוס התג
+Save badge	שמירת התג
+Checksum mismatch	סכום הבדיקה לא תואם
+Library not found in the archive	הספרייה לא נמצאה בארכיון
+Downloading call components…	מוריד רכיבי שיחה…
+Requesting…	מבקש…
+Ringing…	מצלצל…
+Incoming video call	שיחת וידאו נכנסת
+Exchanging encryption keys…	מחליף מפתחות הצפנה…
+Call ended	השיחה הסתיימה
+Decline	דחייה
+Turn camera off	כיבוי המצלמה
+Turn camera on	הפעלת המצלמה
+End call	סיום שיחה
+Stop sharing	הפסקת השיתוף
+Share screen	שיתוף מסך
+Nothing to share	אין מה לשתף
+Calls aren't available on this device	שיחות אינן זמינות במכשיר זה
+Call declined	השיחה נדחתה
+No answer	אין מענה
+Disconnected	החיבור נותק
+Couldn't connect	לא ניתן להתחבר
+Couldn't start the call	לא ניתן להתחיל את השיחה
+Telegram doesn't share this list	טלגרם לא משתפת את הרשימה הזו
+Delete for everyone	מחיקה לכולם
+Call	התקשרות
+Video call	שיחת וידאו
+All Gifts	כל המתנות
+Add Collection	הוספת אוסף
+No gifts here yet	אין כאן מתנות עדיין
+New collection	אוסף חדש
+Collection name	שם האוסף
+Not found	לא נמצא
+Notifications for chats	התראות לצ'אטים
+Events	אירועים
+Contact joined Telegram	איש קשר הצטרף לטלגרם
+Pinned messages	הודעות מוצמדות
+Badge counter	מונה בתג
+Include muted chats in unread count	לכלול צ'אטים מושתקים במונה
+Include muted chats in folder counters	לכלול צ'אטים מושתקים במוני התיקיות
+Count unread messages	ספירת הודעות שלא נקראו
+Use system notifications	שימוש בהתראות המערכת
+Respect system Focus mode	כיבוד מצב המיקוד של המערכת
+No pop-ups or sounds while Do Not Disturb is on.	ללא חלונות קופצים או צלילים כשמצב נא לא להפריע פעיל.
+Display for notifications	מסך להתראות
+Location on the screen	מיקום על המסך
+Notifications count	מספר ההתראות
+Show notifications from	הצגת התראות מ־
+All accounts	כל החשבונות
+Turn this off if you want to receive notifications only from the account you are currently using.	כבו כדי לקבל התראות רק מהחשבון הנוכחי.
+Global settings	הגדרות כלליות
+Desktop notifications	התראות בשולחן העבודה
+Flash the taskbar icon	הבהוב סמל שורת המשימות
+Allow sound	אפשור צליל
+Volume	עוצמת קול
+Enter the code you received.	הזינו את הקוד שקיבלתם.
+All Stories	כל הסטוריז
+Add Album	הוספת אלבום
+No stories here yet	אין כאן סטוריז עדיין
+New album	אלבום חדש
+Album name	שם האלבום
+Story Archive	ארכיון סטוריז
+You haven't posted any stories yet	עדיין לא פרסמת סטוריז
+This story isn't supported yet	הסטורי הזה עדיין לא נתמך
+Live	חיים
+Add image or video	הוספת תמונה או וידאו
+Stories	סטוריז
+This collectible wasn't found	הפריט האספני לא נמצא
+Link copied	הקישור הועתק
+Quantity	כמות
+Uncommon	לא שכיח
+Rare	נדיר
+Epic	אפי
+Legendary	אגדי
+Hold to record a video message	החזיקו להקלטת הודעת וידאו
+Slide up to lock	החליקו למעלה לנעילה
+Hold to record a voice message, click for a video message	החזיקו להודעה קולית, לחצו להודעת וידאו
+Hold to record a video message, click for a voice message	החזיקו להודעת וידאו, לחצו להודעה קולית
+Paste coordinates or a map link, for example 55.7539, 37.6208.	הדביקו קואורדינטות או קישור למפה, למשל 55.7539, 37.6208.
+API ID	API ID
+API hash	API hash
