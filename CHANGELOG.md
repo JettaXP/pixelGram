@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.41.0 Pentagon
+
+### Gifts
+- Gifts play their animation all at once like in Telegram, keep playing while you hover and several can play together.
+- Regular gifts open their details, with a menu to show or hide them on your profile or convert them to Stars.
+- No white glow when hovering a gift, and the gift grid runs much smoother.
+
+### Topics
+- Forum groups show a topic list on the side, and topics switch in place instead of opening a mixed feed.
+
+### Groups and channels
+- Subscribers, members and admins open their profiles, and a right click offers promote, edit rights, restrict and ban.
+- Channel profiles show Mute, Discuss, Manage and More like in Telegram, with Discuss opening the linked discussion group.
+- Comments under posts show avatars and open the commenter's profile.
+
+### Stories
+- Story sound plays at normal speed.
+- Your own stories show who viewed and liked them.
+- Reply to a story or like it right from the viewer.
+
+### Chats
+- Replies to your messages show your name instead of "You", also in screenshots.
+- Files, folders and links open on Windows and macOS even when no app is set for the file type.
+
+### Tray
+- The tray menu opens on scaled screens and with the taskbar at the top, and animates in.
+
+### Performance and stability
+- Fixed a crash while watching videos, and video frames are no longer copied on every draw.
+- Freed native memory from decoded images and stickers, which could make the app run out of memory after long use.
+- Images that were already loaded show at once without flicker, Apple and 3D emoji draw cheaper.
+- Spoilers and the smooth caret animate at 30 fps and the spoiler shimmer pauses in the background.
+- The chat list no longer rebuilds its rows when scrolling starts or stops.
+- TDLib loads off the interface thread, so the startup shapes animate smoothly.
+
+### Other
+- Logs live in a logs folder: startup.log, crash logs with the date and tdlib.log.
+- The sign-in screens and the remaining interface strings are translated.
+- The Hide All chats setting is gone.
+
 ## 0.40.0 Arch
 
 ### Groups and channels
