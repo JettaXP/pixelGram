@@ -433,6 +433,9 @@ fun demoStories(chatId: Long, album: Int = 0): List<TdApi.Story> {
             }
             caption = TdApi.FormattedText(if (index == 2) "Material 3 Expressive everywhere" else "", emptyArray())
             albumIds = IntArray(0)
+            canGetInteractions = chatId == 1L
+            canBeReplied = chatId != 1L
+            interactionInfo = TdApi.StoryInteractionInfo(12 + index, 0, 3, LongArray(0))
         }
     }
 }
@@ -633,4 +636,15 @@ fun demoComments(chatId: Long): List<UiMessage> {
         UiMessage(9_002, chatId, 2, 0, false, now - 150, "That's a lot 😱"),
         UiMessage(9_001, chatId, 3, 0, false, now - 300, "First 🔥"),
     )
+}
+
+fun demoStoryViewers(): List<TdApi.StoryInteraction> {
+    val now = (System.currentTimeMillis() / 1000).toInt()
+    return listOf(2L to "❤", 3L to null, 4L to "🔥", 5L to null).mapIndexed { index, (userId, emoji) ->
+        TdApi.StoryInteraction().apply {
+            actorId = TdApi.MessageSenderUser(userId)
+            interactionDate = now - (index + 1) * 900
+            type = TdApi.StoryInteractionTypeView(emoji?.let { TdApi.ReactionTypeEmoji(it) })
+        }
+    }
 }

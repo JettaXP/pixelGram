@@ -178,6 +178,8 @@ enum class MessageStatus { Sending, Sent, Read, Failed }
 
 private const val AUTH_TIMEOUT_MS = 30_000L
 private const val PinnedLimit = 100
+private const val StoryViewersPage = 50
+const val StoryLike = "\u2764"
 private const val JumpPageSize = 60
 private const val ChatSearchLimit = 20
 private const val PreviewPage = 40
@@ -1816,6 +1818,38 @@ class Telegram(
     fun openStory(story: TdApi.Story) = send(TdApi.OpenStory(story.posterChatId, story.id)) {}
 
     fun closeStory(story: TdApi.Story) = send(TdApi.CloseStory(story.posterChatId, story.id)) {}
+
+    fun storyViewers(story: TdApi.Story, offset: String, done: (List<TdApi.StoryInteraction>, String) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return done(if (offset.isEmpty()) demoStoryViewers() else emptyList(), "")
+        val mine = (story.posterId as? TdApi.MessageSenderUser)?.userId == myUserId
+        val request: TdApi.Function<*> = if (mine) {
+            TdApi.GetStoryInteractions(story.id, "", false, false, true, offset, StoryViewersPage)
+        } else {
+            TdApi.GetChatStoryInteractions(story.posterChatId, story.id, null, false, offset, StoryViewersPage)
+        }
+        send(request) { result ->
+            val found = result as? TdApi.StoryInteractions
+            found?.interactions?.forEach { item -> (item.actorId as? TdApi.MessageSenderUser)?.let { ensureUser(it.userId) } }
+            done(found?.interactions?.toList().orEmpty(), found?.nextOffset.orEmpty())
+        }
+    }
+
+    fun setStoryLiked(story: TdApi.Story, liked: Boolean, done: (String?) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return done(null)
+        send(TdApi.SetStoryReaction(story.posterChatId, story.id, if (liked) TdApi.ReactionTypeEmoji(StoryLike) else null, true)) { result ->
+            done((result as? TdApi.Error)?.message?.let(::friendlyError))
+        }
+    }
+
+    fun replyToStory(story: TdApi.Story, text: String, done: (String?) -> Unit) {
+        if (text.isBlank()) return done(null)
+        if (System.getProperty("pixelgram.demo") == "true") return done(null)
+        send(TdApi.SendMessage().apply {
+            chatId = story.posterChatId
+            replyTo = TdApi.InputMessageReplyToStory(story.posterChatId, story.id)
+            inputMessageContent = TdApi.InputMessageText().apply { this.text = TdApi.FormattedText(text.trim(), emptyArray()) }
+        }) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+    }
 
     fun saveGif(message: UiMessage) {
         val animation = (message.content as? TdApi.MessageAnimation)?.animation?.animation ?: return

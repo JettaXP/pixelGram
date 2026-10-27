@@ -87,7 +87,6 @@ import org.jetbrains.skia.ColorType
 import org.jetbrains.skia.ImageInfo
 import java.awt.GraphicsEnvironment
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.nio.ShortBuffer
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
@@ -137,8 +136,6 @@ private const val AudioBufferSeconds = 0.4
 private const val MaxDecodeWidth = 1920
 private const val MaxFrameGapNs = 100_000_000L
 private const val KeptFrames = 3
-private const val AudioQueueChunks = 256
-private const val AudioQueueWaitMs = 20L
 private const val AudioDrainPollMs = 10L
 private val VolumeSliderWidth = 110.dp
 
@@ -155,8 +152,11 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
     private val lock = Object()
     @Volatile private var running = true
     @Volatile private var seekTo = -1L
-    private var line: SourceDataLine? = null
-    private val audio = java.util.concurrent.LinkedBlockingQueue<ByteArray>(AudioQueueChunks)
+    @Volatile private var audioSeekTo = -1L
+    @Volatile private var line: SourceDataLine? = null
+    @Volatile private var audioDone = true
+    @Volatile private var audioBaseUs = 0L
+    @Volatile private var lineMarkUs = 0L
     private var audioThread: Thread? = null
     private val pool = ArrayList<Bitmap>(KeptFrames)
     private var poolInfo: ImageInfo? = null
@@ -177,7 +177,9 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
     }
 
     fun seek(ms: Long) {
-        seekTo = ms.coerceIn(0, duration.coerceAtLeast(0))
+        val target = ms.coerceIn(0, duration.coerceAtLeast(0))
+        seekTo = target
+        audioSeekTo = target
         ended = false
         synchronized(lock) { lock.notifyAll() }
     }
@@ -187,10 +189,15 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
         synchronized(lock) { lock.notifyAll() }
     }
 
+    private fun audioClockUs(): Long? {
+        val output = line ?: return null
+        if (audioDone) return null
+        return audioBaseUs + (output.microsecondPosition - lineMarkUs)
+    }
+
     private fun run() {
         val grabber = FFmpegFrameGrabber(path).apply {
             pixelFormat = avutil.AV_PIX_FMT_BGRA
-            sampleMode = FrameGrabber.SampleMode.SHORT
             setVideoOption("threads", "0")
         }
         try {
@@ -203,9 +210,9 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
                 grabber.start()
             }
             duration = grabber.lengthInTime / 1000
-            if (grabber.audioChannels > 0 && !loop && sound) line = openLine(grabber.sampleRate, grabber.audioChannels)
-            line?.let { output ->
-                audioThread = Thread({ pumpAudio(output) }, "pixelgram-video-audio").apply {
+            if (grabber.audioChannels > 0 && !loop && sound) {
+                audioDone = false
+                audioThread = Thread(::runAudio, "pixelgram-video-audio").apply {
                     isDaemon = true
                     start()
                 }
@@ -215,20 +222,15 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
             var lastShown = 0L
             while (running) {
                 if (!playing && seekTo < 0) {
-                    audio.clear()
-                    line?.stop()
                     synchronized(lock) { while (running && !playing && seekTo < 0) lock.wait() }
                     if (!running) break
                     base = System.nanoTime()
                     baseUs = position * 1000
-                    if (playing) line?.start()
                 }
                 val target = seekTo
                 if (target >= 0) {
                     seekTo = -1
                     grabber.setTimestamp(target * 1000, true)
-                    audio.clear()
-                    line?.flush()
                     base = System.nanoTime()
                     baseUs = target * 1000
                     position = target
@@ -237,7 +239,7 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
                         continue
                     }
                 }
-                val next = grabber.grab()
+                val next = grabber.grabImage()
                 if (next == null) {
                     if (loop) {
                         grabber.setTimestamp(0)
@@ -245,34 +247,85 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
                         baseUs = 0
                         continue
                     }
-                    while (running && audio.isNotEmpty()) Thread.sleep(AudioDrainPollMs)
-                    line?.drain()
+                    while (running && playing && seekTo < 0 && !audioDone) Thread.sleep(AudioDrainPollMs)
+                    if (seekTo >= 0 || !running) continue
                     ended = true
                     playing = false
                     continue
                 }
-                if (next.image != null) {
-                    val clock = baseUs + (System.nanoTime() - base) / 1000
-                    val wait = next.timestamp - clock
-                    if (wait > 0) Thread.sleep(wait / 1000, ((wait % 1000) * 1000).toInt())
-                    val now = System.nanoTime()
-                    if (wait > -LateFrameUs || frame == null || now - lastShown > MaxFrameGapNs) {
-                        show(next)
-                        lastShown = now
-                    }
-                    position = next.timestamp / 1000
-                } else if (next.samples != null && line != null) {
-                    writeAudio(next)
+                val audible = audioClockUs()
+                val clock = audible ?: (baseUs + (System.nanoTime() - base) / 1000)
+                if (audible != null) {
+                    base = System.nanoTime()
+                    baseUs = audible
                 }
+                val wait = next.timestamp - clock
+                if (wait > 0) Thread.sleep(wait / 1000, ((wait % 1000) * 1000).toInt())
+                val now = System.nanoTime()
+                if (wait > -LateFrameUs || frame == null || now - lastShown > MaxFrameGapNs) {
+                    show(next)
+                    lastShown = now
+                }
+                position = next.timestamp / 1000
             }
         } catch (error: Throwable) {
             AppLog.write("Video playback failed", error)
             failed = true
         } finally {
             releaseFrames()
-            audioThread?.interrupt()
-            audio.clear()
-            runCatching { line?.close() }
+            synchronized(lock) { lock.notifyAll() }
+            runCatching { grabber.stop() }
+            runCatching { grabber.release() }
+        }
+    }
+
+    private fun runAudio() {
+        val grabber = FFmpegFrameGrabber(path).apply { sampleMode = FrameGrabber.SampleMode.SHORT }
+        var output: SourceDataLine? = null
+        try {
+            grabber.start()
+            output = openLine(grabber.sampleRate, grabber.audioChannels) ?: return
+            lineMarkUs = output.microsecondPosition
+            audioBaseUs = 0
+            line = output
+            while (running) {
+                if (!playing && audioSeekTo < 0) {
+                    output.stop()
+                    synchronized(lock) { while (running && !playing && audioSeekTo < 0) lock.wait() }
+                    if (!running) break
+                    if (playing) output.start()
+                }
+                val target = audioSeekTo
+                if (target >= 0) {
+                    audioSeekTo = -1
+                    grabber.setTimestamp(target * 1000)
+                    output.flush()
+                    lineMarkUs = output.microsecondPosition
+                    audioBaseUs = target * 1000
+                    audioDone = false
+                    if (playing) output.start()
+                    continue
+                }
+                if (audioDone) {
+                    synchronized(lock) { while (running && audioSeekTo < 0) lock.wait() }
+                    continue
+                }
+                val next = grabber.grabSamples()
+                if (next == null) {
+                    output.drain()
+                    audioDone = true
+                    continue
+                }
+                writeAudio(output, next)
+            }
+        } catch (_: InterruptedException) {
+        } catch (error: Throwable) {
+            AppLog.write("Video audio failed", error)
+        } finally {
+            audioDone = true
+            line = null
+            runCatching { output?.stop() }
+            runCatching { output?.close() }
             runCatching { grabber.stop() }
             runCatching { grabber.release() }
         }
@@ -286,25 +339,18 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
         }
     }.onFailure { AppLog.write("Video audio unavailable", it) }.getOrNull()
 
-    private fun pumpAudio(output: SourceDataLine) {
-        try {
-            while (running) {
-                val chunk = audio.take()
-                output.write(chunk, 0, chunk.size)
-            }
-        } catch (_: InterruptedException) {
-        }
-    }
-
-    private fun writeAudio(frame: Frame) {
-        if (line == null) return
+    private fun writeAudio(output: SourceDataLine, frame: Frame) {
         val samples = frame.samples.firstOrNull() as? ShortBuffer ?: return
         val count = samples.remaining()
-        val bytes = ByteBuffer.allocate(count * 2).order(ByteOrder.LITTLE_ENDIAN)
+        val bytes = ByteArray(count * 2)
         val start = samples.position()
         val gain = if (muted) 0f else volume
-        for (i in 0 until count) bytes.putShort((samples.get(start + i) * gain).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort())
-        audio.offer(bytes.array(), AudioQueueWaitMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+        for (i in 0 until count) {
+            val value = (samples.get(start + i) * gain).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+            bytes[i * 2] = value.toByte()
+            bytes[i * 2 + 1] = (value shr 8).toByte()
+        }
+        output.write(bytes, 0, bytes.size)
     }
 
     private fun show(frame: Frame) {

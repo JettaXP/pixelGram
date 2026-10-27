@@ -67,6 +67,14 @@ import com.pixelgram.desktop.ui.components.expressive.IconButton
 import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.components.loadImage
 import com.pixelgram.desktop.ui.icons.Icons
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import com.pixelgram.desktop.ui.icons.outlined.Visibility
+import com.pixelgram.desktop.ui.icons.outlined.FavoriteBorder
+import com.pixelgram.desktop.ui.icons.filled.Favorite
+import com.pixelgram.desktop.ui.icons.automirrored.filled.Send
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import com.pixelgram.desktop.ui.icons.filled.PlayArrow
 import com.pixelgram.desktop.ui.icons.outlined.Add
 import com.pixelgram.desktop.ui.icons.outlined.Close
@@ -319,7 +327,7 @@ fun StoryViewer(stories: List<TdApi.Story>, start: Int, telegram: Telegram, onDi
             Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.85f))
-                .clickable(onClick = onDismiss)
+                .pointerInput(Unit) { detectTapGestures { onDismiss() } }
                 .focusRequester(focus)
                 .focusable()
                 .onKeyEvent { event ->
@@ -342,7 +350,9 @@ fun StoryViewer(stories: List<TdApi.Story>, start: Int, telegram: Telegram, onDi
                     .background(Color.Black),
             ) {
                 var progress by remember(story.posterChatId, story.id) { mutableStateOf(0f) }
-                StoryMedia(story, telegram, onProgress = { progress = it }, onEnd = next)
+                var replying by remember(story.posterChatId, story.id) { mutableStateOf(false) }
+                var viewers by remember(story.posterChatId, story.id) { mutableStateOf(false) }
+                StoryMedia(story, telegram, paused = replying || viewers, onProgress = { progress = it }, onEnd = next)
                 Row(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(1f).fillMaxHeight().clickable(indication = null, interactionSource = null) { previous() })
                     Box(Modifier.weight(2f).fillMaxHeight().clickable(indication = null, interactionSource = null) { next() })
@@ -380,24 +390,175 @@ fun StoryViewer(stories: List<TdApi.Story>, start: Int, telegram: Telegram, onDi
                         IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, contentDescription = "Close", tint = Color.White) }
                     }
                 }
-                story.caption?.text?.takeIf { it.isNotBlank() }?.let { caption ->
-                    EmojiText(
-                        caption,
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().background(BottomShade).padding(16.dp),
-                    )
+                Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().background(BottomShade)) {
+                    story.caption?.text?.takeIf { it.isNotBlank() }?.let { caption ->
+                        EmojiText(
+                            caption,
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                        )
+                    }
+                    StoryActions(story, telegram, onViewers = { viewers = true }, onTyping = { replying = it })
+                }
+                if (viewers) StoryViewersPanel(story, telegram, Modifier.align(Alignment.BottomCenter)) { viewers = false }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StoryActions(story: TdApi.Story, telegram: Telegram, onViewers: () -> Unit, onTyping: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().padding(12.dp),
+    ) {
+        if (story.canGetInteractions) {
+            val info = story.interactionInfo
+            Surface(onClick = onViewers, shape = CircleShape, color = Color.White.copy(alpha = StoryChipAlpha), contentColor = Color.White) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                ) {
+                    Icon(Icons.Outlined.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text("%,d".format(info?.viewCount ?: 0), style = MaterialTheme.typography.labelLarge)
+                    if ((info?.reactionCount ?: 0) > 0) {
+                        Icon(Icons.Filled.Favorite, contentDescription = null, tint = LikeColor, modifier = Modifier.size(16.dp))
+                        Text("%,d".format(info?.reactionCount ?: 0), style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
+            return@Row
+        }
+        if (story.canBeReplied) {
+            var text by remember(story.posterChatId, story.id) { mutableStateOf("") }
+            var sent by remember(story.posterChatId, story.id) { mutableStateOf(false) }
+            val send = {
+                val message = text.trim()
+                if (message.isNotEmpty()) {
+                    text = ""
+                    telegram.replyToStory(story, message) { error -> if (error == null) sent = true }
+                }
+            }
+            androidx.compose.material3.TextField(
+                value = text,
+                onValueChange = {
+                    text = it
+                    sent = false
+                },
+                placeholder = { Text(if (sent) "Reply sent" else "Reply privately…", color = Color.White.copy(alpha = 0.7f)) },
+                singleLine = true,
+                shape = CircleShape,
+                visualTransformation = com.pixelgram.desktop.ui.theme.EmojiVisualTransformation,
+                colors = androidx.compose.material3.TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White.copy(alpha = StoryChipAlpha),
+                    unfocusedContainerColor = Color.White.copy(alpha = StoryChipAlpha),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Color.White,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+                trailingIcon = if (text.isNotBlank()) {
+                    { IconButton(onClick = send) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color.White) } }
+                } else {
+                    null
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .onFocusChanged { onTyping(it.isFocused) }
+                    .onPreviewKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
+                            send()
+                            true
+                        } else {
+                            false
+                        }
+                    },
+            )
+        } else {
+            Spacer(Modifier.weight(1f))
+        }
+        var liked by remember(story.posterChatId, story.id) { mutableStateOf(story.chosenReactionType != null) }
+        IconButton(onClick = {
+            val target = !liked
+            liked = target
+            telegram.setStoryLiked(story, target) { error ->
+                if (error != null) liked = !target else story.chosenReactionType = if (target) TdApi.ReactionTypeEmoji(com.pixelgram.desktop.telegram.StoryLike) else null
+            }
+        }) {
+            Icon(
+                if (liked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                contentDescription = if (liked) "Unlike" else "Like",
+                tint = if (liked) LikeColor else Color.White,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StoryViewersPanel(story: TdApi.Story, telegram: Telegram, modifier: Modifier, onClose: () -> Unit) {
+    var viewers by remember(story.posterChatId, story.id) { mutableStateOf<List<TdApi.StoryInteraction>?>(null) }
+    LaunchedEffect(story.posterChatId, story.id) { telegram.storyViewers(story, "") { list, _ -> viewers = list } }
+    Surface(
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = modifier.fillMaxWidth().fillMaxHeight(ViewersHeight).clickable(indication = null, interactionSource = null) {},
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val info = story.interactionInfo
+                Text(
+                    "%,d views".format(info?.viewCount ?: 0),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, contentDescription = "Close") }
+            }
+            val list = viewers
+            when {
+                list == null -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { androidx.compose.material3.LoadingIndicator() }
+                list.isEmpty() -> Text("No views yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                else -> androidx.compose.foundation.lazy.LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    items(list.size) { index ->
+                        val viewer = list[index]
+                        val name = telegram.senderTitle(viewer.actorId)
+                        val reaction = ((viewer.type as? TdApi.StoryInteractionTypeView)?.chosenReactionType as? TdApi.ReactionTypeEmoji)?.emoji
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                        ) {
+                            com.pixelgram.desktop.ui.components.AvatarImage(name, telegram.senderPhoto(viewer.actorId), telegram, CircleShape, 40.dp)
+                            Column(Modifier.weight(1f)) {
+                                EmojiText(name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                                Text(
+                                    DateFormat.format(Instant.ofEpochSecond(viewer.interactionDate.toLong()).atZone(ZoneId.systemDefault())),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            reaction?.let { EmojiText(it, style = MaterialTheme.typography.titleLarge) }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
+private const val StoryChipAlpha = 0.16f
+private const val ViewersHeight = 0.6f
+private val LikeColor = Color(0xFFFF4D6D)
+
 private val TopShade = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.5f), Color.Transparent))
 private val BottomShade = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))
 
 @Composable
-private fun StoryMedia(story: TdApi.Story, telegram: Telegram, onProgress: (Float) -> Unit, onEnd: () -> Unit) {
+private fun StoryMedia(story: TdApi.Story, telegram: Telegram, paused: Boolean, onProgress: (Float) -> Unit, onEnd: () -> Unit) {
+    val holding by androidx.compose.runtime.rememberUpdatedState(paused)
     when (val content = story.content) {
         is TdApi.StoryContentPhoto -> {
             val file = content.photo.sizes.maxByOrNull { it.width }?.photo
@@ -414,7 +575,7 @@ private fun StoryMedia(story: TdApi.Story, telegram: Telegram, onProgress: (Floa
                 while (elapsed < PhotoStoryMs) {
                     onProgress(elapsed.toFloat() / PhotoStoryMs)
                     delay(StoryTickMs)
-                    elapsed += StoryTickMs
+                    if (!holding) elapsed += StoryTickMs
                 }
                 onEnd()
             }
@@ -428,6 +589,9 @@ private fun StoryMedia(story: TdApi.Story, telegram: Telegram, onProgress: (Floa
                 if (path != null) {
                     val engine = remember(path) { VideoEngine(path, loop = false).apply { start() } }
                     DisposableEffect(engine) { onDispose { engine.close() } }
+                    LaunchedEffect(engine, paused) {
+                        if (paused == engine.playing && !engine.ended) engine.toggle()
+                    }
                     VideoFrame(engine, Modifier.fillMaxSize())
                     LaunchedEffect(engine) {
                         while (!engine.ended && !engine.failed) {
