@@ -9,8 +9,11 @@ import kotlin.system.exitProcess
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 object CrashHandler : WindowExceptionHandlerFactory {
     override fun exceptionHandler(window: java.awt.Window) = WindowExceptionHandler { error ->
-        AppLog.write("Window error", error)
-        if (error.isClipboardBusy()) return@WindowExceptionHandler
+        if (error.isClipboardBusy()) {
+            AppLog.write("Window error", error)
+            return@WindowExceptionHandler
+        }
+        AppLog.crash("pixelGram crashed", error)
         runCatching {
             JOptionPane.showMessageDialog(
                 window,

@@ -130,6 +130,7 @@ compose.desktop {
             "-XX:MinHeapFreeRatio=10",
             "-XX:MaxHeapFreeRatio=30",
             "-XX:G1PeriodicGCInterval=30000",
+            "-XX:ErrorFile=\$APPDIR/../pixelgram-data/logs/crash-%p.log",
         )
 
         nativeDistributions {

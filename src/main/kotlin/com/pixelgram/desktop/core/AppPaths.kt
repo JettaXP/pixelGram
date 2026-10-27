@@ -56,4 +56,6 @@ object AppPaths {
     val settingsFile: File get() = File(dataDir, "settings.properties")
 
     val nativesDir: File get() = File(dataDir, "natives").apply { mkdirs() }
+
+    val logsDir: File get() = File(dataDir, "logs").apply { mkdirs() }
 }
