@@ -899,3 +899,92 @@ Side menu	תפריט צד
 Over the chats	מעל הצ'אטים
 Push aside	הזזת הצ'אטים
 Over the chats keeps the window still and dims it. Push aside moves the chats to make room for the menu.	מעל הצ'אטים — התפריט נפתח מעל חלון מעומעם. הזזת הצ'אטים — הצ'אטים זזים ומפנים מקום לתפריט.
+Add members	הוספת משתתפים
+Add new admins	מינוי מנהלים
+Admin actions from the last 48 hours.	פעולות מנהלים מ־48 השעות האחרונות.
+Admin rights	הרשאות מנהל
+Admin title	תואר
+Administrators	מנהלים
+Ban	חסימה
+Ban users	חסימת משתמשים
+Banned	נחסם
+Change chat info	שינוי פרטי הצ'אט
+Closed	סגור
+Create topics	יצירת נושאים
+Delete all their messages	מחיקת כל ההודעות שלו
+Delete messages	מחיקת הודעות
+Delete stories of others	מחיקת סטוריז של אחרים
+Dismiss admin	הסרת מנהל
+Edit admin rights	עריכת הרשאות מנהל
+Edit member tags	עריכת תגיות משתתפים
+Edit messages of others	עריכת הודעות של אחרים
+Edit own tag	עריכת התגית האישית
+Edit restrictions	עריכת הגבלות
+Edit stories of others	עריכת סטוריז של אחרים
+Embed links	תצוגה מקדימה של קישורים
+Exceptions	חריגים
+Invite users via link	הזמנה באמצעות קישור
+Load more	טעינת עוד
+Manage	ניהול
+Manage channel	ניהול הערוץ
+Manage direct messages	ניהול הודעות ישירות
+Manage group	ניהול הקבוצה
+Manage topics	ניהול נושאים
+Manage video chats	ניהול שיחות וידאו
+Member tag	תגית משתתף
+Members	משתתפים
+Members can send one message per this interval.	המשתתפים יוכלו לשלוח הודעה אחת בכל פרק זמן כזה.
+Name and description	שם ותיאור
+New topic	נושא חדש
+No messages here yet…	אין כאן הודעות עדיין…
+Nobody here	אין כאן אף אחד
+Nothing happened lately	לא קרה כלום לאחרונה
+Permissions	הרשאות
+Pin messages	הצמדת הודעות
+Post messages	פרסום הודעות
+Post stories	פרסום סטוריז
+Preview	תצוגה מקדימה
+Promote	מינוי
+Promote to admin	מינוי למנהל
+Recent actions	פעולות אחרונות
+Remain anonymous	להישאר אנונימי
+Remove from channel	הסרה מהערוץ
+Remove from group	הסרה מהקבוצה
+Remove restrictions	הסרת הגבלות
+Removed users	משתמשים שהוסרו
+Restrict	הגבלה
+Restrictions	הגבלות
+Save tag	שמירת תגית
+Send music	שליחת מוזיקה
+Send photos	שליחת תמונות
+Send polls	שליחת סקרים
+Send stickers and GIFs	שליחת מדבקות ו־GIF
+Send text messages	שליחת הודעות טקסט
+Send video messages	שליחת הודעות וידאו
+Send videos	שליחת סרטונים
+Send voice messages	שליחת הודעות קוליות
+Since	מאז
+Slow mode	מצב איטי
+Split the group into topics, each with its own messages.	חלוקת הקבוצה לנושאים, לכל אחד ההודעות שלו.
+Subscribers	מנויים
+The title is set in the member card after saving.	התואר נקבע בכרטיס המשתתף לאחר השמירה.
+They won't be able to come back through invite links.	לא יוכלו לחזור דרך קישורי הזמנה.
+This topic is closed	הנושא סגור
+To add an administrator, open Members and pick someone.	כדי להוסיף מנהל, פתחו את המשתתפים ובחרו מישהו.
+Topic name	שם הנושא
+Topics	נושאים
+Topics need a supergroup	נושאים דורשים קבוצת־על
+Unban	ביטול חסימה
+What can members of this group do?	מה יכולים משתתפי הקבוצה לעשות?
+What can this admin do?	מה יכול המנהל הזה לעשות?
+You can't change anything for this member.	אין באפשרותך לשנות דבר עבור משתתף זה.
+owner	בעלים
+admin	מנהל
+banned	חסום
+restricted	מוגבל
+restricted, left	מוגבל, עזב
+You don't have the rights to do this.	אין לך הרשאות לפעולה זו.
+Only the admin who promoted this member can change them.	רק המנהל שמינה את המשתתף יכול לשנות אותו.
+This chat has too many administrators.	בצ'אט הזה יש יותר מדי מנהלים.
+This user's privacy settings don't allow this.	הגדרות הפרטיות של המשתמש לא מאפשרות זאת.
+Nothing changed.	שום דבר לא השתנה.

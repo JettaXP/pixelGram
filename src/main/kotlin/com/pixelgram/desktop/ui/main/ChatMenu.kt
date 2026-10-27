@@ -99,6 +99,8 @@ import com.pixelgram.desktop.telegram.ChatListKey
 import com.pixelgram.desktop.telegram.ChatState
 import it.tdlight.jni.TdApi
 import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.telegram.canManage
+import com.pixelgram.desktop.ui.icons.outlined.AdminPanelSettings
 import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.theme.EmojiText
 
@@ -125,6 +127,7 @@ fun ChatActions(
     var profile by remember(chat.id) { mutableStateOf(false) }
     var contactEdit by remember(chat.id) { mutableStateOf(false) }
     var renaming by remember(chat.id) { mutableStateOf(false) }
+    var managing by remember(chat.id) { mutableStateOf(false) }
     LaunchedEffect(chat.id, at != null) {
         if (at != null && chat.privateUserId != 0L) telegram.userFullInfo(chat.privateUserId) {}
     }
@@ -161,6 +164,9 @@ fun ChatActions(
                             add(MenuEntry(if (muted) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff, if (muted) "Unmute" else "Mute",
                                 onClick = act { telegram.setMuted(chat, !muted) }))
                             if (showProfile) add(MenuEntry(Icons.Outlined.AccountCircle, "View profile", onClick = act { profile = true }))
+                            if (chat.privateUserId == 0L && telegram.canManage(chat)) {
+                                add(MenuEntry(Icons.Outlined.AdminPanelSettings, if (chat.isChannel) "Manage channel" else "Manage group", onClick = act { managing = true }))
+                            }
                             onSearch?.let { add(MenuEntry(Icons.Outlined.Search, "Search", onClick = act(it))) }
                             onToBeginning?.let { add(MenuEntry(Icons.Outlined.KeyboardDoubleArrowUp, "To beginning", onClick = act(it))) }
                         }
@@ -242,6 +248,7 @@ fun ChatActions(
     if (profile) ChatInfoDialog(chat, telegram, settings, onOpenChat) { profile = false }
     if (contactEdit) ContactDialog(chat, telegram) { contactEdit = false }
     if (renaming) RenameDialog(chat, telegram) { renaming = false }
+    if (managing) ManageChatDialog(chat, telegram) { managing = false }
 }
 
 @Composable
@@ -334,6 +341,8 @@ fun ChatInfoDialog(
         }
     }
     mentioned?.let { other -> ChatInfoDialog(other, telegram, settings, onOpenChat) { mentioned = null } }
+    var managing by remember(chat.id) { mutableStateOf(false) }
+    if (managing) ManageChatDialog(chat, telegram) { managing = false }
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
@@ -397,6 +406,9 @@ fun ChatInfoDialog(
                             Modifier.weight(1f),
                             checked = muted,
                         ) { telegram.setMuted(chat, !muted) }
+                        if (chat.privateUserId == 0L && telegram.canManage(chat)) {
+                            ProfileAction(Icons.Outlined.AdminPanelSettings, "Manage", Modifier.weight(1f)) { managing = true }
+                        }
                         Box(Modifier.weight(1f)) {
                             ProfileAction(Icons.Outlined.MoreHoriz, "More", Modifier.fillMaxWidth()) { moreAt = DpOffset(0.dp, 0.dp) }
                             ChatActions(chat, telegram, settings, moreAt, onDismiss = { moreAt = null }, onOpenChat = onOpenChat, showProfile = false)

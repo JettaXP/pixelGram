@@ -901,3 +901,92 @@ Side menu	Боковое меню
 Over the chats	Поверх чатов
 Push aside	Сдвигать чаты
 Over the chats keeps the window still and dims it. Push aside moves the chats to make room for the menu.	Поверх чатов — меню открывается над затемнённым окном. Сдвигать чаты — чаты отъезжают вправо и освобождают место для меню.
+Add members	Добавление участников
+Add new admins	Назначение администраторов
+Admin actions from the last 48 hours.	Действия администраторов за последние 48 часов.
+Admin rights	Права администратора
+Admin title	Звание
+Administrators	Администраторы
+Ban	Заблокировать
+Ban users	Блокировка пользователей
+Banned	Заблокирован
+Change chat info	Изменение информации
+Closed	Закрыта
+Create topics	Создание тем
+Delete all their messages	Удалить все их сообщения
+Delete messages	Удаление сообщений
+Delete stories of others	Удаление чужих историй
+Dismiss admin	Разжаловать
+Edit admin rights	Изменить права администратора
+Edit member tags	Изменение тегов участников
+Edit messages of others	Изменение чужих сообщений
+Edit own tag	Изменение своего тега
+Edit restrictions	Изменить ограничения
+Edit stories of others	Изменение чужих историй
+Embed links	Предпросмотр ссылок
+Exceptions	Исключения
+Invite users via link	Приглашение по ссылке
+Load more	Загрузить ещё
+Manage	Управление
+Manage channel	Управление каналом
+Manage direct messages	Управление личными сообщениями
+Manage group	Управление группой
+Manage topics	Управление темами
+Manage video chats	Управление видеочатами
+Member tag	Тег участника
+Members	Участники
+Members can send one message per this interval.	Участники смогут отправлять одно сообщение за этот интервал.
+Name and description	Название и описание
+New topic	Новая тема
+No messages here yet…	Здесь пока нет сообщений…
+Nobody here	Здесь никого нет
+Nothing happened lately	В последнее время ничего не происходило
+Permissions	Разрешения
+Pin messages	Закрепление сообщений
+Post messages	Публикация сообщений
+Post stories	Публикация историй
+Preview	Предпросмотр
+Promote	Назначить
+Promote to admin	Назначить администратором
+Recent actions	Недавние действия
+Remain anonymous	Анонимность
+Remove from channel	Удалить из канала
+Remove from group	Удалить из группы
+Remove restrictions	Снять ограничения
+Removed users	Удалённые пользователи
+Restrict	Ограничить
+Restrictions	Ограничения
+Save tag	Сохранить тег
+Send music	Отправка музыки
+Send photos	Отправка фото
+Send polls	Отправка опросов
+Send stickers and GIFs	Отправка стикеров и GIF
+Send text messages	Отправка сообщений
+Send video messages	Отправка видеосообщений
+Send videos	Отправка видео
+Send voice messages	Отправка голосовых
+Since	С
+Slow mode	Медленный режим
+Split the group into topics, each with its own messages.	Разделить группу на темы, у каждой свои сообщения.
+Subscribers	Подписчики
+The title is set in the member card after saving.	Звание задаётся в карточке участника после сохранения.
+They won't be able to come back through invite links.	Пользователь не сможет вернуться по пригласительной ссылке.
+This topic is closed	Тема закрыта
+To add an administrator, open Members and pick someone.	Чтобы добавить администратора, откройте «Участники» и выберите человека.
+Topic name	Название темы
+Topics	Темы
+Topics need a supergroup	Для тем нужна супергруппа
+Unban	Разблокировать
+What can members of this group do?	Что могут участники этой группы?
+What can this admin do?	Что может этот администратор?
+You can't change anything for this member.	Вы не можете ничего изменить для этого участника.
+owner	владелец
+admin	админ
+banned	заблокирован
+restricted	ограничен
+restricted, left	ограничен, вышел
+You don't have the rights to do this.	У вас нет прав на это действие.
+Only the admin who promoted this member can change them.	Изменить этого участника может только назначивший его администратор.
+This chat has too many administrators.	В этом чате слишком много администраторов.
+This user's privacy settings don't allow this.	Настройки приватности пользователя не позволяют это сделать.
+Nothing changed.	Ничего не изменилось.

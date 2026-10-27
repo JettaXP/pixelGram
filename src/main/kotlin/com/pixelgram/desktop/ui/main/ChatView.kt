@@ -157,6 +157,7 @@ import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.ChatState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
+import com.pixelgram.desktop.telegram.SenderTag
 import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.components.loadImage
 import com.pixelgram.desktop.ui.theme.EmojiText
@@ -286,6 +287,7 @@ fun ChatView(
     var highlight by remember(chat.id) { mutableStateOf<Pair<Long, Long>?>(null) }
     var pinning by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var commentsFor by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
+    var openedTopic by remember(chat.id) { mutableStateOf<TdApi.ForumTopicInfo?>(null) }
     val selected = remember(chat.id) { mutableStateListOf<Long>() }
     val selecting = selected.isNotEmpty()
     val selectingState = rememberUpdatedState(selecting)
@@ -573,6 +575,7 @@ fun ChatView(
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
         }
+        if (telegram.isForum(chat)) ForumTabs(chat, telegram, onOpen = { openedTopic = it }, modifier = Modifier.padding(bottom = 8.dp))
         val lastPress = remember(chat.id) { longArrayOf(0L) }
         Box(
             Modifier
@@ -805,6 +808,7 @@ fun ChatView(
                                     message = if (chat.isChannel && message.isOutgoing) message.copy(isOutgoing = false) else message,
                                     modifier = Modifier.weight(1f),
                                     senderName = if ((groupChat || sentAsChat) && firstInRun) telegram.senderName(message) else null,
+                                    senderTag = if (groupChat && firstInRun) telegram.senderTag(chat, message) else null,
                                     settings = settings,
                                     status = if (message.isOutgoing && !chat.isChannel) telegram.status(chat, message) else null,
                                     onReact = { emoji -> telegram.toggleReaction(message, emoji) },
@@ -995,6 +999,15 @@ fun ChatView(
         commentsFor?.let { shownPost = it }
         shownPost?.let { post -> CommentsView(post, telegram, settings) { commentsFor = null } }
     }
+    AnimatedVisibility(
+        visible = openedTopic != null,
+        enter = slideInHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 3 } + fadeIn(),
+        exit = slideOutHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 3 } + fadeOut(),
+    ) {
+        var shownTopic by remember { mutableStateOf(openedTopic) }
+        openedTopic?.let { shownTopic = it }
+        shownTopic?.let { topic -> TopicView(chat, topic, telegram, settings) { openedTopic = null } }
+    }
     }
     }
 }
@@ -1128,6 +1141,7 @@ fun MessageBubble(
     onOrigin: ((TdApi.MessageOrigin) -> Unit)? = null,
     onVia: ((String) -> Unit)? = null,
     onComments: (() -> Unit)? = null,
+    senderTag: SenderTag? = null,
 ) {
     val seconds = settings.messageSeconds.value
     remember(message.chatId, message.id) { ReactionMemory.note(message) }
@@ -1207,6 +1221,7 @@ fun MessageBubble(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false),
                             )
+                            senderTag?.let { MemberTagPill(it.text, it.rank) }
                         }
                         if (via.isNotBlank()) {
                             Text(

@@ -68,6 +68,7 @@ fun Telegram.loadDemo() {
         UiMessage(203, 104, 2, 0, false, now - 200, "Who is cooking today?"),
         UiMessage(202, 104, 2, 0, false, now - 220, "Hi everyone 👋"),
     ))
+    if (System.getProperty("pixelgram.demo.manage") == "true") loadManageDemo(now)
     System.getProperty("pixelgram.demo.plugin")?.let { path -> loadTypesDemo(path, now) }
     chats[101L]?.privateUserId = 2
     statuses[2] = TdApi.UserStatusOnline(0)
@@ -485,3 +486,130 @@ fun demoGiftCollections(): List<TdApi.GiftCollection> =
 
 fun demoUpgradedGift(): TdApi.UpgradedGift? =
     (demoGifts().firstOrNull { it.gift is TdApi.SentGiftUpgraded }?.gift as? TdApi.SentGiftUpgraded)?.gift
+
+private const val DemoSupergroup = 5104L
+
+private fun demoPermissions(all: Boolean) = TdApi.ChatPermissions().apply {
+    canSendBasicMessages = true
+    canSendPhotos = true
+    canSendVideos = true
+    canSendOtherMessages = true
+    canSendAudios = all
+    canSendDocuments = all
+    canSendVoiceNotes = true
+    canSendVideoNotes = true
+    canAddLinkPreviews = true
+    canSendPolls = all
+    canInviteUsers = true
+    canPinMessages = false
+    canChangeInfo = false
+    canCreateTopics = true
+    canEditTag = true
+}
+
+private fun demoRights() = TdApi.ChatAdministratorRights().apply {
+    canManageChat = true
+    canChangeInfo = true
+    canDeleteMessages = true
+    canInviteUsers = true
+    canRestrictMembers = true
+    canPinMessages = true
+    canManageTopics = true
+    canPromoteMembers = true
+    canManageVideoChats = true
+    canManageTags = true
+}
+
+private fun Telegram.loadManageDemo(now: Int) {
+    me?.let { users[it.id] = it }
+    users[4] =TdApi.User().apply { id = 4; firstName = "Charlie"; lastName = "" }
+    users[5] = TdApi.User().apply { id = 5; firstName = "Dana"; lastName = "" }
+    users[6] = TdApi.User().apply { id = 6; firstName = "Spam"; lastName = "Bot" }
+    chats[104L]?.apply {
+        supergroupId = DemoSupergroup
+        permissions = demoPermissions(all = false)
+    }
+    demoUpdate(TdApi.UpdateSupergroup(TdApi.Supergroup().apply {
+        id = DemoSupergroup
+        isForum = true
+        hasForumTabs = true
+        memberCount = 6
+        status = TdApi.ChatMemberStatusAdministrator(false, demoRights())
+    }))
+    messages(104L).add(0, UiMessage(207, 104, 4, 0, false, now - 30, "Can I bring my cat? 🐈", senderTag = "cat lover"))
+}
+
+fun demoMembers(list: MemberList): List<TdApi.ChatMember> {
+    val now = (System.currentTimeMillis() / 1000).toInt()
+    fun member(userId: Long, tag: String, status: TdApi.ChatMemberStatus, days: Int) = TdApi.ChatMember().apply {
+        memberId = TdApi.MessageSenderUser(userId)
+        this.tag = tag
+        joinedChatDate = now - days * 86_400
+        this.status = status
+    }
+    val owner = member(2, "mom", TdApi.ChatMemberStatusCreator(false, true), 400)
+    val me = member(1, "", TdApi.ChatMemberStatusAdministrator(false, demoRights()), 380)
+    val chef = member(3, "chef", TdApi.ChatMemberStatusAdministrator(true, demoRights().apply { canPromoteMembers = false }), 300)
+    val charlie = member(4, "cat lover", TdApi.ChatMemberStatusMember(), 40)
+    val dana = member(5, "", TdApi.ChatMemberStatusRestricted(true, 0, demoPermissions(all = false).apply { canSendPhotos = false; canSendVideos = false }), 12)
+    val spam = member(6, "", TdApi.ChatMemberStatusBanned(0), 2)
+    return when (list) {
+        MemberList.Recent -> listOf(owner, me, chef, charlie, dana)
+        MemberList.Administrators -> listOf(owner, me, chef)
+        MemberList.Banned -> listOf(spam)
+        MemberList.Restricted -> listOf(dana)
+    }
+}
+
+fun demoEvents(): List<TdApi.ChatEvent> {
+    val now = (System.currentTimeMillis() / 1000).toInt()
+    fun event(id: Long, userId: Long, ago: Int, action: TdApi.ChatEventAction) = TdApi.ChatEvent().apply {
+        this.id = id
+        date = now - ago
+        memberId = TdApi.MessageSenderUser(userId)
+        this.action = action
+    }
+    return listOf(
+        event(6, 1, 300, TdApi.ChatEventMemberRestricted(TdApi.MessageSenderUser(6), TdApi.ChatMemberStatusMember(), TdApi.ChatMemberStatusBanned(0))),
+        event(5, 1, 900, TdApi.ChatEventMemberTagChanged(4, "", "cat lover")),
+        event(4, 2, 3_600, TdApi.ChatEventMemberPromoted(3, TdApi.ChatMemberStatusMember(), TdApi.ChatMemberStatusAdministrator(true, demoRights()))),
+        event(3, 2, 7_200, TdApi.ChatEventPermissionsChanged(demoPermissions(all = true), demoPermissions(all = false))),
+        event(2, 5, 86_400, TdApi.ChatEventMemberJoined()),
+        event(1, 2, 172_800, TdApi.ChatEventTitleChanged("Family", "Family 👨‍👩‍👧")),
+    )
+}
+
+private val demoCreatedTopics = mutableListOf<String>()
+
+fun demoTopics(chatId: Long): List<TdApi.ForumTopic> {
+    val names = listOf("General", "Dinner 🍕", "Trips ✈️", "Photos", "Birthdays 🎂") + demoCreatedTopics
+    return names.mapIndexed { index, name ->
+        TdApi.ForumTopic().apply {
+            info = TdApi.ForumTopicInfo().apply {
+                this.chatId = chatId
+                forumTopicId = index + 1
+                this.name = name
+                icon = TdApi.ForumTopicIcon(TopicColors[index % TopicColors.size], 0)
+                isGeneral = index == 0
+            }
+            unreadCount = if (index == 1) 3 else 0
+        }
+    }
+}
+
+fun demoCreateTopic(chatId: Long, name: String) {
+    if (name.isNotBlank()) demoCreatedTopics.add(name)
+}
+
+fun demoTopicHistory(chatId: Long, topicId: Int): List<UiMessage> {
+    val now = (System.currentTimeMillis() / 1000).toInt()
+    val base = topicId * 1_000L
+    return when (topicId) {
+        2 -> listOf(
+            UiMessage(base + 3, chatId, 4, 0, false, now - 40, "Pizza for me 🍕", senderTag = "cat lover"),
+            UiMessage(base + 2, chatId, 3, 0, false, now - 400, "I'll cook pasta tonight"),
+            UiMessage(base + 1, chatId, 2, 0, false, now - 900, "What's for dinner?"),
+        )
+        else -> listOf(UiMessage(base + 1, chatId, 2, 0, false, now - 3_600, "Welcome to the topic 👋"))
+    }
+}

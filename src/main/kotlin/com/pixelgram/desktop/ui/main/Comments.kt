@@ -174,7 +174,7 @@ fun CommentsView(post: UiMessage, telegram: Telegram, settings: AppSettings, onB
 }
 
 @Composable
-private fun CommentComposer(onSend: (String) -> Unit) {
+internal fun CommentComposer(placeholder: String = "Comment", onSend: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
     val send = {
         if (text.isNotBlank()) {
@@ -190,7 +190,7 @@ private fun CommentComposer(onSend: (String) -> Unit) {
         TextField(
             value = text,
             onValueChange = { text = it },
-            placeholder = { Text("Comment") },
+            placeholder = { Text(placeholder) },
             visualTransformation = EmojiVisualTransformation,
             shape = MaterialTheme.shapes.extraLarge,
             colors = TextFieldDefaults.colors(

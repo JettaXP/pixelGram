@@ -109,6 +109,7 @@ class ChatState(val id: Long) {
     var keyboard by mutableStateOf<TdApi.ReplyMarkupShowKeyboard?>(null)
     var notifications by mutableStateOf<TdApi.ChatNotificationSettings?>(null)
     var background by mutableStateOf<TdApi.ChatBackground?>(null)
+    var permissions by mutableStateOf<TdApi.ChatPermissions?>(null)
     val positions = mutableStateMapOf<ChatListKey, Long>()
     val pinned = mutableStateMapOf<ChatListKey, Boolean>()
 }
@@ -164,7 +165,14 @@ data class UiMessage(
     val pinned: Boolean = false,
     val albumId: Long = 0,
     val comments: Int = -1,
+    val senderTag: String = "",
 )
+
+enum class MemberRank { Member, Admin, Owner }
+
+data class SenderTag(val text: String, val rank: MemberRank)
+
+data class MemberRole(val rank: MemberRank, val tag: String)
 
 enum class MessageStatus { Sending, Sent, Read, Failed }
 
@@ -720,6 +728,8 @@ class Telegram(
         chatActions[chatId] = listOf(sender to action)
     }
 
+    internal fun demoUpdate(update: TdApi.Update) = handleUpdate(update)
+
     fun typing(chatId: Long): List<TdApi.MessageSender> =
         chatActions[chatId].orEmpty().filter { (sender, action) ->
             action is TdApi.ChatActionTyping && !(sender is TdApi.MessageSenderUser && sender.userId == myUserId)
@@ -966,6 +976,8 @@ class Telegram(
             }
             is TdApi.UpdateChatPosition -> chats[update.chatId]?.let { applyPosition(it, update.position) }
             is TdApi.UpdateChatBackground -> chats[update.chatId]?.background = update.background
+            is TdApi.UpdateChatPermissions -> chats[update.chatId]?.permissions = update.permissions
+            is TdApi.UpdateChatMember -> chats[update.chatId]?.takeIf { chatRoles[it.id] != null }?.let(::refreshRoles)
             is TdApi.UpdateSavedMessagesTopic -> savedTopics[update.topic.id] = update.topic
             is TdApi.UpdateChatBlockList -> chats[update.chatId]?.privateUserId?.takeIf { it != 0L }?.let { userId ->
                 blockedUsers[userId] = update.blockList != null
@@ -1045,6 +1057,12 @@ class Telegram(
                         threadMessages.add(0, update.message.toUi().copy(fresh = true))
                     }
                 }
+                activeTopic?.let { (topicChat, topicId) ->
+                    val topic = update.message.topicId as? TdApi.MessageTopicForum
+                    if (update.message.chatId == topicChat && topic?.forumTopicId == topicId && topicMessages.none { it.id == update.message.id }) {
+                        topicMessages.add(0, update.message.toUi().copy(fresh = true))
+                    }
+                }
                 messages[update.message.chatId]?.takeIf { detached[update.message.chatId] != true }?.let { list ->
                     if (list.none { it.id == update.message.id }) {
                         list.add(0, update.message.toUi().copy(fresh = true))
@@ -1065,9 +1083,15 @@ class Telegram(
             }
             is TdApi.UpdateScopeNotificationSettings ->
                 scopeNotifications[update.scope.javaClass] = update.notificationSettings
-            is TdApi.UpdateMessageSendSucceeded -> messages[update.message.chatId]?.let { list ->
-                val index = list.indexOfFirst { it.id == update.oldMessageId }
-                if (index >= 0) list[index] = update.message.toUi().copy(key = list[index].key, fresh = true)
+            is TdApi.UpdateMessageSendSucceeded -> {
+                messages[update.message.chatId]?.let { list ->
+                    val index = list.indexOfFirst { it.id == update.oldMessageId }
+                    if (index >= 0) list[index] = update.message.toUi().copy(key = list[index].key, fresh = true)
+                }
+                if (activeTopic?.first == update.message.chatId) {
+                    val index = topicMessages.indexOfFirst { it.id == update.oldMessageId }
+                    if (index >= 0) topicMessages[index] = update.message.toUi().copy(key = topicMessages[index].key, fresh = true)
+                }
             }
             is TdApi.UpdatePoll -> messages.values.forEach { list ->
                 list.forEachIndexed { index, message ->
@@ -1102,7 +1126,10 @@ class Telegram(
                     ?.any { it.equals(OfficialChannel, ignoreCase = true) } == true
                 if (update.supergroup.memberCount > 0) supergroupMembers[update.supergroup.id] = update.supergroup.memberCount
             }
-            is TdApi.UpdateBasicGroup -> basicGroupMembers[update.basicGroup.id] = update.basicGroup.memberCount
+            is TdApi.UpdateBasicGroup -> {
+                basicGroupMembers[update.basicGroup.id] = update.basicGroup.memberCount
+                basicGroupInfo[update.basicGroup.id] = update.basicGroup
+            }
             is TdApi.UpdateSupergroupFullInfo ->
                 if (update.supergroupFullInfo.memberCount > 0) supergroupMembers[update.supergroupId] = update.supergroupFullInfo.memberCount
             is TdApi.UpdateMessageIsPinned -> {
@@ -1121,6 +1148,7 @@ class Telegram(
             }
             is TdApi.UpdateDeleteMessages -> if (update.isPermanent) {
                 messages[update.chatId]?.removeAll { it.id in update.messageIds }
+                if (activeTopic?.first == update.chatId) topicMessages.removeAll { it.id in update.messageIds }
             }
             else -> Unit
         }
@@ -1221,6 +1249,11 @@ class Telegram(
         unread.clear()
         unreadMessages.clear()
         listTotals.clear()
+        basicGroupInfo.clear()
+        chatRoles.clear()
+        roleRequests.clear()
+        topicMessages.clear()
+        activeTopic = null
         contactIds = null
     }
 
@@ -1242,6 +1275,7 @@ class Telegram(
             replyMarkupMessageId = chat.replyMarkupMessageId
             notifications = chat.notificationSettings
             background = chat.background
+            permissions = chat.permissions
         }
         if (state.privateUserId != 0L) blockedUsers[state.privateUserId] = chat.blockList != null
         chat.positions?.forEach { applyPosition(state, it) }
@@ -1460,9 +1494,119 @@ class Telegram(
             else -> false
         }
     }
-    fun isAdmin(chat: ChatState): Boolean = when (supergroupInfo[chat.supergroupId]?.status) {
+    fun isAdmin(chat: ChatState): Boolean = when (myStatus(chat)) {
         is TdApi.ChatMemberStatusCreator, is TdApi.ChatMemberStatusAdministrator -> true
         else -> false
+    }
+
+    private val basicGroupInfo = KeyedState<Long, TdApi.BasicGroup>()
+
+    fun myStatus(chat: ChatState): TdApi.ChatMemberStatus? = when {
+        chat.supergroupId != 0L -> supergroupInfo[chat.supergroupId]?.status
+        chat.basicGroupId != 0L -> basicGroupInfo[chat.basicGroupId]?.status
+        else -> null
+    }
+
+    fun isForum(chat: ChatState): Boolean = chat.supergroupId != 0L && forums[chat.supergroupId] == true
+
+    private val chatRoles = KeyedState<Long, Map<Long, MemberRole>>()
+    private val roleRequests = HashSet<Long>()
+
+    fun refreshRoles(chat: ChatState) {
+        if (chat.isGroup) loadRoles(chat)
+    }
+
+    fun memberRoles(chat: ChatState): Map<Long, MemberRole> {
+        chatRoles[chat.id]?.let { return it }
+        if (chat.isGroup && roleRequests.add(chat.id)) loadRoles(chat)
+        return emptyMap()
+    }
+
+    private fun loadRoles(chat: ChatState) {
+        chatMembers(chat, admins = true) { members ->
+            chatRoles[chat.id] = members.mapNotNull { member ->
+                val userId = (member.memberId as? TdApi.MessageSenderUser)?.userId ?: return@mapNotNull null
+                val rank = when (member.status) {
+                    is TdApi.ChatMemberStatusCreator -> MemberRank.Owner
+                    is TdApi.ChatMemberStatusAdministrator -> MemberRank.Admin
+                    else -> return@mapNotNull null
+                }
+                userId to MemberRole(rank, member.tag.orEmpty())
+            }.toMap()
+        }
+    }
+
+    fun senderTag(chat: ChatState, message: UiMessage): SenderTag? {
+        if (!chat.isGroup || chat.isChannel || message.senderUserId == 0L) return null
+        val role = memberRoles(chat)[message.senderUserId]
+        return when {
+            role?.rank == MemberRank.Owner -> SenderTag(role.tag.ifBlank { com.pixelgram.desktop.core.tr("owner") }, MemberRank.Owner)
+            role != null -> SenderTag(role.tag.ifBlank { com.pixelgram.desktop.core.tr("admin") }, MemberRank.Admin)
+            message.senderTag.isNotBlank() -> SenderTag(message.senderTag, MemberRank.Member)
+            else -> null
+        }
+    }
+
+    var activeTopic by mutableStateOf<Pair<Long, Int>?>(null)
+        private set
+    val topicMessages = mutableStateListOf<UiMessage>()
+    var topicLoading by mutableStateOf(false)
+        private set
+    var topicComplete by mutableStateOf(false)
+        private set
+
+    fun openTopic(chatId: Long, topicId: Int) {
+        topicMessages.clear()
+        topicComplete = false
+        topicLoading = false
+        activeTopic = chatId to topicId
+        loadTopicHistory()
+    }
+
+    fun loadTopicHistory() {
+        val (chatId, topicId) = activeTopic ?: return
+        if (topicLoading || topicComplete) return
+        if (System.getProperty("pixelgram.demo") == "true") {
+            topicMessages.addAll(demoTopicHistory(chatId, topicId))
+            topicComplete = true
+            return
+        }
+        topicLoading = true
+        val from = topicMessages.lastOrNull()?.id ?: 0L
+        send(TdApi.GetForumTopicHistory(chatId, topicId, from, 0, ThreadPageSize)) { result ->
+            if (activeTopic != chatId to topicId) return@send
+            topicLoading = false
+            val loaded = (result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty()
+                .filter { message -> topicMessages.none { it.id == message.id } }
+                .sortedByDescending { it.id }
+                .map { it.toUi() }
+            if (loaded.isEmpty()) topicComplete = true
+            topicMessages.addAll(loaded)
+            if (loaded.isNotEmpty()) markRead(chatId, loaded.map { it.id })
+        }
+    }
+
+    fun closeTopic() {
+        activeTopic = null
+        topicMessages.clear()
+        topicLoading = false
+        topicComplete = false
+    }
+
+    fun sendToTopic(text: String, replyToId: Long = 0) {
+        val (targetChat, forumTopic) = activeTopic ?: return
+        if (text.isBlank()) return
+        if (System.getProperty("pixelgram.demo") == "true") {
+            val id = (topicMessages.firstOrNull()?.id ?: 0L) + 1
+            topicMessages.add(0, UiMessage(id, targetChat, myUserId, 0, true, (System.currentTimeMillis() / 1000).toInt(), text, fresh = true))
+            return
+        }
+        send(TdApi.SendMessage().apply {
+            chatId = targetChat
+            topicId = TdApi.MessageTopicForum(forumTopic)
+            replyTo = replyInput(replyToId)
+            inputMessageContent = TdApi.InputMessageText().apply { this.text = TdApi.FormattedText(text, emptyArray()) }
+        }) { result -> if (result is TdApi.Error) com.pixelgram.desktop.ui.main.TopNotice.text = friendlyError(result.message) }
     }
 
     fun membersCount(chat: ChatState): Int? = memberCount(chat)
@@ -1477,6 +1621,7 @@ class Telegram(
             list.forEach { member -> (member.memberId as? TdApi.MessageSenderUser)?.let { ensureUser(it.userId) } }
             onResult(list)
         }
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(demoMembers(if (admins) MemberList.Administrators else MemberList.Recent))
         when {
             chat.basicGroupId != 0L -> send(TdApi.GetBasicGroupFullInfo(chat.basicGroupId)) { result ->
                 val members = (result as? TdApi.BasicGroupFullInfo)?.members?.toList().orEmpty()
@@ -2775,6 +2920,7 @@ fun TdApi.Message.toUi(): UiMessage {
         pinned = isPinned,
         albumId = mediaAlbumId,
         signature = authorSignature.orEmpty(),
+        senderTag = senderTag.orEmpty(),
         captionAbove = when (val media = content) {
             is TdApi.MessagePhoto -> media.showCaptionAboveMedia
             is TdApi.MessageVideo -> media.showCaptionAboveMedia
@@ -2898,7 +3044,7 @@ private fun List<String?>.filterNotBlank(): String =
 private fun floodSeconds(message: String?): Long? =
     Regex("""(?:retry after |FLOOD_WAIT_)(\d+)""").find(message.orEmpty())?.groupValues?.get(1)?.toLongOrNull()
 
-private fun friendlyError(message: String?): String {
+internal fun friendlyError(message: String?): String {
     val text = message.orEmpty()
     return when {
         text.contains("PHONE_NUMBER_INVALID") -> "Invalid phone number. Check the country code and number."
@@ -2911,6 +3057,13 @@ private fun friendlyError(message: String?): String {
             "Too many attempts. Please wait a bit and try again."
         text.contains("API_ID_INVALID") || text.contains("API_ID_PUBLISHED_FLOOD") ->
             "The API ID / hash are not valid. Check them on my.telegram.org."
+        text.contains("CHAT_ADMIN_REQUIRED") || text.contains("RIGHT_FORBIDDEN") || text.contains("Not enough rights") ->
+            "You don't have the rights to do this."
+        text.contains("USER_ADMIN_INVALID") -> "Only the admin who promoted this member can change them."
+        text.contains("ADMINS_TOO_MUCH") -> "This chat has too many administrators."
+        text.contains("USER_NOT_MUTUAL_CONTACT") || text.contains("USER_PRIVACY_RESTRICTED") ->
+            "This user's privacy settings don't allow this."
+        text.contains("CHAT_NOT_MODIFIED") -> "Nothing changed."
         else -> text.ifEmpty { "Something went wrong." }
     }
 }
