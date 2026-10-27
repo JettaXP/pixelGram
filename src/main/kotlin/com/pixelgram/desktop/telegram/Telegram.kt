@@ -1729,6 +1729,22 @@ class Telegram(
         send(TdApi.GetReceivedGift(id)) { onResult(it as? TdApi.ReceivedGift) }
     }
 
+    fun setGiftSaved(receivedGiftId: String, saved: Boolean, done: (String?) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return done(null)
+        send(TdApi.ToggleGiftIsSaved().apply {
+            this.receivedGiftId = receivedGiftId
+            isSaved = saved
+        }) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+    }
+
+    fun sellGift(receivedGiftId: String, done: (String?) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return done(null)
+        send(TdApi.SellGift().apply {
+            businessConnectionId = ""
+            this.receivedGiftId = receivedGiftId
+        }) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+    }
+
     fun profileGifts(owner: TdApi.MessageSender, onResult: (Int, List<TdApi.ReceivedGift>) -> Unit) {
         if (System.getProperty("pixelgram.demo") == "true") return demoGifts().let { onResult(it.size, it) }
         send(TdApi.GetReceivedGifts().apply {

@@ -132,6 +132,8 @@ fun StickerView(
     animate: Boolean = true,
     runs: Int = -1,
     onEnd: () -> Unit = {},
+    loopWhile: (() -> Boolean)? = null,
+    raster: Boolean = false,
 ) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         if (sticker == null) {
@@ -141,7 +143,7 @@ fun StickerView(
         LaunchedEffect(sticker.sticker?.id) { telegram.download(sticker.sticker) }
         val path = telegram.localPath(sticker.sticker)
         when {
-            path != null && sticker.format is TdApi.StickerFormatTgs -> LottieView(path, Modifier.fillMaxSize(), animate, runs, onEnd)
+            path != null && sticker.format is TdApi.StickerFormatTgs -> LottieView(path, Modifier.fillMaxSize(), animate, runs, onEnd, loopWhile, raster)
             path != null && sticker.format is TdApi.StickerFormatWebp -> FileImage(path, Modifier.fillMaxSize(), ContentScale.Fit)
             path != null && sticker.format is TdApi.StickerFormatWebm -> VideoStickerView(path, Modifier.fillMaxSize(), animate)
             else -> ThumbImage(sticker.thumbnail?.file, null, telegram, Modifier.fillMaxSize(), ContentScale.Fit)
@@ -150,7 +152,15 @@ fun StickerView(
 }
 
 @Composable
-fun LottieView(path: String, modifier: Modifier, play: Boolean = true, runs: Int = -1, onEnd: () -> Unit = {}) {
+fun LottieView(
+    path: String,
+    modifier: Modifier,
+    play: Boolean = true,
+    runs: Int = -1,
+    onEnd: () -> Unit = {},
+    loopWhile: (() -> Boolean)? = null,
+    raster: Boolean = false,
+) {
     val animation by produceState(LottieCache.get(path), path) {
         if (value != null) return@produceState
         value = withContext(Dispatchers.IO) {
@@ -161,21 +171,28 @@ fun LottieView(path: String, modifier: Modifier, play: Boolean = true, runs: Int
         }
     }
     val ended by rememberUpdatedState(onEnd)
+    val looping by rememberUpdatedState(loopWhile)
+    val held = loopWhile != null
     val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
-    val frame by produceState(0, animation, play, runs, focused) {
+    val frame by produceState(0, animation, play, runs, focused, held) {
         val current = animation ?: return@produceState
-        if (!play || runs == 0 || (!focused && runs < 0)) {
+        if (!play || runs == 0 || (!focused && runs < 0 && !held)) {
             value = 0
             return@produceState
         }
         val fps = current.fPS.takeIf { it > 0f } ?: DefaultLottieFps
         val total = (current.duration * fps).toInt().coerceAtLeast(1)
         val start = withFrameNanos { it }
+        var cycle = 0L
         while (true) {
             var done = false
             withFrameNanos { now ->
                 val passed = ((now - start) / 1_000_000_000.0 * fps).toLong()
-                if (runs > 0 && passed >= total) {
+                val reached = passed / total
+                if (held && reached > cycle) {
+                    if (looping?.invoke() == true) cycle = reached else done = true
+                }
+                if (done || (runs > 0 && !held && passed >= total)) {
                     done = true
                     value = 0
                 } else {
@@ -190,6 +207,17 @@ fun LottieView(path: String, modifier: Modifier, play: Boolean = true, runs: Int
         }
     }
     Canvas(modifier.graphicsLayer()) {
+        val width = size.width.toInt()
+        val height = size.height.toInt()
+        if (raster && width > 0 && height > 0) {
+            val player = LottieRaster.frames(path, width, height)
+            player.ready.intValue
+            val image = player.frame(frame)
+            if (image != null) {
+                drawIntoCanvas { canvas -> canvas.nativeCanvas.drawImageRect(image, Rect.makeWH(size.width, size.height)) }
+                return@Canvas
+            }
+        }
         val current = animation ?: return@Canvas
         drawIntoCanvas { canvas ->
             synchronized(current) {

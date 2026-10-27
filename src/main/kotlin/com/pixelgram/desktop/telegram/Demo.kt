@@ -442,21 +442,25 @@ fun demoStoryAlbums(): List<TdApi.StoryAlbum> =
 
 fun demoGifts(collection: Int = 0): List<TdApi.ReceivedGift> {
     val dir = demoStoryDir ?: return emptyList()
+    val animated = System.getProperty("pixelgram.demo.giftTgs")
     fun sticker(index: Int) = TdApi.Sticker().apply {
         id = 960_000L + index
         width = 256
         height = 256
         emoji = "🎁"
-        format = TdApi.StickerFormatWebp()
+        format = if (animated != null && index > 2) TdApi.StickerFormatTgs() else TdApi.StickerFormatWebp()
         fullType = TdApi.StickerFullTypeRegular()
-        sticker = demoFile(960_000 + index, "$dir/gift$index.png", 40_000)
+        sticker = demoFile(960_000 + index, if (animated != null && index > 2) animated else "$dir/gift$index.png", 40_000)
     }
     return (0 until 14).filter { collection == 0 || it % 3 == 0 }.map { i ->
         val index = i % 6 + 1
         TdApi.ReceivedGift().apply {
             receivedGiftId = "demo$i"
             senderId = TdApi.MessageSenderUser(if (i % 2 == 0) 2 else 3)
-            text = TdApi.FormattedText("", emptyArray())
+            text = TdApi.FormattedText(if (i == 0) "Happy birthday 🎉" else "", emptyArray())
+            date = (System.currentTimeMillis() / 1000).toInt() - i * 86_400
+            isSaved = i % 5 != 3
+            sellStarCount = 13
             gift = if (i == 4) {
                 TdApi.SentGiftUpgraded(TdApi.UpgradedGift().apply {
                     title = "Toy Bear"
@@ -474,7 +478,7 @@ fun demoGifts(collection: Int = 0): List<TdApi.ReceivedGift> {
                     }
                 })
             } else {
-                TdApi.SentGiftRegular(TdApi.Gift().apply { sticker = sticker(index); starCount = 15 })
+                TdApi.SentGiftRegular(TdApi.Gift().apply { sticker = sticker(index); starCount = 15; upgradeStarCount = 25 })
             }
             collectionIds = IntArray(0)
         }

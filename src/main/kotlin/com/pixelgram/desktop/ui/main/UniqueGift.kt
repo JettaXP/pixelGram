@@ -76,7 +76,16 @@ fun rarity(rarity: TdApi.UpgradedGiftAttributeRarity?): String? = when (rarity) 
 fun nftLink(gift: TdApi.UpgradedGift) = "https://t.me/nft/${gift.name}"
 
 @Composable
-fun UniqueGiftArt(gift: TdApi.UpgradedGift, telegram: Telegram, modifier: Modifier = Modifier, shape: Shape = MaterialTheme.shapes.large, animate: Boolean = true) {
+fun UniqueGiftArt(
+    gift: TdApi.UpgradedGift,
+    telegram: Telegram,
+    modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.large,
+    animate: Boolean = true,
+    loopWhile: (() -> Boolean)? = null,
+    onEnd: () -> Unit = {},
+    raster: Boolean = false,
+) {
     val colors = gift.backdrop?.colors
     BoxWithConstraints(
         modifier
@@ -142,7 +151,7 @@ fun UniqueGiftArt(gift: TdApi.UpgradedGift, telegram: Telegram, modifier: Modifi
                 }
             }
         }
-        StickerView(gift.model?.sticker, telegram, side * ModelScale, animate = animate)
+        StickerView(gift.model?.sticker, telegram, side * ModelScale, animate = animate, onEnd = onEnd, loopWhile = loopWhile, raster = raster)
     }
 }
 

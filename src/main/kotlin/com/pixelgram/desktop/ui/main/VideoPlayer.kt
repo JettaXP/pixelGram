@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
+import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -92,6 +93,7 @@ import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.SourceDataLine
 import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.impl.BufferUtil
 
 class VideoRequest(
     val telegram: Telegram,
@@ -156,8 +158,10 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
     private var line: SourceDataLine? = null
     private val audio = java.util.concurrent.LinkedBlockingQueue<ByteArray>(AudioQueueChunks)
     private var audioThread: Thread? = null
-    private var pixels = ByteArray(0)
-    private val retired = ArrayDeque<Bitmap>()
+    private val pool = ArrayList<Bitmap>(KeptFrames)
+    private var poolInfo: ImageInfo? = null
+    private var poolStride = 0
+    private var written = 0
 
     private val thread = Thread(::run, "pixelgram-video").apply { isDaemon = true }
 
@@ -307,25 +311,40 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
         val buffer = frame.image?.firstOrNull() as? ByteBuffer ?: return
         val stride = frame.imageStride
         val size = stride * frame.imageHeight
-        if (pixels.size != size) pixels = ByteArray(size)
-        buffer.duplicate().apply { rewind() }.get(pixels, 0, minOf(size, buffer.capacity()))
         val info = ImageInfo(frame.imageWidth, frame.imageHeight, ColorType.BGRA_8888, ColorAlphaType.OPAQUE)
-        val bitmap = Bitmap()
-        bitmap.allocPixels(info, stride)
-        bitmap.installPixels(info, pixels, stride)
-        bitmap.setImmutable()
-        this.frame = bitmap.asComposeImageBitmap()
-        retired.addLast(bitmap)
-        if (retired.size > KeptFrames) {
-            val old = retired.removeFirst()
-            java.awt.EventQueue.invokeLater { old.close() }
+        if (info != poolInfo || stride != poolStride) {
+            releaseFrames()
+            poolInfo = info
+            poolStride = stride
         }
+        val slot = written % KeptFrames
+        val bitmap = pool.getOrNull(slot) ?: Bitmap().also { fresh ->
+            if (!fresh.allocPixels(info, stride)) {
+                fresh.close()
+                return
+            }
+            pool.add(fresh)
+        }
+        val pixmap = bitmap.peekPixels() ?: return
+        try {
+            val source = buffer.duplicate().apply { rewind() }
+            source.limit(minOf(source.capacity(), size))
+            BufferUtil.getByteBufferFromPointer(pixmap.addr, size).put(source)
+        } finally {
+            pixmap.close()
+        }
+        bitmap.notifyPixelsChanged()
+        written++
+        this.frame = bitmap.asComposeImageBitmap()
     }
 
     private fun releaseFrames() {
-        val left = retired.toList()
-        retired.clear()
-        java.awt.EventQueue.invokeLater { left.dropLast(1).forEach { it.close() } }
+        val left = pool.toList()
+        pool.clear()
+        written = 0
+        if (left.isEmpty()) return
+        val shown = frame?.asSkiaBitmap()
+        java.awt.EventQueue.invokeLater { left.forEach { bitmap -> if (bitmap !== shown) bitmap.close() } }
     }
 }
 

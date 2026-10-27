@@ -46,6 +46,8 @@ import com.pixelgram.desktop.ui.icons.outlined.Palette
 import com.pixelgram.desktop.ui.icons.outlined.Payments
 import com.pixelgram.desktop.ui.icons.outlined.Star
 import com.pixelgram.desktop.ui.icons.outlined.Upgrade
+import com.pixelgram.desktop.ui.icons.outlined.Visibility
+import com.pixelgram.desktop.ui.icons.filled.MoreVert
 import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
 import java.time.Instant
@@ -257,6 +259,9 @@ fun GiftsPane(owner: TdApi.MessageSender, all: List<TdApi.ReceivedGift>, own: Bo
         val collection = collections.getOrNull(selected - 1)
         if (collection == null) shown = all else telegram.collectionGifts(owner, collection.id) { shown = it }
     }
+    val mine = own || (owner as? TdApi.MessageSenderUser)?.userId == telegram.me?.id
+    val removed = remember(owner) { androidx.compose.runtime.mutableStateListOf<String>() }
+    val visible = shown.filter { it.receivedGiftId !in removed }
     val full = { _: androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope -> androidx.compose.foundation.lazy.grid.GridItemSpan(GiftColumns) }
     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
         columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(GiftColumns),
@@ -264,15 +269,18 @@ fun GiftsPane(owner: TdApi.MessageSender, all: List<TdApi.ReceivedGift>, own: Bo
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (own || collections.isNotEmpty()) {
+        if (mine || collections.isNotEmpty()) {
             item(span = full) {
-                AlbumTabs(listOf("All Gifts") + collections.map { it.name }, selected, onSelect = { selected = it }, addLabel = if (own) "Add Collection" else null, onAdd = { adding = true })
+                AlbumTabs(listOf("All Gifts") + collections.map { it.name }, selected, onSelect = { selected = it }, addLabel = if (mine) "Add Collection" else null, onAdd = { adding = true })
             }
         }
-        if (shown.isEmpty()) {
+        if (visible.isEmpty()) {
             item(span = full) { Text("No gifts here yet", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
-        items(shown.size, contentType = { GiftCellType }) { index -> GiftCell(shown[index], telegram, Modifier) }
+        items(visible.size, key = { visible[it].receivedGiftId.ifEmpty { "gift$it" } }, contentType = { GiftCellType }) { index ->
+            val gift = visible[index]
+            GiftCell(gift, mine, telegram, Modifier) { removed.add(gift.receivedGiftId) }
+        }
     }
     if (adding) {
         NameDialog("New collection", "Collection name", onDismiss = { adding = false }) { name, done ->
@@ -285,24 +293,29 @@ fun GiftsPane(owner: TdApi.MessageSender, all: List<TdApi.ReceivedGift>, own: Bo
 }
 
 @Composable
-private fun GiftCell(gift: TdApi.ReceivedGift, telegram: Telegram, modifier: Modifier) {
+private fun GiftCell(gift: TdApi.ReceivedGift, own: Boolean, telegram: Telegram, modifier: Modifier, onRemoved: () -> Unit) {
     val upgraded = (gift.gift as? TdApi.SentGiftUpgraded)?.gift
     var open by remember { mutableStateOf(false) }
     val shape = MaterialTheme.shapes.large
     val hover = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val hovered by hover.collectIsHoveredAsState()
+    val hoveredNow by androidx.compose.runtime.rememberUpdatedState(hovered)
+    var active by remember(gift.receivedGiftId) { mutableStateOf(true) }
+    LaunchedEffect(hovered) { if (hovered) active = true }
+    val keepPlaying = remember { { hoveredNow } }
     Box(
         modifier
             .aspectRatio(1f)
-            .hoverable(hover)
             .clip(shape)
-            .then(if (upgraded != null) Modifier.clickable { open = true } else Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)),
+            .then(if (upgraded == null) Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest) else Modifier)
+            .hoverable(hover)
+            .clickable(interactionSource = hover, indication = null) { open = true },
         contentAlignment = Alignment.Center,
     ) {
         if (upgraded != null) {
-            UniqueGiftArt(upgraded, telegram, Modifier.fillMaxWidth(), shape = shape, animate = hovered)
+            UniqueGiftArt(upgraded, telegram, Modifier.fillMaxWidth(), shape = shape, animate = active, loopWhile = keepPlaying, onEnd = { active = false }, raster = true)
         } else {
-            StickerView(giftSticker(gift), telegram, 88.dp, animate = hovered)
+            StickerView(giftSticker(gift), telegram, 88.dp, animate = active, loopWhile = keepPlaying, onEnd = { active = false }, raster = true)
         }
         gift.senderId?.let { sender ->
             com.pixelgram.desktop.ui.components.AvatarImage(
@@ -328,9 +341,136 @@ private fun GiftCell(gift: TdApi.ReceivedGift, telegram: Telegram, modifier: Mod
             )
         }
     }
-    if (open && upgraded != null) NftDialog(telegram, upgraded.name) { open = false }
+    if (open) {
+        if (upgraded != null) {
+            NftDialog(telegram, upgraded.name) { open = false }
+        } else {
+            ReceivedGiftDialog(gift, own, telegram, onRemoved) { open = false }
+        }
+    }
 }
 
+@Composable
+private fun ReceivedGiftDialog(gift: TdApi.ReceivedGift, own: Boolean, telegram: Telegram, onRemoved: () -> Unit, onDismiss: () -> Unit) {
+    val regular = (gift.gift as? TdApi.SentGiftRegular)?.gift ?: return
+    var saved by remember(gift.receivedGiftId) { mutableStateOf(gift.isSaved) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var menu by remember { mutableStateOf(false) }
+    var selling by remember { mutableStateOf(false) }
+    val date = Instant.ofEpochSecond(gift.date.toLong()).atZone(ZoneId.systemDefault()).format(DateFormat)
+    val toggle = {
+        busy = true
+        telegram.setGiftSaved(gift.receivedGiftId, !saved) { failure ->
+            busy = false
+            if (failure == null) {
+                saved = !saved
+                gift.isSaved = saved
+            } else {
+                error = failure
+            }
+        }
+    }
+    val rows = buildList {
+        val sender = gift.senderId
+        if (sender != null) {
+            val title = telegram.senderTitle(sender)
+            add(
+                InfoRow(
+                    Icons.Outlined.AccountCircle,
+                    "From",
+                    title,
+                    leading = { com.pixelgram.desktop.ui.components.AvatarImage(title, telegram.senderPhoto(sender), telegram, androidx.compose.foundation.shape.CircleShape, 32.dp) },
+                ),
+            )
+        } else {
+            add(InfoRow(Icons.Outlined.AccountCircle, "From", "Unknown sender"))
+        }
+        add(InfoRow(Icons.Outlined.CalendarMonth, "Date", date))
+        add(InfoRow(Icons.Outlined.Star, "Value", stars(regular.starCount)))
+        if (own && gift.sellStarCount > 0) add(InfoRow(Icons.Outlined.Payments, "Can be converted to", stars(gift.sellStarCount)))
+        if (gift.canBeUpgraded && regular.upgradeStarCount > 0) add(InfoRow(Icons.Outlined.Upgrade, "Upgrade", stars(regular.upgradeStarCount)))
+        if (gift.isPrivate) add(InfoRow(Icons.Outlined.Info, "Sender", "Hidden from others"))
+    }
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.widthIn(min = 340.dp, max = 440.dp)) {
+            Box {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
+                ) {
+                    StickerView(regular.sticker, telegram, 140.dp)
+                    Text(if (own) "Received Gift" else "Gift", style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
+                    gift.text?.text?.takeIf { it.isNotBlank() }?.let {
+                        EmojiText(it, style = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Center))
+                    }
+                    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) { InfoGroup(rows) }
+                    if (own) {
+                        androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                if (saved) "This gift is visible on your profile." else "This gift is hidden from your profile.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            TextButton(onClick = toggle, enabled = !busy) { Text(if (saved) "Hide" else "Show") }
+                        }
+                    }
+                    error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+                }
+                if (own) {
+                    Box(Modifier.align(Alignment.TopEnd).padding(8.dp)) {
+                        com.pixelgram.desktop.ui.components.expressive.IconButton(onClick = { menu = true }) {
+                            androidx.compose.material3.Icon(Icons.Filled.MoreVert, contentDescription = "More")
+                        }
+                        com.pixelgram.desktop.ui.components.GroupedMenu(expanded = menu, onDismiss = { menu = false }) {
+                            com.pixelgram.desktop.ui.components.MenuGroups(
+                                listOf(
+                                    buildList {
+                                        add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Visibility, if (saved) "Hide from profile" else "Show on profile") {
+                                            menu = false
+                                            if (!busy) toggle()
+                                        })
+                                        if (gift.sellStarCount > 0) {
+                                            add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Payments, "Convert to " + stars(gift.sellStarCount)) {
+                                                menu = false
+                                                selling = true
+                                            })
+                                        }
+                                    },
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (selling) {
+        com.pixelgram.desktop.ui.components.expressive.AlertDialog(
+            onDismissRequest = { selling = false },
+            title = { Text("Convert to Stars?") },
+            text = { Text("The gift will disappear from your profile and you will get " + stars(gift.sellStarCount) + ". This can't be undone.") },
+            confirmButton = {
+                TextButton(enabled = !busy, onClick = {
+                    busy = true
+                    telegram.sellGift(gift.receivedGiftId) { failure ->
+                        busy = false
+                        selling = false
+                        if (failure == null) {
+                            onRemoved()
+                            onDismiss()
+                        } else {
+                            error = failure
+                        }
+                    }
+                }) { Text("Convert") }
+            },
+            dismissButton = { TextButton(onClick = { selling = false }) { Text("Cancel") } },
+        )
+    }
+}
 
 private const val GiftPreviews = 3
 private const val GiftColumns = 3

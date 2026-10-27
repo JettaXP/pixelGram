@@ -990,3 +990,15 @@ Only the admin who promoted this member can change them.	Изменить это
 This chat has too many administrators.	В этом чате слишком много администраторов.
 This user's privacy settings don't allow this.	Настройки приватности пользователя не позволяют это сделать.
 Nothing changed.	Ничего не изменилось.
+Received Gift	Полученный подарок
+Unknown sender	Неизвестный отправитель
+This gift is visible on your profile.	Этот подарок виден в вашем профиле.
+This gift is hidden from your profile.	Этот подарок скрыт из вашего профиля.
+Show	Показать
+Hide from profile	Скрыть из профиля
+Show on profile	Показать в профиле
+Convert to {n} Stars	Обменять на {n} {звезду|звезды|звёзд}
+Convert to 1 Star	Обменять на 1 звезду
+Convert to Stars?	Обменять на звёзды?
+Convert	Обменять
+The gift will disappear from your profile and you will get {n} Stars. This can't be undone.	Подарок исчезнет из профиля, а вы получите {n} {звезду|звезды|звёзд}. Это действие нельзя отменить.
