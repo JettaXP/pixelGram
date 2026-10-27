@@ -51,6 +51,10 @@ import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.ui.theme.PixelTheme
 import java.awt.EventQueue
 import java.awt.GraphicsEnvironment
+import java.awt.MouseInfo
+import java.awt.Rectangle
+import java.awt.Toolkit
+import kotlinx.coroutines.delay
 import java.awt.Point
 import java.awt.SystemTray
 import java.awt.TrayIcon
@@ -101,18 +105,13 @@ private fun TrayMenuWindow(
     onOpen: () -> Unit,
     onQuit: () -> Unit,
 ) {
-    val screen = remember(at) {
-        GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices
-            .map { it.defaultConfiguration.bounds }
-            .firstOrNull { it.contains(at) }
-            ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration.bounds
-    }
     val width = MenuWindow.width.value.toInt()
     val height = MenuWindow.height.value.toInt()
-    val above = at.y + height > screen.y + screen.height
-    val left = at.x + width > screen.x + screen.width
-    val x = if (left) at.x - width else at.x
-    val y = if (above) at.y - height else at.y
+    val place = remember(at) { trayMenuPlace(at, width, height) }
+    val above = place.above
+    val left = place.left
+    val x = place.x
+    val y = place.y
     val shown = remember { MutableTransitionState(false) }
     var closing by remember { mutableStateOf(false) }
     val close = { closing = true; shown.targetState = false }
@@ -138,7 +137,8 @@ private fun TrayMenuWindow(
             onDispose { window.removeWindowFocusListener(listener) }
         }
         LaunchedEffect(Unit) {
-            withFrameNanos { }
+            while (!window.isShowing) delay(ShowPollMs)
+            repeat(SettleFrames) { withFrameNanos { } }
             shown.targetState = true
         }
         PixelTheme(settings) {
@@ -205,3 +205,34 @@ private fun TrayMenu(settings: AppSettings, onOpen: () -> Unit, onQuit: () -> Un
 
 private val MenuWidth = 248.dp
 private val MenuWindow = DpSize(MenuWidth + 16.dp, 300.dp)
+
+private class TrayPlace(val x: Int, val y: Int, val above: Boolean, val left: Boolean)
+
+private fun trayMenuPlace(click: Point, width: Int, height: Int): TrayPlace {
+    val configs = GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.map { it.defaultConfiguration }
+    val pointer = runCatching { MouseInfo.getPointerInfo()?.location }.getOrNull()
+    val at = listOfNotNull(pointer, click).firstOrNull { point -> configs.any { it.bounds.contains(point) } }
+        ?: configs.firstNotNullOfOrNull { config ->
+            val scale = config.defaultTransform.scaleX.takeIf { it > 1.0 } ?: return@firstNotNullOfOrNull null
+            Point((click.x / scale).toInt(), (click.y / scale).toInt()).takeIf { config.bounds.contains(it) }
+        }
+        ?: click
+    val config = configs.firstOrNull { it.bounds.contains(at) }
+        ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
+    val bounds = config.bounds
+    val insets = runCatching { Toolkit.getDefaultToolkit().getScreenInsets(config) }.getOrNull()
+    val work = Rectangle(
+        bounds.x + (insets?.left ?: 0),
+        bounds.y + (insets?.top ?: 0),
+        bounds.width - (insets?.left ?: 0) - (insets?.right ?: 0),
+        bounds.height - (insets?.top ?: 0) - (insets?.bottom ?: 0),
+    )
+    val above = at.y > bounds.y + bounds.height / 2
+    val left = at.x > bounds.x + bounds.width / 2
+    val x = (if (left) at.x - width else at.x).coerceIn(work.x, maxOf(work.x, work.x + work.width - width))
+    val y = (if (above) at.y - height else at.y).coerceIn(work.y, maxOf(work.y, work.y + work.height - height))
+    return TrayPlace(x, y, above, left)
+}
+
+private const val ShowPollMs = 16L
+private const val SettleFrames = 3
