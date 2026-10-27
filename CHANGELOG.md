@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.40.0 Arch
+
+### Groups and channels
+- Manage group or channel: open it from the chat menu or the Manage button in the profile, available to admins.
+- Name and description, member permissions by message type (text, photos, videos, stickers and GIFs, music, files, voice and video messages, links, polls and more) and slow mode.
+- Administrators: promote members and pick each admin right separately, edit or dismiss existing admins.
+- Members, exceptions and removed users: search, restrict, remove from the group, ban with an option to delete all their messages, unban.
+- Recent actions: the admin log of the last 48 hours.
+- Member tags: set a tag of up to 16 characters in the member card. Tags show next to sender names, purple for the owner, green for admins and neutral for everyone else.
+
+### Topics
+- Forum groups show topic tabs above the chat with unread counters.
+- A topic opens with its own messages and message field.
+- New topics can be created right from the tabs, and topics can be turned on or off in Manage group.
+
+### Chats
+- While someone is typing, a small bubble with three bouncing dots appears under the last message and gives way to their message when it arrives.
+
 ## 0.39.0 MD
 
 ### Look and feel
