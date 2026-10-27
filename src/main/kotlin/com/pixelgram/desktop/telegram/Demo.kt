@@ -97,6 +97,9 @@ fun Telegram.loadDemo() {
     unread[ChatListKey.Folder(2)] = UnreadCount(12, 4)
     chatListsChanged()
     if (System.getProperty("pixelgram.demo.heavy") == "true") loadHeavyDemo(now)
+    System.getProperty("pixelgram.demo.typing")?.toLongOrNull()?.let { chatId ->
+        demoAction(chatId, TdApi.MessageSenderUser(2), TdApi.ChatActionTyping())
+    }
     System.getProperty("pixelgram.demo.photo")?.let { path ->
         val file = TdApi.File().apply {
             id = 999_999

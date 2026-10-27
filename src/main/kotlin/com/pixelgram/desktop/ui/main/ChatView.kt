@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.draw.clipToBounds
@@ -677,6 +681,7 @@ fun ChatView(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom),
             ) {
+                if (shown.isEmpty()) item(key = TypingKey) { TypingBubble(chat, telegram) }
                 itemsIndexed(shown, key = { _, message -> message.key }) { index, message ->
                     val newDay = index == shown.lastIndex || !sameDay(message.date, shown[index + 1].date)
                     val rise = remember { Animatable(if (PowerSaving.messageAnimations && message.fresh && slidIn.add(message.key)) 1f else 0f) }
@@ -820,6 +825,7 @@ fun ChatView(
                             }
                             }
                         }
+                        if (index == 0) TypingBubble(chat, telegram)
                     }
                 }
             }
@@ -994,6 +1000,73 @@ fun ChatView(
 }
 
 private enum class BarMode { Select, Blocked, Start, Join, Mute, Compose }
+
+@Composable
+private fun TypingBubble(chat: ChatState, telegram: Telegram) {
+    val typers = telegram.typing(chat.id)
+    var last by remember { mutableStateOf<TdApi.MessageSender?>(null) }
+    typers.firstOrNull()?.let { last = it }
+    AnimatedVisibility(
+        visible = typers.isNotEmpty(),
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec(), expandFrom = Alignment.Top) + fadeIn(),
+        exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec(), shrinkTowards = Alignment.Top) + fadeOut(),
+    ) {
+        val colors = MaterialTheme.colorScheme
+        val group = chat.isGroup && !chat.isChannel
+        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 4.dp)) {
+            val sender = last
+            if (group && sender != null) {
+                Box(Modifier.width(SenderAvatarSlot)) {
+                    com.pixelgram.desktop.ui.components.AvatarImage(
+                        telegram.senderTitle(sender),
+                        telegram.senderPhoto(sender),
+                        telegram,
+                        CircleShape,
+                        SenderAvatarSize,
+                    )
+                }
+            }
+            Surface(
+                shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomEnd = 18.dp, bottomStart = 6.dp),
+                color = colors.surfaceContainerHigh,
+            ) {
+                TypingDots(colors.onSurfaceVariant, Modifier.padding(horizontal = 14.dp, vertical = 12.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TypingDots(color: Color, modifier: Modifier) {
+    val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
+    val phase = if (focused) {
+        val transition = rememberInfiniteTransition()
+        transition.animateFloat(0f, 1f, infiniteRepeatable(tween(TypingCycleMs, easing = LinearEasing))).value
+    } else {
+        0f
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically, modifier = modifier.height(14.dp)) {
+        repeat(TypingDotCount) { dot ->
+            val local = ((phase - dot * TypingDotDelay) % 1f + 1f) % 1f
+            val wave = if (local < 0.5f) kotlin.math.sin(local * 2 * Math.PI).toFloat() else 0f
+            Box(
+                Modifier
+                    .size(7.dp)
+                    .graphicsLayer {
+                        translationY = -wave * TypingLift.toPx()
+                        alpha = 0.45f + 0.55f * wave
+                    }
+                    .background(color, CircleShape),
+            )
+        }
+    }
+}
+
+private const val TypingCycleMs = 1100
+private const val TypingKey = "typing"
+private const val TypingDotCount = 3
+private const val TypingDotDelay = 0.16f
+private val TypingLift = 4.dp
 
 @Composable
 private fun ComposerBar(label: String, accent: Boolean = false, enabled: Boolean = true, detail: String? = null, onClick: () -> Unit) {

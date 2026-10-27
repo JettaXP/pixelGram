@@ -716,6 +716,15 @@ class Telegram(
         return "%,d $noun${if (count == 1) "" else "s"}".format(java.util.Locale.US, count).replace(',', ' ')
     }
 
+    internal fun demoAction(chatId: Long, sender: TdApi.MessageSender, action: TdApi.ChatAction) {
+        chatActions[chatId] = listOf(sender to action)
+    }
+
+    fun typing(chatId: Long): List<TdApi.MessageSender> =
+        chatActions[chatId].orEmpty().filter { (sender, action) ->
+            action is TdApi.ChatActionTyping && !(sender is TdApi.MessageSenderUser && sender.userId == myUserId)
+        }.map { it.first }
+
     fun activity(chat: ChatState): Presence? {
         val (sender, action) = chatActions[chat.id]?.lastOrNull() ?: return null
         val label = actionLabel(action) ?: return null
