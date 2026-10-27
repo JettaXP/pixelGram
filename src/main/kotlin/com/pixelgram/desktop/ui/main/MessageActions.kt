@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.theme.outgoingAccent
+
 import com.pixelgram.desktop.ui.icons.outlined.Gif
 import com.pixelgram.desktop.ui.icons.outlined.FolderOpen
 import androidx.compose.foundation.layout.ColumnScope
@@ -353,7 +355,8 @@ fun ReplyQuote(
     accent: androidx.compose.ui.graphics.Color? = null,
 ) {
     val colors = MaterialTheme.colorScheme
-    val tint = accent ?: colors.primary
+    val inOutgoing = androidx.compose.material3.LocalContentColor.current == colors.onPrimaryContainer
+    val tint = accent?.takeUnless { inOutgoing && colors.outgoingAccent != colors.primary } ?: if (inOutgoing) colors.outgoingAccent else colors.primary
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),

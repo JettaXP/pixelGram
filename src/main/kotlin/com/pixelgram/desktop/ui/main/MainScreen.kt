@@ -196,8 +196,12 @@ fun MainScreen(
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val maxListWidth = minOf((maxWidth - MinChatWidth - RailWidth).value, maxWidth.value * MaxListShare).coerceAtLeast(CompactWidth.value)
-            val compact = dragWidth < CompactThreshold.value
-            val listWidth = if (compact) CompactWidth else dragWidth.coerceAtMost(maxListWidth).dp
+            val forum = openChatId?.let { telegram.chats[it] }?.takeIf { telegram.isForum(it) }
+            val compact = forum != null || dragWidth < CompactThreshold.value
+            val listWidth by androidx.compose.animation.core.animateDpAsState(
+                if (compact) CompactWidth else dragWidth.coerceAtMost(maxListWidth).dp,
+                MaterialTheme.motionScheme.defaultSpatialSpec(),
+            )
             val push = settings.sideMenuStyle.value == com.pixelgram.desktop.core.SideMenuStyle.Push
             Row(Modifier.fillMaxSize()) {
                 when {
@@ -287,6 +291,17 @@ fun MainScreen(
                             },
                         ),
                 )
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = forum != null,
+                    enter = fadeIn(fade) + androidx.compose.animation.expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()),
+                    exit = fadeOut(fade) + androidx.compose.animation.shrinkHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()),
+                ) {
+                    var shownForum by remember { mutableStateOf(forum) }
+                    if (forum != null) shownForum = forum
+                    shownForum?.let { chat ->
+                        androidx.compose.runtime.key(chat.id) { ForumSidebar(chat, telegram, Modifier.fillMaxHeight().padding(end = 8.dp), onClose = onCloseChat) }
+                    }
+                }
                 OnEscape {
                     when {
                         menuOpen -> scope.launch { railState.collapse() }
@@ -321,7 +336,7 @@ fun MainScreen(
                         contentKey = { it?.id },
                     ) { shown ->
                         if (shown != null) {
-                            ChatView(shown, telegram, settings, onOpenChatInside, onChatBack)
+                            ChatView(shown, telegram, settings, onOpenChatInside, onChatBack, forumSidebar = false)
                         } else {
                             androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
                             MiniPlayer(telegram)

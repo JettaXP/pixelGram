@@ -57,6 +57,7 @@ import com.pixelgram.desktop.ui.components.expressive.IconButton
 import com.pixelgram.desktop.ui.components.expressive.TextButton
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.outlined.Add
+import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
 import com.pixelgram.desktop.ui.icons.outlined.Lock
 import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
@@ -81,7 +82,7 @@ fun TopicIcon(info: TdApi.ForumTopicInfo, size: Dp) {
 }
 
 @Composable
-fun ForumSidebar(chat: ChatState, telegram: Telegram, modifier: Modifier = Modifier) {
+fun ForumSidebar(chat: ChatState, telegram: Telegram, modifier: Modifier = Modifier, onClose: (() -> Unit)? = null) {
     var topics by remember(chat.id) { mutableStateOf<List<TdApi.ForumTopic>?>(null) }
     var reload by remember(chat.id) { mutableIntStateOf(0) }
     var creating by remember(chat.id) { mutableStateOf(false) }
@@ -98,6 +99,20 @@ fun ForumSidebar(chat: ChatState, telegram: Telegram, modifier: Modifier = Modif
     val selected = telegram.selectedTopic(chat.id)
     val canCreate = telegram.can(chat) { it.canManageTopics } || chat.permissions?.canCreateTopics == true
     Column(modifier.width(SidebarWidth).padding(start = 12.dp, top = 12.dp, bottom = 12.dp)) {
+        if (onClose != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            ) {
+                IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                Column(Modifier.weight(1f).padding(start = 4.dp)) {
+                    EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    telegram.presence(chat)?.label?.let { label ->
+                        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    }
+                }
+            }
+        }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(start = 8.dp, bottom = 8.dp).height(40.dp),

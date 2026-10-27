@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.theme
 
+import androidx.compose.ui.graphics.luminance
+
 import com.pixelgram.desktop.ui.main.Links
 import com.pixelgram.desktop.core.PowerSaving
 import com.pixelgram.desktop.core.InstantMotion
@@ -220,3 +222,14 @@ fun colorSchemeOf(roles: Map<String, Color>, dark: Boolean): ColorScheme {
         surfaceDim = roles["surfaceDim"] ?: base.surfaceDim,
     )
 }
+
+val ColorScheme.outgoingAccent: Color
+    get() = if (contrast(primary, primaryContainer) >= MinAccentContrast) primary else onPrimaryContainer
+
+private fun contrast(a: Color, b: Color): Float {
+    val first = a.luminance() + 0.05f
+    val second = b.luminance() + 0.05f
+    return maxOf(first, second) / minOf(first, second)
+}
+
+private const val MinAccentContrast = 3f

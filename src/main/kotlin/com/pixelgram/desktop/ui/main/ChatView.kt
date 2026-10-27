@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.theme.outgoingAccent
+
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.animateFloat
@@ -200,6 +202,7 @@ fun ChatView(
     settings: AppSettings,
     onOpenChat: (Long) -> Unit,
     onBack: (() -> Unit)? = null,
+    forumSidebar: Boolean = true,
 ) {
     DisposableEffect(chat.id) {
         telegram.openChat(chat.id)
@@ -478,7 +481,7 @@ fun ChatView(
     }) {
     Box(Modifier.fillMaxSize()) {
     Row(Modifier.fillMaxSize()) {
-    if (telegram.isForum(chat)) ForumSidebar(chat, telegram, Modifier.fillMaxHeight())
+    if (forumSidebar && telegram.isForum(chat)) ForumSidebar(chat, telegram, Modifier.fillMaxHeight())
     Column(Modifier.weight(1f).fillMaxHeight()) {
         MiniPlayer(telegram)
         Row(
@@ -1186,7 +1189,7 @@ fun MessageBubble(
             modifier = Modifier.widthIn(max = 520.dp),
         ) {
             val metaColor = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant).copy(alpha = 0.7f)
-            val readColor = if (outgoing) colors.primary else metaColor
+            val readColor = if (outgoing) colors.outgoingAccent else metaColor
             val hasText = message.text.isNotEmpty()
             val inset = photo != null || media || album != null
             Column(
