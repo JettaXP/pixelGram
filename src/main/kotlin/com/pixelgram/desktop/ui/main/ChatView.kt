@@ -1688,7 +1688,7 @@ private fun MessagePhoto(
 ) {
     LaunchedEffect(file.id) { telegram.download(file) }
     val path = telegram.localPath(file)
-    val image by produceState<ImageBitmap?>(null, path) {
+    val image by produceState(com.pixelgram.desktop.ui.components.cachedImage(path, PhotoPixels), path) {
         path?.let { loadImage(it, maxSize = PhotoPixels) }?.let { value = it }
     }
     Box(

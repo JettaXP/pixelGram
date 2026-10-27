@@ -220,13 +220,19 @@ private const val ResizeSettleMs = 150L
 
 private fun cropTo(image: ImageBitmap, width: Int, height: Int): ImageBitmap? {
     if (width <= 0 || height <= 0) return null
-    val skia = org.jetbrains.skia.Image.makeFromBitmap(image.asSkiaBitmap())
+    return org.jetbrains.skia.Image.makeFromBitmap(image.asSkiaBitmap()).use { skia -> cropSkia(skia, width, height) }
+}
+
+private fun cropSkia(skia: org.jetbrains.skia.Image, width: Int, height: Int): ImageBitmap {
     val scale = maxOf(width / skia.width.toFloat(), height / skia.height.toFloat())
     val srcWidth = width / scale
     val srcHeight = height / scale
     val left = (skia.width - srcWidth) / 2f
     val top = (skia.height - srcHeight) / 2f
-    val surface = org.jetbrains.skia.Surface.makeRasterN32Premul(width, height)
+    return org.jetbrains.skia.Surface.makeRasterN32Premul(width, height).use { surface -> drawCrop(surface, skia, left, top, srcWidth, srcHeight, width, height) }
+}
+
+private fun drawCrop(surface: org.jetbrains.skia.Surface, skia: org.jetbrains.skia.Image, left: Float, top: Float, srcWidth: Float, srcHeight: Float, width: Int, height: Int): ImageBitmap {
     surface.canvas.drawImageRect(
         skia,
         org.jetbrains.skia.Rect.makeXYWH(left, top, srcWidth, srcHeight),
@@ -235,5 +241,5 @@ private fun cropTo(image: ImageBitmap, width: Int, height: Int): ImageBitmap? {
         null,
         true,
     )
-    return surface.makeImageSnapshot().toComposeImageBitmap()
+    return surface.makeImageSnapshot().use { it.toComposeImageBitmap() }
 }

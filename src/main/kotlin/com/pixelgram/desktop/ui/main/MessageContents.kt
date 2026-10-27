@@ -160,15 +160,18 @@ fun LottieView(
     loopWhile: (() -> Boolean)? = null,
     raster: Boolean = false,
 ) {
-    val animation by produceState(LottieCache.get(path), path) {
-        if (value != null) return@produceState
-        value = withContext(Dispatchers.IO) {
-            LottieCache.get(path) ?: runCatching {
+    val lease = remember(path) { LottieLease(path) }
+    LaunchedEffect(lease) {
+        if (lease.animation != null) return@LaunchedEffect
+        val loaded = withContext(Dispatchers.IO) {
+            runCatching {
                 val json = GZIPInputStream(File(path).inputStream()).use { it.readBytes().decodeToString() }
                 Animation.makeFromString(json)
-            }.onFailure { AppLog.write("Sticker animation failed", it) }.getOrNull()?.also { LottieCache.put(path, it) }
+            }.onFailure { AppLog.write("Sticker animation failed", it) }.getOrNull()
         }
+        if (loaded != null) lease.adopt(loaded)
     }
+    val animation = lease.animation
     val ended by rememberUpdatedState(onEnd)
     val looping by rememberUpdatedState(loopWhile)
     val held = loopWhile != null
@@ -229,18 +232,73 @@ fun LottieView(
 
 private const val DefaultLottieFps = 60f
 
+private class LottieLease(private val path: String) : androidx.compose.runtime.RememberObserver {
+    var animation by mutableStateOf(LottieCache.acquire(path))
+        private set
+    private var released = false
+
+    fun adopt(loaded: Animation) {
+        if (released || animation != null) return loaded.close()
+        animation = LottieCache.adopt(path, loaded)
+    }
+
+    override fun onRemembered() = Unit
+
+    override fun onForgotten() = release()
+
+    override fun onAbandoned() = release()
+
+    private fun release() {
+        if (released) return
+        released = true
+        animation?.let { LottieCache.release(it) }
+    }
+}
+
 private object LottieCache {
-    private const val MaxEntries = 96
-    private val cache = object : LinkedHashMap<String, Animation>(MaxEntries, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Animation>) = size > MaxEntries
+    private const val MaxEntries = 64
+
+    private class Entry(val animation: Animation) {
+        var users = 0
+        var evicted = false
+    }
+
+    private val entries = java.util.IdentityHashMap<Animation, Entry>()
+    private val cache = object : LinkedHashMap<String, Entry>(MaxEntries, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Entry>): Boolean {
+            if (size <= MaxEntries) return false
+            eldest.value.evicted = true
+            if (eldest.value.users == 0) dispose(eldest.value)
+            return true
+        }
     }
 
     @Synchronized
-    fun get(path: String): Animation? = cache[path]
+    fun acquire(path: String): Animation? = cache[path]?.also { it.users++ }?.animation
 
     @Synchronized
-    fun put(path: String, animation: Animation) {
-        cache[path] = animation
+    fun adopt(path: String, loaded: Animation): Animation {
+        cache[path]?.let { existing ->
+            loaded.close()
+            existing.users++
+            return existing.animation
+        }
+        val entry = Entry(loaded).apply { users = 1 }
+        entries[loaded] = entry
+        cache[path] = entry
+        return loaded
+    }
+
+    @Synchronized
+    fun release(animation: Animation) {
+        val entry = entries[animation] ?: return
+        entry.users--
+        if (entry.users <= 0 && entry.evicted) dispose(entry)
+    }
+
+    private fun dispose(entry: Entry) {
+        entries.remove(entry.animation)
+        synchronized(entry.animation) { entry.animation.close() }
     }
 }
 private const val AutoplayVideoBytes = 20L * 1024 * 1024
@@ -330,7 +388,7 @@ private const val EffectShift = 1f
 
 @Composable
 fun FileImage(path: String, modifier: Modifier, scale: ContentScale) {
-    val image by produceState<ImageBitmap?>(null, path) { value = loadImage(path, maxSize = 640) }
+    val image by produceState(com.pixelgram.desktop.ui.components.cachedImage(path, 640), path) { value = loadImage(path, maxSize = 640) }
     image?.let { Image(it, contentDescription = null, contentScale = scale, filterQuality = FilterQuality.High, modifier = modifier) }
 }
 
@@ -345,7 +403,7 @@ fun ThumbImage(
     LaunchedEffect(file?.id) { telegram.download(file) }
     val path = telegram.localPath(file)
     val miniImage = remember(mini) {
-        mini?.data?.let { runCatching { SkiaImage.makeFromEncoded(it).toComposeImageBitmap() }.getOrNull() }
+        mini?.data?.let { runCatching { SkiaImage.makeFromEncoded(it).use { image -> image.toComposeImageBitmap() } }.getOrNull() }
     }
     Box(modifier) {
         if (path != null) {

@@ -445,7 +445,9 @@ private fun ChatRow(
             }
         },
     ) {
-        ChatActions(chat, telegram, settings, menuAt, onDismiss = { menuAt = null }, listKey = listKey)
+        var actionsUsed by remember { mutableStateOf(false) }
+        if (menuAt != null) actionsUsed = true
+        if (actionsUsed) ChatActions(chat, telegram, settings, menuAt, onDismiss = { menuAt = null }, listKey = listKey)
         if (preview) ChatPreview(chat, telegram, settings, onOpen = onClick) { preview = false }
         SegmentedListItem(
             selected = selected || dropping,

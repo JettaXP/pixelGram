@@ -70,7 +70,7 @@ fun ProfileBanner(
     editable: Boolean = false,
 ) {
     val file = Banners.banner(userId)
-    val image by produceState<ImageBitmap?>(null, file) { value = file?.let { loadImage(it.absolutePath) } }
+    val image by produceState(com.pixelgram.desktop.ui.components.cachedImage(file?.absolutePath), file) { value = file?.let { loadImage(it.absolutePath) } }
     val shown by animateFloatAsState(if (image != null) 1f else 0f, MaterialTheme.motionScheme.slowEffectsSpec())
     Box(modifier.fillMaxWidth().height(height).clip(shape)) {
         Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.surfaceContainerHighest))

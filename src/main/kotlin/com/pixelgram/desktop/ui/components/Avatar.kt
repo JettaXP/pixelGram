@@ -69,6 +69,8 @@ private val ImageDecoding = Dispatchers.IO.limitedParallelism(DecodeThreads)
 
 private const val DecodeThreads = 4
 
+fun cachedImage(path: String?, maxSize: Int = 0): ImageBitmap? = path?.let { ImageCache.get("$it@$maxSize") }
+
 suspend fun loadImage(path: String): ImageBitmap? = loadImage(path, maxSize = 0)
 
 suspend fun loadImage(path: String, maxSize: Int): ImageBitmap? {
@@ -76,25 +78,26 @@ suspend fun loadImage(path: String, maxSize: Int): ImageBitmap? {
     ImageCache.get(key)?.let { return it }
     return withContext(ImageDecoding) {
         runCatching {
-            val image = SkiaImage.makeFromEncoded(File(path).readBytes())
-            val longer = maxOf(image.width, image.height)
-            if (maxSize <= 0 || longer <= maxSize) {
-                image.toComposeImageBitmap()
-            } else {
-                val scale = maxSize.toFloat() / longer
-                val width = (image.width * scale).toInt().coerceAtLeast(1)
-                val height = (image.height * scale).toInt().coerceAtLeast(1)
-                val surface = Surface.makeRasterN32Premul(width, height)
-                surface.canvas.drawImageRect(
-                    image,
-                    Rect.makeWH(image.width.toFloat(), image.height.toFloat()),
-                    Rect.makeWH(width.toFloat(), height.toFloat()),
-                    SamplingMode.CATMULL_ROM,
-                    null,
-                    true,
-                )
-                image.close()
-                surface.makeImageSnapshot().toComposeImageBitmap().also { surface.close() }
+            SkiaImage.makeFromEncoded(File(path).readBytes()).use { image ->
+                val longer = maxOf(image.width, image.height)
+                if (maxSize <= 0 || longer <= maxSize) {
+                    image.toComposeImageBitmap()
+                } else {
+                    val scale = maxSize.toFloat() / longer
+                    val width = (image.width * scale).toInt().coerceAtLeast(1)
+                    val height = (image.height * scale).toInt().coerceAtLeast(1)
+                    Surface.makeRasterN32Premul(width, height).use { surface ->
+                        surface.canvas.drawImageRect(
+                            image,
+                            Rect.makeWH(image.width.toFloat(), image.height.toFloat()),
+                            Rect.makeWH(width.toFloat(), height.toFloat()),
+                            SamplingMode.CATMULL_ROM,
+                            null,
+                            true,
+                        )
+                        surface.makeImageSnapshot().use { it.toComposeImageBitmap() }
+                    }
+                }
             }
         }.getOrNull()
     }?.also { ImageCache.put(key, it) }
@@ -161,9 +164,9 @@ fun AvatarImage(
     LaunchedEffect(photo?.id) { telegram.download(photo) }
     LaunchedEffect(full?.id) { telegram.download(full) }
     val path = telegram.localPath(full) ?: telegram.localPath(photo)
-    val image by produceState<ImageBitmap?>(null, path) {
-        value = null
-        value = path?.let { loadImage(it) }
+    val image by produceState(cachedImage(path), path) {
+        value = cachedImage(path)
+        if (value == null) value = path?.let { loadImage(it) }
     }
     val colors = MaterialTheme.colorScheme
     Box(

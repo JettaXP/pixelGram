@@ -39,6 +39,7 @@ import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.EmojiStyle
 import com.pixelgram.desktop.ui.components.loadImage
+import com.pixelgram.desktop.ui.components.cachedImage
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
@@ -230,7 +231,7 @@ fun EmojiText(
     val ranges = remember(text) { emojiRanges(text) }
     if (!EmojiFonts.use3D || ranges.isEmpty()) {
         Text(
-            emojiText(text),
+            remember(text) { emojiText(text) },
             modifier = modifier,
             color = color,
             fontSize = fontSize,
@@ -328,17 +329,17 @@ private fun SourceEmojiImage(emoji: String, source: ImageEmoji) {
     val file by produceState(source.cached(emoji), emoji, source) {
         if (value == null) value = source.file(emoji)
     }
-    val image by produceState<ImageBitmap?>(null, file) {
+    val image by produceState(cachedImage(file?.absolutePath), file) {
         file?.let { loadImage(it.absolutePath) }?.let { value = it }
     }
+    val bitmap = image
+    if (bitmap != null) {
+        Image(bitmap, contentDescription = emoji, modifier = Modifier.fillMaxSize(), filterQuality = FilterQuality.Medium)
+        return
+    }
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        val bitmap = image
-        if (bitmap != null) {
-            Image(bitmap, contentDescription = emoji, modifier = Modifier.fillMaxSize(), filterQuality = FilterQuality.High)
-        } else {
-            val size = with(LocalDensity.current) { (maxHeight * 0.8f).toSp() }
-            Text(emoji, fontFamily = FlatEmoji, fontSize = size)
-        }
+        val size = with(LocalDensity.current) { (maxHeight * 0.8f).toSp() }
+        Text(emoji, fontFamily = FlatEmoji, fontSize = size)
     }
 }
 

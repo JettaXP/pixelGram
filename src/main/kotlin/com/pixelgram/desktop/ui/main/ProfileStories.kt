@@ -564,7 +564,7 @@ private fun StoryMedia(story: TdApi.Story, telegram: Telegram, paused: Boolean, 
             val file = content.photo.sizes.maxByOrNull { it.width }?.photo
             LaunchedEffect(file?.id) { telegram.download(file) }
             val path = telegram.localPath(file)
-            val image by produceState<ImageBitmap?>(null, path) { value = path?.let { loadImage(it, maxSize = StoryImageSize) } }
+            val image by produceState(com.pixelgram.desktop.ui.components.cachedImage(path, StoryImageSize), path) { value = path?.let { loadImage(it, maxSize = StoryImageSize) } }
             Box(Modifier.fillMaxSize()) {
                 ThumbImage(null, content.photo.minithumbnail, telegram, Modifier.fillMaxSize())
                 image?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, filterQuality = FilterQuality.High, modifier = Modifier.fillMaxSize()) }
