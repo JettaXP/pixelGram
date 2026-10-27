@@ -282,9 +282,7 @@ object Updater {
     }
 
     fun openFolder(dir: File) {
-        runCatching { java.awt.Desktop.getDesktop().open(dir) }.recoverCatching {
-            ProcessBuilder("xdg-open", dir.absolutePath).start()
-        }
+        runCatching { SystemOpen.file(dir) }.onFailure { AppLog.write("Open folder failed", it) }
     }
 }
 

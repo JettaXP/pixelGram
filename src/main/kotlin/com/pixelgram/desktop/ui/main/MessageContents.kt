@@ -106,7 +106,6 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Rect
 import org.jetbrains.skia.skottie.Animation
 import com.pixelgram.desktop.core.PowerSaving
-import java.awt.Desktop
 import java.io.File
 import java.net.URI
 import java.util.zip.GZIPInputStream
@@ -379,9 +378,7 @@ fun ReplyThumb(message: UiMessage?, telegram: Telegram?, size: androidx.compose.
 
 fun openFile(path: String) {
     Thread {
-        runCatching { Desktop.getDesktop().open(File(path)) }.recoverCatching {
-            ProcessBuilder("xdg-open", path).start()
-        }.onFailure { AppLog.write("Open file failed", it) }
+        runCatching { com.pixelgram.desktop.core.SystemOpen.file(File(path)) }.onFailure { AppLog.write("Open file failed", it) }
     }.apply { isDaemon = true }.start()
 }
 
@@ -403,7 +400,7 @@ fun showInFolder(path: String) {
                             "['${file.toURI()}']", "",
                         ).start().waitFor() == 0
                     }.getOrDefault(false)
-                    if (!shown) ProcessBuilder("xdg-open", file.parentFile.absolutePath).start()
+                    if (!shown) com.pixelgram.desktop.core.SystemOpen.file(file.parentFile)
                 }
             }
         }.onFailure { AppLog.write("Show in folder failed", it) }

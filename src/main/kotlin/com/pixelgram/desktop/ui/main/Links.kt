@@ -7,7 +7,6 @@ import androidx.compose.ui.platform.UriHandler
 import com.pixelgram.desktop.core.AppLog
 import com.pixelgram.desktop.telegram.Telegram
 import it.tdlight.jni.TdApi
-import java.awt.Desktop
 import java.net.URI
 import javax.swing.SwingUtilities
 
@@ -109,9 +108,7 @@ object Links : UriHandler {
             return
         }
         Thread {
-            runCatching { Desktop.getDesktop().browse(URI(url)) }.recoverCatching {
-                ProcessBuilder("xdg-open", url).start()
-            }.onFailure { AppLog.write("Open link failed", it) }
+            runCatching { com.pixelgram.desktop.core.SystemOpen.link(url) }.onFailure { AppLog.write("Open link failed", it) }
         }.apply { isDaemon = true }.start()
     }
 }

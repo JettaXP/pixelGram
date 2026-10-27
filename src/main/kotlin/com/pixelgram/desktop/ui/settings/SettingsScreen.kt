@@ -174,10 +174,8 @@ import com.pixelgram.desktop.ui.theme.SeedColors
 import com.pixelgram.desktop.ui.themedAppIcon
 import com.pixelgram.desktop.ui.toShape
 import it.tdlight.jni.TdApi
-import java.awt.Desktop
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
-import java.net.URI
 
 private enum class Section(val title: String, val icon: ImageVector, val pixel: Boolean = false) {
     Profile("My Profile", Icons.Outlined.Person),
@@ -1607,16 +1605,14 @@ private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {
         (if (AppPaths.isPortable) "Portable mode: " else "") + AppPaths.dataDir.absolutePath
     )
     OutlinedButton(onClick = {
-        runCatching { Desktop.getDesktop().open(AppPaths.dataDir) }
+        Thread { runCatching { com.pixelgram.desktop.core.SystemOpen.file(AppPaths.dataDir) }.onFailure { com.pixelgram.desktop.core.AppLog.write("Open folder failed", it) } }.apply { isDaemon = true }.start()
     }) {
         Text("Open data folder")
     }
 }
 
 private fun openUrl(url: String) {
-    runCatching {
-        if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(URI(url))
-    }
+    com.pixelgram.desktop.ui.main.Links.openBrowser(url)
 }
 
 @Composable
