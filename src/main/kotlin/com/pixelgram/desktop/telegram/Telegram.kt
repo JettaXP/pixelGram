@@ -1604,6 +1604,21 @@ class Telegram(
         send(TdApi.GetSupergroupFullInfo(chat.supergroupId)) { result -> onResult((result as? TdApi.SupergroupFullInfo)?.administratorCount ?: 0) }
     }
 
+    fun linkedChat(chat: ChatState, onResult: (Long) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") {
+            chats.values.firstOrNull { it.id != chat.id && it.isGroup && !it.isChannel }?.let { onResult(it.id) }
+            return
+        }
+        if (chat.supergroupId == 0L) return
+        send(TdApi.GetSupergroupFullInfo(chat.supergroupId)) { result ->
+            val linked = (result as? TdApi.SupergroupFullInfo)?.linkedChatId ?: 0L
+            if (linked != 0L) {
+                loadChat(linked)
+                onResult(linked)
+            }
+        }
+    }
+
     fun chatMembers(chat: ChatState, admins: Boolean, onResult: (List<TdApi.ChatMember>) -> Unit) {
         val deliver = { list: List<TdApi.ChatMember> ->
             list.forEach { member -> (member.memberId as? TdApi.MessageSenderUser)?.let { ensureUser(it.userId) } }

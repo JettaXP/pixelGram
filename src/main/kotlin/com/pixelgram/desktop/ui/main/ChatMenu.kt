@@ -100,7 +100,9 @@ import com.pixelgram.desktop.telegram.ChatState
 import it.tdlight.jni.TdApi
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.canManage
-import com.pixelgram.desktop.ui.icons.outlined.AdminPanelSettings
+import com.pixelgram.desktop.ui.icons.outlined.Forum
+import com.pixelgram.desktop.ui.icons.outlined.Tune
+import androidx.compose.ui.unit.sp
 import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.theme.EmojiText
 
@@ -165,7 +167,7 @@ fun ChatActions(
                                 onClick = act { telegram.setMuted(chat, !muted) }))
                             if (showProfile) add(MenuEntry(Icons.Outlined.AccountCircle, "View profile", onClick = act { profile = true }))
                             if (chat.privateUserId == 0L && telegram.canManage(chat)) {
-                                add(MenuEntry(Icons.Outlined.AdminPanelSettings, if (chat.isChannel) "Manage channel" else "Manage group", onClick = act { managing = true }))
+                                add(MenuEntry(Icons.Outlined.Tune, if (chat.isChannel) "Manage channel" else "Manage group", onClick = act { managing = true }))
                             }
                             onSearch?.let { add(MenuEntry(Icons.Outlined.Search, "Search", onClick = act(it))) }
                             onToBeginning?.let { add(MenuEntry(Icons.Outlined.KeyboardDoubleArrowUp, "To beginning", onClick = act(it))) }
@@ -390,12 +392,14 @@ fun ChatInfoDialog(
                 if (!telegram.isSavedMessages(chat.id)) {
                     var moreAt by remember(chat.id) { mutableStateOf<DpOffset?>(null) }
                     val muted = telegram.isMuted(chat)
+                    var discussion by remember(chat.id) { mutableStateOf(0L) }
+                    if (chat.isChannel) LaunchedEffect(chat.id) { telegram.linkedChat(chat) { discussion = it } }
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     ) {
-                        if (onOpenChat != null) {
-                            ProfileAction(Icons.AutoMirrored.Outlined.Chat, if (chat.isChannel) "Open" else "Message", Modifier.weight(1f)) {
+                        if (onOpenChat != null && !chat.isChannel) {
+                            ProfileAction(Icons.AutoMirrored.Outlined.Chat, "Message", Modifier.weight(1f)) {
                                 onDismiss()
                                 onOpenChat(chat.id)
                             }
@@ -406,8 +410,14 @@ fun ChatInfoDialog(
                             Modifier.weight(1f),
                             checked = muted,
                         ) { telegram.setMuted(chat, !muted) }
+                        if (onOpenChat != null && discussion != 0L) {
+                            ProfileAction(Icons.Outlined.Forum, "Discuss", Modifier.weight(1f)) {
+                                onDismiss()
+                                onOpenChat(discussion)
+                            }
+                        }
                         if (chat.privateUserId == 0L && telegram.canManage(chat)) {
-                            ProfileAction(Icons.Outlined.AdminPanelSettings, "Manage", Modifier.weight(1f)) { managing = true }
+                            ProfileAction(Icons.Outlined.Tune, "Manage", Modifier.weight(1f)) { managing = true }
                         }
                         Box(Modifier.weight(1f)) {
                             ProfileAction(Icons.Outlined.MoreHoriz, "More", Modifier.fillMaxWidth()) { moreAt = DpOffset(0.dp, 0.dp) }
@@ -530,13 +540,21 @@ private fun ProfileAction(
             ) { (shownIcon, shownLabel) ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(shownIcon, contentDescription = null)
-                    Text(shownLabel, style = MaterialTheme.typography.labelMedium)
+                    val style = MaterialTheme.typography.labelMedium
+                    androidx.compose.foundation.text.BasicText(
+                        com.pixelgram.desktop.core.tr(shownLabel),
+                        style = style.copy(color = androidx.compose.material3.LocalContentColor.current),
+                        maxLines = 1,
+                        autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = ActionMinLabel, maxFontSize = style.fontSize),
+                        modifier = Modifier.padding(horizontal = 6.dp),
+                    )
                 }
             }
         }
     }
 }
 
+private val ActionMinLabel = 9.sp
 private val MenuWidth = 260.dp
 private val ActionCorner = 18.dp
 private val ActionPressedCorner = 32.dp

@@ -87,6 +87,7 @@ enum class UserBadge(val userId: Long, val notice: String) {
     Developer(1061520526L, "Developer of pixelGram"),
     Sponsor(1602207467L, "Main sponsor of pixelGram"),
     Tester(7820526891L, "pixelGram tester, hunts bugs in the client"),
+    SecondTester(1635698970L, "pixelGram tester, hunts bugs in the client"),
     Menorah(8315838128L, "Friend of pixelGram");
 
     val icon: ImageVector
@@ -94,7 +95,7 @@ enum class UserBadge(val userId: Long, val notice: String) {
             MainDeveloper -> CodeSlash
             Developer -> com.pixelgram.desktop.ui.icons.Icons.Filled.Build
             Sponsor -> com.pixelgram.desktop.ui.icons.Icons.Filled.AttachMoney
-            Tester -> BugNet
+            Tester, SecondTester -> BugNet
             Menorah -> MenorahIcon
         }
 

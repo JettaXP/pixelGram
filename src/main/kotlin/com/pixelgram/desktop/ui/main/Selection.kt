@@ -294,7 +294,7 @@ private fun ShotMessages(
                 ReplyQuote(
                     name = when {
                         replied == null -> "Message"
-                        replied.isOutgoing -> "You"
+                        replied.isOutgoing -> telegram.senderName(replied).ifBlank { "You" }
                         else -> telegram.senderName(replied)
                     },
                     text = replied?.text?.takeIf { it.isNotEmpty() } ?: replied?.let { contentText(it.content) }?.ifBlank { null } ?: "…",

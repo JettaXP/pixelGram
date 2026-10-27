@@ -718,7 +718,7 @@ fun ChatView(
                             ReplyQuote(
                                 name = when {
                                     replied == null -> "Message"
-                                    replied.isOutgoing -> "You"
+                                    replied.isOutgoing -> telegram.senderName(replied).ifBlank { "You" }
                                     else -> telegram.senderName(replied)
                                 },
                                 text = replied?.text?.takeIf { it.isNotEmpty() } ?: if (replied?.photo != null) "Photo" else replied?.let { contentText(it.content) }?.ifBlank { null } ?: "…",
