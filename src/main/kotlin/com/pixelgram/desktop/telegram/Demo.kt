@@ -624,3 +624,13 @@ fun demoTopicHistory(chatId: Long, topicId: Int): List<UiMessage> {
         else -> listOf(UiMessage(base + 1, chatId, 2, 0, false, now - 3_600, "Welcome to the topic 👋"))
     }
 }
+
+fun demoComments(chatId: Long): List<UiMessage> {
+    val now = (System.currentTimeMillis() / 1000).toInt()
+    return listOf(
+        UiMessage(9_004, chatId, 3, 0, false, now - 60, "Prices will drop again by summer"),
+        UiMessage(9_003, chatId, 2, 0, false, now - 120, "Source?"),
+        UiMessage(9_002, chatId, 2, 0, false, now - 150, "That's a lot 😱"),
+        UiMessage(9_001, chatId, 3, 0, false, now - 300, "First 🔥"),
+    )
+}

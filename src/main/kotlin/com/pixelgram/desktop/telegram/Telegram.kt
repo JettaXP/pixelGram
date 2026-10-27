@@ -608,6 +608,10 @@ class Telegram(
     }
 
     fun openPrivateChat(userId: Long, onChat: (Long) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") {
+            chats.values.firstOrNull { it.privateUserId == userId }?.let { onChat(it.id) }
+            return
+        }
         send(TdApi.CreatePrivateChat().apply {
             this.userId = userId
             force = false
@@ -1947,6 +1951,11 @@ class Telegram(
         threadMessages.clear()
         threadRoot = null
         activeThread = null
+        if (System.getProperty("pixelgram.demo") == "true") {
+            activeThread = channelId to messageId
+            threadMessages.addAll(demoComments(channelId))
+            return
+        }
         send(TdApi.GetMessageThread(channelId, messageId)) { result ->
             if (result !is TdApi.MessageThreadInfo) return@send onFail((result as? TdApi.Error)?.message?.let(::friendlyError) ?: "Comments are unavailable")
             activeThread = result.chatId to result.messageThreadId

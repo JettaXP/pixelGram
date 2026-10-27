@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
@@ -47,6 +49,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppSettings
+import com.pixelgram.desktop.telegram.ChatState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.ui.OnEscape
@@ -80,8 +83,16 @@ fun CommentsBar(count: Int, onClick: () -> Unit) {
 }
 
 @Composable
-fun CommentsView(post: UiMessage, telegram: Telegram, settings: AppSettings, onBack: () -> Unit) {
+fun CommentsView(post: UiMessage, telegram: Telegram, settings: AppSettings, onOpenChat: ((Long) -> Unit)? = null, onBack: () -> Unit) {
     var error by remember(post.key) { mutableStateOf<String?>(null) }
+    var profile by remember(post.key) { mutableStateOf<ChatState?>(null) }
+    val openSender = { message: UiMessage ->
+        if (message.senderUserId != 0L) {
+            telegram.openPrivateChat(message.senderUserId) { id -> telegram.chats[id]?.let { profile = it } }
+        } else {
+            telegram.chats[message.senderChatId]?.let { profile = it }
+        }
+    }
     DisposableEffect(post.key) {
         telegram.openThread(post.chatId, post.id) { error = it }
         onDispose { telegram.closeThread() }
@@ -131,15 +142,26 @@ fun CommentsView(post: UiMessage, telegram: Telegram, settings: AppSettings, onB
                                 }
                             }
                         }
-                        items(telegram.threadMessages, key = { it.key }) { message ->
-                            MessageBubble(
-                                modifier = itemMotion(),
-                                message = message,
-                                senderName = if (message.isOutgoing) null else telegram.senderName(message),
-                                settings = settings,
-                                telegram = telegram,
-                                onReact = { emoji -> telegram.toggleReaction(message, emoji) },
-                            )
+                        itemsIndexed(telegram.threadMessages, key = { _, message -> message.key }) { index, message ->
+                            val shown = telegram.threadMessages
+                            val firstInRun = !sameSender(shown.getOrNull(index + 1), message)
+                            val lastInRun = !sameSender(shown.getOrNull(index - 1), message)
+                            Row(verticalAlignment = Alignment.Bottom, modifier = itemMotion()) {
+                                if (!message.isOutgoing) {
+                                    Box(Modifier.width(SenderAvatarSlot)) {
+                                        if (lastInRun) SenderAvatar(message, telegram, settings) { openSender(message) }
+                                    }
+                                }
+                                MessageBubble(
+                                    modifier = Modifier.weight(1f),
+                                    message = message,
+                                    senderName = if (message.isOutgoing || !firstInRun) null else telegram.senderName(message),
+                                    senderTag = if (message.isOutgoing || !firstInRun) null else telegram.chats[message.chatId]?.let { telegram.senderTag(it, message) },
+                                    settings = settings,
+                                    telegram = telegram,
+                                    onReact = { emoji -> telegram.toggleReaction(message, emoji) },
+                                )
+                            }
                         }
                         telegram.threadRoot?.let { root ->
                             item(key = "root") {
@@ -171,6 +193,7 @@ fun CommentsView(post: UiMessage, telegram: Telegram, settings: AppSettings, onB
             }
         }
     }
+    profile?.let { shown -> ChatInfoDialog(shown, telegram, settings, onOpenChat) { profile = null } }
 }
 
 @Composable

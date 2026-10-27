@@ -248,7 +248,7 @@ fun ChatActions(
     if (profile) ChatInfoDialog(chat, telegram, settings, onOpenChat) { profile = false }
     if (contactEdit) ContactDialog(chat, telegram) { contactEdit = false }
     if (renaming) RenameDialog(chat, telegram) { renaming = false }
-    if (managing) ManageChatDialog(chat, telegram) { managing = false }
+    if (managing) ManageChatDialog(chat, telegram, onDismiss = { managing = false })
 }
 
 @Composable
@@ -342,7 +342,7 @@ fun ChatInfoDialog(
     }
     mentioned?.let { other -> ChatInfoDialog(other, telegram, settings, onOpenChat) { mentioned = null } }
     var managing by remember(chat.id) { mutableStateOf(false) }
-    if (managing) ManageChatDialog(chat, telegram) { managing = false }
+    if (managing) ManageChatDialog(chat, telegram, onDismiss = { managing = false })
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
@@ -459,7 +459,7 @@ fun ChatInfoDialog(
                 }
                 if (chat.privateUserId != 0L) ProfileMusic(telegram, settings, chat.privateUserId, own = false, modifier = Modifier.padding(top = 8.dp))
                 Box(Modifier.fillMaxWidth().padding(top = 8.dp)) { InfoGroup(rows) }
-                ChatMemberRows(chat, telegram, Modifier.fillMaxWidth().padding(top = 8.dp))
+                ChatMemberRows(chat, telegram, settings, onOpenChat, Modifier.fillMaxWidth().padding(top = 8.dp))
                 if (personalChannel != 0L) {
                     PersonalChannelCard(
                         personalChannel,

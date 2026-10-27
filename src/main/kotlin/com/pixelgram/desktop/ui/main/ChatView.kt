@@ -1002,7 +1002,7 @@ fun ChatView(
     ) {
         var shownPost by remember { mutableStateOf(commentsFor) }
         commentsFor?.let { shownPost = it }
-        shownPost?.let { post -> CommentsView(post, telegram, settings) { commentsFor = null } }
+        shownPost?.let { post -> CommentsView(post, telegram, settings, onOpenChat) { commentsFor = null } }
     }
     }
     }

@@ -97,13 +97,15 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.reflect.KMutableProperty1
 
+enum class ManageStart { Member, Rights, Restrict, Ban }
+
 private sealed interface ManagePage {
     data object Home : ManagePage
     data object Info : ManagePage
     data object Permissions : ManagePage
     data class Members(val list: MemberList) : ManagePage
     data object Log : ManagePage
-    data class Member(val member: TdApi.ChatMember) : ManagePage
+    data class Member(val member: TdApi.ChatMember, val askBan: Boolean = false) : ManagePage
     data class Rights(val member: TdApi.ChatMember) : ManagePage
     data class Restrict(val member: TdApi.ChatMember) : ManagePage
 }
@@ -218,8 +220,24 @@ private fun memberLabel(member: TdApi.ChatMember): String? = when (val status = 
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ManageChatDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> Unit) {
-    val stack = remember(chat.id) { mutableStateListOf<ManagePage>(ManagePage.Home) }
+fun ManageChatDialog(
+    chat: ChatState,
+    telegram: Telegram,
+    member: TdApi.ChatMember? = null,
+    start: ManageStart = ManageStart.Member,
+    onDismiss: () -> Unit,
+) {
+    val stack = remember(chat.id) {
+        mutableStateListOf<ManagePage>().apply {
+            if (member == null) {
+                add(ManagePage.Home)
+            } else {
+                add(ManagePage.Member(member, askBan = start == ManageStart.Ban))
+                if (start == ManageStart.Rights) add(ManagePage.Rights(member))
+                if (start == ManageStart.Restrict) add(ManagePage.Restrict(member))
+            }
+        }
+    }
     val page = stack.last()
     val go: (ManagePage) -> Unit = { next -> stack.add(next) }
     val back: () -> Unit = { if (stack.size > 1) stack.removeAt(stack.lastIndex) else onDismiss() }
@@ -252,7 +270,7 @@ fun ManageChatDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> Unit)
                         ManagePage.Permissions -> PermissionsPage(chat, telegram, back)
                         is ManagePage.Members -> MembersPage(chat, telegram, shown.list) { go(ManagePage.Member(it)) }
                         ManagePage.Log -> LogPage(chat, telegram)
-                        is ManagePage.Member -> MemberPage(chat, telegram, shown.member, go, back)
+                        is ManagePage.Member -> MemberPage(chat, telegram, shown.member, go, back, shown.askBan)
                         is ManagePage.Rights -> RightsPage(chat, telegram, shown.member, back)
                         is ManagePage.Restrict -> RestrictPage(chat, telegram, shown.member, back)
                     }
@@ -525,7 +543,7 @@ private class MemberAction(val icon: ImageVector, val title: String, val danger:
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun MemberPage(chat: ChatState, telegram: Telegram, member: TdApi.ChatMember, go: (ManagePage) -> Unit, back: () -> Unit) {
+private fun MemberPage(chat: ChatState, telegram: Telegram, member: TdApi.ChatMember, go: (ManagePage) -> Unit, back: () -> Unit, askBan: Boolean = false) {
     val name = telegram.senderTitle(member.memberId)
     val userId = (member.memberId as? TdApi.MessageSenderUser)?.userId ?: 0L
     val self = userId != 0L && userId == telegram.me?.id
@@ -540,7 +558,7 @@ private fun MemberPage(chat: ChatState, telegram: Telegram, member: TdApi.ChatMe
     val tagEditable = group && userId != 0L && (telegram.can(chat) { it.canManageTags } || (self && chat.permissions?.canEditTag == true)) && !banned
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
-    var confirmBan by remember { mutableStateOf(false) }
+    var confirmBan by remember { mutableStateOf(askBan) }
     val done = { failure: String? ->
         busy = false
         if (failure == null) back() else error = failure
