@@ -1103,3 +1103,13 @@ Hold to record a video message, click for a voice message	Удерживайте
 Paste coordinates or a map link, for example 55.7539, 37.6208.	Вставьте координаты или ссылку на карту, например 55.7539, 37.6208.
 API ID	API ID
 API hash	API hash
+We've sent the code in Telegram on your other device.	Мы отправили код в Telegram на другом вашем устройстве.
+We've sent the code by SMS.	Мы отправили код по SMS.
+We're calling you with the code.	Мы звоним вам, чтобы продиктовать код.
+We've sent the code with a missed call.	Мы отправили код пропущенным звонком.
+We've sent the code on Fragment.	Мы отправили код на Fragment.
+Too many attempts. Try again in {n}:{n}	Слишком много попыток. Повторите через {n}:{n}
+Two-step verification is on. Hint:	Включена двухэтапная проверка. Подсказка:
+{n} more digit	Ещё {n} {цифра|цифры|цифр}
+{n} more digits	Ещё {n} {цифра|цифры|цифр}
+This sign-in step is not supported yet. Finish it in another Telegram app.	Этот шаг входа пока не поддерживается. Завершите его в другом приложении Telegram.

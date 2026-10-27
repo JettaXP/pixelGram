@@ -223,15 +223,15 @@ private fun CountryPicker(
 }
 
 private fun describeCodeType(type: TdApi.AuthenticationCodeType?): String = when (type) {
-    is TdApi.AuthenticationCodeTypeTelegramMessage -> "in Telegram on your other device"
+    is TdApi.AuthenticationCodeTypeTelegramMessage -> "We've sent the code in Telegram on your other device."
     is TdApi.AuthenticationCodeTypeSms,
     is TdApi.AuthenticationCodeTypeSmsWord,
-    is TdApi.AuthenticationCodeTypeSmsPhrase -> "by SMS"
-    is TdApi.AuthenticationCodeTypeCall -> "by a phone call"
+    is TdApi.AuthenticationCodeTypeSmsPhrase -> "We've sent the code by SMS."
+    is TdApi.AuthenticationCodeTypeCall -> "We're calling you with the code."
     is TdApi.AuthenticationCodeTypeFlashCall,
-    is TdApi.AuthenticationCodeTypeMissedCall -> "with a missed call"
-    is TdApi.AuthenticationCodeTypeFragment -> "on Fragment"
-    else -> ""
+    is TdApi.AuthenticationCodeTypeMissedCall -> "We've sent the code with a missed call."
+    is TdApi.AuthenticationCodeTypeFragment -> "We've sent the code on Fragment."
+    else -> "Enter the code you received."
 }
 
 private fun describeNextType(type: TdApi.AuthenticationCodeType?): String = when (type) {
@@ -264,7 +264,7 @@ fun CodeStep(info: CodeInfo, telegram: Telegram, onChangeNumber: () -> Unit) {
         "+" + info.phoneNumber.removePrefix("+"),
         style = MaterialTheme.typography.titleMedium,
     )
-    Hint(if (via.isNotEmpty()) "We've sent the code $via." else "Enter the code you received.")
+    Hint(via)
     OutlinedTextField(
         value = code,
         onValueChange = { value ->
@@ -293,7 +293,7 @@ fun CodeStep(info: CodeInfo, telegram: Telegram, onChangeNumber: () -> Unit) {
             TextButton(onClick = telegram::resendCode, enabled = secondsLeft == 0 && !busy) {
                 Text(
                     if (secondsLeft > 0) {
-                        "%s in %d:%02d".format(describeNextType(info.nextType), secondsLeft / 60, secondsLeft % 60)
+                        com.pixelgram.desktop.core.tr(describeNextType(info.nextType)) + " · %d:%02d".format(secondsLeft / 60, secondsLeft % 60)
                     } else {
                         describeNextType(info.nextType)
                     },

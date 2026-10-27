@@ -114,8 +114,8 @@ fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
                                 is AuthState.WaitCode -> CodeStep(state.info, telegram) { editingNumber = true }
                                 is AuthState.WaitPassword -> PasswordStep(state.hint, telegram)
                                 is AuthState.Unsupported -> Hint(
-                                    "This sign-in step (${state.name}) is not supported yet. " +
-                                        "Finish it in another Telegram app."
+                                    com.pixelgram.desktop.core.tr("This sign-in step is not supported yet. Finish it in another Telegram app.") +
+                                        " (${state.name})"
                                 )
                                 is AuthState.Failed -> Hint(state.reason)
                                 AuthState.Ready -> Unit
@@ -266,7 +266,7 @@ private fun ApiCredentialsStep(telegram: Telegram) {
 @Composable
 private fun PasswordStep(hint: String, telegram: Telegram) {
     Hint(
-        if (hint.isNotEmpty()) "Two-step verification is on. Hint: $hint" else
+        if (hint.isNotEmpty()) com.pixelgram.desktop.core.tr("Two-step verification is on. Hint:") + " " + hint else
             "Two-step verification is on. Enter your password."
     )
     ShapePasswordBar(

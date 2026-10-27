@@ -1101,3 +1101,13 @@ Hold to record a video message, click for a voice message	החזיקו להוד�
 Paste coordinates or a map link, for example 55.7539, 37.6208.	הדביקו קואורדינטות או קישור למפה, למשל 55.7539, 37.6208.
 API ID	API ID
 API hash	API hash
+We've sent the code in Telegram on your other device.	שלחנו את הקוד בטלגרם במכשיר האחר שלך.
+We've sent the code by SMS.	שלחנו את הקוד ב־SMS.
+We're calling you with the code.	אנחנו מתקשרים אליך עם הקוד.
+We've sent the code with a missed call.	שלחנו את הקוד בשיחה שלא נענתה.
+We've sent the code on Fragment.	שלחנו את הקוד ב־Fragment.
+Too many attempts. Try again in {n}:{n}	יותר מדי ניסיונות. נסו שוב בעוד {n}:{n}
+Two-step verification is on. Hint:	האימות הדו־שלבי מופעל. רמז:
+{n} more digit	עוד ספרה {n}
+{n} more digits	עוד {n} ספרות
+This sign-in step is not supported yet. Finish it in another Telegram app.	שלב הכניסה הזה עדיין לא נתמך. השלימו אותו באפליקציית טלגרם אחרת.

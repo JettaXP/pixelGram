@@ -4,6 +4,8 @@ import kotlin.math.roundToInt
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import com.pixelgram.desktop.ui.components.expressive.Slider
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.animation.AnimatedVisibility
@@ -56,8 +58,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asComposeImageBitmap
-import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -140,7 +140,7 @@ private const val AudioDrainPollMs = 10L
 private val VolumeSliderWidth = 110.dp
 
 internal class VideoEngine(private val path: String, private val loop: Boolean, private val sound: Boolean = true, private val maxWidth: Int = MaxDecodeWidth) {
-    var frame by mutableStateOf<ImageBitmap?>(null)
+    var frame by mutableStateOf<org.jetbrains.skia.Image?>(null)
     var position by mutableLongStateOf(0L)
     var duration by mutableLongStateOf(0L)
     var playing by mutableStateOf(true)
@@ -159,6 +159,8 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
     @Volatile private var lineMarkUs = 0L
     private var audioThread: Thread? = null
     private val pool = ArrayList<Bitmap>(KeptFrames)
+    private val images = arrayOfNulls<org.jetbrains.skia.Image>(KeptFrames)
+    private var shownSlot = -1
     private var poolInfo: ImageInfo? = null
     private var poolStride = 0
     private var written = 0
@@ -372,25 +374,37 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
             pool.add(fresh)
         }
         val pixmap = bitmap.peekPixels() ?: return
-        try {
+        val address = try {
             val source = buffer.duplicate().apply { rewind() }
             source.limit(minOf(source.capacity(), size))
             BufferUtil.getByteBufferFromPointer(pixmap.addr, size).put(source)
+            pixmap.addr
         } finally {
             pixmap.close()
         }
         bitmap.notifyPixelsChanged()
         written++
-        this.frame = bitmap.asComposeImageBitmap()
+        val image = org.jetbrains.skia.Image.makeRaster(info, org.jetbrains.skia.Data.makeWithoutCopy(address, size, bitmap), stride)
+        val stale = images[slot]
+        images[slot] = image
+        shownSlot = slot
+        this.frame = image
+        if (stale != null) java.awt.EventQueue.invokeLater { stale.close() }
     }
 
     private fun releaseFrames() {
         val left = pool.toList()
+        val oldImages = images.toList()
+        val keep = shownSlot
         pool.clear()
+        images.fill(null)
         written = 0
+        shownSlot = -1
         if (left.isEmpty()) return
-        val shown = frame?.asSkiaBitmap()
-        java.awt.EventQueue.invokeLater { left.forEach { bitmap -> if (bitmap !== shown) bitmap.close() } }
+        java.awt.EventQueue.invokeLater {
+            oldImages.forEachIndexed { index, image -> if (index != keep) image?.close() }
+            left.forEachIndexed { index, bitmap -> if (index != keep) bitmap.close() }
+        }
     }
 }
 
@@ -465,11 +479,9 @@ private fun VideoSurface(request: VideoRequest, engine: VideoEngine?, close: () 
             .padding(horizontal = MediaInsetX, vertical = MediaInsetY)
         if (frame != null) {
             Box(media, contentAlignment = Alignment.Center) {
-                Image(
-                    frame,
-                    contentDescription = "Video",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
+                VideoFrame(
+                    engine,
+                    Modifier
                         .aspectRatio(frame.width.toFloat() / frame.height.coerceAtLeast(1))
                         .clip(RoundedCornerShape(16.dp))
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { engine.toggle() },
@@ -582,14 +594,18 @@ internal fun VideoFrame(engine: VideoEngine, modifier: Modifier) {
         modifier.drawBehind {
             val image = engine.frame ?: return@drawBehind
             val scale = maxOf(size.width / image.width, size.height / image.height)
-            val sourceWidth = (size.width / scale).roundToInt().coerceIn(1, image.width)
-            val sourceHeight = (size.height / scale).roundToInt().coerceIn(1, image.height)
-            drawImage(
-                image,
-                srcOffset = IntOffset((image.width - sourceWidth) / 2, (image.height - sourceHeight) / 2),
-                srcSize = IntSize(sourceWidth, sourceHeight),
-                dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
-            )
+            val sourceWidth = (size.width / scale).coerceIn(1f, image.width.toFloat())
+            val sourceHeight = (size.height / scale).coerceIn(1f, image.height.toFloat())
+            drawIntoCanvas { canvas ->
+                canvas.nativeCanvas.drawImageRect(
+                    image,
+                    org.jetbrains.skia.Rect.makeXYWH((image.width - sourceWidth) / 2f, (image.height - sourceHeight) / 2f, sourceWidth, sourceHeight),
+                    org.jetbrains.skia.Rect.makeWH(size.width, size.height),
+                    org.jetbrains.skia.SamplingMode.LINEAR,
+                    null,
+                    true,
+                )
+            }
         },
     )
 }

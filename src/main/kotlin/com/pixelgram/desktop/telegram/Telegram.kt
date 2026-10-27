@@ -26,6 +26,7 @@ import it.tdlight.jni.TdApi
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -222,6 +223,7 @@ private object Tdlib {
     private var factory: ClientFactory? = null
     private var error: Throwable? = null
 
+    @Synchronized
     fun factory(): Result<ClientFactory> {
         error?.let { return Result.failure(it) }
         factory?.let { return Result.success(it) }
@@ -295,17 +297,19 @@ class Telegram(
         internal set
 
     fun start() {
-        Tdlib.factory()
-            .onSuccess {
-                factory = it
-                createClient()
-            }
-            .onFailure { e ->
-                AppLog.write("TDLib native library failed to load", e)
-                authState = AuthState.Failed(
-                    "TDLib native library failed to load: ${e.describe()}\n\nLog: ${AppLog.file.absolutePath}"
-                )
-            }
+        scope.launch(Dispatchers.Main) {
+            withContext(Dispatchers.IO) { Tdlib.factory() }
+                .onSuccess {
+                    factory = it
+                    createClient()
+                }
+                .onFailure { e ->
+                    AppLog.write("TDLib native library failed to load", e)
+                    authState = AuthState.Failed(
+                        "TDLib native library failed to load: ${e.describe()}\n\nLog: ${AppLog.file.absolutePath}"
+                    )
+                }
+        }
     }
 
     private fun createClient() {
@@ -313,7 +317,7 @@ class Telegram(
         this.client = client
         client.execute(TdApi.SetLogVerbosityLevel(2))
         client.execute(TdApi.SetLogStream(TdApi.LogStreamFile(
-            File(AppPaths.dataDir, "tdlib.log").absolutePath,
+            File(AppPaths.logsDir, "tdlib.log").absolutePath,
             10L * 1024 * 1024,
             false,
         )))

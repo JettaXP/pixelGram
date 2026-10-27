@@ -152,7 +152,6 @@ internal val SettingsIndex = listOf(
     "Appearance" to "Style on top",
     "Appearance" to "Tabs",
     "Appearance" to "Capsule",
-    "Appearance" to "Hide \"All chats\"",
     "Appearance" to "Spacing",
     "Appearance" to "Reset to default",
     "Appearance" to "All chats",

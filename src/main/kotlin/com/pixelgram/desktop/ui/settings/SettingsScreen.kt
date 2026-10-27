@@ -929,15 +929,6 @@ private fun AppearanceSection(settings: AppSettings) {
             if (it) settings.materialFolders.value = false
         },
     )
-    Spacer(Modifier.height(8.dp))
-    SwitchRow(
-        index = 0,
-        count = 1,
-        title = "Hide \"All chats\"",
-        subtitle = "Only works when you have at least one folder.",
-        checked = settings.hideAllChats.value,
-        onChange = { settings.hideAllChats.value = it },
-    )
 
     Header("Capsule")
     Description("The selected folder shows its name, the others only their icon. Try it here:")
