@@ -597,6 +597,13 @@ fun demoTopics(chatId: Long): List<TdApi.ForumTopic> {
                 isGeneral = index == 0
             }
             unreadCount = if (index == 1) 3 else 0
+            val previews = listOf("Welcome to the topic 👋", "Pizza for me 🍕", "Tickets are booked ✈️", "Look at this sunset 📷", "Cake is ordered 🎂")
+            lastMessage = TdApi.Message().apply {
+                id = (index + 1) * 1_000L + 3
+                this.chatId = chatId
+                senderId = TdApi.MessageSenderUser(if (index % 2 == 0) 2 else 4)
+                content = TdApi.MessageText().apply { text = TdApi.FormattedText(previews.getOrElse(index) { "New topic" }, emptyArray()) }
+            }
         }
     }
 }

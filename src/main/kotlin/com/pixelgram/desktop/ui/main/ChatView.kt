@@ -92,6 +92,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -287,7 +288,6 @@ fun ChatView(
     var highlight by remember(chat.id) { mutableStateOf<Pair<Long, Long>?>(null) }
     var pinning by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var commentsFor by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
-    var openedTopic by remember(chat.id) { mutableStateOf<TdApi.ForumTopicInfo?>(null) }
     val selected = remember(chat.id) { mutableStateListOf<Long>() }
     val selecting = selected.isNotEmpty()
     val selectingState = rememberUpdatedState(selecting)
@@ -477,7 +477,9 @@ fun ChatView(
         asFiles = asDocuments || files.any { !Attachments.isMedia(it) }
     }) {
     Box(Modifier.fillMaxSize()) {
-    Column(Modifier.fillMaxSize()) {
+    Row(Modifier.fillMaxSize()) {
+    if (telegram.isForum(chat)) ForumSidebar(chat, telegram, Modifier.fillMaxHeight())
+    Column(Modifier.weight(1f).fillMaxHeight()) {
         MiniPlayer(telegram)
         Row(
             modifier = Modifier
@@ -511,7 +513,10 @@ fun ChatView(
                     EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
                     com.pixelgram.desktop.ui.components.ChatBadges(chat, telegram, 22.dp)
                 }
-                val status = telegram.activity(chat) ?: telegram.presence(chat)
+                val topicName = if (telegram.isForum(chat)) telegram.selectedTopicName(chat.id) else null
+                val status = telegram.activity(chat) ?: telegram.presence(chat)?.let { presence ->
+                    if (topicName != null) presence.copy(label = topicName + " · " + presence.label) else presence
+                }
                 AnimatedContent(status, transitionSpec = { fadeIn() togetherWith fadeOut() }) { text ->
                     if (text != null) {
                         EmojiText(
@@ -575,7 +580,6 @@ fun ChatView(
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
         }
-        if (telegram.isForum(chat)) ForumTabs(chat, telegram, onOpen = { openedTopic = it }, modifier = Modifier.padding(bottom = 8.dp))
         val lastPress = remember(chat.id) { longArrayOf(0L) }
         Box(
             Modifier
@@ -990,6 +994,7 @@ fun ChatView(
         }
         }
     }
+    }
     AnimatedVisibility(
         visible = commentsFor != null,
         enter = slideInHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 3 } + fadeIn(),
@@ -998,15 +1003,6 @@ fun ChatView(
         var shownPost by remember { mutableStateOf(commentsFor) }
         commentsFor?.let { shownPost = it }
         shownPost?.let { post -> CommentsView(post, telegram, settings) { commentsFor = null } }
-    }
-    AnimatedVisibility(
-        visible = openedTopic != null,
-        enter = slideInHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 3 } + fadeIn(),
-        exit = slideOutHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 3 } + fadeOut(),
-    ) {
-        var shownTopic by remember { mutableStateOf(openedTopic) }
-        openedTopic?.let { shownTopic = it }
-        shownTopic?.let { topic -> TopicView(chat, topic, telegram, settings) { openedTopic = null } }
     }
     }
     }

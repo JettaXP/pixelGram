@@ -857,6 +857,7 @@ class Telegram(
     fun sendContent(chatId: Long, content: TdApi.InputMessageContent, replyToId: Long = 0, done: (String?) -> Unit = {}) {
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
+            topicId = topicOf(chatId)
             replyTo = replyInput(replyToId)
             inputMessageContent = content
         }) { result -> done((result as? TdApi.Error)?.message) }
@@ -879,6 +880,7 @@ class Telegram(
     fun sendAudio(chatId: Long, audio: TdApi.Audio) {
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
+            topicId = topicOf(chatId)
             inputMessageContent = TdApi.InputMessageAudio().apply {
                 this.audio = TdApi.InputAudio().apply {
                     this.audio = remoteInput(audio.audio)
@@ -978,6 +980,8 @@ class Telegram(
             is TdApi.UpdateChatBackground -> chats[update.chatId]?.background = update.background
             is TdApi.UpdateChatPermissions -> chats[update.chatId]?.permissions = update.permissions
             is TdApi.UpdateChatMember -> chats[update.chatId]?.takeIf { chatRoles[it.id] != null }?.let(::refreshRoles)
+            is TdApi.UpdateForumTopic -> topicsVersion[update.chatId] = (topicsVersion[update.chatId] ?: 0) + 1
+            is TdApi.UpdateForumTopicInfo -> topicsVersion[update.info.chatId] = (topicsVersion[update.info.chatId] ?: 0) + 1
             is TdApi.UpdateSavedMessagesTopic -> savedTopics[update.topic.id] = update.topic
             is TdApi.UpdateChatBlockList -> chats[update.chatId]?.privateUserId?.takeIf { it != 0L }?.let { userId ->
                 blockedUsers[userId] = update.blockList != null
@@ -1057,13 +1061,7 @@ class Telegram(
                         threadMessages.add(0, update.message.toUi().copy(fresh = true))
                     }
                 }
-                activeTopic?.let { (topicChat, topicId) ->
-                    val topic = update.message.topicId as? TdApi.MessageTopicForum
-                    if (update.message.chatId == topicChat && topic?.forumTopicId == topicId && topicMessages.none { it.id == update.message.id }) {
-                        topicMessages.add(0, update.message.toUi().copy(fresh = true))
-                    }
-                }
-                messages[update.message.chatId]?.takeIf { detached[update.message.chatId] != true }?.let { list ->
+                messages[update.message.chatId]?.takeIf { detached[update.message.chatId] != true && belongs(update.message) }?.let { list ->
                     if (list.none { it.id == update.message.id }) {
                         list.add(0, update.message.toUi().copy(fresh = true))
                     }
@@ -1087,10 +1085,6 @@ class Telegram(
                 messages[update.message.chatId]?.let { list ->
                     val index = list.indexOfFirst { it.id == update.oldMessageId }
                     if (index >= 0) list[index] = update.message.toUi().copy(key = list[index].key, fresh = true)
-                }
-                if (activeTopic?.first == update.message.chatId) {
-                    val index = topicMessages.indexOfFirst { it.id == update.oldMessageId }
-                    if (index >= 0) topicMessages[index] = update.message.toUi().copy(key = topicMessages[index].key, fresh = true)
                 }
             }
             is TdApi.UpdatePoll -> messages.values.forEach { list ->
@@ -1148,7 +1142,6 @@ class Telegram(
             }
             is TdApi.UpdateDeleteMessages -> if (update.isPermanent) {
                 messages[update.chatId]?.removeAll { it.id in update.messageIds }
-                if (activeTopic?.first == update.chatId) topicMessages.removeAll { it.id in update.messageIds }
             }
             else -> Unit
         }
@@ -1252,8 +1245,9 @@ class Telegram(
         basicGroupInfo.clear()
         chatRoles.clear()
         roleRequests.clear()
-        topicMessages.clear()
-        activeTopic = null
+        chatTopics.clear()
+        topicsVersion.clear()
+        topicNames.clear()
         contactIds = null
     }
 
@@ -1547,66 +1541,50 @@ class Telegram(
         }
     }
 
-    var activeTopic by mutableStateOf<Pair<Long, Int>?>(null)
-        private set
-    val topicMessages = mutableStateListOf<UiMessage>()
-    var topicLoading by mutableStateOf(false)
-        private set
-    var topicComplete by mutableStateOf(false)
-        private set
+    private val chatTopics = KeyedState<Long, Int>()
+    private val topicsVersion = KeyedState<Long, Int>()
 
-    fun openTopic(chatId: Long, topicId: Int) {
-        topicMessages.clear()
-        topicComplete = false
-        topicLoading = false
-        activeTopic = chatId to topicId
-        loadTopicHistory()
-    }
+    private val topicNames = KeyedState<Long, String>()
 
-    fun loadTopicHistory() {
-        val (chatId, topicId) = activeTopic ?: return
-        if (topicLoading || topicComplete) return
+    fun selectedTopic(chatId: Long): Int? = chatTopics[chatId]
+
+    fun selectedTopicName(chatId: Long): String? = topicNames[chatId]
+
+    fun topicsVersion(chatId: Long): Int = topicsVersion[chatId] ?: 0
+
+    fun selectTopic(chatId: Long, topicId: Int, name: String) {
+        topicNames[chatId] = name
+        if (chatTopics[chatId] == topicId && messages(chatId).isNotEmpty()) return
+        chatTopics[chatId] = topicId
+        detached[chatId] = false
+        resetHistory(chatId)
         if (System.getProperty("pixelgram.demo") == "true") {
-            topicMessages.addAll(demoTopicHistory(chatId, topicId))
-            topicComplete = true
+            messages(chatId).addAll(demoTopicHistory(chatId, topicId))
             return
         }
-        topicLoading = true
-        val from = topicMessages.lastOrNull()?.id ?: 0L
-        send(TdApi.GetForumTopicHistory(chatId, topicId, from, 0, ThreadPageSize)) { result ->
-            if (activeTopic != chatId to topicId) return@send
-            topicLoading = false
-            val loaded = (result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty()
-                .filter { message -> topicMessages.none { it.id == message.id } }
-                .sortedByDescending { it.id }
-                .map { it.toUi() }
-            if (loaded.isEmpty()) topicComplete = true
-            topicMessages.addAll(loaded)
-            if (loaded.isNotEmpty()) markRead(chatId, loaded.map { it.id })
+        loadMoreMessages(chatId)
+    }
+
+    private fun topicOf(chatId: Long): TdApi.MessageTopic? = chatTopics[chatId]?.let { TdApi.MessageTopicForum(it) }
+
+    private fun history(chatId: Long, fromMessageId: Long, offset: Int, limit: Int): TdApi.Function<TdApi.Messages> {
+        val topic = chatTopics[chatId]
+        return if (topic != null) {
+            TdApi.GetForumTopicHistory(chatId, topic, fromMessageId, offset, limit)
+        } else {
+            TdApi.GetChatHistory().apply {
+                this.chatId = chatId
+                this.fromMessageId = fromMessageId
+                this.offset = offset
+                this.limit = limit
+                onlyLocal = false
+            }
         }
     }
 
-    fun closeTopic() {
-        activeTopic = null
-        topicMessages.clear()
-        topicLoading = false
-        topicComplete = false
-    }
-
-    fun sendToTopic(text: String, replyToId: Long = 0) {
-        val (targetChat, forumTopic) = activeTopic ?: return
-        if (text.isBlank()) return
-        if (System.getProperty("pixelgram.demo") == "true") {
-            val id = (topicMessages.firstOrNull()?.id ?: 0L) + 1
-            topicMessages.add(0, UiMessage(id, targetChat, myUserId, 0, true, (System.currentTimeMillis() / 1000).toInt(), text, fresh = true))
-            return
-        }
-        send(TdApi.SendMessage().apply {
-            chatId = targetChat
-            topicId = TdApi.MessageTopicForum(forumTopic)
-            replyTo = replyInput(replyToId)
-            inputMessageContent = TdApi.InputMessageText().apply { this.text = TdApi.FormattedText(text, emptyArray()) }
-        }) { result -> if (result is TdApi.Error) com.pixelgram.desktop.ui.main.TopNotice.text = friendlyError(result.message) }
+    private fun belongs(message: TdApi.Message): Boolean {
+        val topic = chatTopics[message.chatId] ?: return true
+        return (message.topicId as? TdApi.MessageTopicForum)?.forumTopicId == topic
     }
 
     fun membersCount(chat: ChatState): Int? = memberCount(chat)
@@ -1915,7 +1893,8 @@ class Telegram(
         openChats[chatId] = (openChats[chatId] ?: 0) + 1
         send(TdApi.OpenChat().apply { this.chatId = chatId })
         val list = messages(chatId)
-        if (list.isEmpty()) loadMoreMessages(chatId) else if (windowFocused) readChat(chatId)
+        val waitsForTopic = chats[chatId]?.let(::isForum) == true && chatTopics[chatId] == null
+        if (list.isEmpty() && !waitsForTopic) loadMoreMessages(chatId) else if (list.isNotEmpty() && windowFocused) readChat(chatId)
     }
 
     fun closeChat(chatId: Long) {
@@ -1940,13 +1919,7 @@ class Telegram(
         val list = messages(chatId)
         val fromId = list.lastOrNull()?.id ?: 0L
         val requested = generation(chatId)
-        send(TdApi.GetChatHistory().apply {
-            this.chatId = chatId
-            fromMessageId = fromId
-            offset = 0
-            limit = pageSize
-            onlyLocal = false
-        }) { result ->
+        send(history(chatId, fromId, 0, pageSize)) { result ->
             if (result !is TdApi.Messages || requested != generation(chatId)) {
                 onLoaded(0)
                 return@send
@@ -2079,13 +2052,7 @@ class Telegram(
             done()
         }
         fun fetch(from: Long, shift: Int, attempt: Int) {
-            send(TdApi.GetChatHistory().apply {
-                this.chatId = chatId
-                fromMessageId = from
-                this.offset = shift
-                limit = JumpPageSize
-                onlyLocal = false
-            }) { result ->
+            send(history(chatId, from, shift, JumpPageSize)) { result ->
                 val loaded = (result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty()
                 loaded.forEach { collected[it.id] = it }
                 val enough = collected.size >= JumpMinMessages || loaded.isEmpty() || attempt >= JumpAttempts
@@ -2108,13 +2075,7 @@ class Telegram(
         val list = messages(chatId)
         val newest = list.firstOrNull()?.id ?: return run { loadingNewer.remove(chatId) }
         val requested = generation(chatId)
-        send(TdApi.GetChatHistory().apply {
-            this.chatId = chatId
-            fromMessageId = newest
-            offset = -JumpPageSize
-            limit = JumpPageSize + 1
-            onlyLocal = false
-        }) { result ->
+        send(history(chatId, newest, -JumpPageSize, JumpPageSize + 1)) { result ->
             loadingNewer.remove(chatId)
             if (requested != generation(chatId)) return@send
             val top = list.firstOrNull()?.id ?: newest
@@ -2179,6 +2140,7 @@ class Telegram(
         if (text.isBlank()) return
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
+            topicId = topicOf(chatId)
             replyTo = replyInput(replyToId)
             inputMessageContent = TdApi.InputMessageText().apply {
                 this.text = TdApi.FormattedText(text, entities)
@@ -2445,6 +2407,7 @@ class Telegram(
     fun forwardMessages(toChatId: Long, fromChatId: Long, ids: LongArray, sendCopy: Boolean = false, removeCaption: Boolean = false) {
         send(TdApi.ForwardMessages().apply {
             chatId = toChatId
+            topicId = topicOf(toChatId)
             this.fromChatId = fromChatId
             messageIds = ids
             this.sendCopy = sendCopy
@@ -2564,6 +2527,7 @@ class Telegram(
     fun sendSticker(chatId: Long, sticker: TdApi.Sticker, replyToId: Long = 0, silent: Boolean = false, schedule: TdApi.MessageSchedulingState? = null) {
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
+            topicId = topicOf(chatId)
             replyTo = replyInput(replyToId)
             options = TdApi.MessageSendOptions().apply {
                 disableNotification = silent
@@ -2583,6 +2547,7 @@ class Telegram(
     fun sendVoice(chatId: Long, voice: com.pixelgram.desktop.core.VoiceNote, replyToId: Long = 0) {
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
+            topicId = topicOf(chatId)
             replyTo = replyInput(replyToId)
             inputMessageContent = TdApi.InputMessageVoiceNote().apply {
                 voiceNote = TdApi.InputVoiceNote(TdApi.InputFileLocal(voice.file.absolutePath), voice.duration, voice.waveform)
@@ -2594,6 +2559,7 @@ class Telegram(
     fun sendVideoNote(chatId: Long, note: com.pixelgram.desktop.core.VideoNote, replyToId: Long = 0) {
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
+            topicId = topicOf(chatId)
             replyTo = replyInput(replyToId)
             inputMessageContent = TdApi.InputMessageVideoNote().apply {
                 videoNote = TdApi.InputVideoNote().apply {
@@ -2609,6 +2575,7 @@ class Telegram(
     fun sendAnimation(chatId: Long, animation: TdApi.Animation, replyToId: Long = 0) {
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
+            topicId = topicOf(chatId)
             replyTo = replyInput(replyToId)
             inputMessageContent = TdApi.InputMessageAnimation().apply {
                 this.animation = TdApi.InputAnimation().apply {
@@ -2854,12 +2821,14 @@ class Telegram(
                 if (contents.size == 1) {
                     send(TdApi.SendMessage().apply {
                         this.chatId = chatId
+                        topicId = topicOf(chatId)
                         if (chunkIndex == 0) replyTo = replyInput(replyToId)
                         inputMessageContent = contents.single()
                     })
                 } else {
                     send(TdApi.SendMessageAlbum().apply {
                         this.chatId = chatId
+                        topicId = topicOf(chatId)
                         if (chunkIndex == 0) replyTo = replyInput(replyToId)
                         inputMessageContents = contents.toTypedArray()
                     })
