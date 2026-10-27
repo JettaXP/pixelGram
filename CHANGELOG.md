@@ -8,7 +8,7 @@
 - No white glow when hovering a gift, and the gift grid runs much smoother.
 
 ### Topics
-- Forum groups show a topic list on the side, and topics switch in place instead of opening a mixed feed.
+- Opening a forum group collapses the chat list to avatars and shows its topics in their own panel next to the chat, with a back button, and topics switch in place instead of opening a mixed feed.
 
 ### Groups and channels
 - Subscribers, members and admins open their profiles, and a right click offers promote, edit rights, restrict and ban.
@@ -23,6 +23,7 @@
 ### Chats
 - Replies to your messages show your name instead of "You", also in screenshots.
 - Files, folders and links open on Windows and macOS even when no app is set for the file type.
+- In the Vibrant style, reply names and read checks in your own bubbles stay readable.
 
 ### Tray
 - The tray menu opens on scaled screens and with the taskbar at the top, and animates in.
