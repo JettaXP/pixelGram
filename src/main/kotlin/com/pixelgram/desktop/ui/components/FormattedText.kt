@@ -272,12 +272,15 @@ fun FormattedText(
 
 @Composable
 private fun SpoilerShimmer(path: Path, tint: Color, modifier: Modifier) {
-    val transition = rememberInfiniteTransition()
-    val sweep by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(ShimmerMs, easing = LinearEasing)),
-    )
+    val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
+    val sweep by androidx.compose.runtime.produceState(0f, focused) {
+        if (!focused) return@produceState
+        val start = System.nanoTime() - (value * ShimmerMs * 1_000_000L).toLong()
+        while (true) {
+            value = ((System.nanoTime() - start) / 1_000_000L % ShimmerMs) / ShimmerMs.toFloat()
+            kotlinx.coroutines.delay(ShimmerFrameMs)
+        }
+    }
     Spacer(
         modifier.graphicsLayer().drawBehind {
             val bounds = path.getBounds()
@@ -431,6 +434,7 @@ private val PillInset = 1.dp
 private val QuoteGap = 4.dp
 private const val StrikeHeight = 0.3f
 private val SpoilerBlur = 8.dp
+private const val ShimmerFrameMs = 33L
 private const val ShimmerMs = 1_800
 private const val ShimmerBand = 0.35f
 private const val ShimmerAlpha = 0.38f

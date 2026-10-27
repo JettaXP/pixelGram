@@ -206,6 +206,7 @@ private fun ChatListBody(
         ) { key ->
             val (pinned, rest) = chatsFor(key).partition { it.pinned[key] == true }
             val listState = rememberLazyListState()
+            val placement = com.pixelgram.desktop.ui.components.rememberScrollAwarePlacement { listState.isScrollInProgress }
             LoadMoreChats(listState, key, pinned.size + rest.size, telegram)
             val scrollRequest = ChatListScroll.request
             val seenRequest = remember { intArrayOf(scrollRequest) }
@@ -253,7 +254,7 @@ private fun ChatListBody(
                     item(key = "archive-gap") { Spacer(Modifier.height(GroupGap)) }
                 }
                 itemsIndexed(pinned, key = { _, chat -> chat.id }, contentType = { _, _ -> ChatRowType }) { index, chat ->
-                    ChatRow(chat, index, pinned.size, chat.id == selectedChatId, telegram, settings, key, itemMotion(!listState.isScrollInProgress)) {
+                    ChatRow(chat, index, pinned.size, chat.id == selectedChatId, telegram, settings, key, itemMotion(placement)) {
                         onOpen(chat.id)
                     }
                 }
@@ -261,7 +262,7 @@ private fun ChatListBody(
                     item(key = "pinned-gap") { Spacer(Modifier.height(GroupGap)) }
                 }
                 itemsIndexed(rest, key = { _, chat -> chat.id }, contentType = { _, _ -> ChatRowType }) { index, chat ->
-                    ChatRow(chat, index, rest.size, chat.id == selectedChatId, telegram, settings, key, itemMotion(!listState.isScrollInProgress)) {
+                    ChatRow(chat, index, rest.size, chat.id == selectedChatId, telegram, settings, key, itemMotion(placement)) {
                         onOpen(chat.id)
                     }
                 }

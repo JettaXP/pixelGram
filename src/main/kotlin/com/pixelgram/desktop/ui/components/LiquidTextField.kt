@@ -154,15 +154,13 @@ private fun rememberBlink(visible: Boolean, moved: Long, settings: AppSettings):
                 value = to
                 return
             }
-            val start = withFrameNanos { it }
+            val start = System.nanoTime()
             while (true) {
-                val done = withFrameNanos { now ->
-                    val progress = ((now - start) / 1_000_000f / fade).coerceIn(0f, 1f)
-                    val curve = 0.5f - 0.5f * cos(PI * progress).toFloat()
-                    value = from + (to - from) * curve
-                    progress >= 1f
-                }
-                if (done) break
+                val progress = ((System.nanoTime() - start) / 1_000_000f / fade).coerceIn(0f, 1f)
+                val curve = 0.5f - 0.5f * cos(PI * progress).toFloat()
+                value = from + (to - from) * curve
+                if (progress >= 1f) break
+                delay(FadeFrameMs)
             }
         }
         while (true) {
@@ -461,6 +459,7 @@ private const val HeadDamping = 0.8f
 private const val TailDamping = 0.9f
 private const val MinCycle = 200
 private const val BlinkRestMs = 500L
+private const val FadeFrameMs = 33L
 private const val StretchUnit = 2
 private const val BarSquash = 0.6f
 private const val BarSwell = 0.5f
