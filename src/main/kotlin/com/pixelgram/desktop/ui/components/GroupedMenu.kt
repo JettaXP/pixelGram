@@ -32,6 +32,7 @@ class MenuEntry(
     val label: String,
     val color: Color = Color.Unspecified,
     val trailing: ImageVector? = null,
+    val enabled: Boolean = true,
     val onClick: () -> Unit,
 )
 
@@ -69,12 +70,14 @@ fun MenuGroups(
         shown.forEach { entries ->
             Column(verticalArrangement = Arrangement.spacedBy(ItemGap)) {
                 entries.forEachIndexed { index, entry ->
-                    val tint = if (entry.color == Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else entry.color
+                    val base = if (entry.color == Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else entry.color
+                    val tint = if (entry.enabled) base else base.copy(alpha = DisabledAlpha)
                     val shape = groupShapes(index, entries.size).shape
                     Surface(shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = MenuShadow) {
                         DropdownMenuItem(
                             onClick = { scope.launch { entry.onClick() } },
-                            text = { Text(entry.label, color = entry.color) },
+                            enabled = entry.enabled,
+                            text = { Text(entry.label, color = if (entry.enabled) entry.color else MaterialTheme.colorScheme.onSurface.copy(alpha = DisabledAlpha)) },
                             shape = shape,
                             contentPadding = PaddingValues(horizontal = ItemPadding),
                             modifier = Modifier.fillMaxWidth().height(ItemHeight),
@@ -94,3 +97,5 @@ private val ItemHeight = 40.dp
 private val ItemPadding = 12.dp
 private val MenuShadow = 2.dp
 private val MenuWidth = 240.dp
+
+private const val DisabledAlpha = 0.38f

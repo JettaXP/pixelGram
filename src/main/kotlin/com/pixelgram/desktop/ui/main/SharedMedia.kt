@@ -85,6 +85,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppSettings
+import com.pixelgram.desktop.core.tr
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.telegram.contentText
@@ -479,7 +480,7 @@ fun SharedMediaSection(chat: com.pixelgram.desktop.telegram.ChatState, telegram:
         emptyMap()
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        PillTabs(titles, selected, { selected = it }, decorations = decorations)
+        PillTabs(titles.map(::tr), selected, { selected = it }, decorations = decorations)
         TabContent(selected, Modifier.fillMaxWidth().height(SectionHeight)) { position ->
             when (extra.getOrNull(position)) {
                 "Stories" -> {

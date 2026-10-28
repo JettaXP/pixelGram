@@ -79,6 +79,10 @@ import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.components.rememberPixelgramLogo
 import com.pixelgram.desktop.ui.main.ForwardDialog
+import androidx.compose.runtime.mutableStateListOf
+import com.pixelgram.desktop.ui.components.Avatar
+import com.pixelgram.desktop.ui.icons.outlined.Block
+import com.pixelgram.desktop.ui.icons.outlined.Timer
 import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
 import java.time.Instant
@@ -86,7 +90,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private enum class PrivacyPage { Main, Sessions }
+private enum class PrivacyPage { Main, Sessions, Blocked }
 
 private enum class Audience(val label: String) { Everybody("Everybody"), Contacts("My contacts"), Nobody("Nobody") }
 
@@ -117,22 +121,25 @@ fun PrivacySection(telegram: Telegram, settings: AppSettings) {
     var page by remember { mutableStateOf(PrivacyPage.Main) }
     var sessions by remember { mutableStateOf<List<TdApi.Session>?>(null) }
     var reload by remember { mutableIntStateOf(0) }
+    var blockedTotal by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(reload) { telegram.activeSessions { sessions = it } }
-    if (page == PrivacyPage.Sessions) OnEscape {
+    LaunchedEffect(reload, page) { telegram.blockedSenders(0, 1) { _, total -> blockedTotal = total } }
+    if (page != PrivacyPage.Main) OnEscape {
         page = PrivacyPage.Main
         true
     }
     AnimatedContent(
         targetState = page,
         transitionSpec = {
-            val direction = if (targetState == PrivacyPage.Sessions) 1 else -1
+            val direction = if (targetState != PrivacyPage.Main) 1 else -1
             (slideInHorizontally { it / 4 * direction } + fadeIn()) togetherWith (slideOutHorizontally { -it / 4 * direction } + fadeOut())
         },
     ) { shown ->
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (shown) {
-                PrivacyPage.Main -> PrivacyMain(telegram, settings, sessions?.size) { page = PrivacyPage.Sessions }
+                PrivacyPage.Main -> PrivacyMain(telegram, settings, sessions?.size, blockedTotal, onBlocked = { page = PrivacyPage.Blocked }) { page = PrivacyPage.Sessions }
                 PrivacyPage.Sessions -> SessionsPage(telegram, settings, sessions, onChanged = { reload++ }) { page = PrivacyPage.Main }
+                PrivacyPage.Blocked -> BlockedPage(telegram, settings) { page = PrivacyPage.Main }
             }
         }
     }
@@ -157,8 +164,11 @@ private fun ValueRow(index: Int, count: Int, icon: ImageVector?, title: String, 
 }
 
 @Composable
-private fun PrivacyMain(telegram: Telegram, settings: AppSettings, sessionCount: Int?, onSessions: () -> Unit) {
+private fun PrivacyMain(telegram: Telegram, settings: AppSettings, sessionCount: Int?, blockedTotal: Int?, onBlocked: () -> Unit, onSessions: () -> Unit) {
     var passcodeDialog by remember { mutableStateOf(false) }
+    var defaultAutoDelete by remember { mutableStateOf<Int?>(null) }
+    var autoDeleting by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { telegram.defaultAutoDelete { defaultAutoDelete = it } }
     val rules = remember { mutableStateMapOf<String, TdApi.UserPrivacySettingRules>() }
     var newChats by remember { mutableStateOf<TdApi.NewChatPrivacySettings?>(null) }
     var editing by remember { mutableStateOf<PrivacyItem?>(null) }
@@ -170,8 +180,10 @@ private fun PrivacyMain(telegram: Telegram, settings: AppSettings, sessionCount:
     }
     Header("Security")
     SegmentedGroup {
-        ValueRow(0, 2, Icons.Outlined.Lock, "Local passcode", if (AppLock.enabled) "On" else "Off") { passcodeDialog = true }
-        ValueRow(1, 2, Icons.Outlined.Devices, "Active sessions", sessionCount?.toString(), onClick = onSessions)
+        ValueRow(0, 4, Icons.Outlined.Lock, "Local passcode", if (AppLock.enabled) "On" else "Off") { passcodeDialog = true }
+        ValueRow(1, 4, Icons.Outlined.Block, "Blocked users", blockedTotal?.let { if (it == 0) "None" else it.toString() }, onClick = onBlocked)
+        ValueRow(2, 4, Icons.Outlined.Timer, "Auto-delete messages", defaultAutoDelete?.let { com.pixelgram.desktop.ui.main.autoDeleteLabel(it) }) { autoDeleting = true }
+        ValueRow(3, 4, Icons.Outlined.Devices, "Active sessions", sessionCount?.toString(), onClick = onSessions)
     }
     Header("Privacy")
     val count = all.size + 1
@@ -199,6 +211,19 @@ private fun PrivacyMain(telegram: Telegram, settings: AppSettings, sessionCount:
         }
     }
     if (passcodeDialog) PasscodeDialog(settings) { passcodeDialog = false }
+    if (autoDeleting) {
+        com.pixelgram.desktop.ui.main.AutoDeleteDialog(
+            title = "Auto-delete messages",
+            description = "Automatically delete messages in new chats you start after a certain period of time.",
+            current = defaultAutoDelete ?: 0,
+            onDismiss = { autoDeleting = false },
+        ) { seconds, done ->
+            telegram.setDefaultAutoDelete(seconds) { failure ->
+                if (failure == null) defaultAutoDelete = seconds
+                done(failure)
+            }
+        }
+    }
 }
 
 private class ParsedRules(
@@ -538,6 +563,97 @@ private val PasscodeFieldWidth = 200.dp
 private val PasscodeDialogWidth = 300.dp
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun BlockedPage(telegram: Telegram, settings: AppSettings, onBack: () -> Unit) {
+    val senders = remember { mutableStateListOf<TdApi.MessageSender>() }
+    var total by remember { mutableStateOf<Int?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    var picking by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    fun load() {
+        if (loading) return
+        loading = true
+        telegram.blockedSenders(senders.size, BlockedPageSize) { found, count ->
+            senders.addAll(found.filter { item -> senders.none { it.key() == item.key() } })
+            total = count
+            loading = false
+        }
+    }
+    LaunchedEffect(Unit) { load() }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+        Text("Blocked users", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+        TextButton(onClick = { picking = true }) {
+            Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text("Block user", modifier = Modifier.padding(start = 6.dp))
+        }
+    }
+    Text(
+        "Blocked users can't send you messages or add you to groups. They will not see your profile photos, stories, online and last seen status.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp),
+    )
+    if (total == null) {
+        LoadingIndicator()
+    } else if (senders.isEmpty()) {
+        Text("No blocked users", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
+    } else {
+        SegmentedGroup {
+            senders.forEachIndexed { index, sender ->
+                val title = telegram.senderTitle(sender)
+                SegmentedListItem(
+                    onClick = {},
+                    shapes = groupShapes(index, senders.size),
+                    leadingContent = { Avatar(title, telegram.senderPhoto(sender), telegram, settings, 40.dp) },
+                    supportingContent = (sender as? TdApi.MessageSenderUser)?.let { user ->
+                        telegram.users[user.userId]?.usernames?.activeUsernames?.firstOrNull()?.let { name -> { Text("@$name") } }
+                    },
+                    trailingContent = {
+                        TextButton(onClick = {
+                            telegram.setSenderBlocked(sender, false) { failure ->
+                                if (failure == null) {
+                                    senders.remove(sender)
+                                    total = (total ?: 1) - 1
+                                } else {
+                                    error = failure
+                                }
+                            }
+                        }) { Text("Unblock") }
+                    },
+                ) { EmojiText(title, maxLines = 1) }
+            }
+        }
+        if (senders.size < (total ?: 0)) {
+            TextButton(enabled = !loading, onClick = { load() }) { Text("Show more") }
+        }
+    }
+    error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    if (picking) {
+        ForwardDialog(telegram, settings, onDismiss = { picking = false }) { chatId ->
+            picking = false
+            val userId = telegram.chats[chatId]?.privateUserId ?: 0L
+            val sender = if (userId != 0L) TdApi.MessageSenderUser(userId) else TdApi.MessageSenderChat(chatId)
+            telegram.setSenderBlocked(sender, true) { failure ->
+                if (failure == null) {
+                    if (senders.none { it.key() == sender.key() }) senders.add(0, sender)
+                    total = (total ?: 0) + 1
+                } else {
+                    error = failure
+                }
+            }
+        }
+    }
+}
+
+private fun TdApi.MessageSender.key(): Long = when (this) {
+    is TdApi.MessageSenderUser -> userId
+    is TdApi.MessageSenderChat -> -chatId
+    else -> 0L
+}
+
+private const val BlockedPageSize = 50
+
 @Composable
 private fun SessionsPage(
     telegram: Telegram,

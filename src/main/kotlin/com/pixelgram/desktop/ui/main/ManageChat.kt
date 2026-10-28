@@ -90,6 +90,8 @@ import com.pixelgram.desktop.ui.icons.outlined.Lock
 import com.pixelgram.desktop.ui.icons.outlined.Delete
 import com.pixelgram.desktop.ui.icons.outlined.TextFields
 import com.pixelgram.desktop.ui.settings.PixelSwitch
+import com.pixelgram.desktop.telegram.canInvite
+import com.pixelgram.desktop.ui.icons.outlined.Link
 import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
 import java.time.Instant
@@ -105,6 +107,7 @@ private sealed interface ManagePage {
     data object Permissions : ManagePage
     data class Members(val list: MemberList) : ManagePage
     data object Log : ManagePage
+    data object Links : ManagePage
     data class Member(val member: TdApi.ChatMember, val askBan: Boolean = false) : ManagePage
     data class Rights(val member: TdApi.ChatMember) : ManagePage
     data class Restrict(val member: TdApi.ChatMember) : ManagePage
@@ -225,6 +228,7 @@ fun ManageChatDialog(
     telegram: Telegram,
     member: TdApi.ChatMember? = null,
     start: ManageStart = ManageStart.Member,
+    settings: com.pixelgram.desktop.core.AppSettings? = null,
     onDismiss: () -> Unit,
 ) {
     val stack = remember(chat.id) {
@@ -265,11 +269,12 @@ fun ManageChatDialog(
                     },
                 ) { shown ->
                     when (shown) {
-                        ManagePage.Home -> HomePage(chat, telegram, go)
+                        ManagePage.Home -> HomePage(chat, telegram, settings, go)
                         ManagePage.Info -> InfoPage(chat, telegram, back)
                         ManagePage.Permissions -> PermissionsPage(chat, telegram, back)
                         is ManagePage.Members -> MembersPage(chat, telegram, shown.list) { go(ManagePage.Member(it)) }
                         ManagePage.Log -> LogPage(chat, telegram)
+                        ManagePage.Links -> settings?.let { InviteLinksPage(chat, telegram, it) }
                         is ManagePage.Member -> MemberPage(chat, telegram, shown.member, go, back, shown.askBan)
                         is ManagePage.Rights -> RightsPage(chat, telegram, shown.member, back)
                         is ManagePage.Restrict -> RestrictPage(chat, telegram, shown.member, back)
@@ -291,6 +296,7 @@ private fun pageTitle(page: ManagePage, chat: ChatState, telegram: Telegram): St
         MemberList.Restricted -> "Exceptions"
     }
     ManagePage.Log -> "Recent actions"
+    ManagePage.Links -> "Invite links"
     is ManagePage.Member -> telegram.senderTitle(page.member.memberId)
     is ManagePage.Rights -> "Admin rights"
     is ManagePage.Restrict -> "Restrictions"
@@ -300,7 +306,7 @@ private class HomeRow(val icon: ImageVector, val title: String, val detail: Stri
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun HomePage(chat: ChatState, telegram: Telegram, go: (ManagePage) -> Unit) {
+private fun HomePage(chat: ChatState, telegram: Telegram, settings: com.pixelgram.desktop.core.AppSettings?, go: (ManagePage) -> Unit) {
     val group = !chat.isChannel
     val supergroup = chat.supergroupId != 0L
     val restrict = telegram.can(chat) { it.canRestrictMembers }
@@ -309,6 +315,7 @@ private fun HomePage(chat: ChatState, telegram: Telegram, go: (ManagePage) -> Un
     val rows = buildList {
         if (changeInfo) add(HomeRow(Icons.Outlined.Info, "Name and description", null) { go(ManagePage.Info) })
         if (group && restrict) add(HomeRow(Icons.Outlined.Lock, "Permissions", allowed?.let { "$it/${PermissionFlags.size}" }) { go(ManagePage.Permissions) })
+        if (settings != null && telegram.canInvite(chat)) add(HomeRow(Icons.Outlined.Link, "Invite links", null) { go(ManagePage.Links) })
         add(HomeRow(Icons.Outlined.AdminPanelSettings, "Administrators", null) { go(ManagePage.Members(MemberList.Administrators)) })
         add(HomeRow(Icons.Outlined.Group, if (group) "Members" else "Subscribers", telegram.membersCount(chat)?.let { "%,d".format(it) }) { go(ManagePage.Members(MemberList.Recent)) })
         if (supergroup && group && restrict) add(HomeRow(Icons.Outlined.PanTool, "Exceptions", null) { go(ManagePage.Members(MemberList.Restricted)) })

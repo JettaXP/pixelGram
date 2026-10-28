@@ -107,6 +107,8 @@ class MessageActions(
     val filePath: (UiMessage) -> String? = { null },
     val onSaveGif: ((UiMessage) -> Unit)? = null,
     val canEdit: (UiMessage, (Boolean) -> Unit) -> Unit = { message, done -> done(message.editable) },
+    val properties: ((UiMessage, (TdApi.MessageProperties?) -> Unit) -> Unit)? = null,
+    val protectedContent: Boolean = false,
 )
 
 private class MenuTarget(val at: DpOffset, val link: String?, val button: TdApi.InlineKeyboardButton?)
@@ -258,30 +260,38 @@ private fun MessageMenu(
         ?: (button?.type as? TdApi.InlineKeyboardButtonTypeLoginUrl)?.url
     val copyLink = link ?: buttonUrl
     var canEdit by remember(message.key) { mutableStateOf(false) }
+    var properties by remember(message.key) { mutableStateOf<TdApi.MessageProperties?>(null) }
     androidx.compose.runtime.LaunchedEffect(message.key) {
         if (message.isOutgoing && message.editable) actions.canEdit(message) { canEdit = it }
+        actions.properties?.invoke(message) { properties = it }
     }
+    val known = properties
+    val checked = actions.properties != null
+    val canSave = known?.canBeSaved ?: !actions.protectedContent
+    val canForward = known?.canBeForwarded ?: !actions.protectedContent
+    val canPin = if (checked) known?.canBePinned == true else true
+    val canDelete = if (checked) known != null && (known.canBeDeletedOnlyForSelf || known.canBeDeletedForAllUsers) else true
     val reply = buildList {
         add(MenuEntry(Icons.AutoMirrored.Outlined.Reply, "Reply", onClick = act { actions.onReply(message) }))
-        add(MenuEntry(Icons.AutoMirrored.Outlined.Forward, "Forward", onClick = act { actions.onForward(message) }))
+        add(MenuEntry(Icons.AutoMirrored.Outlined.Forward, "Forward", enabled = canForward, onClick = act { actions.onForward(message) }))
         if (canEdit) add(MenuEntry(Icons.Outlined.Edit, "Edit", onClick = act { actions.onEdit(message) }))
-        actions.onPin?.takeIf { !message.service }?.let { pin ->
+        actions.onPin?.takeIf { !message.service && canPin }?.let { pin ->
             add(MenuEntry(Icons.Outlined.PushPin, if (message.pinned) "Unpin" else "Pin", onClick = act { pin(message) }))
         }
     }
     val copies = buildList {
-        if (message.text.isNotEmpty()) add(MenuEntry(Icons.Outlined.ContentCopy, "Copy text", onClick = act { copy(message.text) }))
+        if (message.text.isNotEmpty()) add(MenuEntry(Icons.Outlined.ContentCopy, "Copy text", enabled = canSave, onClick = act { copy(message.text) }))
         (message.content as? TdApi.MessageAnimatedEmoji)?.emoji?.takeIf { message.text.isEmpty() }?.let { emoji ->
             add(MenuEntry(Icons.Outlined.ContentCopy, "Copy emoji", onClick = act { copy(emoji) }))
         }
         actions.filePath(message)?.let { path ->
-            add(MenuEntry(Icons.Outlined.FolderOpen, "Show in folder", onClick = act { showInFolder(path) }))
-            add(MenuEntry(Icons.Outlined.Link, "Copy file path", onClick = act { copy(path) }))
+            add(MenuEntry(Icons.Outlined.FolderOpen, "Show in folder", enabled = canSave, onClick = act { showInFolder(path) }))
+            add(MenuEntry(Icons.Outlined.Link, "Copy file path", enabled = canSave, onClick = act { copy(path) }))
         }
-        if (message.photo != null) add(MenuEntry(Icons.Outlined.Image, "Copy photo", onClick = act { actions.onCopyPhoto(message) }))
+        if (message.photo != null) add(MenuEntry(Icons.Outlined.Image, "Copy photo", enabled = canSave, onClick = act { actions.onCopyPhoto(message) }))
         val saveGif = actions.onSaveGif
         if (saveGif != null && message.content is TdApi.MessageAnimation) {
-            add(MenuEntry(Icons.Outlined.Gif, "Save to GIFs", onClick = act { saveGif(message) }))
+            add(MenuEntry(Icons.Outlined.Gif, "Save to GIFs", enabled = canSave, onClick = act { saveGif(message) }))
         }
         if (copyLink != null) add(MenuEntry(Icons.Outlined.Link, "Copy Link", onClick = act { copy(copyLink) }))
         (button?.type as? TdApi.InlineKeyboardButtonTypeCallback)?.let { callback ->
@@ -292,7 +302,7 @@ private fun MessageMenu(
         actions.onSelect?.takeIf { !message.service }?.let { select ->
             add(MenuEntry(Icons.Outlined.CheckCircle, "Select", onClick = act { select(message) }))
         }
-        add(MenuEntry(Icons.Outlined.Delete, "Delete", color = MaterialTheme.colorScheme.error, onClick = act { actions.onDelete(message) }))
+        if (canDelete) add(MenuEntry(Icons.Outlined.Delete, "Delete", color = MaterialTheme.colorScheme.error, onClick = act { actions.onDelete(message) }))
     }
     GroupedMenu(expanded = expanded, onDismiss = onDismiss) {
         val reactions: (@Composable ColumnScope.() -> Unit)? = if (!message.service && actions.canReact) {

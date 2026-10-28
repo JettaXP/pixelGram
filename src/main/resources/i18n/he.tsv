@@ -1112,3 +1112,65 @@ Two-step verification is on. Hint:	האימות הדו־שלבי מופעל. ר�
 {n} more digits	עוד {n} ספרות
 This sign-in step is not supported yet. Finish it in another Telegram app.	שלב הכניסה הזה עדיין לא נתמך. השלימו אותו באפליקציית טלגרם אחרת.
 Discuss	דיון
+Read all mentions	סמן את כל האזכורים כנקראו
+Read all reactions	סמן את כל התגובות כנקראו
+Next unread mention	האזכור הבא שלא נקרא
+Next unread reaction	התגובה הבאה שלא נקראה
+Blocked users	משתמשים חסומים
+No blocked users	אין משתמשים חסומים
+Unblock	בטל חסימה
+Show more	הצג עוד
+None	אין
+Blocked users can't send you messages or add you to groups. They will not see your profile photos, stories, online and last seen status.	משתמשים חסומים לא יכולים לשלוח לך הודעות או להוסיף אותך לקבוצות. הם לא יראו את תמונות הפרופיל, הסטוריז, הסטטוס המקוון וזמן הנראות האחרון שלך.
+Auto-delete	מחיקה אוטומטית
+Auto-delete messages	מחיקה אוטומטית של הודעות
+Automatically delete new messages sent in this chat after a certain period of time.	מחק אוטומטית הודעות חדשות בצ'אט הזה לאחר פרק זמן מסוים.
+Automatically delete messages in new chats you start after a certain period of time.	מחק אוטומטית הודעות בצ'אטים חדשים שתתחיל לאחר פרק זמן מסוים.
+{n} sec	{n} שנ׳
+{n} min	{n} דק׳
+{n} h	{n} שע׳
+1 week	שבוע
+2 weeks	שבועיים
+1 month	חודש
+3 months	3 חודשים
+6 months	6 חודשים
+1 year	שנה
+Save as image	שמור כתמונה
+Delete sticker	מחק מדבקה
+Invite links	קישורי הזמנה
+Primary link	קישור ראשי
+Additional links	קישורים נוספים
+Create a new link	צור קישור חדש
+You can create additional invite links that have a limited time or number of uses, or that need admin approval.	אפשר ליצור קישורי הזמנה נוספים עם הגבלת זמן או מספר שימושים, או שדורשים אישור מנהל.
+Revoked links	קישורים שבוטלו
+Revoke link	בטל קישור
+The current primary link will stop working and a new one will be created.	הקישור הראשי הנוכחי יפסיק לעבוד וייווצר קישור חדש.
+This link will stop working. Anyone who has it won't be able to join.	הקישור יפסיק לעבוד. מי שיש לו אותו לא יוכל להצטרף.
+Revoke	בטל
+Share link	שתף קישור
+Edit link	ערוך קישור
+Delete link	מחק קישור
+New link	קישור חדש
+Link name (optional)	שם הקישור (לא חובה)
+Request admin approval	בקשת אישור מנהל
+New members will need to be approved by an admin.	חברים חדשים יצטרכו אישור של מנהל.
+Limit by time period	הגבל לפי זמן
+Limit by number of users	הגבל לפי מספר משתמשים
+No limit	ללא הגבלה
+Never	אף פעם
+1 day	יום
+{n} joined	{n} הצטרפו
+{n} requests	{n} בקשות
+{n} left	נותרו {n}
+expired	פג תוקף
+until {date}	עד {date}
+{n} member	חבר אחד
+{n} members	{n} חברים
+{n} subscriber	מנוי אחד
+{n} subscribers	{n} מנויים
+Secret chat	צ'אט סודי
+Encryption key	מפתח הצפנה
+Start secret chat	התחל צ'אט סודי
+Waiting for the contact to get online…	ממתין שאיש הקשר יתחבר…
+Secret chat cancelled	הצ'אט הסודי בוטל
+If this image and text look the same on {name}'s device, your chat is 100% secure.	אם התמונה והטקסט נראים זהים במכשיר של {name}, הצ'אט שלך מאובטח ב־100%.

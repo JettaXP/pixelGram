@@ -21,6 +21,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.launch
 
 private const val ShowAfterItems = 3
@@ -66,3 +69,34 @@ fun ScrollDownButton(listState: LazyListState, modifier: Modifier = Modifier, fo
         }
     }
 }
+
+@Composable
+fun UnreadJumpButton(count: Int, icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onJump: () -> Unit, onReadAll: () -> Unit) {
+    AnimatedVisibility(
+        visible = count > 0,
+        enter = scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()),
+        exit = scaleOut(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
+    ) {
+        androidx.compose.material3.BadgedBox(
+            badge = { androidx.compose.material3.Badge { androidx.compose.material3.Text(if (count > MaxBadge) "$MaxBadge+" else count.toString()) } },
+        ) {
+            SmallFloatingActionButton(
+                onClick = onJump,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                elevation = FloatingActionButtonDefaults.loweredElevation(),
+                modifier = Modifier.pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) onReadAll()
+                        }
+                    }
+                },
+            ) {
+                Icon(icon, contentDescription = label)
+            }
+        }
+    }
+}
+
+private const val MaxBadge = 99

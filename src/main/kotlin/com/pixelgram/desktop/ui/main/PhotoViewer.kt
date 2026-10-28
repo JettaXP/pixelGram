@@ -364,7 +364,7 @@ private fun ZoomablePhoto(photo: ViewedPhoto, modifier: Modifier) {
         }
         if (full == null) LoadingIndicator(Modifier.align(Alignment.Center))
         menuAt?.let { at ->
-            val path = fullPath ?: previewPath
+            val path = (fullPath ?: previewPath)?.takeIf { photo.telegram.chats[photo.chatId]?.protectedContent != true }
             Box(Modifier.align(Alignment.TopStart).offset(at.x, at.y)) {
                 DropdownMenu(
                     expanded = true,

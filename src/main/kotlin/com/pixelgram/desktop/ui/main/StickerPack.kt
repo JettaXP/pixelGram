@@ -51,6 +51,23 @@ import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
 import java.awt.Toolkit
+import java.io.ByteArrayOutputStream
+import io.github.vinceglb.filekit.dialogs.openFileSaver
+import java.io.File
+import java.util.zip.GZIPInputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
+import com.pixelgram.desktop.ui.icons.outlined.NotificationsOff
+import com.pixelgram.desktop.ui.icons.outlined.CalendarMonth
+import com.pixelgram.desktop.ui.icons.outlined.Star
+import com.pixelgram.desktop.ui.icons.outlined.StarOutline
+import com.pixelgram.desktop.ui.icons.outlined.Download
+import com.pixelgram.desktop.ui.icons.outlined.Delete
 import java.awt.datatransfer.StringSelection
 
 class StickerPackRequest(val telegram: Telegram, val chatId: Long, val setId: Long)
@@ -70,7 +87,12 @@ fun StickerPackDialog(request: StickerPackRequest, settings: AppSettings, onDism
     var busy by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var sharing by remember { mutableStateOf(false) }
+    var menuFor by remember { mutableStateOf<TdApi.Sticker?>(null) }
+    var scheduling by remember { mutableStateOf<TdApi.Sticker?>(null) }
+    var favorites by remember { mutableStateOf(emptyList<TdApi.Sticker>()) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     LaunchedEffect(request.setId) { telegram.stickerSet(request.setId) { set = it } }
+    LaunchedEffect(Unit) { telegram.favoriteStickers { favorites = it } }
     val loaded = set
     val link = loaded?.let { "https://t.me/${if (it.stickerType is TdApi.StickerTypeCustomEmoji) "addemoji" else "addstickers"}/${it.name}" }
     BasicAlertDialog(onDismissRequest = onDismiss) {
@@ -128,6 +150,7 @@ fun StickerPackDialog(request: StickerPackRequest, settings: AppSettings, onDism
                                 Modifier
                                     .size(PackCell)
                                     .clip(RoundedCornerShape(12.dp))
+                                    .onSecondaryPress { menuFor = sticker }
                                     .then(
                                         if (sendable) {
                                             Modifier.clickable {
@@ -141,6 +164,42 @@ fun StickerPackDialog(request: StickerPackRequest, settings: AppSettings, onDism
                                 contentAlignment = Alignment.Center,
                             ) {
                                 StickerView(sticker, telegram, PackCell, animate = com.pixelgram.desktop.core.PowerSaving.stickersInPanel)
+                                if (menuFor === sticker) {
+                                    val favorite = favorites.any { it.sticker.id == sticker.sticker.id }
+                                    val item = @Composable { label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, danger: Boolean, action: () -> Unit ->
+                                        val tint = if (danger) MaterialTheme.colorScheme.error else androidx.compose.ui.graphics.Color.Unspecified
+                                        DropdownMenuItem(
+                                            text = { Text(label, color = tint) },
+                                            leadingIcon = { Icon(icon, contentDescription = null, tint = if (danger) tint else androidx.compose.material3.LocalContentColor.current) },
+                                            onClick = {
+                                                menuFor = null
+                                                action()
+                                            },
+                                        )
+                                    }
+                                    DropdownMenu(expanded = true, onDismissRequest = { menuFor = null }, shape = RoundedCornerShape(16.dp)) {
+                                        if (sendable) {
+                                            item("Send without sound", Icons.Outlined.NotificationsOff, false) {
+                                                telegram.sendSticker(request.chatId, sticker, silent = true)
+                                                onDismiss()
+                                            }
+                                            item("Schedule message", Icons.Outlined.CalendarMonth, false) { scheduling = sticker }
+                                        }
+                                        if (loaded.stickerType is TdApi.StickerTypeRegular) {
+                                            item(if (favorite) "Remove from Favorites" else "Add to Favorites", if (favorite) Icons.Outlined.StarOutline else Icons.Outlined.Star, false) {
+                                                telegram.setStickerFavorite(sticker, !favorite) { telegram.favoriteStickers { favorites = it } }
+                                            }
+                                        }
+                                        item("Save as image", Icons.Outlined.Download, false) {
+                                            scope.launch { StickerImage.save(telegram, sticker) }
+                                        }
+                                        if (loaded.isOwned) {
+                                            item("Delete sticker", Icons.Outlined.Delete, true) {
+                                                telegram.removeStickerFromSet(sticker) { telegram.stickerSet(loaded.id) { set = it } }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -175,6 +234,13 @@ fun StickerPackDialog(request: StickerPackRequest, settings: AppSettings, onDism
             }
         }
     }
+    scheduling?.let { sticker ->
+        ScheduleDialog(onDismiss = { scheduling = null }) { date ->
+            scheduling = null
+            telegram.sendSticker(request.chatId, sticker, schedule = TdApi.MessageSchedulingStateSendAtDate(date, 0))
+            onDismiss()
+        }
+    }
     if (sharing && link != null) {
         ForwardDialog(telegram, settings, onDismiss = { sharing = false }) { target ->
             sharing = false
@@ -187,3 +253,87 @@ fun Modifier.openPack(telegram: Telegram, chatId: Long, sticker: TdApi.Sticker?)
     if (sticker == null || sticker.setId == 0L) this else clickable {
         StickerPack.current = StickerPackRequest(telegram, chatId, sticker.setId)
     }
+
+private fun Modifier.onSecondaryPress(action: () -> Unit): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                event.changes.first().consume()
+                action()
+            }
+        }
+    }
+}
+
+object StickerImage {
+    suspend fun save(telegram: Telegram, sticker: TdApi.Sticker) {
+        val path = telegram.downloaded(sticker.sticker) ?: return
+        val png = withContext(Dispatchers.IO) {
+            runCatching {
+                when (sticker.format) {
+                    is TdApi.StickerFormatTgs -> lottie(path)
+                    is TdApi.StickerFormatWebm -> video(path)
+                    else -> still(path)
+                }
+            }.onFailure { com.pixelgram.desktop.core.AppLog.write("Sticker image failed", it) }.getOrNull()
+        } ?: return
+        runCatching {
+            val target = io.github.vinceglb.filekit.FileKit.openFileSaver(suggestedName = "sticker-${sticker.sticker.id}", extension = "png") ?: return
+            withContext(Dispatchers.IO) { target.file.writeBytes(png) }
+        }.onFailure { com.pixelgram.desktop.core.AppLog.write("Save sticker failed", it) }
+    }
+
+    private fun still(path: String): ByteArray? =
+        org.jetbrains.skia.Image.makeFromEncoded(File(path).readBytes()).use { image -> image.encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)?.bytes }
+
+    private fun lottie(path: String): ByteArray? {
+        val json = GZIPInputStream(File(path).inputStream()).use { it.readBytes().decodeToString() }
+        return org.jetbrains.skia.skottie.Animation.makeFromString(json).use { animation ->
+            org.jetbrains.skia.Surface.makeRasterN32Premul(ImageSide, ImageSide).use { surface ->
+                animation.seekFrame(0f)
+                animation.render(surface.canvas, org.jetbrains.skia.Rect.makeWH(ImageSide.toFloat(), ImageSide.toFloat()))
+                surface.makeImageSnapshot().use { it.encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)?.bytes }
+            }
+        }
+    }
+
+    private fun video(path: String): ByteArray? {
+        val grabber = org.bytedeco.javacv.FFmpegFrameGrabber(path).apply {
+            videoCodecName = "libvpx-vp9"
+            pixelFormat = org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_BGRA
+        }
+        return try {
+            runCatching { grabber.start() }.getOrElse {
+                grabber.release()
+                return fallbackVideo(path)
+            }
+            val frame = grabber.grabImage() ?: return null
+            val image = org.bytedeco.javacv.Java2DFrameConverter().convert(frame) ?: return null
+            ByteArrayOutputStream().use { out ->
+                javax.imageio.ImageIO.write(image, "png", out)
+                out.toByteArray()
+            }
+        } finally {
+            runCatching { grabber.stop() }
+            runCatching { grabber.release() }
+        }
+    }
+
+    private fun fallbackVideo(path: String): ByteArray? {
+        val grabber = org.bytedeco.javacv.FFmpegFrameGrabber(path)
+        return try {
+            grabber.start()
+            val image = grabber.grabImage()?.let { org.bytedeco.javacv.Java2DFrameConverter().convert(it) } ?: return null
+            ByteArrayOutputStream().use { out ->
+                javax.imageio.ImageIO.write(image, "png", out)
+                out.toByteArray()
+            }
+        } finally {
+            runCatching { grabber.stop() }
+            runCatching { grabber.release() }
+        }
+    }
+
+    private const val ImageSide = 512
+}

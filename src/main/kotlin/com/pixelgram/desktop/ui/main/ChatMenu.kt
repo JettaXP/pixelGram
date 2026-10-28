@@ -4,6 +4,10 @@ import com.pixelgram.desktop.ui.icons.outlined.Edit
 import com.pixelgram.desktop.ui.icons.outlined.DriveFileRenameOutline
 import com.pixelgram.desktop.ui.icons.outlined.PersonAdd
 import com.pixelgram.desktop.ui.icons.outlined.Link
+import com.pixelgram.desktop.ui.icons.outlined.Key
+import com.pixelgram.desktop.ui.icons.outlined.Lock
+import com.pixelgram.desktop.telegram.secretChatWith
+import com.pixelgram.desktop.telegram.startSecretChat
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.heightIn
@@ -29,6 +33,7 @@ import com.pixelgram.desktop.ui.icons.outlined.Numbers
 import com.pixelgram.desktop.ui.icons.outlined.Info
 import com.pixelgram.desktop.ui.icons.outlined.Phone
 import com.pixelgram.desktop.ui.icons.outlined.AlternateEmail
+import com.pixelgram.desktop.ui.icons.outlined.FavoriteBorder
 import com.pixelgram.desktop.ui.components.InfoRow
 import com.pixelgram.desktop.ui.components.UsernameQrButton
 import com.pixelgram.desktop.ui.components.InfoGroup
@@ -102,6 +107,7 @@ import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.canManage
 import com.pixelgram.desktop.ui.icons.outlined.Forum
 import com.pixelgram.desktop.ui.icons.outlined.Tune
+import com.pixelgram.desktop.ui.icons.outlined.Timer
 import androidx.compose.ui.unit.sp
 import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.theme.EmojiText
@@ -130,8 +136,20 @@ fun ChatActions(
     var contactEdit by remember(chat.id) { mutableStateOf(false) }
     var renaming by remember(chat.id) { mutableStateOf(false) }
     var managing by remember(chat.id) { mutableStateOf(false) }
+    var autoDeleting by remember(chat.id) { mutableStateOf(false) }
+    var keyShown by remember(chat.id) { mutableStateOf(false) }
+    var secretError by remember(chat.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(chat.id, at != null) {
         if (at != null && chat.privateUserId != 0L) telegram.userFullInfo(chat.privateUserId) {}
+    }
+    if (autoDeleting) {
+        AutoDeleteDialog(
+            title = "Auto-delete messages",
+            description = "Automatically delete new messages sent in this chat after a certain period of time.",
+            current = chat.autoDelete,
+            choices = if (telegram.isSecret(chat)) SecretAutoDeleteChoices else AutoDeleteChoices,
+            onDismiss = { autoDeleting = false },
+        ) { seconds, done -> telegram.setAutoDelete(chat, seconds, done) }
     }
     if (at != null) {
         var folders by remember { mutableStateOf(false) }
@@ -169,6 +187,11 @@ fun ChatActions(
                             if (chat.privateUserId == 0L && telegram.canManage(chat)) {
                                 add(MenuEntry(Icons.Outlined.Tune, if (chat.isChannel) "Manage channel" else "Manage group", onClick = act { managing = true }))
                             }
+                            if (telegram.canSetAutoDelete(chat)) {
+                                add(MenuEntry(Icons.Outlined.Timer, "Auto-delete", onClick = act { autoDeleting = true }))
+                            }
+                            if (chat.unreadMentions > 0) add(MenuEntry(Icons.Outlined.AlternateEmail, "Read all mentions", onClick = act { telegram.readAllMentions(chat) }))
+                            if (chat.unreadReactions > 0) add(MenuEntry(Icons.Outlined.FavoriteBorder, "Read all reactions", onClick = act { telegram.readAllReactions(chat) }))
                             onSearch?.let { add(MenuEntry(Icons.Outlined.Search, "Search", onClick = act(it))) }
                             onToBeginning?.let { add(MenuEntry(Icons.Outlined.KeyboardDoubleArrowUp, "To beginning", onClick = act(it))) }
                         }
@@ -188,6 +211,17 @@ fun ChatActions(
                                     add(MenuEntry(Icons.Outlined.PersonAdd, "Add to contacts", onClick = act { contactEdit = true }))
                                 }
                                 add(MenuEntry(Icons.Outlined.DriveFileRenameOutline, "Rename", onClick = act { renaming = true }))
+                                if (telegram.isSecret(chat)) {
+                                    add(MenuEntry(Icons.Outlined.Key, "Encryption key", onClick = act { keyShown = true }))
+                                } else if (onOpenChat != null) {
+                                    add(MenuEntry(Icons.Outlined.Lock, "Start secret chat", onClick = act {
+                                        val existing = telegram.secretChatWith(chat.privateUserId)
+                                        if (existing != null) onOpenChat(existing.id)
+                                        else telegram.startSecretChat(chat.privateUserId) { chatId, error ->
+                                            if (chatId != null) onOpenChat(chatId) else secretError = error
+                                        }
+                                    }))
+                                }
                             }
                         }
                         val danger = buildList {
@@ -250,7 +284,16 @@ fun ChatActions(
     if (profile) ChatInfoDialog(chat, telegram, settings, onOpenChat) { profile = false }
     if (contactEdit) ContactDialog(chat, telegram) { contactEdit = false }
     if (renaming) RenameDialog(chat, telegram) { renaming = false }
-    if (managing) ManageChatDialog(chat, telegram, onDismiss = { managing = false })
+    if (managing) ManageChatDialog(chat, telegram, settings = settings, onDismiss = { managing = false })
+    if (keyShown) EncryptionKeyDialog(chat, telegram) { keyShown = false }
+    secretError?.let { error ->
+        AlertDialog(
+            onDismissRequest = { secretError = null },
+            title = { Text("Start secret chat") },
+            text = { Text(error) },
+            confirmButton = { TextButton(onClick = { secretError = null }) { Text("OK") } },
+        )
+    }
 }
 
 @Composable
@@ -344,7 +387,7 @@ fun ChatInfoDialog(
     }
     mentioned?.let { other -> ChatInfoDialog(other, telegram, settings, onOpenChat) { mentioned = null } }
     var managing by remember(chat.id) { mutableStateOf(false) }
-    if (managing) ManageChatDialog(chat, telegram, onDismiss = { managing = false })
+    if (managing) ManageChatDialog(chat, telegram, settings = settings, onDismiss = { managing = false })
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
             shape = MaterialTheme.shapes.extraLarge,

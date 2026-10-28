@@ -98,6 +98,10 @@ class ChatState(val id: Long) {
     var lastMessage by mutableStateOf<TdApi.Message?>(null)
     var unreadCount by mutableStateOf(0)
     var unreadMentions by mutableStateOf(0)
+    var unreadReactions by mutableStateOf(0)
+    var protectedContent by mutableStateOf(false)
+    var autoDelete by mutableStateOf(0)
+    var secretChatId = 0
     var markedUnread by mutableStateOf(false)
     var lastReadOutbox by mutableStateOf(0L)
     var isGroup by mutableStateOf(false)
@@ -257,6 +261,7 @@ class Telegram(
 
     fun chatCount(key: ChatListKey): Int = maxOf(listTotals[key] ?: 0, chatList(key).size)
     val statuses = KeyedState<Long, TdApi.UserStatus>()
+    val secretChats = KeyedState<Int, TdApi.SecretChat>()
     private val chatActions = mutableStateMapOf<Long, List<Pair<TdApi.MessageSender, TdApi.ChatAction>>>()
     val emojiClicks = KeyedState<Pair<Long, Long>, TdApi.Sticker>()
     var clockMinute by mutableStateOf(System.currentTimeMillis() / 60_000)
@@ -457,7 +462,7 @@ class Telegram(
             useFileDatabase = true
             useChatInfoDatabase = true
             useMessageDatabase = true
-            useSecretChats = false
+            useSecretChats = true
             apiId = this@Telegram.apiId
             apiHash = this@Telegram.apiHash
             systemLanguageCode = System.getProperty("user.language") ?: "en"
@@ -615,7 +620,7 @@ class Telegram(
 
     fun openPrivateChat(userId: Long, onChat: (Long) -> Unit) {
         if (System.getProperty("pixelgram.demo") == "true") {
-            chats.values.firstOrNull { it.privateUserId == userId }?.let { onChat(it.id) }
+            chats.values.firstOrNull { it.privateUserId == userId && it.secretChatId == 0 }?.let { onChat(it.id) }
             return
         }
         send(TdApi.CreatePrivateChat().apply {
@@ -731,7 +736,8 @@ class Telegram(
     private fun membersLabel(chat: ChatState): String? {
         val count = memberCount(chat) ?: return null
         val noun = if (chat.isChannel) "subscriber" else "member"
-        return "%,d $noun${if (count == 1) "" else "s"}".format(java.util.Locale.US, count).replace(',', ' ')
+        val grouped = "%,d".format(java.util.Locale.US, count).replace(',', ' ')
+        return com.pixelgram.desktop.core.tr("$count $noun${if (count == 1) "" else "s"}").replaceFirst(count.toString(), grouped)
     }
 
     internal fun demoAction(chatId: Long, sender: TdApi.MessageSender, action: TdApi.ChatAction) {
@@ -1008,6 +1014,11 @@ class Telegram(
                 chat.unreadMentions = update.unreadMentionCount
                 chatListsChanged()
             }
+            is TdApi.UpdateChatMessageAutoDeleteTime -> chats[update.chatId]?.autoDelete = update.messageAutoDeleteTime
+            is TdApi.UpdateSecretChat -> secretChats[update.secretChat.id] = update.secretChat
+            is TdApi.UpdateChatHasProtectedContent -> chats[update.chatId]?.protectedContent = update.hasProtectedContent
+            is TdApi.UpdateChatUnreadReactionCount -> chats[update.chatId]?.unreadReactions = update.unreadReactionCount
+            is TdApi.UpdateMessageUnreadReactions -> chats[update.chatId]?.unreadReactions = update.unreadReactionCount
             is TdApi.UpdateChatIsMarkedAsUnread -> chats[update.chatId]?.let { chat ->
                 chat.markedUnread = update.isMarkedAsUnread
                 chatListsChanged()
@@ -1268,10 +1279,14 @@ class Telegram(
             lastMessage = chat.lastMessage
             unreadCount = chat.unreadCount
             unreadMentions = chat.unreadMentionCount
+            unreadReactions = chat.unreadReactionCount
+            protectedContent = chat.hasProtectedContent
+            autoDelete = chat.messageAutoDeleteTime
             markedUnread = chat.isMarkedAsUnread
             lastReadOutbox = chat.lastReadOutboxMessageId
             isGroup = chat.type is TdApi.ChatTypeBasicGroup || chat.type is TdApi.ChatTypeSupergroup
-            privateUserId = (chat.type as? TdApi.ChatTypePrivate)?.userId ?: 0L
+            privateUserId = (chat.type as? TdApi.ChatTypePrivate)?.userId ?: (chat.type as? TdApi.ChatTypeSecret)?.userId ?: 0L
+            secretChatId = (chat.type as? TdApi.ChatTypeSecret)?.secretChatId ?: 0
             isChannel = (chat.type as? TdApi.ChatTypeSupergroup)?.isChannel == true
             supergroupId = (chat.type as? TdApi.ChatTypeSupergroup)?.supergroupId ?: 0L
             basicGroupId = (chat.type as? TdApi.ChatTypeBasicGroup)?.basicGroupId ?: 0L
@@ -1698,12 +1713,43 @@ class Telegram(
         }
     }
 
+    fun blockedSenders(offset: Int, limit: Int, onResult: (List<TdApi.MessageSender>, Int) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") {
+            val demo = listOf<TdApi.MessageSender>(TdApi.MessageSenderUser(3), TdApi.MessageSenderUser(2))
+            return onResult(demo.drop(offset).take(limit), demo.size)
+        }
+        send(TdApi.GetBlockedMessageSenders(TdApi.BlockListMain(), offset, limit)) { result ->
+            val found = result as? TdApi.MessageSenders
+            val senders = found?.senders?.filterNotNull().orEmpty()
+            senders.forEach { sender ->
+                when (sender) {
+                    is TdApi.MessageSenderUser -> {
+                        ensureUser(sender.userId)
+                        blockedUsers[sender.userId] = true
+                    }
+                    is TdApi.MessageSenderChat -> loadChat(sender.chatId)
+                }
+            }
+            onResult(senders, found?.totalCount ?: 0)
+        }
+    }
+
+    fun setSenderBlocked(sender: TdApi.MessageSender, blocked: Boolean, done: (String?) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return done(null)
+        send(TdApi.SetMessageSenderBlockList(sender, if (blocked) TdApi.BlockListMain() else null)) { result ->
+            if (result is TdApi.Error) return@send done(friendlyError(result.message))
+            (sender as? TdApi.MessageSenderUser)?.let { blockedUsers[it.userId] = blocked }
+            done(null)
+        }
+    }
+
     fun clearHistory(chat: ChatState) {
         send(TdApi.DeleteChatHistory(chat.id, false, false))
         messages[chat.id]?.clear()
     }
 
     fun deleteChat(chat: ChatState) {
+        if (chat.secretChatId != 0) send(TdApi.CloseSecretChat(chat.secretChatId))
         if (chat.privateUserId != 0L) send(TdApi.DeleteChatHistory(chat.id, true, false)) else send(TdApi.LeaveChat(chat.id))
     }
 
@@ -2059,6 +2105,57 @@ class Telegram(
         }) { result ->
             val found = result as? TdApi.FoundChatMessages
             done(found?.messages?.filterNotNull().orEmpty().map { it.toUi() }, found?.nextFromMessageId ?: 0L)
+        }
+    }
+
+    fun setAutoDelete(chat: ChatState, seconds: Int, done: (String?) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") {
+            chat.autoDelete = seconds
+            return done(null)
+        }
+        send(TdApi.SetChatMessageAutoDeleteTime(chat.id, seconds)) { result ->
+            if (result is TdApi.Error) done(friendlyError(result.message)) else {
+                chat.autoDelete = seconds
+                done(null)
+            }
+        }
+    }
+
+    fun defaultAutoDelete(onResult: (Int?) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(0)
+        send(TdApi.GetDefaultMessageAutoDeleteTime()) { result -> onResult((result as? TdApi.MessageAutoDeleteTime)?.time) }
+    }
+
+    fun setDefaultAutoDelete(seconds: Int, done: (String?) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return done(null)
+        send(TdApi.SetDefaultMessageAutoDeleteTime(TdApi.MessageAutoDeleteTime(seconds))) { result ->
+            done((result as? TdApi.Error)?.message?.let(::friendlyError))
+        }
+    }
+
+    fun isSecret(chat: ChatState): Boolean = chat.secretChatId != 0
+
+    fun canSetAutoDelete(chat: ChatState): Boolean = when {
+        isSavedMessages(chat.id) -> false
+        chat.privateUserId != 0L -> !isBot(chat)
+        else -> isOwner(chat) || myRights(chat)?.canDeleteMessages == true || myRights(chat)?.canChangeInfo == true
+    }
+
+    fun readAllMentions(chat: ChatState) {
+        send(TdApi.ReadAllChatMentions(chat.id))
+        chat.unreadMentions = 0
+        chatListsChanged()
+    }
+
+    fun readAllReactions(chat: ChatState) {
+        send(TdApi.ReadAllChatReactions(chat.id))
+        chat.unreadReactions = 0
+    }
+
+    fun nextUnread(chatId: Long, mentions: Boolean, onFound: (Long) -> Unit) {
+        val filter = if (mentions) TdApi.SearchMessagesFilterUnreadMention() else TdApi.SearchMessagesFilterUnreadReaction()
+        send(TdApi.SearchChatMessages(chatId, null, "", null, 0L, 0, 1, filter)) { result ->
+            (result as? TdApi.FoundChatMessages)?.messages?.firstOrNull()?.let { onFound(it.id) }
         }
     }
 
@@ -2582,6 +2679,13 @@ class Telegram(
     private fun remoteInput(file: TdApi.File): TdApi.InputFile =
         file.remote?.id?.takeIf { it.isNotEmpty() }?.let { TdApi.InputFileRemote(it) } ?: TdApi.InputFileId(file.id)
 
+    fun removeStickerFromSet(sticker: TdApi.Sticker, done: () -> Unit) {
+        send(TdApi.RemoveStickerFromSet(TdApi.InputFileRemote(sticker.sticker.remote.id))) { result ->
+            if (result is TdApi.Error) com.pixelgram.desktop.ui.main.TopNotice.text = friendlyError(result.message)
+            done()
+        }
+    }
+
     fun removeRecentSticker(sticker: TdApi.Sticker, done: () -> Unit) {
         send(TdApi.RemoveRecentSticker(false, remoteInput(sticker.sticker))) { done() }
     }
@@ -2774,6 +2878,23 @@ class Telegram(
             this.messageId = messageId
             optionIds = options
         })
+    }
+
+    fun messageProperties(message: UiMessage, done: (TdApi.MessageProperties?) -> Unit) {
+        if (message.service || message.sending || message.failed) return done(null)
+        if (System.getProperty("pixelgram.demo") == "true") {
+            val chat = chats[message.chatId]
+            val admin = chat?.privateUserId != 0L || chat?.isGroup == true && chat.isChannel == false
+            return done(TdApi.MessageProperties().apply {
+                canBeEdited = message.editable
+                canBePinned = admin
+                canBeDeletedOnlyForSelf = admin
+                canBeDeletedForAllUsers = message.isOutgoing
+                canBeForwarded = chat?.protectedContent != true
+                canBeSaved = chat?.protectedContent != true
+            })
+        }
+        send(TdApi.GetMessageProperties(message.chatId, message.id)) { result -> done(result as? TdApi.MessageProperties) }
     }
 
     fun canEdit(message: UiMessage, done: (Boolean) -> Unit) {

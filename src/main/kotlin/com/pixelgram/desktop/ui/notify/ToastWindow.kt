@@ -7,7 +7,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
@@ -87,28 +86,24 @@ fun ToastWindow(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) ->
         warm = false
     }
     val showing = stack.entries.isNotEmpty()
-    key(side, screen, count) {
-        val state = rememberDialogState(
-            position = OffScreen,
-            size = DpSize(ToastWindowWidth, height),
-        )
-        LaunchedEffect(showing) {
-            state.position = if (showing) positionFor(side, screen, height.value.toInt()) else OffScreen
-        }
-        DialogWindow(
-            onCloseRequest = stack::dismissAll,
-            visible = warm || showing,
-            state = state,
-            title = "pixelGram",
-            undecorated = true,
-            transparent = true,
-            resizable = false,
-            focusable = false,
-            alwaysOnTop = true,
-        ) {
-            PixelTheme(settings) {
-                ToastStackContent(stack, settings, onOpen)
-            }
+    val state = rememberDialogState(position = OffScreen, size = DpSize(ToastWindowWidth, height))
+    LaunchedEffect(showing, side, screen, height) {
+        state.size = DpSize(ToastWindowWidth, height)
+        state.position = if (showing) positionFor(side, screen, height.value.toInt()) else OffScreen
+    }
+    DialogWindow(
+        onCloseRequest = stack::dismissAll,
+        visible = warm || showing,
+        state = state,
+        title = "pixelGram",
+        undecorated = true,
+        transparent = true,
+        resizable = false,
+        focusable = false,
+        alwaysOnTop = true,
+    ) {
+        PixelTheme(settings) {
+            ToastStackContent(stack, settings, onOpen)
         }
     }
 }

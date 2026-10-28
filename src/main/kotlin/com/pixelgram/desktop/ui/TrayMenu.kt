@@ -92,14 +92,12 @@ fun PixelTray(images: List<BufferedImage>, settings: AppSettings, onOpen: () -> 
         runCatching { SystemTray.getSystemTray().add(trayIcon) }
         onDispose { runCatching { SystemTray.getSystemTray().remove(trayIcon) } }
     }
-    menuAt?.let { at ->
-        TrayMenuWindow(at, settings, onDismiss = { menuAt = null }, onOpen = onOpen, onQuit = onQuit)
-    }
+    TrayMenuWindow(menuAt, settings, onDismiss = { menuAt = null }, onOpen = onOpen, onQuit = onQuit)
 }
 
 @Composable
 private fun TrayMenuWindow(
-    at: Point,
+    at: Point?,
     settings: AppSettings,
     onDismiss: () -> Unit,
     onOpen: () -> Unit,
@@ -107,38 +105,56 @@ private fun TrayMenuWindow(
 ) {
     val width = MenuWindow.width.value.toInt()
     val height = MenuWindow.height.value.toInt()
-    val place = remember(at) { trayMenuPlace(at, width, height) }
-    val above = place.above
-    val left = place.left
-    val x = place.x
-    val y = place.y
+    val state = rememberWindowState(position = WindowPosition(0.dp, 0.dp), size = MenuWindow)
+    var place by remember { mutableStateOf<TrayPlace?>(null) }
     val shown = remember { MutableTransitionState(false) }
     var closing by remember { mutableStateOf(false) }
-    val close = { closing = true; shown.targetState = false }
-    LaunchedEffect(closing, shown.isIdle) {
-        if (closing && shown.isIdle) onDismiss()
+    val close = {
+        if (!closing && shown.targetState) {
+            closing = true
+            shown.targetState = false
+        }
     }
+    if (at != null) {
+        val next = remember(at) { trayMenuPlace(at, width, height) }
+        if (place !== next) {
+            place = next
+            state.position = WindowPosition(next.x.dp, next.y.dp)
+        }
+    }
+    LaunchedEffect(closing, shown.isIdle) {
+        if (closing && shown.isIdle) {
+            closing = false
+            onDismiss()
+        }
+    }
+    val current = place
+    val above = current?.above ?: true
+    val left = current?.left ?: true
     Window(
         onCloseRequest = close,
-        state = rememberWindowState(position = WindowPosition(x.dp, y.dp), size = MenuWindow),
+        visible = at != null,
+        state = state,
         title = "pixelGram",
         undecorated = true,
         transparent = true,
         resizable = false,
         alwaysOnTop = true,
+        focusable = true,
     ) {
         DisposableEffect(Unit) {
             val listener = object : WindowAdapter() {
                 override fun windowLostFocus(e: WindowEvent) = close()
             }
             window.addWindowFocusListener(listener)
-            window.toFront()
-            window.requestFocus()
             onDispose { window.removeWindowFocusListener(listener) }
         }
-        LaunchedEffect(Unit) {
+        LaunchedEffect(at) {
+            if (at == null) return@LaunchedEffect
             while (!window.isShowing) delay(ShowPollMs)
-            repeat(SettleFrames) { withFrameNanos { } }
+            window.toFront()
+            window.requestFocus()
+            withFrameNanos { }
             shown.targetState = true
         }
         PixelTheme(settings) {
@@ -164,6 +180,7 @@ private fun TrayMenuWindow(
                     TrayMenu(
                         settings,
                         onOpen = {
+                            shown.targetState = false
                             onDismiss()
                             onOpen()
                         },
@@ -235,4 +252,3 @@ private fun trayMenuPlace(click: Point, width: Int, height: Int): TrayPlace {
 }
 
 private const val ShowPollMs = 16L
-private const val SettleFrames = 3

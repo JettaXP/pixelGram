@@ -262,7 +262,18 @@ private fun ApplicationScope.PixelApp() {
                 else -> toasts.push(card)
             }
         }
-        Notifications.showTest = { toasts.push(testToast(accounts.active)) }
+        Notifications.showTest = {
+            toasts.push(testToast(accounts.active))
+            if (settings.notificationSound.value) com.pixelgram.desktop.core.Sounds.newMessage(settings.notificationVolume.value)
+        }
+        if (System.getProperty("pixelgram.demo.toasts") == "true") {
+            kotlinx.coroutines.delay(DemoToastStartMs)
+            com.pixelgram.desktop.core.ToastSide.entries.forEach { side ->
+                settings.notificationSide.value = side
+                Notifications.showTest?.invoke()
+                kotlinx.coroutines.delay(DemoToastStepMs)
+            }
+        }
     }
     ChatWindows.open.toList().forEach { (owner, chatId) ->
         key(owner.account, chatId) {
@@ -576,3 +587,6 @@ private object FocusedWindows {
         if (value) focused[key] = true else focused.remove(key)
     }
 }
+
+private const val DemoToastStartMs = 20_000L
+private const val DemoToastStepMs = 4_000L

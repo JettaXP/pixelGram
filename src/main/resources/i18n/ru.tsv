@@ -1114,3 +1114,65 @@ Two-step verification is on. Hint:	Включена двухэтапная пр�
 {n} more digits	Ещё {n} {цифра|цифры|цифр}
 This sign-in step is not supported yet. Finish it in another Telegram app.	Этот шаг входа пока не поддерживается. Завершите его в другом приложении Telegram.
 Discuss	Обсуждение
+Read all mentions	Прочитать все упоминания
+Read all reactions	Прочитать все реакции
+Next unread mention	Следующее упоминание
+Next unread reaction	Следующая реакция
+Blocked users	Заблокированные
+No blocked users	Нет заблокированных
+Unblock	Разблокировать
+Show more	Показать ещё
+None	Нет
+Blocked users can't send you messages or add you to groups. They will not see your profile photos, stories, online and last seen status.	Заблокированные пользователи не могут писать вам и добавлять вас в группы. Они не увидят ваши фото профиля, истории, статус «в сети» и время последнего визита.
+Auto-delete	Автоудаление
+Auto-delete messages	Автоудаление сообщений
+Automatically delete new messages sent in this chat after a certain period of time.	Автоматически удалять новые сообщения в этом чате через выбранное время.
+Automatically delete messages in new chats you start after a certain period of time.	Автоматически удалять сообщения в новых чатах, которые вы начинаете, через выбранное время.
+{n} sec	{n} сек
+{n} min	{n} мин
+{n} h	{n} ч
+1 week	1 неделя
+2 weeks	2 недели
+1 month	1 месяц
+3 months	3 месяца
+6 months	6 месяцев
+1 year	1 год
+Save as image	Сохранить как картинку
+Delete sticker	Удалить стикер
+Invite links	Ссылки-приглашения
+Primary link	Основная ссылка
+Additional links	Дополнительные ссылки
+Create a new link	Создать новую ссылку
+You can create additional invite links that have a limited time or number of uses, or that need admin approval.	Можно создать дополнительные ссылки с ограничением по времени или числу использований, или с одобрением админом.
+Revoked links	Отозванные ссылки
+Revoke link	Отозвать ссылку
+The current primary link will stop working and a new one will be created.	Текущая основная ссылка перестанет работать, вместо неё будет создана новая.
+This link will stop working. Anyone who has it won't be able to join.	Ссылка перестанет работать. Те, у кого она есть, не смогут вступить.
+Revoke	Отозвать
+Share link	Поделиться ссылкой
+Edit link	Изменить ссылку
+Delete link	Удалить ссылку
+New link	Новая ссылка
+Link name (optional)	Название ссылки (необязательно)
+Request admin approval	Одобрение админом
+New members will need to be approved by an admin.	Новых участников должен будет одобрить админ.
+Limit by time period	Ограничить по времени
+Limit by number of users	Ограничить по числу участников
+No limit	Без ограничений
+Never	Никогда
+1 day	1 день
+{n} joined	{n} вступили
+{n} requests	{n} {заявка|заявки|заявок}
+{n} left	осталось {n}
+expired	истекла
+until {date}	до {date}
+{n} member	{n} {участник|участника|участников}
+{n} members	{n} {участник|участника|участников}
+{n} subscriber	{n} {подписчик|подписчика|подписчиков}
+{n} subscribers	{n} {подписчик|подписчика|подписчиков}
+Secret chat	Секретный чат
+Encryption key	Ключ шифрования
+Start secret chat	Начать секретный чат
+Waiting for the contact to get online…	Ожидание, пока собеседник появится в сети…
+Secret chat cancelled	Секретный чат отменён
+If this image and text look the same on {name}'s device, your chat is 100% secure.	Если это изображение и текст совпадают с теми, что на устройстве {name}, ваш чат защищён на 100%.

@@ -81,7 +81,7 @@ fun pinPreview(message: UiMessage?): String {
 }
 
 @Composable
-fun SelectionBar(count: Int, onForward: () -> Unit, onDelete: () -> Unit, onShot: () -> Unit, onCancel: () -> Unit) {
+fun SelectionBar(count: Int, onForward: () -> Unit, onDelete: () -> Unit, onShot: () -> Unit, onCancel: () -> Unit, canCopy: Boolean = true) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -90,9 +90,9 @@ fun SelectionBar(count: Int, onForward: () -> Unit, onDelete: () -> Unit, onShot
         AnimatedContent(count, transitionSpec = { fadeIn() togetherWith fadeOut() }, modifier = Modifier.weight(1f)) { shown ->
             Text("$shown selected", style = MaterialTheme.typography.titleSmall)
         }
-        FilledTonalButton(onClick = onForward) { Text("Forward $count") }
+        FilledTonalButton(onClick = onForward, enabled = canCopy) { Text("Forward $count") }
         FilledTonalButton(onClick = onDelete) { Text("Delete $count") }
-        FilledTonalButton(onClick = onShot) { Text("Shot $count") }
+        FilledTonalButton(onClick = onShot, enabled = canCopy) { Text("Shot $count") }
         TextButton(onClick = onCancel) { Text("Cancel") }
     }
 }

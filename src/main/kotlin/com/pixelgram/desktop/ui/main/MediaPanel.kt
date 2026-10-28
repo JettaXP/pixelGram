@@ -475,7 +475,7 @@ private const val PreviewScrim = 0.45f
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun ScheduleDialog(onDismiss: () -> Unit, onPick: (Int) -> Unit) {
+internal fun ScheduleDialog(onDismiss: () -> Unit, onPick: (Int) -> Unit) {
     var day by remember { mutableStateOf<Long?>(null) }
     val dateState = androidx.compose.material3.rememberDatePickerState(initialSelectedDateMillis = System.currentTimeMillis())
     val now = java.time.LocalTime.now().plusMinutes(ScheduleLeadMinutes)

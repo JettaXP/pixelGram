@@ -509,6 +509,7 @@ private fun ChatRow(
             },
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                SecretLock(chat, telegram, 16.dp)
                 EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 com.pixelgram.desktop.ui.components.ChatBadges(chat, telegram, 18.dp)
             }

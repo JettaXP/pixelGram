@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.icons.outlined.AlternateEmail
+import com.pixelgram.desktop.ui.icons.outlined.FavoriteBorder
+
 import com.pixelgram.desktop.ui.theme.outgoingAccent
 
 import androidx.compose.animation.core.LinearEasing
@@ -161,6 +164,8 @@ import com.pixelgram.desktop.telegram.ChatState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.telegram.SenderTag
+import com.pixelgram.desktop.telegram.SecretStatus
+import com.pixelgram.desktop.telegram.secretStatus
 import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.components.loadImage
 import com.pixelgram.desktop.ui.theme.EmojiText
@@ -207,6 +212,11 @@ fun ChatView(
     DisposableEffect(chat.id) {
         telegram.openChat(chat.id)
         onDispose { telegram.closeChat(chat.id) }
+    }
+    val guarded = chat.protectedContent
+    DisposableEffect(chat.id, guarded) {
+        if (guarded) com.pixelgram.desktop.core.ScreenProtection.acquire()
+        onDispose { if (guarded) com.pixelgram.desktop.core.ScreenProtection.release() }
     }
     val messages = telegram.messages(chat.id)
     val shown by remember(chat.id) { derivedStateOf { groupAlbums(messages.toList()) } }
@@ -309,7 +319,7 @@ fun ChatView(
     LaunchedEffect(chat.id) { telegram.loadPinned(chat.id) }
     var pinIndex by remember(chat.id) { mutableStateOf(0) }
     val canReact = !telegram.isSavedMessages(chat.id) || telegram.me?.isPremium == true
-    val actions = remember(chat.id, canReact) {
+    val actions = remember(chat.id, canReact, chat.protectedContent) {
         MessageActions(
             onReply = { editing = null; replyTo = it },
             onEdit = { replyTo = null; editing = it },
@@ -331,6 +341,8 @@ fun ChatView(
             onForward = { forwarding = it },
             onSaveGif = { message -> telegram.saveGif(message) },
             canEdit = { message, done -> telegram.canEdit(message, done) },
+            properties = { message, done -> telegram.messageProperties(message, done) },
+            protectedContent = chat.protectedContent,
             onReact = { message, emoji -> telegram.toggleReaction(message, emoji) },
             loadReactions = { message, done -> telegram.availableReactions(message, done) },
             canReact = canReact,
@@ -479,6 +491,7 @@ fun ChatView(
         attach(files)
         asFiles = asDocuments || files.any { !Attachments.isMedia(it) }
     }) {
+    androidx.compose.runtime.CompositionLocalProvider(LocalProtectedContent provides chat.protectedContent) {
     Box(Modifier.fillMaxSize()) {
     Row(Modifier.fillMaxSize()) {
     if (forumSidebar && telegram.isForum(chat)) ForumSidebar(chat, telegram, Modifier.fillMaxHeight())
@@ -513,6 +526,7 @@ fun ChatView(
             ChatAvatar(chat, telegram, settings, size = 40.dp)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SecretLock(chat, telegram, 18.dp)
                     EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
                     com.pixelgram.desktop.ui.components.ChatBadges(chat, telegram, 22.dp)
                 }
@@ -851,16 +865,35 @@ fun ChatView(
                 dateAt = { index -> shown.getOrNull(index)?.date },
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
             )
-            ScrollDownButton(
-                listState,
-                Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                forceVisible = detached,
-                onLatest = if (detached) {
-                    { telegram.returnToLatest(chat.id) { scope.launch { listState.scrollToItem(0) } } }
-                } else {
-                    null
-                },
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            ) {
+                UnreadJumpButton(
+                    chat.unreadReactions,
+                    com.pixelgram.desktop.ui.icons.Icons.Outlined.FavoriteBorder,
+                    "Next unread reaction",
+                    onJump = { telegram.nextUnread(chat.id, mentions = false) { id -> actions.onQuoteClick(id) } },
+                    onReadAll = { telegram.readAllReactions(chat) },
+                )
+                UnreadJumpButton(
+                    chat.unreadMentions,
+                    com.pixelgram.desktop.ui.icons.Icons.Outlined.AlternateEmail,
+                    "Next unread mention",
+                    onJump = { telegram.nextUnread(chat.id, mentions = true) { id -> actions.onQuoteClick(id) } },
+                    onReadAll = { telegram.readAllMentions(chat) },
+                )
+                ScrollDownButton(
+                    listState,
+                    forceVisible = detached,
+                    onLatest = if (detached) {
+                        { telegram.returnToLatest(chat.id) { scope.launch { listState.scrollToItem(0) } } }
+                    } else {
+                        null
+                    },
+                )
+            }
             if (chat.privateUserId != 0L && telegram.isBot(chat)) {
                 var welcome by remember(chat.id) { mutableStateOf(false) }
                 val empty = shown.isEmpty()
@@ -900,6 +933,8 @@ fun ChatView(
         }
         val barMode = when {
             selecting -> BarMode.Select
+            telegram.secretStatus(chat) == SecretStatus.Pending -> BarMode.SecretPending
+            telegram.secretStatus(chat) == SecretStatus.Closed -> BarMode.SecretClosed
             telegram.isBlocked(chat) -> BarMode.Blocked
             telegram.needsStart(chat) -> BarMode.Start
             telegram.isLeft(chat) -> BarMode.Join
@@ -920,11 +955,16 @@ fun ChatView(
         if (mode == BarMode.Select) {
             SelectionBar(
                 count = selected.size,
+                canCopy = !chat.protectedContent,
                 onForward = { forwardingSelected = true },
                 onDelete = { deletingSelected = true },
                 onShot = { shot = true },
                 onCancel = { selected.clear() },
             )
+        } else if (mode == BarMode.SecretPending) {
+            ComposerBar("Waiting for the contact to get online…", enabled = false) {}
+        } else if (mode == BarMode.SecretClosed) {
+            ComposerBar("Secret chat cancelled", enabled = false) {}
         } else if (mode == BarMode.Blocked) {
             ComposerBar("UNBLOCK", accent = true) { telegram.unblock(chat) }
         } else if (mode == BarMode.Start) {
@@ -1009,9 +1049,10 @@ fun ChatView(
     }
     }
     }
+    }
 }
 
-private enum class BarMode { Select, Blocked, Start, Join, Mute, Compose }
+private enum class BarMode { Select, SecretPending, SecretClosed, Blocked, Start, Join, Mute, Compose }
 
 @Composable
 private fun TypingBubble(chat: ChatState, telegram: Telegram) {
@@ -1543,7 +1584,7 @@ private fun TextWithCode(text: String, entities: List<TdApi.TextEntity>, meta: @
                 is TextPart.Plain -> if (last) {
                     TextWithMeta(part.text, part.entities, meta)
                 } else {
-                    SelectionContainer { FormattedText(part.text, part.entities, style = style) }
+                    MessageSelection { FormattedText(part.text, part.entities, style = style) }
                 }
                 is TextPart.Code -> com.pixelgram.desktop.ui.components.CodeBlock(part.code, part.language, style, Modifier.widthIn(min = CodeMinWidth))
             }
@@ -1571,7 +1612,7 @@ private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @
         },
         content = {
             if (text.isNotEmpty()) {
-                SelectionContainer {
+                MessageSelection {
                     FormattedText(text, entities, style = com.pixelgram.desktop.ui.theme.messageTextStyle(), onTextLayout = { layoutRef[0] = it }, quoteBackground = false)
                 }
             } else {
@@ -2406,4 +2447,11 @@ private fun Composer(
             }, modifier = Modifier.padding(bottom = 8.dp))
         }
     }
+}
+
+val LocalProtectedContent = androidx.compose.runtime.compositionLocalOf { false }
+
+@Composable
+fun MessageSelection(content: @Composable () -> Unit) {
+    if (LocalProtectedContent.current) content() else SelectionContainer(content = content)
 }
