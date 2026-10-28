@@ -156,7 +156,7 @@ fun UniqueGiftArt(
 }
 
 @Composable
-fun NftDialog(telegram: Telegram, name: String, onDismiss: () -> Unit) {
+fun NftDialog(telegram: Telegram, name: String, received: TdApi.ReceivedGift? = null, onChanged: () -> Unit = {}, onDismiss: () -> Unit) {
     var gift by remember(name) { mutableStateOf<TdApi.UpgradedGift?>(null) }
     var failed by remember(name) { mutableStateOf(false) }
     LaunchedEffect(name) {
@@ -168,6 +168,7 @@ fun NftDialog(telegram: Telegram, name: String, onDismiss: () -> Unit) {
     var copied by remember { mutableStateOf(false) }
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.widthIn(min = 340.dp, max = 440.dp)) {
+            Box {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -188,6 +189,8 @@ fun NftDialog(telegram: Telegram, name: String, onDismiss: () -> Unit) {
                     }
                     TextButton(onClick = onDismiss) { Text("Close") }
                 }
+            }
+            gift?.let { NftMenu(it, received, telegram, onChanged, onDismiss, Modifier.align(Alignment.TopEnd).padding(8.dp)) }
             }
         }
     }

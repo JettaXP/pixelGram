@@ -50,6 +50,8 @@ import com.pixelgram.desktop.ui.icons.outlined.Visibility
 import com.pixelgram.desktop.ui.icons.filled.MoreVert
 import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
+import com.pixelgram.desktop.telegram.giftUpgradePreview
+import com.pixelgram.desktop.telegram.upgradeGift
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -343,7 +345,7 @@ private fun GiftCell(gift: TdApi.ReceivedGift, own: Boolean, telegram: Telegram,
     }
     if (open) {
         if (upgraded != null) {
-            NftDialog(telegram, upgraded.name) { open = false }
+            NftDialog(telegram, upgraded.name, received = gift.takeIf { own }, onChanged = onRemoved) { open = false }
         } else {
             ReceivedGiftDialog(gift, own, telegram, onRemoved) { open = false }
         }
@@ -358,6 +360,8 @@ private fun ReceivedGiftDialog(gift: TdApi.ReceivedGift, own: Boolean, telegram:
     var error by remember { mutableStateOf<String?>(null) }
     var menu by remember { mutableStateOf(false) }
     var selling by remember { mutableStateOf(false) }
+    var upgrading by remember { mutableStateOf(false) }
+    var upgradedName by remember { mutableStateOf<String?>(null) }
     val date = Instant.ofEpochSecond(gift.date.toLong()).atZone(ZoneId.systemDefault()).format(DateFormat)
     val toggle = {
         busy = true
@@ -432,6 +436,12 @@ private fun ReceivedGiftDialog(gift: TdApi.ReceivedGift, own: Boolean, telegram:
                                             menu = false
                                             if (!busy) toggle()
                                         })
+                                        if (gift.canBeUpgraded) {
+                                            add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Upgrade, "Upgrade") {
+                                                menu = false
+                                                upgrading = true
+                                            })
+                                        }
                                         if (gift.sellStarCount > 0) {
                                             add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Payments, "Convert to " + stars(gift.sellStarCount)) {
                                                 menu = false
@@ -445,6 +455,19 @@ private fun ReceivedGiftDialog(gift: TdApi.ReceivedGift, own: Boolean, telegram:
                     }
                 }
             }
+        }
+    }
+    if (upgrading) {
+        UpgradeGiftDialog(gift, regular, telegram, onDismiss = { upgrading = false }) { upgraded ->
+            upgrading = false
+            upgradedName = upgraded.name
+        }
+    }
+    upgradedName?.let { name ->
+        NftDialog(telegram, name) {
+            upgradedName = null
+            onRemoved()
+            onDismiss()
         }
     }
     if (selling) {
@@ -475,3 +498,44 @@ private fun ReceivedGiftDialog(gift: TdApi.ReceivedGift, own: Boolean, telegram:
 private const val GiftPreviews = 3
 private const val GiftColumns = 3
 private const val GiftCellType = "gift"
+
+@Composable
+private fun UpgradeGiftDialog(gift: TdApi.ReceivedGift, regular: TdApi.Gift, telegram: Telegram, onDismiss: () -> Unit, onUpgraded: (TdApi.UpgradedGift) -> Unit) {
+    var preview by remember { mutableStateOf<TdApi.GiftUpgradePreview?>(null) }
+    var keep by remember { mutableStateOf(true) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(regular.id) { telegram.giftUpgradePreview(regular) { preview = it } }
+    val price = if (gift.prepaidUpgradeStarCount > 0) 0L else regular.upgradeStarCount
+    com.pixelgram.desktop.ui.components.expressive.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Upgrade gift") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Turn your gift into a unique collectible that you can wear, sell or transfer.")
+                preview?.let { info ->
+                    Text(
+                        "${info.models.size} models · ${info.backdrops.size} backdrops · ${info.symbols.size} symbols",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(checked = keep, onCheckedChange = { keep = it })
+                    Text("Keep sender's name and comment")
+                }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = !busy, onClick = {
+                busy = true
+                telegram.upgradeGift(gift, price, keep) { upgraded, failure ->
+                    busy = false
+                    if (upgraded != null) onUpgraded(upgraded) else error = failure ?: "Upgrade failed"
+                }
+            }) { Text(if (price > 0) "Upgrade for " + stars(price) else "Upgrade for free") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}

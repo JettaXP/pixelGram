@@ -67,6 +67,8 @@ fun appColorScheme(settings: AppSettings): ColorScheme {
     return matugenScheme ?: seedScheme
 }
 
+val LocalAppSettings = androidx.compose.runtime.staticCompositionLocalOf<AppSettings?> { null }
+
 @Composable
 fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     PowerSaving.settings = settings
@@ -87,6 +89,7 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
             LocalUriHandler provides Links,
             com.pixelgram.desktop.ui.components.LocalCorners provides corners,
             LocalMessageFont provides font,
+            LocalAppSettings provides settings,
             androidx.compose.ui.platform.LocalLayoutDirection provides
                 if (com.pixelgram.desktop.core.I18n.rtl) androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr,
             content = content,
