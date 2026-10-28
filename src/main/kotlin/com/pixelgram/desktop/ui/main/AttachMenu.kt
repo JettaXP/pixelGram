@@ -2,6 +2,8 @@ package com.pixelgram.desktop.ui.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,8 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.ToggleFloatingActionButton
-import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -112,25 +112,26 @@ fun AttachButton(
     val density = androidx.compose.ui.platform.LocalDensity.current
     val colors = MaterialTheme.colorScheme
     Box {
-        ToggleFloatingActionButton(
-            checked = expanded,
-            onCheckedChange = { checked ->
-                when {
-                    !checked -> close()
-                    System.currentTimeMillis() - dismissedAt > ReopenGuardMs -> shown = true
-                }
-            },
-            containerColor = { progress -> androidx.compose.ui.graphics.lerp(Color.Transparent, colors.primaryContainer, progress) },
-            containerSize = { MenuButtonSize },
-            containerCornerRadius = { progress -> androidx.compose.ui.unit.lerp(MenuButtonSize / 2, MenuButtonCorner, progress) },
-            modifier = Modifier.focusProperties { canFocus = false },
+        val progress by androidx.compose.animation.core.animateFloatAsState(if (expanded) 1f else 0f, MaterialTheme.motionScheme.fastSpatialSpec())
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .focusProperties { canFocus = false }
+                .size(MenuButtonSize)
+                .clip(RoundedCornerShape(androidx.compose.ui.unit.lerp(MenuButtonSize / 2, MenuButtonCorner, progress)))
+                .background(androidx.compose.ui.graphics.lerp(Color.Transparent, colors.primaryContainer, progress))
+                .toggleable(value = expanded, role = androidx.compose.ui.semantics.Role.Button) { checked ->
+                    when {
+                        !checked -> close()
+                        System.currentTimeMillis() - dismissedAt > ReopenGuardMs -> shown = true
+                    }
+                },
         ) {
-            val progress = checkedProgress
             Icon(
                 if (progress > 0.5f) Icons.Filled.Close else Icons.Outlined.AttachFile,
                 contentDescription = if (expanded) "Close" else "Attach",
                 tint = androidx.compose.ui.graphics.lerp(colors.onSurfaceVariant, colors.onPrimaryContainer, progress),
-                modifier = Modifier.animateIcon({ progress }),
+                modifier = Modifier.graphicsLayer { rotationZ = progress * IconTurn },
             )
         }
         if (shown && !locked) {
@@ -573,6 +574,7 @@ private const val MenuCloseMs = 260L
 private val MenuButtonSize = 48.dp
 private val MenuButtonCorner = 16.dp
 private val MenuGap = 4.dp
+private const val IconTurn = 90f
 private const val ReopenGuardMs = 250L
 private val DialogWidth = 420.dp
 private val DialogMaxHeight = 560.dp
