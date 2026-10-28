@@ -3,6 +3,10 @@ package com.pixelgram.desktop.ui.components
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.ColumnScope
@@ -73,17 +77,29 @@ fun MenuGroups(
                     val base = if (entry.color == Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else entry.color
                     val tint = if (entry.enabled) base else base.copy(alpha = DisabledAlpha)
                     val shape = groupShapes(index, entries.size).shape
-                    Surface(shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = MenuShadow) {
-                        DropdownMenuItem(
-                            onClick = { scope.launch { entry.onClick() } },
-                            enabled = entry.enabled,
-                            text = { Text(entry.label, color = if (entry.enabled) entry.color else MaterialTheme.colorScheme.onSurface.copy(alpha = DisabledAlpha)) },
-                            shape = shape,
-                            contentPadding = PaddingValues(horizontal = ItemPadding),
-                            modifier = Modifier.fillMaxWidth().height(ItemHeight),
-                            leadingIcon = entry.icon?.let { icon -> { Icon(icon, contentDescription = null, tint = tint) } },
-                            trailingIcon = entry.trailing?.let { icon -> { Icon(icon, contentDescription = null, tint = tint) } },
-                        )
+                    Surface(
+                        onClick = { scope.launch { entry.onClick() } },
+                        enabled = entry.enabled,
+                        shape = shape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shadowElevation = MenuShadow,
+                        modifier = Modifier.fillMaxWidth().height(ItemHeight).focusProperties { canFocus = false },
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(ItemPadding),
+                            modifier = Modifier.padding(horizontal = ItemPadding),
+                        ) {
+                            entry.icon?.let { icon -> Icon(icon, contentDescription = null, tint = tint) }
+                            Text(
+                                entry.label,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (entry.enabled) entry.color.takeOrElse { MaterialTheme.colorScheme.onSurface } else MaterialTheme.colorScheme.onSurface.copy(alpha = DisabledAlpha),
+                                maxLines = 1,
+                                modifier = Modifier.weight(1f),
+                            )
+                            entry.trailing?.let { icon -> Icon(icon, contentDescription = null, tint = tint) }
+                        }
                     }
                 }
             }

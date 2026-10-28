@@ -34,7 +34,7 @@ fun Button(
 ) = androidx.compose.material3.Button(
     onClick = onClick,
     shapes = shapes ?: shape?.let { ButtonDefaults.shapes(it, ButtonDefaults.pressedShape) } ?: ButtonDefaults.shapes(),
-    modifier = modifier,
+    modifier = modifier.focusProperties { canFocus = false },
     enabled = enabled,
     colors = colors,
     elevation = elevation,
@@ -61,7 +61,7 @@ fun FilledTonalButton(
 ) = androidx.compose.material3.FilledTonalButton(
     onClick = onClick,
     shapes = shapes ?: shape?.let { ButtonDefaults.shapes(it, ButtonDefaults.pressedShape) } ?: ButtonDefaults.shapes(),
-    modifier = modifier,
+    modifier = modifier.focusProperties { canFocus = false },
     enabled = enabled,
     colors = colors,
     elevation = elevation,
@@ -88,7 +88,7 @@ fun OutlinedButton(
 ) = androidx.compose.material3.OutlinedButton(
     onClick = onClick,
     shapes = shapes ?: shape?.let { ButtonDefaults.shapes(it, ButtonDefaults.pressedShape) } ?: ButtonDefaults.shapes(),
-    modifier = modifier,
+    modifier = modifier.focusProperties { canFocus = false },
     enabled = enabled,
     colors = colors,
     elevation = elevation,
@@ -115,7 +115,7 @@ fun TextButton(
 ) = androidx.compose.material3.TextButton(
     onClick = onClick,
     shapes = shapes ?: shape?.let { ButtonDefaults.shapes(it, ButtonDefaults.pressedShape) } ?: ButtonDefaults.shapes(),
-    modifier = modifier,
+    modifier = modifier.focusProperties { canFocus = false },
     enabled = enabled,
     colors = colors,
     elevation = elevation,

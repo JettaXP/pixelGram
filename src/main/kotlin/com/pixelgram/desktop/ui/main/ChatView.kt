@@ -1044,6 +1044,7 @@ private fun ChatViewContent(
                 if (files.isNotEmpty()) asFiles = true
             },
             onOpenChat = onOpenChat,
+            onDeleteEditing = { editing?.let { deleting = it } },
             onSend = { text, entities ->
                 val edited = editing
                 val replyId = replyTo?.id ?: 0L
@@ -1888,6 +1889,7 @@ private fun Composer(
     onAttach: (List<File>) -> Unit,
     onAttachDocuments: (List<File>) -> Unit,
     onSend: (String, Array<TdApi.TextEntity>) -> Unit,
+    onDeleteEditing: () -> Unit,
     onOpenChat: (Long) -> Unit = {},
 ) {
     var text by remember(chatId) {
@@ -2073,7 +2075,9 @@ private fun Composer(
     val hasForward = editing == null && PendingForward.drafts[chatId] != null
     val canSend = if (editing?.photo != null) hasAttachments else text.text.isNotBlank() || hasAttachments || hasForward
     val send = {
-        if (canSend) {
+        if (editing != null && editing.photo == null && text.text.isBlank() && !hasAttachments) {
+            onDeleteEditing()
+        } else if (canSend) {
             val raw = text.text
             val lead = raw.length - raw.trimStart().length
             val trimmed = raw.trim()

@@ -137,7 +137,7 @@ fun AttachButton(
         if (shown && !locked) {
             Popup(
                 alignment = Alignment.BottomStart,
-                offset = IntOffset(0, -with(density) { (MenuButtonSize + MenuGap).roundToPx() }),
+                offset = with(density) { IntOffset(-MenuInset.roundToPx(), -(MenuButtonSize + MenuGap).roundToPx()) },
                 onDismissRequest = {
                     dismissedAt = System.currentTimeMillis()
                     close()
@@ -574,6 +574,7 @@ private const val MenuCloseMs = 260L
 private val MenuButtonSize = 48.dp
 private val MenuButtonCorner = 16.dp
 private val MenuGap = 4.dp
+private val MenuInset = 16.dp
 private const val IconTurn = 90f
 private const val ReopenGuardMs = 250L
 private val DialogWidth = 420.dp

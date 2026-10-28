@@ -24,12 +24,43 @@ object AppLog {
             }
             File(AppPaths.dataDir, "pixelgram.log").takeIf { it.isFile }?.let { legacy -> move(legacy, File(AppPaths.logsDir, "old.log")) }
             File(AppPaths.dataDir, "tdlib.log").takeIf { it.isFile }?.delete()
-            collectDumps()
+            val dumped = collectDumps()
+            if (dumped) running.delete() else reportUncleanExit()
             pruneCrashes()
             file.writeText("${LocalDateTime.now()} pixelGram ${BuildConfig.VERSION} ${BuildConfig.CODENAME} (${BuildConfig.COMMIT}) on ${System.getProperty("os.name")} ${System.getProperty("os.version")}, Java ${System.getProperty("java.version")}\n")
         }
         Thread.setDefaultUncaughtExceptionHandler { thread, error -> write("Uncaught error in ${thread.name}", error) }
+        runCatching {
+            running.writeText(ProcessHandle.current().pid().toString())
+            Runtime.getRuntime().addShutdownHook(Thread { running.delete() })
+        }
     }
+
+    private val running: File get() = File(AppPaths.logsDir, "running.marker")
+
+    private fun reportUncleanExit() {
+        val marker = running.takeIf { it.isFile } ?: return
+        val time = Instant.ofEpochMilli(previous.takeIf { it.isFile }?.lastModified() ?: marker.lastModified())
+            .atZone(ZoneId.systemDefault()).format(stamp)
+        val recent = previous.takeIf { it.isFile }?.readLines()?.takeLast(CrashContextLines)?.joinToString("\n").orEmpty()
+        val tdlib = File(AppPaths.logsDir, "tdlib.log").takeIf { it.isFile }?.let(::tail).orEmpty()
+        File(AppPaths.logsDir, "crash-$time.log").writeText(
+            "pixelGram ${BuildConfig.VERSION} ${BuildConfig.CODENAME} (${BuildConfig.COMMIT})\n\n" +
+                "The previous session ended unexpectedly, without a Java error. This usually means a native crash or the process being killed.\n\n" +
+                "Recent log:\n$recent\n\nRecent TDLib log:\n$tdlib\n",
+        )
+        marker.delete()
+    }
+
+    private fun tail(file: File): String = runCatching {
+        java.io.RandomAccessFile(file, "r").use { raf ->
+            val start = (raf.length() - TailBytes).coerceAtLeast(0)
+            raf.seek(start)
+            val bytes = ByteArray((raf.length() - start).toInt())
+            raf.readFully(bytes)
+            bytes.decodeToString()
+        }
+    }.getOrDefault("")
 
     @Synchronized
     fun write(message: String, error: Throwable? = null) {
@@ -59,7 +90,8 @@ object AppLog {
         }
     }
 
-    private fun collectDumps() {
+    private fun collectDumps(): Boolean {
+        var moved = 0
         val places = listOfNotNull(
             File(System.getProperty("user.dir")),
             AppPaths.appDir,
@@ -76,12 +108,14 @@ object AppLog {
                 var index = 2
                 while (target.exists()) target = File(AppPaths.logsDir, "crash-$time-${index++}.log")
                 move(found, target)
+                moved++
             }
         }
+        return moved > 0
     }
 
     private fun isOurs(file: File): Boolean = runCatching {
-        file.bufferedReader().use { reader -> generateSequence { reader.readLine() }.take(DumpHeaderLines).any { "com.pixelgram.desktop" in it } }
+        file.bufferedReader().use { reader -> generateSequence { reader.readLine() }.take(DumpScanLines).any { "com.pixelgram.desktop" in it || "pixelGram" in it || "pixelgram" in it } }
     }.getOrDefault(false)
 
     private fun pruneCrashes() {
@@ -100,7 +134,8 @@ object AppLog {
     }
 
     private const val CrashContextLines = 200
-    private const val DumpHeaderLines = 80
+    private const val DumpScanLines = 20_000
+    private const val TailBytes = 64L * 1024
     private const val KeptCrashes = 20
 }
 
