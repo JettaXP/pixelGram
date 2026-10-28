@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.42.2 Fan
+
+- New setting in Chat Settings: Capitalize sentences. When it's on, the first letter of each sentence becomes a capital letter as you type.
+- Call buttons shrink and turn when pressed, and the microphone, camera and screen buttons morph from a circle to a cookie shape when switched on.
+- The QR code and Cancel buttons on the sign-in screen animate as a Material 3 button group.
+
 ## 0.42.1 Fan
 
 ### Photo editor

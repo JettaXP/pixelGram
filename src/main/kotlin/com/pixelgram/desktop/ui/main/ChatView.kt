@@ -1926,7 +1926,8 @@ private fun Composer(
     var menuAt by remember { mutableStateOf<DpOffset?>(null) }
     var linkFor by remember { mutableStateOf<TextRange?>(null) }
     var dateFor by remember { mutableStateOf<TextRange?>(null) }
-    val setText = { value: TextFieldValue ->
+    val setText = { typed: TextFieldValue ->
+        val value = if (settings.autoCapitalize.value) capitalizeTyped(text.text, typed) else typed
         val shifted = shiftSpans(spans, text.text, value.text)
         val fenced = if (value.text.contains("```")) autoCodeBlock(value.text, shifted, value.selection.end) else null
         if (fenced != null) {
@@ -2526,4 +2527,21 @@ val LocalProtectedContent = androidx.compose.runtime.compositionLocalOf { false 
 @Composable
 fun MessageSelection(content: @Composable () -> Unit) {
     if (LocalProtectedContent.current) content() else SelectionContainer(content = content)
+}
+
+private val SentenceEnds = setOf('.', '!', '?')
+
+private fun capitalizeTyped(old: String, typed: TextFieldValue): TextFieldValue {
+    val new = typed.text
+    val at = typed.selection.end - 1
+    if (!typed.selection.collapsed || new.length != old.length + 1 || at < 0) return typed
+    val char = new[at]
+    if (!char.isLowerCase() || new.removeRange(at, at + 1) != old) return typed
+    var before = at - 1
+    if (before >= 0 && new[before] != '\n') {
+        if (new[before] != ' ') return typed
+        while (before >= 0 && new[before] == ' ') before--
+        if (before >= 0 && new[before] !in SentenceEnds && new[before] != '\n') return typed
+    }
+    return typed.copy(text = new.substring(0, at) + char.uppercaseChar() + new.substring(at + 1))
 }

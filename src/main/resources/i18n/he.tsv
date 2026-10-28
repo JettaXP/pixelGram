@@ -1241,3 +1241,6 @@ Color	צבע
 {n} media files	{n} קובצי מדיה
 {n} GIF	{n} GIF
 {n} GIFs	{n} קובצי GIF
+Input	קלט
+Capitalize sentences	אות גדולה בתחילת משפט
+The first letter of each sentence becomes a capital letter as you type.	האות הראשונה בכל משפט הופכת לאות גדולה בזמן ההקלדה.

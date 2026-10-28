@@ -1292,6 +1292,14 @@ private fun ChatSettingsSection(settings: AppSettings) {
         "When off, only the chat header says that someone is typing.",
         settings.typingBubble.value,
     ) { settings.typingBubble.value = it }
+    Header("Input")
+    SwitchRow(
+        0,
+        1,
+        "Capitalize sentences",
+        "The first letter of each sentence becomes a capital letter as you type.",
+        settings.autoCapitalize.value,
+    ) { settings.autoCapitalize.value = it }
 }
 
 @Composable

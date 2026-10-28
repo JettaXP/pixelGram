@@ -129,6 +129,7 @@ class AppSettings private constructor(private val props: Properties) {
     val swipeLeft = enum("swipeLeft", SwipeAction.Reply)
     val swipeRight = enum("swipeRight", SwipeAction.Off)
     val typingBubble = bool("typingBubble", true)
+    val autoCapitalize = bool("autoCapitalize", false)
     val capsuleSpacing = int("capsuleSpacing", 4)
     val capsuleHeight = int("capsuleContainerHeight", 64)
 
@@ -218,7 +219,7 @@ class AppSettings private constructor(private val props: Properties) {
         materialFolders, hideAllChats, folderOrder, folderIcons,
         unreadFolder, unreadFolderName, unreadFolderIcon, mentionsFolder, mentionsFolderName, mentionsFolderIcon,
         capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, checkUpdates,
-        doubleClickOwn, doubleClickOther, doubleClickEmoji, swipeLeft, swipeRight, typingBubble, settingsStyle, sideMenuStyle,
+        doubleClickOwn, doubleClickOther, doubleClickEmoji, swipeLeft, swipeRight, typingBubble, autoCapitalize, settingsStyle, sideMenuStyle,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,
