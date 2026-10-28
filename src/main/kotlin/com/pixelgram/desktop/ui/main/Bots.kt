@@ -38,6 +38,9 @@ import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.AvatarKind
 import com.pixelgram.desktop.telegram.BotCommandItem
 import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.telegram.hasMainWebApp
+import com.pixelgram.desktop.telegram.openMainWebApp
+import com.pixelgram.desktop.telegram.openWebApp
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
@@ -150,5 +153,21 @@ fun BotWelcome(botId: Long, telegram: Telegram, onStart: () -> Unit, modifier: M
             )
             Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) { Text("Start") }
         }
+    }
+}
+
+@Composable
+fun BotAppButton(chat: com.pixelgram.desktop.telegram.ChatState, telegram: Telegram) {
+    val bot = chat.privateUserId
+    var menuButton by remember(bot) { mutableStateOf<it.tdlight.jni.TdApi.BotMenuButton?>(null) }
+    LaunchedEffect(bot) { telegram.userFullInfo(bot) { info -> menuButton = info?.botInfo?.menuButton } }
+    val main = telegram.hasMainWebApp(bot)
+    val button = menuButton?.takeIf { it.url.isNotBlank() }
+    if (!main && button == null) return
+    FilledTonalButton(
+        onClick = { if (button != null) telegram.openWebApp(chat.id, bot, button.url) else telegram.openMainWebApp(chat.id, bot) },
+        modifier = Modifier.padding(horizontal = 4.dp),
+    ) {
+        Text(button?.text?.takeIf { it.isNotBlank() } ?: "Open", maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

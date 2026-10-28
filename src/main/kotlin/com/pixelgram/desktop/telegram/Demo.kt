@@ -78,6 +78,12 @@ fun Telegram.loadDemo() {
     if (System.getProperty("pixelgram.demo.protected") == "true") chats[106L]?.protectedContent = true
     if (System.getProperty("pixelgram.demo.secret") == "true") loadSecretDemo(now)
     loadThemesDemo()
+    System.getProperty("pixelgram.demo.miniapp")?.let { path ->
+        kotlinx.coroutines.MainScope().launch {
+            kotlinx.coroutines.delay(DemoMiniAppDelayMs)
+            com.pixelgram.desktop.ui.webapp.MiniApps.launch(com.pixelgram.desktop.ui.webapp.MiniAppSession(this@loadDemo, 2, "Demo App", java.io.File(path).toURI().toString() + "#tgWebAppPlatform=tdesktop", 101))
+        }
+    }
     if (System.getProperty("pixelgram.demo.qr") == "true") {
         kotlinx.coroutines.MainScope().launch {
             kotlinx.coroutines.delay(4000)
@@ -651,3 +657,5 @@ fun demoStoryViewers(): List<TdApi.StoryInteraction> {
         }
     }
 }
+
+private const val DemoMiniAppDelayMs = 12_000L

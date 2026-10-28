@@ -198,6 +198,8 @@ class AppSettings private constructor(private val props: Properties) {
     val cornerDialogs = int("cornerDialogs", 28)
     val cornerMenus = int("cornerMenus", 16)
 
+    val miniAppsAndroid = bool("miniAppsAndroid", false)
+
     val apiId = int("apiId", 0)
     val apiHash = string("apiHash", "")
 
@@ -217,6 +219,7 @@ class AppSettings private constructor(private val props: Properties) {
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,
         deviceName, israelLogo, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
         stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, restoreWindow, windowBounds, emptyShapes, autostart, launchMinimized, language, localNames, bigReactions, liquidCursor, cursorStyle, trailFast, trailSlow, trailThreshold, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
+        miniAppsAndroid,
         apiId, apiHash,
         accounts, activeAccount,
     ) + avatarKindShapes.values

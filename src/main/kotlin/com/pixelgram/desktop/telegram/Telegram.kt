@@ -2868,6 +2868,10 @@ class Telegram(
                 onAnswer("Copied", false)
             }
             is TdApi.InlineKeyboardButtonTypeUser -> openPrivateChat(type.userId) { }
+            is TdApi.InlineKeyboardButtonTypeWebApp -> {
+                val bot = message.viaBot.takeIf { it != 0L } ?: message.senderUserId
+                openWebApp(message.chatId, bot, type.url) { onAnswer(it, false) }
+            }
             else -> onAnswer("This button isn't supported yet", false)
         }
     }

@@ -13,6 +13,7 @@ jlayer = "1.0.1.4"
 javacv = "1.5.11"
 ffmpeg = "7.1-1.5.11"
 markdown = "0.7.18"
+javafx = "21.0.13"
 
 [libraries]
 material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
@@ -28,6 +29,12 @@ javacv = { module = "org.bytedeco:javacv", version.ref = "javacv" }
 javacpp = { module = "org.bytedeco:javacpp", version.ref = "javacv" }
 ffmpeg = { module = "org.bytedeco:ffmpeg", version.ref = "ffmpeg" }
 markdown = { module = "org.jetbrains:markdown", version.ref = "markdown" }
+javafx-base = { module = "org.openjfx:javafx-base", version.ref = "javafx" }
+javafx-graphics = { module = "org.openjfx:javafx-graphics", version.ref = "javafx" }
+javafx-controls = { module = "org.openjfx:javafx-controls", version.ref = "javafx" }
+javafx-media = { module = "org.openjfx:javafx-media", version.ref = "javafx" }
+javafx-web = { module = "org.openjfx:javafx-web", version.ref = "javafx" }
+javafx-swing = { module = "org.openjfx:javafx-swing", version.ref = "javafx" }
 filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs-jvm", version.ref = "filekit" }
 
 [plugins]

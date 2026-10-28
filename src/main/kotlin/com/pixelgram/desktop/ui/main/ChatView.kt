@@ -165,6 +165,7 @@ import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.telegram.SenderTag
 import com.pixelgram.desktop.telegram.SecretStatus
+import com.pixelgram.desktop.telegram.openKeyboardWebApp
 import com.pixelgram.desktop.telegram.secretStatus
 import com.pixelgram.desktop.ui.components.ChatAvatar
 import com.pixelgram.desktop.ui.components.loadImage
@@ -565,6 +566,7 @@ private fun ChatViewContent(
                     Icon(Icons.Filled.Videocam, contentDescription = "Video call")
                 }
             }
+            if (chat.privateUserId != 0L && telegram.isBot(chat)) BotAppButton(chat, telegram)
             IconButton(onClick = { MessageSearch.start(chat.id) }) {
                 Icon(Icons.Filled.Search, contentDescription = "Search in chat")
             }
@@ -2453,6 +2455,12 @@ private fun Composer(
     ) {
         keyboard?.let { shown ->
             ReplyKeyboardPanel(shown, onPress = { button ->
+                val webApp = button.type as? TdApi.KeyboardButtonTypeWebApp
+                val bot = telegram.chats[chatId]?.privateUserId ?: 0L
+                if (webApp != null && bot != 0L) {
+                    telegram.openKeyboardWebApp(chatId, bot, webApp.url, button.text)
+                    return@ReplyKeyboardPanel
+                }
                 telegram.sendText(chatId, button.text, replyTo?.id ?: 0)
                 onCancelReply()
                 if (shown.oneTime) keyboardOpen = false

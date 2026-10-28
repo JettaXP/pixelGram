@@ -1598,6 +1598,10 @@ private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {
             SwitchRow(last.value.first, last.value.second, row.title, row.subtitle, row.checked, row.onChange)
         }
     }
+    Header("Mini apps")
+    SwitchRow(0, 1, "Spoof client as Android", "Mini apps see pixelGram as Telegram for Android. Some apps unlock mobile-only features.", settings.miniAppsAndroid.value) {
+        settings.miniAppsAndroid.value = it
+    }
     Header("Data and storage")
     MemoryContent(telegram)
     Header("Data folder")

@@ -7,6 +7,8 @@ import androidx.compose.ui.platform.UriHandler
 import com.pixelgram.desktop.core.AppLog
 import com.pixelgram.desktop.telegram.Telegram
 import it.tdlight.jni.TdApi
+import com.pixelgram.desktop.telegram.openLinkWebApp
+import com.pixelgram.desktop.telegram.openMainWebApp
 import java.net.URI
 import javax.swing.SwingUtilities
 
@@ -96,6 +98,16 @@ object Links : UriHandler {
                             openBrowser(url)
                         }
                     }
+                is TdApi.InternalLinkTypeWebApp ->
+                    telegram.openPublicChat(type.botUsername, { chatId ->
+                        val bot = telegram.chats[chatId]?.privateUserId ?: 0L
+                        if (bot != 0L) telegram.openLinkWebApp(chatId, bot, type.webAppShortName, type.startParameter) else openBrowser(url)
+                    }, { openBrowser(url) })
+                is TdApi.InternalLinkTypeMainWebApp ->
+                    telegram.openPublicChat(type.botUsername, { chatId ->
+                        val bot = telegram.chats[chatId]?.privateUserId ?: 0L
+                        if (bot != 0L) telegram.openMainWebApp(chatId, bot, type.startParameter) else openBrowser(url)
+                    }, { openBrowser(url) })
                 is TdApi.InternalLinkTypeUpgradedGift -> SwingUtilities.invokeLater { nft = telegram to type.name }
                 else -> openBrowser(url)
             }

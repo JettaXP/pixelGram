@@ -41,6 +41,17 @@ val bytedecoPlatform: String = run {
     }
 }
 
+val javafxPlatform: String = run {
+    val os = System.getProperty("os.name").lowercase()
+    val arm = System.getProperty("os.arch").let { it == "aarch64" || it == "arm64" }
+    when {
+        os.contains("win") -> "win"
+        os.contains("mac") -> if (arm) "mac-aarch64" else "mac"
+        arm -> "linux-aarch64"
+        else -> "linux"
+    }
+}
+
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation(libs.material3)
@@ -58,6 +69,9 @@ dependencies {
     implementation(variantOf(libs.javacpp) { classifier(bytedecoPlatform) })
     implementation(variantOf(libs.ffmpeg) { classifier(bytedecoPlatform) })
 
+    listOf(libs.javafx.base, libs.javafx.graphics, libs.javafx.controls, libs.javafx.media, libs.javafx.web, libs.javafx.swing).forEach { module ->
+        implementation(variantOf(module) { classifier(javafxPlatform) }) { isTransitive = false }
+    }
     implementation(platform(libs.tdlight.bom))
     implementation(libs.tdlight.java)
     implementation(group = "it.tdlight", name = "tdlight-natives", classifier = tdlightNatives)
@@ -141,7 +155,7 @@ compose.desktop {
             vendor = "jettax"
             licenseFile.set(project.file("LICENSE"))
             appResourcesRootDir.set(project.layout.projectDirectory.dir("appResources"))
-            modules("java.sql", "jdk.unsupported", "java.naming", "jdk.security.auth")
+            modules("java.sql", "jdk.unsupported", "java.naming", "jdk.security.auth", "jdk.jsobject", "jdk.xml.dom", "java.net.http", "jdk.unsupported.desktop")
 
             linux {
                 packageName = "pixelgram"
