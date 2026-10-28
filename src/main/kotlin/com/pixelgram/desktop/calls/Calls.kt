@@ -69,6 +69,7 @@ class ActiveCall(val telegram: Telegram, val userId: Long, val outgoing: Boolean
 }
 
 object Calls {
+    private const val DemoCallUser = 2L
     private const val SampleRate = 48_000
     private const val Channels: Byte = 2
     private const val CameraWidth: Short = 1280
@@ -210,6 +211,13 @@ object Calls {
             call.telegram.send(TdApi.DiscardCall(call.callId, false, "", duration, call.camera || call.isVideo, 0))
         }
         finish(call, "Call ended")
+    }
+
+    fun showDemo(telegram: Telegram) {
+        current = ActiveCall(telegram, DemoCallUser, outgoing = true, video = false).apply {
+            phase = CallPhase.Active
+            startedAt = System.currentTimeMillis()
+        }
     }
 
     fun toggleMute() {

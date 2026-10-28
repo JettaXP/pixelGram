@@ -78,6 +78,7 @@ fun Telegram.loadDemo() {
     if (System.getProperty("pixelgram.demo.protected") == "true") chats[106L]?.protectedContent = true
     if (System.getProperty("pixelgram.demo.secret") == "true") loadSecretDemo(now)
     loadThemesDemo()
+    if (System.getProperty("pixelgram.demo.call") == "true") com.pixelgram.desktop.calls.Calls.showDemo(this)
     System.getProperty("pixelgram.demo.miniapp")?.let { path ->
         kotlinx.coroutines.MainScope().launch {
             kotlinx.coroutines.delay(DemoMiniAppDelayMs)

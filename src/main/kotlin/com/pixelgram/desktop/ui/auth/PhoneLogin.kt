@@ -11,6 +11,7 @@ import com.pixelgram.desktop.ui.components.expressive.OutlinedButton
 import com.pixelgram.desktop.ui.components.expressive.FilledTonalButton
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -307,38 +308,47 @@ fun CodeStep(info: CodeInfo, telegram: Telegram, onChangeNumber: () -> Unit) {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun PhoneActions(busy: Boolean, onQr: () -> Unit, onCancel: (() -> Unit)?) {
-    Row(
+    ButtonGroup(
+        overflowIndicator = {},
         horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        val qrSource = remember { MutableInteractionSource() }
-        val qrPressed by qrSource.collectIsPressedAsState()
-        FilledTonalButton(
-            onClick = onQr,
-            enabled = !busy,
-            interactionSource = qrSource,
-            shape = when {
-                onCancel == null -> CircleShape
-                qrPressed -> ButtonGroupDefaults.connectedLeadingButtonPressShape
-                else -> ButtonGroupDefaults.connectedLeadingButtonShape
+        customItem(
+            buttonGroupContent = {
+                val qrSource = remember { MutableInteractionSource() }
+                FilledTonalButton(
+                    onClick = onQr,
+                    enabled = !busy,
+                    interactionSource = qrSource,
+                    shapes = if (onCancel == null) {
+                        ButtonDefaults.shapes(CircleShape, ButtonDefaults.pressedShape)
+                    } else {
+                        ButtonDefaults.shapes(ButtonGroupDefaults.connectedLeadingButtonShape, ButtonGroupDefaults.connectedLeadingButtonPressShape)
+                    },
+                    modifier = Modifier.weight(1f).animateWidth(qrSource).height(ActionHeight),
+                ) {
+                    Icon(Icons.Filled.QrCode2, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text(if (onCancel == null) "Log in by QR code" else "QR code")
+                }
             },
-            modifier = Modifier.weight(1f).height(ActionHeight),
-        ) {
-            Icon(Icons.Filled.QrCode2, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-            Text(if (onCancel == null) "Log in by QR code" else "QR code")
-        }
+            menuContent = {},
+        )
         if (onCancel != null) {
-            val cancelSource = remember { MutableInteractionSource() }
-            val cancelPressed by cancelSource.collectIsPressedAsState()
-            OutlinedButton(
-                onClick = onCancel,
-                interactionSource = cancelSource,
-                shape = if (cancelPressed) ButtonGroupDefaults.connectedTrailingButtonPressShape else ButtonGroupDefaults.connectedTrailingButtonShape,
-                modifier = Modifier.weight(1f).height(ActionHeight),
-            ) {
-                Text("Cancel")
-            }
+            customItem(
+                buttonGroupContent = {
+                    val cancelSource = remember { MutableInteractionSource() }
+                    OutlinedButton(
+                        onClick = onCancel,
+                        interactionSource = cancelSource,
+                        shapes = ButtonDefaults.shapes(ButtonGroupDefaults.connectedTrailingButtonShape, ButtonGroupDefaults.connectedTrailingButtonPressShape),
+                        modifier = Modifier.weight(1f).animateWidth(cancelSource).height(ActionHeight),
+                    ) {
+                        Text("Cancel")
+                    }
+                },
+                menuContent = {},
+            )
         }
     }
 }

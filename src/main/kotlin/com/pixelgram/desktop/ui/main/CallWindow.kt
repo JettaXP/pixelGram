@@ -1,5 +1,22 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material3.ripple
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.graphics.shapes.Morph
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
@@ -38,9 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
@@ -247,17 +262,62 @@ private fun Toggle(icon: ImageVector, label: String, active: Boolean, onClick: (
     val colors = MaterialTheme.colorScheme
     val container by animateColorAsState(if (active) colors.secondaryContainer else colors.surfaceContainerHighest)
     val content by animateColorAsState(if (active) colors.onSecondaryContainer else colors.onSurfaceVariant)
-    RoundAction(icon, label, ControlSize, container, content, onClick)
+    RoundAction(icon, label, ControlSize, container, content, active, onClick)
 }
 
 @Composable
-private fun RoundAction(icon: ImageVector, label: String, size: Dp, container: Color, content: Color, onClick: () -> Unit) {
-    FilledIconButton(
-        onClick = onClick,
-        shape = MaterialShapes.Cookie9Sided.toShape(),
-        colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(containerColor = container, contentColor = content),
-        modifier = Modifier.size(size),
+private fun RoundAction(icon: ImageVector, label: String, size: Dp, container: Color, content: Color, active: Boolean = true, onClick: () -> Unit) {
+    val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+    val shape by animateFloatAsState(if (active) 1f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec())
+    val press by animateFloatAsState(if (pressed) 1f else 0f, spatial)
+    val morph = remember { Morph(MaterialShapes.Circle, MaterialShapes.Cookie9Sided) }
+    val outline = remember(shape) { MorphShape(morph, shape) }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(size)
+            .graphicsLayer {
+                val scale = 1f - press * PressShrink
+                scaleX = scale
+                scaleY = scale
+                rotationZ = press * PressTurn
+            }
+            .clip(outline)
+            .background(container)
+            .focusProperties { canFocus = false }
+            .clickable(interactionSource = source, indication = ripple(color = content), role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = label },
     ) {
-        Icon(icon, contentDescription = label, modifier = Modifier.size(size * 0.42f))
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = content,
+            modifier = Modifier.size(size * 0.42f).graphicsLayer { rotationZ = -press * PressTurn },
+        )
     }
 }
+
+private class MorphShape(private val morph: Morph, private val progress: Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val path = Path()
+        var first = true
+        morph.forEachCubic(progress) { cubic ->
+            if (first) {
+                path.moveTo(cubic.anchor0X * size.width, cubic.anchor0Y * size.height)
+                first = false
+            }
+            path.cubicTo(
+                cubic.control0X * size.width, cubic.control0Y * size.height,
+                cubic.control1X * size.width, cubic.control1Y * size.height,
+                cubic.anchor1X * size.width, cubic.anchor1Y * size.height,
+            )
+        }
+        path.close()
+        return Outline.Generic(path)
+    }
+}
+
+private const val PressShrink = 0.1f
+private const val PressTurn = 25f
