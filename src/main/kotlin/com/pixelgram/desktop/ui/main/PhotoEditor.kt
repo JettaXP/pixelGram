@@ -27,7 +27,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
@@ -109,7 +114,7 @@ import com.pixelgram.desktop.ui.icons.outlined.BlurOn
 import com.pixelgram.desktop.ui.icons.outlined.Brush
 import com.pixelgram.desktop.ui.icons.outlined.ChatBubble
 import com.pixelgram.desktop.ui.icons.outlined.Circle
-import com.pixelgram.desktop.ui.icons.outlined.EmojiEmotions
+import com.pixelgram.desktop.ui.icons.outlined.Sticker
 import com.pixelgram.desktop.ui.icons.outlined.Flip
 import com.pixelgram.desktop.ui.icons.outlined.FormatColorFill
 import com.pixelgram.desktop.ui.icons.outlined.InkEraser
@@ -391,7 +396,7 @@ private fun PhotoEditor(request: EditRequest, onClose: () -> Unit) {
             .background(MaterialTheme.colorScheme.scrim.copy(alpha = EditorScrim))
             .pointerInput(Unit) {
                 awaitPointerEventScope {
-                    while (true) awaitPointerEvent(PointerEventPass.Final).changes.forEach { it.consume() }
+                    while (true) awaitPointerEvent()
                 }
             }
             .focusRequester(focus)
@@ -404,6 +409,7 @@ private fun PhotoEditor(request: EditRequest, onClose: () -> Unit) {
                     command && event.key == Key.Z -> history.stepBack()
                     command && event.key == Key.Y -> history.stepForward()
                     (event.key == Key.Delete || event.key == Key.Backspace) && selected != null -> deleteSelected()
+                    event.key == Key.Enter || event.key == Key.NumPadEnter -> finish()
                     else -> return@onPreviewKeyEvent false
                 }
                 true
@@ -433,7 +439,7 @@ private fun PhotoEditor(request: EditRequest, onClose: () -> Unit) {
                             Icon(Icons.Outlined.Flip, contentDescription = "Mirror")
                         }
                         Box {
-                            FilledTonalButton(onClick = { ratioMenu = true }, enabled = state != null) {
+                            FilledTonalButton(onClick = { ratioMenu = true }, enabled = state != null, modifier = Modifier.focusProperties { canFocus = false }) {
                                 Icon(Icons.Outlined.AspectRatio, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
                                 Text(state?.ratio?.label ?: CropRatio.Free.label)
@@ -478,7 +484,12 @@ private fun PhotoEditor(request: EditRequest, onClose: () -> Unit) {
                         )
                         Spacer(Modifier.width(4.dp))
                         Icon(Icons.Outlined.LineWeight, contentDescription = "Brush size", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Slider(value = brush, onValueChange = { brush = it }, valueRange = MinBrush..MaxBrush, modifier = Modifier.width(SliderWidth))
+                        Slider(
+                            value = brush,
+                            onValueChange = { brush = it },
+                            valueRange = MinBrush..MaxBrush,
+                            modifier = Modifier.width(SliderWidth).focusProperties { canFocus = false },
+                        )
                     }
                     Spacer(Modifier.weight(1f))
                     IconButton(onClick = { history.stepBack() }, enabled = history.undo.isNotEmpty()) {
@@ -520,7 +531,7 @@ private fun PhotoEditor(request: EditRequest, onClose: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().height(BottomHeight).padding(horizontal = 16.dp),
                 ) {
-                    TextButton(onClick = onClose) { Text("Cancel") }
+                    TextButton(onClick = onClose, modifier = Modifier.focusProperties { canFocus = false }) { Text("Cancel") }
                     Spacer(Modifier.weight(1f))
                     Box {
                         ConnectedToggles(
@@ -529,7 +540,7 @@ private fun PhotoEditor(request: EditRequest, onClose: () -> Unit) {
                                     mode = if (mode == EditorMode.Draw) EditorMode.Crop else EditorMode.Draw
                                     selected = null
                                 },
-                                Toggle(Icons.Outlined.EmojiEmotions, "Sticker", stickers) { stickers = !stickers },
+                                Toggle(Icons.Outlined.Sticker, "Sticker", stickers) { stickers = !stickers },
                                 Toggle(Icons.Outlined.TextFields, "Text", textTarget != null) { textTarget = TextTarget(null, "") },
                                 Toggle(Icons.Outlined.Shapes, "Shapes", shapesMenu) { shapesMenu = true },
                             ),
@@ -572,7 +583,7 @@ private fun PhotoEditor(request: EditRequest, onClose: () -> Unit) {
                         }
                     }
                     Spacer(Modifier.weight(1f))
-                    Button(onClick = finish, enabled = state != null && !exporting) {
+                    Button(onClick = finish, enabled = state != null && !exporting, modifier = Modifier.focusProperties { canFocus = false }) {
                         if (exporting) {
                             LoadingIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
                         } else {
@@ -582,6 +593,10 @@ private fun PhotoEditor(request: EditRequest, onClose: () -> Unit) {
                 }
             }
         }
+    }
+    val overlayOpen = picking || textTarget != null
+    LaunchedEffect(overlayOpen) {
+        if (!overlayOpen) runCatching { focus.requestFocus() }
     }
     if (picking) {
         ColorPickerDialog(initial = color, onDismiss = { picking = false }) {
@@ -615,11 +630,24 @@ private fun PhotoEditor(request: EditRequest, onClose: () -> Unit) {
                     value = value,
                     onValueChange = { value = it },
                     placeholder = { Text("Text") },
-                    modifier = Modifier.fillMaxWidth().focusRequester(textFocus),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(textFocus)
+                        .onPreviewKeyEvent { event ->
+                            val enter = event.key == Key.Enter || event.key == Key.NumPadEnter
+                            if (enter && !event.isShiftPressed) {
+                                if (event.type == KeyEventType.KeyDown) confirm()
+                                true
+                            } else {
+                                false
+                            }
+                        },
                 )
             },
-            confirmButton = { Button(onClick = confirm) { Text("Done") } },
-            dismissButton = { TextButton(onClick = { textTarget = null }) { Text("Cancel") } },
+            confirmButton = { Button(onClick = confirm, modifier = Modifier.focusProperties { canFocus = false }) { Text("Done") } },
+            dismissButton = {
+                TextButton(onClick = { textTarget = null }, modifier = Modifier.focusProperties { canFocus = false }) { Text("Cancel") }
+            },
         )
     }
 }
@@ -628,26 +656,39 @@ private class Toggle(val icon: ImageVector, val label: String, val checked: Bool
 
 @Composable
 private fun ConnectedToggles(toggles: List<Toggle>, large: Boolean = false) {
-    Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
+    ButtonGroup(
+        overflowIndicator = {},
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+    ) {
         toggles.forEachIndexed { index, toggle ->
-            val shapes: ToggleButtonShapes = when (index) {
-                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                toggles.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-            }
-            ToggleButton(
-                checked = toggle.checked,
-                onCheckedChange = { toggle.onClick() },
-                shapes = shapes,
-                colors = androidx.compose.material3.ToggleButtonDefaults.toggleButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = if (large) 20.dp else 14.dp),
-                modifier = Modifier.height(if (large) LargeToggle else SmallToggle),
-            ) {
-                Icon(toggle.icon, contentDescription = toggle.label, modifier = Modifier.size(if (large) 24.dp else 20.dp))
-            }
+            customItem(
+                buttonGroupContent = {
+                    val interaction = remember { MutableInteractionSource() }
+                    val shapes: ToggleButtonShapes = when (index) {
+                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                        toggles.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                    }
+                    ToggleButton(
+                        checked = toggle.checked,
+                        onCheckedChange = { toggle.onClick() },
+                        shapes = shapes,
+                        colors = ToggleButtonDefaults.toggleButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                        interactionSource = interaction,
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        modifier = Modifier
+                            .animateWidth(interaction)
+                            .size(if (large) LargeToggleWidth else SmallToggleWidth, if (large) LargeToggle else SmallToggle)
+                            .focusProperties { canFocus = false },
+                    ) {
+                        Icon(toggle.icon, contentDescription = toggle.label, modifier = Modifier.size(if (large) 24.dp else 20.dp))
+                    }
+                },
+                menuContent = {},
+            )
         }
     }
 }
@@ -948,6 +989,8 @@ private val RatioMenuWidth = 200.dp
 private val ShapesMenuWidth = 220.dp
 private val SmallToggle = 40.dp
 private val LargeToggle = 48.dp
+private val LargeToggleWidth = 64.dp
+private val SmallToggleWidth = 48.dp
 private const val EditorScrim = 0.32f
 private const val PreviewSide = 2048
 private const val DefaultColor = 0xFFF44336

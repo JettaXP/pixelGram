@@ -385,11 +385,12 @@ internal fun drawEdit(
     canvas.drawImageRect(images.base, SkRect.makeWH(images.base.width.toFloat(), images.base.height.toFloat()), full, Smooth, null, true)
     canvas.restore()
     val strokes = if (live != null) state.strokes + live else state.strokes
-    val blurs = strokes.filter { it.tool == DrawTool.Blur }
     val blurred = images.blurred
-    if (blurs.isNotEmpty() && blurred != null) {
+    if (blurred != null && strokes.any { it.tool == DrawTool.Blur }) {
         canvas.saveLayer(bounds, null)
-        blurs.forEach { stroke -> strokePath(stroke.points).use { canvas.drawPath(it, strokePaint(stroke)) } }
+        strokes.filter { it.tool == DrawTool.Blur || it.tool == DrawTool.Eraser }.forEach { stroke ->
+            strokePath(stroke.points).use { canvas.drawPath(it, strokePaint(stroke)) }
+        }
         canvas.save()
         canvas.orient(state)
         canvas.drawImageRect(

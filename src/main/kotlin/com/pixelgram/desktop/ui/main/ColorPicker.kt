@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -151,8 +152,8 @@ internal fun ColorPickerDialog(initial: Color, onDismiss: () -> Unit, onPick: (C
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), modifier = Modifier.fillMaxWidth()) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
-                    Button(onClick = { onPick(color) }) { Text("Done") }
+                    TextButton(onClick = onDismiss, modifier = Modifier.focusProperties { canFocus = false }) { Text("Cancel") }
+                    Button(onClick = { onPick(color) }, modifier = Modifier.focusProperties { canFocus = false }) { Text("Done") }
                 }
             }
         }
