@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.42.1 Fan
+
+### Photo editor
+- Text, shapes and stickers open with the first click, even if the mouse moves a little.
+- The brush size slider follows the mouse reliably.
+- The eraser also removes blur strokes.
+- The bottom bar animates like other Material 3 Expressive button groups, and the sticker button has a sticker icon.
+- Enter only presses Done in the editor.
+
+### Chats
+- Buttons and menu items no longer react to Enter after you click them.
+- Menu items highlight edge to edge when pressed.
+- Clearing the text of a message you are editing and pressing Enter asks to delete it.
+- The attach menu lines up with its button again.
+
+### Crash reports
+- If the app closes unexpectedly without an error, the next start saves a crash log with the recent app and TDLib logs.
+- Crash dumps from native code in the temp folder are now always collected into the logs folder.
+
 ## 0.42.0 Fan
 
 ### Photo editor
