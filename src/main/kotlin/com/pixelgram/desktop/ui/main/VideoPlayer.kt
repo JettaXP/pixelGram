@@ -135,7 +135,6 @@ private const val LateFrameUs = 120_000L
 private const val AudioBufferSeconds = 0.4
 private const val MaxDecodeWidth = 1920
 private const val MaxFrameGapNs = 100_000_000L
-private const val KeptFrames = 3
 private const val AudioDrainPollMs = 10L
 private val VolumeSliderWidth = 110.dp
 
@@ -158,12 +157,7 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
     @Volatile private var audioBaseUs = 0L
     @Volatile private var lineMarkUs = 0L
     private var audioThread: Thread? = null
-    private val pool = ArrayList<Bitmap>(KeptFrames)
-    private val images = arrayOfNulls<org.jetbrains.skia.Image>(KeptFrames)
-    private var shownSlot = -1
-    private var poolInfo: ImageInfo? = null
-    private var poolStride = 0
-    private var written = 0
+    private var shown: org.jetbrains.skia.Image? = null
 
     private val thread = Thread(::run, "pixelgram-video").apply { isDaemon = true }
 
@@ -274,7 +268,6 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
             AppLog.write("Video playback failed", error)
             failed = true
         } finally {
-            releaseFrames()
             synchronized(lock) { lock.notifyAll() }
             runCatching { grabber.stop() }
             runCatching { grabber.release() }
@@ -360,52 +353,28 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
         val stride = frame.imageStride
         val size = stride * frame.imageHeight
         val info = ImageInfo(frame.imageWidth, frame.imageHeight, ColorType.BGRA_8888, ColorAlphaType.OPAQUE)
-        if (info != poolInfo || stride != poolStride) {
-            releaseFrames()
-            poolInfo = info
-            poolStride = stride
-        }
-        val slot = written % KeptFrames
-        val bitmap = pool.getOrNull(slot) ?: Bitmap().also { fresh ->
-            if (!fresh.allocPixels(info, stride)) {
-                fresh.close()
-                return
+        val bitmap = Bitmap()
+        try {
+            if (!bitmap.allocPixels(info, stride)) return
+            val pixmap = bitmap.peekPixels() ?: return
+            try {
+                val source = buffer.duplicate().apply { rewind() }
+                source.limit(minOf(source.capacity(), size))
+                BufferUtil.getByteBufferFromPointer(pixmap.addr, size).put(source)
+            } finally {
+                pixmap.close()
             }
-            pool.add(fresh)
-        }
-        val pixmap = bitmap.peekPixels() ?: return
-        val address = try {
-            val source = buffer.duplicate().apply { rewind() }
-            source.limit(minOf(source.capacity(), size))
-            BufferUtil.getByteBufferFromPointer(pixmap.addr, size).put(source)
-            pixmap.addr
+            bitmap.setImmutable()
+            val image = org.jetbrains.skia.Image.makeFromBitmap(bitmap)
+            val stale = shown
+            shown = image
+            this.frame = image
+            if (stale != null) java.awt.EventQueue.invokeLater { stale.close() }
         } finally {
-            pixmap.close()
+            bitmap.close()
         }
-        bitmap.notifyPixelsChanged()
-        written++
-        val image = org.jetbrains.skia.Image.makeRaster(info, org.jetbrains.skia.Data.makeWithoutCopy(address, size, bitmap), stride)
-        val stale = images[slot]
-        images[slot] = image
-        shownSlot = slot
-        this.frame = image
-        if (stale != null) java.awt.EventQueue.invokeLater { stale.close() }
     }
 
-    private fun releaseFrames() {
-        val left = pool.toList()
-        val oldImages = images.toList()
-        val keep = shownSlot
-        pool.clear()
-        images.fill(null)
-        written = 0
-        shownSlot = -1
-        if (left.isEmpty()) return
-        java.awt.EventQueue.invokeLater {
-            oldImages.forEachIndexed { index, image -> if (index != keep) image?.close() }
-            left.forEachIndexed { index, bitmap -> if (index != keep) bitmap.close() }
-        }
-    }
 }
 
 @Composable
