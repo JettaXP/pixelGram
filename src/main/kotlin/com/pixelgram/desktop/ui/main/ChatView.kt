@@ -268,6 +268,16 @@ private fun ChatViewContent(
     var asFiles by remember(chat.id) { mutableStateOf(false) }
     var editPhoto by remember(chat.id) { mutableStateOf<File?>(null) }
     var editingPhoto by remember(chat.id) { mutableStateOf(false) }
+    var spoiler by remember(chat.id) { mutableStateOf(false) }
+    var sendWith by remember(chat.id) { mutableStateOf<AttachmentSend?>(null) }
+    var sendRequested by remember(chat.id) { mutableStateOf(false) }
+    val modal = LocalModalHost.current
+    val editAttachment = { file: File ->
+        modal?.editing = EditRequest(file, telegram, chat.id) { result ->
+            val index = attachments.indexOf(file)
+            if (index >= 0) attachments[index] = result
+        }
+    }
     val attach = { files: List<File> ->
         if (editingPhoto) {
             files.firstOrNull()?.let {
@@ -278,6 +288,12 @@ private fun ChatViewContent(
             files.filter { it !in attachments }.let(attachments::addAll)
         }
         if (files.any { !Attachments.isMedia(it) }) asFiles = true
+    }
+    LaunchedEffect(chat.id) {
+        com.pixelgram.desktop.telegram.demoAttachment()?.let { file ->
+            attach(listOf(file))
+            if (com.pixelgram.desktop.telegram.demoOpensEditor) editAttachment(file)
+        }
     }
     val placement = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
     val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -943,6 +959,13 @@ private fun ChatViewContent(
                 onAdd = { scope.launch { attach(Attachments.pick()) } },
                 onClose = { attachments.clear() },
                 modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp),
+                onEdit = if (modal != null) editAttachment else null,
+                spoiler = spoiler,
+                onSpoiler = { spoiler = it },
+                onSendWith = if (editingPhoto) null else { how ->
+                    sendWith = how
+                    sendRequested = true
+                },
             )
         }
         val barMode = when {
@@ -998,6 +1021,8 @@ private fun ChatViewContent(
             telegram = telegram,
             settings = settings,
             hasAttachments = attachments.isNotEmpty(),
+            sendRequested = sendRequested,
+            onSendRequestHandled = { sendRequested = false },
             editing = editing,
             replyTo = replyTo,
             onCancelReply = { replyTo = null },
@@ -1028,7 +1053,7 @@ private fun ChatViewContent(
                     when {
                         file == null -> Unit
                         file == editPhoto -> telegram.editMessage(edited, text, entities)
-                        else -> telegram.editMessageMedia(edited, file, text, !asFiles && Attachments.isPhoto(file), entities)
+                        else -> telegram.editMessageMedia(edited, file, text, !asFiles && (Attachments.isPhoto(file) || Attachments.isAnimation(file)), entities)
                     }
                     editing = null
                 } else if (edited != null) {
@@ -1036,12 +1061,26 @@ private fun ChatViewContent(
                     editing = null
                 } else if (attachments.isNotEmpty()) {
                     val photos = !asFiles && attachments.all(Attachments::isMedia)
-                    telegram.sendFiles(chat.id, attachments.toList(), photos, text, replyId, entities)
+                    val how = sendWith ?: AttachmentSend()
+                    telegram.sendFiles(
+                        chat.id,
+                        attachments.toList(),
+                        photos,
+                        text,
+                        replyId,
+                        entities,
+                        silent = how.silent,
+                        schedule = how.schedule,
+                        spoiler = photos && spoiler,
+                        highQuality = Attachments.highQuality,
+                    )
                     attachments.clear()
                     asFiles = false
+                    spoiler = false
                 } else if (text.isNotBlank()) {
                     telegram.sendText(chat.id, text, replyId, entities)
                 }
+                sendWith = null
                 if (edited == null) PendingForward.send(telegram, chat.id)
                 if (listState.firstVisibleItemIndex > 0) {
                     scope.launch { listState.animateScrollToItem(0) }
@@ -1839,6 +1878,8 @@ private fun Composer(
     telegram: Telegram,
     settings: AppSettings,
     hasAttachments: Boolean,
+    sendRequested: Boolean,
+    onSendRequestHandled: () -> Unit,
     editing: UiMessage?,
     replyTo: UiMessage?,
     onCancelReply: () -> Unit,
@@ -2039,6 +2080,12 @@ private fun Composer(
             onSend(trimmed, toEntities(spans, lead, trimmed.length))
             text = TextFieldValue("")
             spans = emptyList()
+        }
+    }
+    LaunchedEffect(sendRequested) {
+        if (sendRequested) {
+            onSendRequestHandled()
+            send()
         }
     }
     LaunchedEffect(replyTo?.key) {

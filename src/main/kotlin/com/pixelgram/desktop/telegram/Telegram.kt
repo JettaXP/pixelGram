@@ -2315,7 +2315,19 @@ class Telegram(
     fun editMessageMedia(message: UiMessage, file: File, caption: String, asPhoto: Boolean, entities: Array<TdApi.TextEntity> = emptyArray()) {
         val text = TdApi.FormattedText(caption, entities)
         val input = TdApi.InputFileLocal(file.absolutePath)
-        val content = if (asPhoto) {
+        val content = if (asPhoto && com.pixelgram.desktop.ui.main.Attachments.isAnimation(file)) {
+            val info = com.pixelgram.desktop.ui.main.Attachments.videoInfo(file)
+            TdApi.InputMessageAnimation().apply {
+                animation = TdApi.InputAnimation().apply {
+                    animation = input
+                    addedStickerFileIds = IntArray(0)
+                    duration = info.duration
+                    width = info.width
+                    height = info.height
+                }
+                this.caption = text
+            }
+        } else if (asPhoto) {
             val (width, height) = imageSize(file)
             TdApi.InputMessagePhoto().apply {
                 photo = TdApi.InputPhoto().apply {
@@ -2640,6 +2652,7 @@ class Telegram(
     }
 
     fun installedStickerSets(onResult: (List<TdApi.StickerSetInfo>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(emptyList())
         send(TdApi.GetInstalledStickerSets(TdApi.StickerTypeRegular())) { result ->
             onResult((result as? TdApi.StickerSets)?.sets?.toList().orEmpty())
         }
@@ -2665,10 +2678,12 @@ class Telegram(
     }
 
     fun recentStickers(onResult: (List<TdApi.Sticker>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(demoStickers())
         send(TdApi.GetRecentStickers(false)) { result -> onResult((result as? TdApi.Stickers)?.stickers?.toList().orEmpty()) }
     }
 
     fun favoriteStickers(onResult: (List<TdApi.Sticker>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(emptyList())
         send(TdApi.GetFavoriteStickers()) { result -> onResult((result as? TdApi.Stickers)?.stickers?.toList().orEmpty()) }
     }
 
@@ -2967,62 +2982,109 @@ class Telegram(
         caption: String,
         replyToId: Long = 0,
         entities: Array<TdApi.TextEntity> = emptyArray(),
+        silent: Boolean = false,
+        schedule: TdApi.MessageSchedulingState? = null,
+        spoiler: Boolean = false,
+        highQuality: Boolean = true,
     ) {
         if (System.getProperty("pixelgram.demo") == "true") return demoSendFiles(chatId, files, caption)
         scope.launch(Dispatchers.IO) {
-            files.chunked(AlbumSize).forEachIndexed { chunkIndex, chunk ->
-                val contents = chunk.mapIndexed { index, file ->
-                    val first = chunkIndex == 0 && index == 0
-                    val text = TdApi.FormattedText(if (first) caption else "", if (first) entities else arrayOf())
-                    val input = TdApi.InputFileLocal(file.absolutePath)
-                    if (asPhotos && com.pixelgram.desktop.ui.main.Attachments.isVideo(file)) {
-                        val info = com.pixelgram.desktop.ui.main.Attachments.videoInfo(file)
-                        TdApi.InputMessageVideo().apply {
-                            video = TdApi.InputVideo().apply {
-                                video = input
-                                thumbnail = info.poster?.let { poster ->
-                                    val (w, h) = imageSize(poster)
-                                    TdApi.InputThumbnail(TdApi.InputFileLocal(poster.absolutePath), w, h)
-                                }
-                                addedStickerFileIds = IntArray(0)
-                                duration = info.duration
-                                width = info.width
-                                height = info.height
-                                supportsStreaming = file.extension.lowercase() in StreamingExtensions
-                            }
-                            this.caption = text
+            val options = if (silent || schedule != null) {
+                TdApi.MessageSendOptions().apply {
+                    disableNotification = silent
+                    schedulingState = schedule
+                }
+            } else {
+                null
+            }
+            val contents = files.mapIndexed { index, file ->
+                val first = index == 0
+                val text = TdApi.FormattedText(if (first) caption else "", if (first) entities else arrayOf())
+                val input = TdApi.InputFileLocal(file.absolutePath)
+                if (asPhotos && com.pixelgram.desktop.ui.main.Attachments.isAnimation(file)) {
+                    val info = com.pixelgram.desktop.ui.main.Attachments.videoInfo(file)
+                    TdApi.InputMessageAnimation().apply {
+                        animation = TdApi.InputAnimation().apply {
+                            animation = input
+                            addedStickerFileIds = IntArray(0)
+                            duration = info.duration
+                            width = info.width
+                            height = info.height
                         }
-                    } else if (asPhotos) {
-                        val (width, height) = imageSize(file)
-                        TdApi.InputMessagePhoto().apply {
-                            photo = TdApi.InputPhoto().apply {
-                                photo = input
-                                addedStickerFileIds = IntArray(0)
-                                this.width = width
-                                this.height = height
+                        this.caption = text
+                        hasSpoiler = spoiler
+                    }
+                } else if (asPhotos && com.pixelgram.desktop.ui.main.Attachments.isVideo(file)) {
+                    val info = com.pixelgram.desktop.ui.main.Attachments.videoInfo(file)
+                    TdApi.InputMessageVideo().apply {
+                        video = TdApi.InputVideo().apply {
+                            video = input
+                            thumbnail = info.poster?.let { poster ->
+                                val (w, h) = imageSize(poster)
+                                TdApi.InputThumbnail(TdApi.InputFileLocal(poster.absolutePath), w, h)
                             }
-                            this.caption = text
+                            addedStickerFileIds = IntArray(0)
+                            duration = info.duration
+                            width = info.width
+                            height = info.height
+                            supportsStreaming = file.extension.lowercase() in StreamingExtensions
                         }
+                        this.caption = text
+                        hasSpoiler = spoiler
+                    }
+                } else if (asPhotos) {
+                    val photoFile = if (highQuality) file else com.pixelgram.desktop.ui.main.Attachments.standardQuality(file)
+                    val (width, height) = imageSize(photoFile)
+                    TdApi.InputMessagePhoto().apply {
+                        photo = TdApi.InputPhoto().apply {
+                            photo = TdApi.InputFileLocal(photoFile.absolutePath)
+                            addedStickerFileIds = IntArray(0)
+                            this.width = width
+                            this.height = height
+                        }
+                        this.caption = text
+                        hasSpoiler = spoiler
+                    }
+                } else {
+                    TdApi.InputMessageDocument().apply {
+                        document = TdApi.InputDocument().apply { document = input }
+                        this.caption = text
+                    }
+                }
+            }
+            val groups = buildList {
+                var album = mutableListOf<TdApi.InputMessageContent>()
+                contents.forEach { content ->
+                    if (content is TdApi.InputMessageAnimation) {
+                        if (album.isNotEmpty()) add(album)
+                        album = mutableListOf()
+                        add(listOf(content))
                     } else {
-                        TdApi.InputMessageDocument().apply {
-                            document = TdApi.InputDocument().apply { document = input }
-                            this.caption = text
+                        album += content
+                        if (album.size == AlbumSize) {
+                            add(album)
+                            album = mutableListOf()
                         }
                     }
                 }
-                if (contents.size == 1) {
+                if (album.isNotEmpty()) add(album)
+            }
+            groups.forEachIndexed { groupIndex, group ->
+                if (group.size == 1) {
                     send(TdApi.SendMessage().apply {
                         this.chatId = chatId
                         topicId = topicOf(chatId)
-                        if (chunkIndex == 0) replyTo = replyInput(replyToId)
-                        inputMessageContent = contents.single()
+                        if (groupIndex == 0) replyTo = replyInput(replyToId)
+                        this.options = options
+                        inputMessageContent = group.single()
                     })
                 } else {
                     send(TdApi.SendMessageAlbum().apply {
                         this.chatId = chatId
                         topicId = topicOf(chatId)
-                        if (chunkIndex == 0) replyTo = replyInput(replyToId)
-                        inputMessageContents = contents.toTypedArray()
+                        if (groupIndex == 0) replyTo = replyInput(replyToId)
+                        this.options = options
+                        inputMessageContents = group.toTypedArray()
                     })
                 }
             }

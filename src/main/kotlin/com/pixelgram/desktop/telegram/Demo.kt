@@ -659,3 +659,32 @@ fun demoStoryViewers(): List<TdApi.StoryInteraction> {
 }
 
 private const val DemoMiniAppDelayMs = 12_000L
+
+fun demoStickers(): List<TdApi.Sticker> {
+    val dir = System.getProperty("pixelgram.demo.stickers") ?: return emptyList()
+    val files = java.io.File(dir).listFiles().orEmpty().filter { it.extension.lowercase() in DemoStickerFormats }.sortedBy { it.name }
+    return files.mapIndexed { index, file ->
+        TdApi.Sticker().apply {
+            id = DemoStickerId + index
+            width = DemoStickerSide
+            height = DemoStickerSide
+            emoji = "🙂"
+            format = when (file.extension.lowercase()) {
+                "tgs" -> TdApi.StickerFormatTgs()
+                "webm" -> TdApi.StickerFormatWebm()
+                else -> TdApi.StickerFormatWebp()
+            }
+            fullType = TdApi.StickerFullTypeRegular()
+            sticker = demoFile(DemoStickerFile + index, file.absolutePath, file.length())
+        }
+    }
+}
+
+fun demoAttachment(): java.io.File? = System.getProperty("pixelgram.demo.attach")?.let { java.io.File(it) }?.takeIf { it.isFile }
+
+val demoOpensEditor: Boolean get() = System.getProperty("pixelgram.demo.editor") == "true"
+
+private val DemoStickerFormats = setOf("tgs", "webp", "webm")
+private const val DemoStickerId = 970_000L
+private const val DemoStickerFile = 970_000
+private const val DemoStickerSide = 512

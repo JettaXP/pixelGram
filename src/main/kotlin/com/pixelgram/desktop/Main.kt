@@ -291,7 +291,7 @@ private fun ApplicationScope.PixelApp() {
                 DisposableEffect(windowKey) { onDispose { FocusedWindows.set(windowKey, false) } }
                 PixelTheme(settings) {
                     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
-                        if (chat != null) key(shownId) { ChatView(chat, owner, settings, onOpenChat = { shownId = it }) }
+                        if (chat != null) com.pixelgram.desktop.ui.main.ModalBlurHost { key(shownId) { ChatView(chat, owner, settings, onOpenChat = { shownId = it }) } }
                     }
                 }
             }
@@ -404,7 +404,7 @@ private fun ApplicationScope.PixelApp() {
                         ownTitleBar -> TitleBar(chrome, onClose = close)
                     }
                     key(accounts.active) {
-                        App(accounts, accounts.active, settings)
+                        com.pixelgram.desktop.ui.main.ModalBlurHost { App(accounts, accounts.active, settings) }
                     }
                 }
                 if (ownTitleBar && !macNativeWindow) ResizeHandles(chrome)

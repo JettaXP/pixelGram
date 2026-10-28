@@ -135,6 +135,25 @@ fun MediaPanel(
 
 class StickerSend(val silent: Boolean = false, val schedule: TdApi.MessageSchedulingState? = null)
 
+@Composable
+fun StickerPicker(telegram: Telegram, chatId: Long, onPick: (TdApi.Sticker) -> Unit) {
+    var search by remember { mutableStateOf<String?>(null) }
+    val pick = { sticker: TdApi.Sticker, _: StickerSend -> onPick(sticker) }
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shadowElevation = 6.dp,
+        modifier = Modifier.size(width = PanelWidth, height = PanelHeight),
+    ) {
+        val query = search
+        if (query != null) {
+            StickerSearch(telegram, chatId, query, { search = it }, pick, Modifier.fillMaxSize().padding(top = 8.dp))
+        } else {
+            StickersTab(telegram, chatId, false, pick, { search = "" }, Modifier.fillMaxSize().padding(top = 4.dp), menu = false)
+        }
+    }
+}
+
 private class StickerSection(val id: Long, val title: String, val icon: TdApi.Sticker?, val thumb: TdApi.Thumbnail?)
 
 @Composable
@@ -145,6 +164,7 @@ private fun StickersTab(
     onSticker: (TdApi.Sticker, StickerSend) -> Unit,
     onSearch: () -> Unit,
     modifier: Modifier,
+    menu: Boolean = true,
 ) {
     var preview by remember { mutableStateOf<TdApi.Sticker?>(null) }
     var scheduling by remember { mutableStateOf<TdApi.Sticker?>(null) }
@@ -196,7 +216,7 @@ private fun StickersTab(
                             Modifier
                                 .size(StickerCell)
                                 .clip(RoundedCornerShape(12.dp))
-                                .onSecondaryClick { menuFor = sticker }
+                                .onSecondaryClick { if (menu) menuFor = sticker }
                                 .pointerInput(sticker.sticker.id) {
                                     detectTapGestures(
                                         onTap = { onSticker(sticker, StickerSend()) },

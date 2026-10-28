@@ -58,4 +58,6 @@ object AppPaths {
     val nativesDir: File get() = File(dataDir, "natives").apply { mkdirs() }
 
     val logsDir: File get() = File(dataDir, "logs").apply { mkdirs() }
+
+    val tempDir: File get() = File(dataDir, "temp").apply { mkdirs() }
 }

@@ -44,8 +44,24 @@ import com.pixelgram.desktop.ui.components.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import com.pixelgram.desktop.ui.components.GroupedMenu
+import com.pixelgram.desktop.ui.components.MenuEntry
+import com.pixelgram.desktop.ui.components.MenuGroups
+import com.pixelgram.desktop.ui.icons.filled.Check
+import com.pixelgram.desktop.ui.icons.filled.MoreVert
+import com.pixelgram.desktop.ui.icons.outlined.AutoAwesome
+import com.pixelgram.desktop.ui.icons.outlined.CalendarMonth
+import com.pixelgram.desktop.ui.icons.outlined.Hd
+import com.pixelgram.desktop.ui.icons.outlined.NotificationsOff
+import it.tdlight.jni.TdApi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,7 +88,7 @@ object Attachments {
 
     private const val MaxPhotoBytes = 10L * 1024 * 1024
 
-    private val tempDir: File get() = File(AppPaths.dataDir, "temp")
+    private val tempDir: File get() = AppPaths.tempDir
 
     fun isPhoto(file: File) = file.extension.lowercase() in PhotoExtensions && file.length() <= MaxPhotoBytes
 
@@ -80,7 +96,29 @@ object Attachments {
 
     fun isVideo(file: File) = file.extension.lowercase() in VideoExtensions
 
-    fun isMedia(file: File) = isPhoto(file) || isVideo(file)
+    fun isAnimation(file: File) = file.extension.lowercase() == "gif"
+
+    fun isMedia(file: File) = isPhoto(file) || isVideo(file) || isAnimation(file)
+
+    var highQuality by mutableStateOf(false)
+
+    fun standardQuality(file: File): File = runCatching {
+        val bytes = file.readBytes()
+        val (width, height) = uprightSize(bytes)
+        if (maxOf(width, height) <= StandardSide) return file
+        val encoded = decodeUpright(bytes, StandardSide).use { image ->
+            org.jetbrains.skia.Surface.makeRasterN32Premul(image.width, image.height).use { surface ->
+                surface.canvas.clear(0xFFFFFFFF.toInt())
+                surface.canvas.drawImage(image, 0f, 0f)
+                surface.makeImageSnapshot().use { it.encodeToData(org.jetbrains.skia.EncodedImageFormat.JPEG, StandardJpegQuality) }
+            }
+        } ?: return file
+        tempDir.mkdirs()
+        File(tempDir, "photo-${file.nameWithoutExtension.hashCode()}-${System.nanoTime()}.jpg").also { it.writeBytes(encoded.bytes) }
+    }.onFailure { AppLog.write("Photo resize failed", it) }.getOrDefault(file)
+
+    private const val StandardSide = 1280
+    private const val StandardJpegQuality = 87
 
     class VideoInfo(val poster: File?, val width: Int, val height: Int, val duration: Int)
 
@@ -233,6 +271,8 @@ object Attachments {
     }
 }
 
+class AttachmentSend(val silent: Boolean = false, val schedule: TdApi.MessageSchedulingState? = null)
+
 @Composable
 fun AttachmentsPanel(
     files: List<File>,
@@ -242,8 +282,15 @@ fun AttachmentsPanel(
     onAdd: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    onEdit: ((File) -> Unit)? = null,
+    spoiler: Boolean = false,
+    onSpoiler: (Boolean) -> Unit = {},
+    onSendWith: ((AttachmentSend) -> Unit)? = null,
 ) {
     val canBePhotos = files.all(Attachments::isMedia)
+    val asMedia = !asFiles && canBePhotos
+    var menu by remember { mutableStateOf(false) }
+    var scheduling by remember { mutableStateOf(false) }
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -256,6 +303,7 @@ fun AttachmentsPanel(
                     asFiles || !canBePhotos -> "file"
                     files.all(Attachments::isVideo) -> "video"
                     files.all(Attachments::isPhoto) -> "photo"
+                    files.all(Attachments::isAnimation) -> "GIF"
                     else -> "media file"
                 }
                 Text(
@@ -266,22 +314,63 @@ fun AttachmentsPanel(
                 Spacer(Modifier.weight(1f))
                 Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
                     ToggleButton(
-                        checked = !asFiles && canBePhotos,
+                        checked = asMedia,
                         onCheckedChange = { onAsFiles(false) },
                         enabled = canBePhotos,
                         shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
                     ) { Text("Media") }
                     ToggleButton(
-                        checked = asFiles || !canBePhotos,
+                        checked = !asMedia,
                         onCheckedChange = { onAsFiles(true) },
                         shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
                     ) { Text("File") }
+                }
+                if (onSendWith != null) {
+                    Box {
+                        IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "More") }
+                        GroupedMenu(expanded = menu, onDismiss = { menu = false }) {
+                            MenuGroups(
+                                listOf(
+                                    listOf(
+                                        MenuEntry(Icons.Outlined.NotificationsOff, "Send without sound") {
+                                            menu = false
+                                            onSendWith(AttachmentSend(silent = true))
+                                        },
+                                        MenuEntry(Icons.Outlined.CalendarMonth, "Schedule message") {
+                                            menu = false
+                                            scheduling = true
+                                        },
+                                    ),
+                                    buildList {
+                                        if (asMedia && files.any(Attachments::isPhoto)) {
+                                            add(MenuEntry(Icons.Outlined.Hd, "High Quality", trailing = if (Attachments.highQuality) Icons.Filled.Check else null) {
+                                                Attachments.highQuality = !Attachments.highQuality
+                                            })
+                                        }
+                                        if (asMedia) {
+                                            add(MenuEntry(Icons.Outlined.AutoAwesome, "Hide with Spoiler", trailing = if (spoiler) Icons.Filled.Check else null) {
+                                                onSpoiler(!spoiler)
+                                            })
+                                        }
+                                    },
+                                ),
+                                width = MenuWidth,
+                            )
+                        }
+                    }
                 }
                 IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = "Cancel") }
             }
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(files, key = { it.absolutePath }) { file ->
-                    AttachmentTile(file, showAsPhoto = !asFiles && canBePhotos, onRemove = { onRemove(file) })
+                    val editable = asMedia && onEdit != null && Attachments.isPhoto(file)
+                    AttachmentTile(
+                        file,
+                        showAsPhoto = asMedia,
+                        spoiler = asMedia && spoiler,
+                        onRemove = { onRemove(file) },
+                        onEdit = if (editable) ({ onEdit?.invoke(file) }) else null,
+                    )
                 }
                 item(key = "add") {
                     OutlinedCard(
@@ -296,15 +385,30 @@ fun AttachmentsPanel(
                     }
                 }
             }
+            if (asMedia && onEdit != null && files.any(Attachments::isPhoto)) {
+                Text(
+                    "Left-click on the photo to edit.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
+        }
+    }
+    if (scheduling && onSendWith != null) {
+        ScheduleDialog(onDismiss = { scheduling = false }) { date ->
+            scheduling = false
+            onSendWith(AttachmentSend(schedule = TdApi.MessageSchedulingStateSendAtDate(date, 0)))
         }
     }
 }
 
+private val MenuWidth = 250.dp
 private val TileHeight = 180.dp
 private val TileShape = RoundedCornerShape(20.dp)
 
 @Composable
-private fun AttachmentTile(file: File, showAsPhoto: Boolean, onRemove: () -> Unit) {
+private fun AttachmentTile(file: File, showAsPhoto: Boolean, spoiler: Boolean, onRemove: () -> Unit, onEdit: (() -> Unit)?) {
     val video = showAsPhoto && Attachments.isVideo(file)
     val info by produceState<Attachments.VideoInfo?>(null, file, video) {
         value = if (video) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Attachments.videoInfo(file) } else null
@@ -327,7 +431,20 @@ private fun AttachmentTile(file: File, showAsPhoto: Boolean, onRemove: () -> Uni
     Box(Modifier.size(width = width, height = TileHeight).clip(TileShape)) {
         val bitmap = image
         if (bitmap != null) {
-            Image(bitmap, contentDescription = file.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            Image(
+                bitmap,
+                contentDescription = file.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(if (spoiler) Modifier.blur(SpoilerBlur) else Modifier)
+                    .then(if (onEdit != null) Modifier.pointerHoverIcon(PointerIcon.Hand).clickable(onClick = onEdit) else Modifier),
+            )
+            if (Attachments.isAnimation(file)) {
+                Surface(shape = CircleShape, color = Color.Black.copy(alpha = VideoBadgeAlpha), contentColor = Color.White, modifier = Modifier.align(Alignment.BottomStart).padding(8.dp)) {
+                    Text("GIF", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                }
+            }
             if (video) {
                 Surface(shape = CircleShape, color = Color.Black.copy(alpha = VideoBadgeAlpha), contentColor = Color.White, modifier = Modifier.align(Alignment.Center).size(48.dp)) {
                     Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(30.dp)) }
@@ -368,4 +485,5 @@ private fun AttachmentTile(file: File, showAsPhoto: Boolean, onRemove: () -> Uni
 }
 
 private const val PreviewSize = 640
+private val SpoilerBlur = 18.dp
 private const val VideoBadgeAlpha = 0.55f
