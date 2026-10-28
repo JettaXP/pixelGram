@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.42.0 Fan
+
+### Photo editor
+- Click a photo in the send preview to edit it over a blurred window: rotate, mirror, crop with corner handles and aspect ratios (Original, Square, 3:2, 16:9, 3:4, 9:16, Free).
+- Draw with a pen, arrows, a see-through marker that gets stronger where strokes overlap, a blur brush and an eraser, with any color from a full color picker, brush sizes and undo/redo.
+- Add stickers, text and shapes (circle, rectangle, star, bubble, arrow, filled or outlined). Move, resize and rotate them. An animated sticker turns the photo into a GIF.
+- The send preview has a menu with Send without sound, Schedule message, High Quality and Hide with Spoiler. Without High Quality, photos are sent at the standard 1280 px size like in Telegram.
+
+### Chats
+- Swipe a message with the right mouse button or the touchpad to reply, react, pin, forward, copy or select it. Pick the action for each side in Chat Settings.
+- Typing can show as a bubble in the chat or only in the header.
+- Secret chats: start one from a chat's menu. They show a lock, waiting and cancelled states, and the encryption key.
+- Auto-delete timer for chats, and a default timer in Privacy.
+- Read all mentions and reactions at once, with jump buttons to unread ones.
+- Chat themes and wallpapers. A chat's own wallpaper wins over the global one, and Telegram pattern and gradient backgrounds are drawn.
+- Channels with protected content can't be forwarded, copied or saved, and screen capture is blocked while such a chat is open. Pin and Delete only show where they are allowed.
+- The chat menu is shorter. Archive and folders live in the chat list menu, and Rename is in the profile menu.
+
+### Groups and channels
+- Invite links: primary link, extra links with name, time and user limits or join requests, revoke and delete.
+
+### Gifts
+- Collectibles can be worn as your status, transferred, put on sale, shown or hidden on your profile and shared.
+- Regular gifts can be upgraded into collectibles.
+
+### Mini apps
+- Bot mini apps open in their own window with the Telegram WebApp bridge: theme, main and back buttons, popups, links and sending data.
+- Advanced settings: Spoof client as Android makes mini apps see the app as Telegram for Android.
+
+### Settings
+- Blocked users list in Privacy.
+- The Material You settings style follows regular Material 3 colors.
+
+### Fixes
+- Fixed crashes after a few minutes of watching videos, GIFs or live wallpapers, and when scrolling fast through media.
+- Notifications show in every corner without freezing, and their sound plays again.
+- The attach button is readable in the Vibrant style.
+- The tray menu opens without a delay.
+- Sticker packs have a right-click menu and can save a sticker as an image.
+
 ## 0.41.0 Pentagon
 
 ### Gifts
