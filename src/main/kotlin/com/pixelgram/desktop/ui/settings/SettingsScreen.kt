@@ -285,7 +285,8 @@ fun SettingsScreen(
         }
         true
     }
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
+    val materialYou = settings.settingsStyle.value == com.pixelgram.desktop.core.SettingsStyle.MaterialYou
+    Surface(color = if (materialYou) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
         Row {
             Column(
                 Modifier
@@ -451,7 +452,7 @@ fun SettingsScreen(
                     .fillMaxHeight()
                     .padding(top = 8.dp, end = 8.dp, bottom = 8.dp),
                 shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.surface,
+                color = if (materialYou) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surface,
             ) {
                 val sectionSpatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
                 val sectionIn = effects<Float>()
@@ -637,10 +638,10 @@ private fun NavItem(
     }
     val colors = MaterialTheme.colorScheme
     val background by androidx.compose.animation.animateColorAsState(
-        if (selected) colors.primaryContainer else Color.Transparent,
+        if (selected) colors.primary else Color.Transparent,
         MaterialTheme.motionScheme.defaultEffectsSpec(),
     )
-    val content = if (selected) colors.onPrimaryContainer else colors.onSurface
+    val content = if (selected) colors.onPrimary else colors.onSurface
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -652,7 +653,7 @@ private fun NavItem(
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = if (selected) colors.onPrimaryContainer else colors.onSurfaceVariant)
+        Icon(icon, contentDescription = null, tint = if (selected) colors.onPrimary else colors.onSurfaceVariant)
         Text(title, style = MaterialTheme.typography.titleMedium, color = content, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }

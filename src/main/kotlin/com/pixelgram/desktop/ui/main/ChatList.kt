@@ -355,7 +355,7 @@ private fun CompactChatList(
                     Box(
                         Modifier
                             .size(CompactItemSize)
-                            .clip(MaterialTheme.shapes.large)
+                            .clip(CircleShape)
                             .clickable(onClick = onOpenArchive),
                         contentAlignment = Alignment.Center,
                     ) {
