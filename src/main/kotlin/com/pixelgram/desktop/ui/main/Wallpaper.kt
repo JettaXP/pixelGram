@@ -3,6 +3,16 @@ package com.pixelgram.desktop.ui.main
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import com.pixelgram.desktop.telegram.chatBackground
 import kotlin.math.roundToInt
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -148,11 +158,12 @@ object Wallpapers {
 
 @Composable
 fun ChatWallpaper(chat: ChatState, telegram: Telegram, settings: AppSettings, dark: Boolean, modifier: Modifier = Modifier) {
-    val own = chat.background?.background
+    val chatBackground = telegram.chatBackground(chat, dark)
+    val own = chatBackground?.background
     val dim = (settings.wallpaperDim.value / 100f).coerceIn(0f, 0.9f)
     Box(modifier.fillMaxSize().graphicsLayer()) {
         when {
-            own != null -> TelegramBackground(own, telegram, dark, chat.background?.darkThemeDimming ?: 0)
+            own != null -> TelegramBackground(own, telegram, dark, chatBackground.darkThemeDimming)
             settings.wallpaper.value.isNotBlank() -> {
                 val path = settings.wallpaper.value
                 val source by produceState<ImageBitmap?>(null, path) {
@@ -182,8 +193,26 @@ fun ChatWallpaper(chat: ChatState, telegram: Telegram, settings: AppSettings, da
 @Composable
 private fun TelegramBackground(background: TdApi.Background, telegram: Telegram, dark: Boolean, darkDimming: Int) {
     when (val type = background.type) {
-        is TdApi.BackgroundTypeFill -> Box(Modifier.fillMaxSize().background(fillBrush(type.fill)))
-        is TdApi.BackgroundTypePattern -> Box(Modifier.fillMaxSize().background(fillBrush(type.fill)).alpha(if (dark) 0.6f else 1f))
+        is TdApi.BackgroundTypeFill, is TdApi.BackgroundTypePattern -> {
+            val file = (type as? TdApi.BackgroundTypePattern)?.let { background.document?.document }
+            LaunchedEffect(file?.id) { telegram.download(file) }
+            val pattern = telegram.localPath(file)
+            val fill = (type as? TdApi.BackgroundTypeFill)?.fill ?: (type as TdApi.BackgroundTypePattern).fill
+            Box(Modifier.fillMaxSize().background(fillBrush(fill)))
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+                val width = constraints.maxWidth
+                val height = constraints.maxHeight
+                val rendered by produceState<ImageBitmap?>(null, background.id, type, pattern, width, height) {
+                    if (width <= 0 || height <= 0) return@produceState
+                    kotlinx.coroutines.delay(ResizeSettleMs)
+                    value = withContext(Dispatchers.Default) {
+                        runCatching { renderBackground(type, pattern?.let(::File), width, height) }
+                            .onFailure { AppLog.write("Background render failed", it) }.getOrNull()
+                    }
+                }
+                rendered?.let { Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+            }
+        }
         is TdApi.BackgroundTypeWallpaper -> {
             val file = background.document?.document
             LaunchedEffect(file?.id) { telegram.download(file) }
@@ -203,14 +232,91 @@ private fun TelegramBackground(background: TdApi.Background, telegram: Telegram,
     if (dark && darkDimming > 0) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = darkDimming / 100f)))
 }
 
-private fun fillBrush(fill: TdApi.BackgroundFill): Brush = when (fill) {
+internal fun fillBrush(fill: TdApi.BackgroundFill): Brush = when (fill) {
     is TdApi.BackgroundFillSolid -> Brush.linearGradient(listOf(rgb(fill.color), rgb(fill.color)))
     is TdApi.BackgroundFillGradient -> Brush.verticalGradient(listOf(rgb(fill.topColor), rgb(fill.bottomColor)))
     is TdApi.BackgroundFillFreeformGradient -> Brush.linearGradient(fill.colors.map(::rgb))
     else -> Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
 }
 
-private fun rgb(color: Int) = Color(0xFF000000.toInt() or color)
+private val FreeformPoints = listOf(Offset(0.80f, 0.10f), Offset(0.60f, 0.85f), Offset(0.35f, 0.25f), Offset(0.25f, 0.60f))
+private const val FreeformRadius = 0.75f
+private const val LightPatternAlpha = 0.45f
+
+private fun renderBackground(type: TdApi.BackgroundType, pattern: File?, width: Int, height: Int): ImageBitmap {
+    val bitmap = ImageBitmap(width, height)
+    val canvas = androidx.compose.ui.graphics.Canvas(bitmap)
+    val size = Size(width.toFloat(), height.toFloat())
+    val bounds = androidx.compose.ui.geometry.Rect(Offset.Zero, size)
+    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, canvas, size) {
+        when (type) {
+            is TdApi.BackgroundTypeFill -> drawFill(type.fill)
+            is TdApi.BackgroundTypePattern -> {
+                val inverted = type.isInverted || type.intensity < 0
+                val alpha = kotlin.math.abs(type.intensity) / 100f
+                val svg = pattern?.takeIf { it.isFile }?.let(::loadPattern)
+                if (inverted) drawRect(Color.Black) else drawFill(type.fill)
+                if (svg != null) {
+                    svg.use { dom ->
+                        canvas.saveLayer(bounds, Paint().apply { this.alpha = if (inverted) alpha else alpha * LightPatternAlpha })
+                        drawPattern(dom)
+                        if (inverted) {
+                            canvas.saveLayer(bounds, Paint().apply { blendMode = BlendMode.SrcIn })
+                            drawFill(type.fill)
+                            canvas.restore()
+                        }
+                        canvas.restore()
+                    }
+                }
+            }
+            else -> Unit
+        }
+    }
+    return bitmap
+}
+
+private fun DrawScope.drawFill(fill: TdApi.BackgroundFill) {
+    if (fill !is TdApi.BackgroundFillFreeformGradient || fill.colors.size < 3) {
+        drawRect(fillBrush(fill))
+        return
+    }
+    val colors = fill.colors.map(::rgb)
+    drawRect(Color(colors.map { it.red }.average().toFloat(), colors.map { it.green }.average().toFloat(), colors.map { it.blue }.average().toFloat()))
+    val radius = size.maxDimension * FreeformRadius
+    colors.forEachIndexed { index, color ->
+        val point = FreeformPoints[index % FreeformPoints.size]
+        val center = Offset(point.x * size.width, point.y * size.height)
+        drawRect(Brush.radialGradient(listOf(color, color.copy(alpha = 0f)), center, radius))
+    }
+}
+
+private fun loadPattern(file: File): org.jetbrains.skia.svg.SVGDOM? {
+    val raw = file.readBytes()
+    val bytes = if (raw.size > 2 && raw[0] == 0x1f.toByte() && raw[1] == 0x8b.toByte()) {
+        java.util.zip.GZIPInputStream(raw.inputStream()).use { it.readBytes() }
+    } else {
+        raw
+    }
+    return org.jetbrains.skia.Data.makeFromBytes(bytes).use { org.jetbrains.skia.svg.SVGDOM(it) }
+}
+
+private fun DrawScope.drawPattern(dom: org.jetbrains.skia.svg.SVGDOM) {
+    val root = dom.root ?: return
+    val box = root.viewBox
+    val patternWidth = box?.width ?: root.width.value
+    val patternHeight = box?.height ?: root.height.value
+    if (patternWidth <= 0f || patternHeight <= 0f) return
+    val scale = maxOf(size.width / patternWidth, size.height / patternHeight)
+    val native = drawContext.canvas.nativeCanvas
+    native.save()
+    native.translate((size.width - patternWidth * scale) / 2f, (size.height - patternHeight * scale) / 2f)
+    native.scale(scale, scale)
+    dom.setContainerSize(patternWidth, patternHeight)
+    dom.render(native)
+    native.restore()
+}
+
+internal fun rgb(color: Int) = Color(0xFF000000.toInt() or color)
 
 private const val WallpaperMaxSize = 2048
 

@@ -77,6 +77,7 @@ fun Telegram.loadDemo() {
     if (System.getProperty("pixelgram.demo.offline") == "true") connection = ConnectionStatus.Connecting
     if (System.getProperty("pixelgram.demo.protected") == "true") chats[106L]?.protectedContent = true
     if (System.getProperty("pixelgram.demo.secret") == "true") loadSecretDemo(now)
+    loadThemesDemo()
     if (System.getProperty("pixelgram.demo.qr") == "true") {
         kotlinx.coroutines.MainScope().launch {
             kotlinx.coroutines.delay(4000)

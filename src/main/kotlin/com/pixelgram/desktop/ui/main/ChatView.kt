@@ -209,6 +209,18 @@ fun ChatView(
     onBack: (() -> Unit)? = null,
     forumSidebar: Boolean = true,
 ) {
+    ChatThemeScope(chat, telegram, settings) { ChatViewContent(chat, telegram, settings, onOpenChat, onBack, forumSidebar) }
+}
+
+@Composable
+private fun ChatViewContent(
+    chat: ChatState,
+    telegram: Telegram,
+    settings: AppSettings,
+    onOpenChat: (Long) -> Unit,
+    onBack: (() -> Unit)?,
+    forumSidebar: Boolean,
+) {
     DisposableEffect(chat.id) {
         telegram.openChat(chat.id)
         onDispose { telegram.closeChat(chat.id) }

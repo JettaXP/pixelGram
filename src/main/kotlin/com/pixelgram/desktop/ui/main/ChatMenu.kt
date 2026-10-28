@@ -7,6 +7,8 @@ import com.pixelgram.desktop.ui.icons.outlined.Link
 import com.pixelgram.desktop.ui.icons.outlined.Key
 import com.pixelgram.desktop.ui.icons.outlined.Lock
 import com.pixelgram.desktop.telegram.secretChatWith
+import com.pixelgram.desktop.telegram.canSetChatTheme
+import com.pixelgram.desktop.ui.icons.outlined.Palette
 import com.pixelgram.desktop.telegram.startSecretChat
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -138,6 +140,7 @@ fun ChatActions(
     var managing by remember(chat.id) { mutableStateOf(false) }
     var autoDeleting by remember(chat.id) { mutableStateOf(false) }
     var keyShown by remember(chat.id) { mutableStateOf(false) }
+    var theming by remember(chat.id) { mutableStateOf(false) }
     var secretError by remember(chat.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(chat.id, at != null) {
         if (at != null && chat.privateUserId != 0L) telegram.userFullInfo(chat.privateUserId) {}
@@ -189,6 +192,9 @@ fun ChatActions(
                             }
                             if (telegram.canSetAutoDelete(chat)) {
                                 add(MenuEntry(Icons.Outlined.Timer, "Auto-delete", onClick = act { autoDeleting = true }))
+                            }
+                            if (telegram.canSetChatTheme(chat)) {
+                                add(MenuEntry(Icons.Outlined.Palette, "Chat theme", onClick = act { theming = true }))
                             }
                             if (chat.unreadMentions > 0) add(MenuEntry(Icons.Outlined.AlternateEmail, "Read all mentions", onClick = act { telegram.readAllMentions(chat) }))
                             if (chat.unreadReactions > 0) add(MenuEntry(Icons.Outlined.FavoriteBorder, "Read all reactions", onClick = act { telegram.readAllReactions(chat) }))
@@ -286,6 +292,7 @@ fun ChatActions(
     if (renaming) RenameDialog(chat, telegram) { renaming = false }
     if (managing) ManageChatDialog(chat, telegram, settings = settings, onDismiss = { managing = false })
     if (keyShown) EncryptionKeyDialog(chat, telegram) { keyShown = false }
+    if (theming) ChatThemeDialog(chat, telegram, settings) { theming = false }
     secretError?.let { error ->
         AlertDialog(
             onDismissRequest = { secretError = null },

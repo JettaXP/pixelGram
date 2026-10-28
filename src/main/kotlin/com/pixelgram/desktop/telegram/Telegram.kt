@@ -114,6 +114,7 @@ class ChatState(val id: Long) {
     var keyboard by mutableStateOf<TdApi.ReplyMarkupShowKeyboard?>(null)
     var notifications by mutableStateOf<TdApi.ChatNotificationSettings?>(null)
     var background by mutableStateOf<TdApi.ChatBackground?>(null)
+    var theme by mutableStateOf<TdApi.ChatTheme?>(null)
     var permissions by mutableStateOf<TdApi.ChatPermissions?>(null)
     val positions = mutableStateMapOf<ChatListKey, Long>()
     val pinned = mutableStateMapOf<ChatListKey, Boolean>()
@@ -262,6 +263,7 @@ class Telegram(
     fun chatCount(key: ChatListKey): Int = maxOf(listTotals[key] ?: 0, chatList(key).size)
     val statuses = KeyedState<Long, TdApi.UserStatus>()
     val secretChats = KeyedState<Int, TdApi.SecretChat>()
+    var emojiThemes by mutableStateOf<List<TdApi.EmojiChatTheme>>(emptyList())
     private val chatActions = mutableStateMapOf<Long, List<Pair<TdApi.MessageSender, TdApi.ChatAction>>>()
     val emojiClicks = KeyedState<Pair<Long, Long>, TdApi.Sticker>()
     var clockMinute by mutableStateOf(System.currentTimeMillis() / 60_000)
@@ -994,6 +996,8 @@ class Telegram(
             }
             is TdApi.UpdateChatPosition -> chats[update.chatId]?.let { applyPosition(it, update.position) }
             is TdApi.UpdateChatBackground -> chats[update.chatId]?.background = update.background
+            is TdApi.UpdateChatTheme -> chats[update.chatId]?.theme = update.theme
+            is TdApi.UpdateEmojiChatThemes -> emojiThemes = update.chatThemes.filterNotNull()
             is TdApi.UpdateChatPermissions -> chats[update.chatId]?.permissions = update.permissions
             is TdApi.UpdateChatMember -> chats[update.chatId]?.takeIf { chatRoles[it.id] != null }?.let(::refreshRoles)
             is TdApi.UpdateForumTopic -> topicsVersion[update.chatId] = (topicsVersion[update.chatId] ?: 0) + 1
@@ -1294,6 +1298,7 @@ class Telegram(
             replyMarkupMessageId = chat.replyMarkupMessageId
             notifications = chat.notificationSettings
             background = chat.background
+            theme = chat.theme
             permissions = chat.permissions
         }
         if (state.privateUserId != 0L) blockedUsers[state.privateUserId] = chat.blockList != null
