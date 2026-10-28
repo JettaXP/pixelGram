@@ -74,7 +74,6 @@ import com.pixelgram.desktop.ui.icons.outlined.KeyboardDoubleArrowUp
 import com.pixelgram.desktop.ui.icons.outlined.Notifications
 import com.pixelgram.desktop.ui.icons.outlined.NotificationsOff
 import com.pixelgram.desktop.ui.icons.outlined.PushPin
-import com.pixelgram.desktop.ui.icons.outlined.Search
 import com.pixelgram.desktop.ui.icons.outlined.Unarchive
 import com.pixelgram.desktop.ui.components.expressive.AlertDialog
 import com.pixelgram.desktop.ui.components.expressive.BasicAlertDialog
@@ -175,6 +174,8 @@ fun ChatActions(
                             ))
                             return@Column
                         }
+                        val inChat = onSearch != null
+                        val inList = !inChat && showProfile
                         val muted = telegram.isMuted(chat)
                         val pinned = chat.pinned[listKey] == true
                         val archived = ChatListKey.Archive in chat.positions
@@ -198,25 +199,26 @@ fun ChatActions(
                             }
                             if (chat.unreadMentions > 0) add(MenuEntry(Icons.Outlined.AlternateEmail, "Read all mentions", onClick = act { telegram.readAllMentions(chat) }))
                             if (chat.unreadReactions > 0) add(MenuEntry(Icons.Outlined.FavoriteBorder, "Read all reactions", onClick = act { telegram.readAllReactions(chat) }))
-                            onSearch?.let { add(MenuEntry(Icons.Outlined.Search, "Search", onClick = act(it))) }
                             onToBeginning?.let { add(MenuEntry(Icons.Outlined.KeyboardDoubleArrowUp, "To beginning", onClick = act(it))) }
                         }
                         val organize = buildList {
                             if (onSearch == null) add(MenuEntry(Icons.Outlined.PushPin, if (pinned) "Unpin" else "Pin", onClick = act { telegram.setPinned(chat, listKey, !pinned) }))
-                            add(MenuEntry(if (archived) Icons.Outlined.Unarchive else Icons.Outlined.Archive, if (archived) "Unarchive" else "Archive",
+                            if (inList) add(MenuEntry(if (archived) Icons.Outlined.Unarchive else Icons.Outlined.Archive, if (archived) "Unarchive" else "Archive",
                                 onClick = act { telegram.setArchived(chat, !archived) }))
-                            if (telegram.folders.isNotEmpty()) {
+                            if (inList && telegram.folders.isNotEmpty()) {
                                 add(MenuEntry(Icons.Outlined.CreateNewFolder, "Add to folder", trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight) { folders = true })
                             }
                         }
                         val people = buildList {
                             if (chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id) && !telegram.isBot(chat)) {
-                                if (telegram.isContact(chat)) {
-                                    add(MenuEntry(Icons.Outlined.Edit, "Edit contact", onClick = act { contactEdit = true }))
-                                } else {
-                                    add(MenuEntry(Icons.Outlined.PersonAdd, "Add to contacts", onClick = act { contactEdit = true }))
+                                if (!inChat) {
+                                    if (telegram.isContact(chat)) {
+                                        add(MenuEntry(Icons.Outlined.Edit, "Edit contact", onClick = act { contactEdit = true }))
+                                    } else {
+                                        add(MenuEntry(Icons.Outlined.PersonAdd, "Add to contacts", onClick = act { contactEdit = true }))
+                                    }
                                 }
-                                add(MenuEntry(Icons.Outlined.DriveFileRenameOutline, "Rename", onClick = act { renaming = true }))
+                                if (!showProfile) add(MenuEntry(Icons.Outlined.DriveFileRenameOutline, "Rename", onClick = act { renaming = true }))
                                 if (telegram.isSecret(chat)) {
                                     add(MenuEntry(Icons.Outlined.Key, "Encryption key", onClick = act { keyShown = true }))
                                 } else if (onOpenChat != null) {
