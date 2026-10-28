@@ -18,6 +18,8 @@ enum class NotificationStyle { System, PixelGram }
 
 enum class DoubleClickAction { Nothing, Reply, Reaction, Edit }
 
+enum class SwipeAction { Reply, React, Pin, Forward, Copy, Select, Off }
+
 enum class CursorStyle { Liquid, Kitty }
 
 enum class SettingsStyle { Expressive, MaterialYou }
@@ -124,6 +126,9 @@ class AppSettings private constructor(private val props: Properties) {
     val sideMenuStyle = enum("sideMenuStyle", SideMenuStyle.Overlay)
     val doubleClickOther = enum("doubleClickOther", DoubleClickAction.Reaction)
     val doubleClickEmoji = string("doubleClickEmoji", "❤")
+    val swipeLeft = enum("swipeLeft", SwipeAction.Reply)
+    val swipeRight = enum("swipeRight", SwipeAction.Off)
+    val typingBubble = bool("typingBubble", true)
     val capsuleSpacing = int("capsuleSpacing", 4)
     val capsuleHeight = int("capsuleContainerHeight", 64)
 
@@ -213,7 +218,7 @@ class AppSettings private constructor(private val props: Properties) {
         materialFolders, hideAllChats, folderOrder, folderIcons,
         unreadFolder, unreadFolderName, unreadFolderIcon, mentionsFolder, mentionsFolderName, mentionsFolderIcon,
         capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, checkUpdates,
-        doubleClickOwn, doubleClickOther, doubleClickEmoji, settingsStyle, sideMenuStyle,
+        doubleClickOwn, doubleClickOther, doubleClickEmoji, swipeLeft, swipeRight, typingBubble, settingsStyle, sideMenuStyle,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,

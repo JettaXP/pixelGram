@@ -364,6 +364,13 @@ Reset to default	אפס לברירת מחדל
 Open profile	פתח פרופיל
 Bubble corners, avatar shapes and colors are in pixelGram Preferences.	פינות בועות, צורות תמונות וצבעים נמצאים בהעדפות pixelGram.
 Double click on a message	לחיצה כפולה על הודעה
+Swipe actions	פעולות החלקה
+Hold the right mouse button on a message and drag it sideways, or swipe sideways on a touchpad. A right click without dragging still opens the menu.	החזיקו את לחצן העכבר הימני על הודעה וגררו אותה הצידה, או החליקו הצידה על משטח המגע. לחיצה ימנית בלי גרירה עדיין פותחת את התפריט.
+Swipe left	החלקה שמאלה
+Swipe right	החלקה ימינה
+Typing	הקלדה
+Show typing as a message bubble	הצגת הקלדה כבועת הודעה
+When off, only the chat header says that someone is typing.	כשהאפשרות כבויה, רק כותרת הצ׳אט מציינת שמישהו מקליד.
 Reaction	תגובה
 Reply	השב
 Nothing	כלום

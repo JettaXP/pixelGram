@@ -9,6 +9,14 @@ import com.pixelgram.desktop.ui.components.GroupedMenu
 import com.pixelgram.desktop.ui.components.MenuEntry
 import com.pixelgram.desktop.ui.components.MenuGroups
 import com.pixelgram.desktop.ui.icons.outlined.PushPin
+import com.pixelgram.desktop.ui.icons.outlined.AddReaction
+import com.pixelgram.desktop.ui.icons.outlined.Block
+import com.pixelgram.desktop.core.AppSettings
+import com.pixelgram.desktop.core.SwipeAction
+import com.pixelgram.desktop.ui.theme.LocalAppSettings
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.AbsoluteAlignment
+import androidx.compose.foundation.layout.absoluteOffset
 import com.pixelgram.desktop.ui.icons.outlined.Link
 import com.pixelgram.desktop.ui.icons.outlined.DataObject
 import com.pixelgram.desktop.ui.icons.outlined.CheckCircle
@@ -134,26 +142,39 @@ fun MessageGestures(
     val reach = remember { Animatable(0f) }
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val swipe = remember { ReplySwipe() }
-    val show = { ratio: Float ->
-        val clamped = ratio.coerceAtLeast(0f)
-        val over = (clamped - 1f).coerceAtLeast(0f) * threshold
-        val pixels = minOf(clamped, 1f) * threshold + with(density) { dampedOverswipe(over.toDp().value).dp.toPx() }
-        scope.launch { shift.snapTo(-pixels) }
-        if (!swipe.reached && clamped >= 1f) {
+    val drag = remember { MouseSwipe() }
+    val settings = LocalAppSettings.current
+    val current by rememberUpdatedState(message)
+    val guarded by rememberUpdatedState(actions.protectedContent || LocalProtectedContent.current)
+    var revealed by remember { mutableStateOf(SwipeAction.Reply) }
+    var properties by remember(message.key) { mutableStateOf<TdApi.MessageProperties?>(null) }
+    val springBack = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val loadProperties = { actions.properties?.invoke(current) { properties = it } }
+    val actionFor = { left: Boolean ->
+        val chosen = if (left) settings?.swipeLeft?.value ?: SwipeAction.Reply else settings?.swipeRight?.value ?: SwipeAction.Off
+        chosen.takeIf { swipeAllowed(it, current, actions, guarded, properties) } ?: SwipeAction.Off
+    }
+    val show = { pull: Float ->
+        val action = actionFor(pull > 0f)
+        if (action != SwipeAction.Off) revealed = action
+        val ratio = if (action == SwipeAction.Off) 0f else abs(pull) / threshold
+        val over = (ratio - 1f).coerceAtLeast(0f) * threshold
+        val pixels = minOf(ratio, 1f) * threshold + with(density) { dampedOverswipe(over.toDp().value).dp.toPx() }
+        scope.launch { shift.snapTo(if (pull > 0f) -pixels else pixels) }
+        if (!swipe.reached && ratio >= 1f) {
             swipe.reached = true
             scope.launch {
                 reach.snapTo(0f)
                 reach.animateTo(1f, tween(ReachBounceMs))
             }
-        } else if (swipe.reached && clamped < ResetReachedOn) {
+        } else if (swipe.reached && ratio < ResetReachedOn) {
             swipe.reached = false
         }
     }
-    val finish = {
-        val ratio = swipe.ratio(threshold).coerceIn(0f, MaxSwipeRatio)
-        if (swipe.horizontal && ratio >= 1f) actions.onReply(message)
+    val finish = { pull: Float, horizontal: Boolean ->
+        if (horizontal && abs(pull) >= threshold) performSwipe(actionFor(pull > 0f), current, actions, settings)
         swipe.reset()
-        scope.launch { shift.animateTo(0f, tween((minOf(1f, ratio) * SwipeEndMs).roundToInt())) }
+        scope.launch { shift.animateTo(0f, springBack) }
     }
     Box(
         modifier
@@ -165,14 +186,40 @@ fun MessageGestures(
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val change = event.changes.firstOrNull() ?: continue
                         if (event.type == PointerEventType.Move || event.type == PointerEventType.Enter) lastMove = change.uptimeMillis
+                        val pressAt = drag.pressAt
                         if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
                             change.consume()
-                            menuShown = true
-                            menuAt = MenuTarget(
-                                with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) },
-                                HoverTarget.link,
-                                HoverTarget.button?.takeIf { HoverTarget.buttonSeenAt >= lastMove },
+                            settle?.cancel()
+                            if (swipe.active) finish(swipe.pull, false)
+                            drag.start(
+                                change.position,
+                                MenuTarget(
+                                    with(density) { DpOffset(change.position.x.toDp(), change.position.y.toDp()) },
+                                    HoverTarget.link,
+                                    HoverTarget.button?.takeIf { HoverTarget.buttonSeenAt >= lastMove },
+                                ),
                             )
+                            loadProperties()
+                        } else if (pressAt != null && event.type == PointerEventType.Move) {
+                            val delta = change.position - pressAt
+                            if (!drag.dragging && !drag.vertical) {
+                                if (abs(delta.x) > slop && abs(delta.x) > abs(delta.y)) drag.dragging = true
+                                else if (abs(delta.y) > slop) drag.vertical = true
+                            }
+                            if (drag.dragging) {
+                                change.consume()
+                                drag.pull = -delta.x
+                                show(drag.pull)
+                            }
+                        } else if (pressAt != null && event.type == PointerEventType.Release && !event.buttons.isSecondaryPressed) {
+                            change.consume()
+                            if (drag.dragging) {
+                                finish(drag.pull, true)
+                            } else {
+                                menuShown = true
+                                menuAt = drag.target
+                            }
+                            drag.reset()
                         } else if (event.type == PointerEventType.Press && event.buttons.isPrimaryPressed) {
                             val (time, at) = lastPress
                             val now = change.uptimeMillis
@@ -185,7 +232,7 @@ fun MessageGestures(
                         } else if (event.type == PointerEventType.Move && swipe.horizontal) {
                             if (abs(change.position.y - swipe.startY) > slop) {
                                 settle?.cancel()
-                                finish()
+                                finish(swipe.pull, true)
                             }
                         } else if (event.type == PointerEventType.Scroll) {
                             val delta = change.scrollDelta
@@ -193,26 +240,27 @@ fun MessageGestures(
                             if (!swipe.active) {
                                 swipe.active = true
                                 swipe.startY = change.position.y
+                                loadProperties()
                             }
                             swipe.add(delta.x * step * (if (rtl) -1 else 1), delta.y * step)
                             if (swipe.horizontal) {
                                 change.consume()
-                                show(swipe.ratio(threshold))
+                                show(swipe.pull)
                             }
                             settle?.cancel()
                             settle = scope.launch {
                                 delay(SettleMs)
-                                finish()
+                                finish(swipe.pull, swipe.horizontal)
                             }
                         }
                     }
                 }
             },
     ) {
-        val progress = (-shift.value / threshold).coerceIn(0f, 1f)
+        val progress = (abs(shift.value) / threshold).coerceIn(0f, 1f)
         Box(
             Modifier
-                .align(if (rtl) Alignment.CenterStart else Alignment.CenterEnd)
+                .align(if (shift.value <= 0f) AbsoluteAlignment.CenterRight else AbsoluteAlignment.CenterLeft)
                 .padding(horizontal = 8.dp)
                 .size(40.dp)
                 .graphicsLayer {
@@ -228,13 +276,13 @@ fun MessageGestures(
                 modifier = Modifier.fillMaxSize(),
             )
             Icon(
-                Icons.AutoMirrored.Outlined.Reply,
+                revealed.icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp),
             )
         }
-        Box(Modifier.offset { IntOffset((if (rtl) -shift.value else shift.value).roundToInt(), 0) }) {
+        Box(Modifier.absoluteOffset { IntOffset(shift.value.roundToInt(), 0) }) {
             content()
         }
         menuAt?.let { target ->
@@ -244,6 +292,52 @@ fun MessageGestures(
         }
     }
 }
+
+val SwipeAction.icon: ImageVector
+    get() = when (this) {
+        SwipeAction.Reply -> Icons.AutoMirrored.Outlined.Reply
+        SwipeAction.React -> Icons.Outlined.AddReaction
+        SwipeAction.Pin -> Icons.Outlined.PushPin
+        SwipeAction.Forward -> Icons.AutoMirrored.Outlined.Forward
+        SwipeAction.Copy -> Icons.Outlined.ContentCopy
+        SwipeAction.Select -> Icons.Outlined.CheckCircle
+        SwipeAction.Off -> Icons.Outlined.Block
+    }
+
+private fun copyable(message: UiMessage): String? =
+    message.text.ifEmpty { (message.content as? TdApi.MessageAnimatedEmoji)?.emoji.orEmpty() }.ifEmpty { null }
+
+private fun swipeAllowed(
+    action: SwipeAction,
+    message: UiMessage,
+    actions: MessageActions,
+    guarded: Boolean,
+    known: TdApi.MessageProperties?,
+): Boolean = when (action) {
+    SwipeAction.Off -> false
+    SwipeAction.Reply -> true
+    SwipeAction.React -> !message.service && actions.canReact
+    SwipeAction.Pin -> actions.onPin != null && !message.service && (actions.properties == null || known?.canBePinned == true)
+    SwipeAction.Forward -> !message.service && !guarded && known?.canBeForwarded != false
+    SwipeAction.Copy -> !guarded && known?.canBeSaved != false && (copyable(message) != null || message.photo != null)
+    SwipeAction.Select -> actions.onSelect != null && !message.service
+}
+
+private fun performSwipe(action: SwipeAction, message: UiMessage, actions: MessageActions, settings: AppSettings?) {
+    when (action) {
+        SwipeAction.Reply -> actions.onReply(message)
+        SwipeAction.React -> actions.onReact(message, settings?.doubleClickEmoji?.value ?: QuickReaction)
+        SwipeAction.Pin -> actions.onPin?.invoke(message)
+        SwipeAction.Forward -> actions.onForward(message)
+        SwipeAction.Copy -> copyable(message)?.let { text ->
+            Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
+        } ?: actions.onCopyPhoto(message)
+        SwipeAction.Select -> actions.onSelect?.invoke(message)
+        SwipeAction.Off -> Unit
+    }
+}
+
+private const val QuickReaction = "❤"
 
 @Composable
 private fun MessageMenu(
@@ -400,6 +494,29 @@ fun ReplyQuote(
 }
 
 private val ReplyThumbSize = 32.dp
+private class MouseSwipe {
+    var pressAt: Offset? = null
+    var target: MenuTarget? = null
+    var dragging = false
+    var vertical = false
+    var pull = 0f
+
+    fun start(at: Offset, menu: MenuTarget) {
+        pressAt = at
+        target = menu
+        dragging = false
+        vertical = false
+        pull = 0f
+    }
+
+    fun reset() {
+        pressAt = null
+        dragging = false
+        vertical = false
+        pull = 0f
+    }
+}
+
 private class ReplySwipe {
     var active = false
     var startY = 0f
@@ -420,7 +537,7 @@ private class ReplySwipe {
         }
     }
 
-    fun ratio(threshold: Float) = x / threshold
+    val pull: Float get() = x
 
     fun reset() {
         active = false
@@ -442,7 +559,6 @@ private const val SettleMs = 180L
 private const val OrientationThreshold = 1f
 private const val MaxSwipeRatio = 1.5f
 private const val ResetReachedOn = 0.95f
-private const val SwipeEndMs = 200
 private const val ReachBounceMs = 500
 private const val BouncePart = 0.25f
 private const val BounceScale = 0.6f

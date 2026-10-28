@@ -28,6 +28,10 @@ import androidx.compose.material3.FilterChip
 import com.pixelgram.desktop.core.AvatarKind
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.core.DoubleClickAction
+import com.pixelgram.desktop.core.SwipeAction
+import com.pixelgram.desktop.ui.main.icon
+import com.pixelgram.desktop.ui.icons.outlined.SwipeLeft
+import com.pixelgram.desktop.ui.icons.outlined.SwipeRight
 import com.pixelgram.desktop.ui.components.PhoneText
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -1257,10 +1261,87 @@ private fun ChatSettingsSection(settings: AppSettings) {
     ConnectedChoice(ownOptions, settings.doubleClickOwn.value, { settings.doubleClickOwn.value = it })
     Text("Other people's messages", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
     ConnectedChoice(options, settings.doubleClickOther.value, { settings.doubleClickOther.value = it })
-    Reveal(DoubleClickAction.Reaction in listOf(settings.doubleClickOwn.value, settings.doubleClickOther.value)) {
+    Header("Swipe actions")
+    Description("Hold the right mouse button on a message and drag it sideways, or swipe sideways on a touchpad. A right click without dragging still opens the menu.")
+    val swipeOptions = listOf(
+        SwipeAction.Reply to "Reply",
+        SwipeAction.React to "Reaction",
+        SwipeAction.Pin to "Pin",
+        SwipeAction.Forward to "Forward",
+        SwipeAction.Copy to "Copy",
+        SwipeAction.Select to "Select",
+        SwipeAction.Off to "Off",
+    )
+    SegmentedGroup {
+        SwipeActionRow(Icons.Outlined.SwipeLeft, "Swipe left", settings.swipeLeft, swipeOptions, 0, 2)
+        SwipeActionRow(Icons.Outlined.SwipeRight, "Swipe right", settings.swipeRight, swipeOptions, 1, 2)
+    }
+    val quickReaction = DoubleClickAction.Reaction in listOf(settings.doubleClickOwn.value, settings.doubleClickOther.value) ||
+        SwipeAction.React in listOf(settings.swipeLeft.value, settings.swipeRight.value)
+    Reveal(quickReaction) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Reaction", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
             DoubleClickEmoji(settings)
+        }
+    }
+    Header("Typing")
+    SwitchRow(
+        0,
+        1,
+        "Show typing as a message bubble",
+        "When off, only the chat header says that someone is typing.",
+        settings.typingBubble.value,
+    ) { settings.typingBubble.value = it }
+}
+
+@Composable
+private fun SwipeActionRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    setting: com.pixelgram.desktop.core.Setting<SwipeAction>,
+    options: List<Pair<SwipeAction, String>>,
+    index: Int,
+    count: Int,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        SegmentedListItem(
+            onClick = { open = true },
+            shapes = groupShapes(index, count),
+            leadingContent = { Icon(icon, contentDescription = null) },
+            trailingContent = {
+                val enter = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                val exit = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+                AnimatedContent(
+                    targetState = setting.value,
+                    transitionSpec = { fadeIn(enter) togetherWith fadeOut(exit) },
+                ) { value ->
+                    Text(
+                        options.firstOrNull { it.first == value }?.second.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            },
+        ) { Text(title) }
+        Box(Modifier.align(Alignment.TopEnd)) {
+            com.pixelgram.desktop.ui.components.GroupedMenu(expanded = open, onDismiss = { open = false }) {
+                com.pixelgram.desktop.ui.components.MenuGroups(
+                    listOf(
+                        options.map { (value, label) ->
+                            com.pixelgram.desktop.ui.components.MenuEntry(
+                                value.icon,
+                                label,
+                                trailing = if (value == setting.value) Icons.Filled.Check else null,
+                            ) {
+                                setting.value = value
+                                open = false
+                            }
+                        },
+                    ),
+                    width = SettingsMenuWidth,
+                )
+            }
         }
     }
 }

@@ -364,6 +364,13 @@ Reset to default	Сбросить
 Open profile	Открыть профиль
 Bubble corners, avatar shapes and colors are in pixelGram Preferences.	Углы пузырей, формы аватаров и цвета — в настройках pixelGram.
 Double click on a message	Двойной клик по сообщению
+Swipe actions	Действия при свайпе
+Hold the right mouse button on a message and drag it sideways, or swipe sideways on a touchpad. A right click without dragging still opens the menu.	Зажмите правую кнопку мыши на сообщении и потяните его в сторону или проведите вбок по тачпаду. Обычный правый клик без перетаскивания по-прежнему открывает меню.
+Swipe left	Свайп влево
+Swipe right	Свайп вправо
+Typing	Набор текста
+Show typing as a message bubble	Показывать набор текста пузырём сообщения
+When off, only the chat header says that someone is typing.	Если выключено, о наборе текста сообщает только заголовок чата.
 Reaction	Реакция
 Reply	Ответить
 Nothing	Ничего

@@ -1070,6 +1070,7 @@ private enum class BarMode { Select, SecretPending, SecretClosed, Blocked, Start
 
 @Composable
 private fun TypingBubble(chat: ChatState, telegram: Telegram) {
+    if (com.pixelgram.desktop.ui.theme.LocalAppSettings.current?.typingBubble?.value == false) return
     val typers = telegram.typing(chat.id)
     var last by remember { mutableStateOf<TdApi.MessageSender?>(null) }
     typers.firstOrNull()?.let { last = it }
