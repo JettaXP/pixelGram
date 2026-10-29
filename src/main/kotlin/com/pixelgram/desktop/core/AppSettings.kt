@@ -68,7 +68,7 @@ class Setting<T>(
     }
 }
 
-class AppSettings private constructor(private val props: Properties) {
+class AppSettings private constructor(private val props: Properties, private val readOnly: Boolean = false) {
     private fun string(key: String, default: String) =
         Setting(this, key, props.getProperty(key) ?: default, default)
 
@@ -258,6 +258,7 @@ class AppSettings private constructor(private val props: Properties) {
     }
 
     fun save() {
+        if (readOnly) return
         val out = Properties()
         for (setting in all) {
             val value = setting.value
@@ -305,13 +306,13 @@ class AppSettings private constructor(private val props: Properties) {
     }
 
     companion object {
-        fun load(): AppSettings {
+        fun load(readOnly: Boolean = false): AppSettings {
             val props = Properties()
             runCatching {
                 val file = AppPaths.settingsFile
                 if (file.exists()) file.inputStream().use(props::load)
             }
-            return AppSettings(props)
+            return AppSettings(props, readOnly)
         }
     }
 }

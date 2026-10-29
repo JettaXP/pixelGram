@@ -33,7 +33,10 @@ object AppPaths {
 
     val isPortable: Boolean get() = portableDir != null
 
+    const val DataDirProperty = "pixelgram.dataDir"
+
     val dataDir: File by lazy {
+        System.getProperty(DataDirProperty)?.takeIf { it.isNotBlank() }?.let(::File)?.takeIf { it.isDirectory }?.let { return@lazy it.absoluteFile }
         portableDir?.let { return@lazy it }
         val base = when {
             isWindows -> System.getenv("APPDATA")?.let(::File) ?: home

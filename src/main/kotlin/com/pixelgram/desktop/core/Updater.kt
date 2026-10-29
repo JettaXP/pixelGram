@@ -32,6 +32,11 @@ object Updater {
     private const val LatestUrl = "https://api.github.com/repos/$Repository/releases/latest"
     private const val LatestPage = "https://github.com/$Repository/releases/latest"
     private const val TimeoutMs = 15_000
+    private const val RunnerExitWaitSeconds = 120L
+    private const val CleanUpAttempts = 10
+    private const val CleanUpDelayMs = 1_000L
+    private const val RunnerStartMs = 30_000L
+    private const val RunnerPollMs = 100L
 
     var state by mutableStateOf<UpdateState>(UpdateState.Idle)
         private set
@@ -221,10 +226,64 @@ object Updater {
         return reason ?: "Unknown error"
     }
 
+    private val runnerDir: File get() = File(AppPaths.dataDir, "updater")
+
+    private val runnerLock = Any()
+
+    @Volatile
+    private var installing = false
+
+    private fun startRunner(file: File, exe: File, target: File): Boolean = runCatching {
+        val launcher = exe.absoluteFile.relativeTo(target.absoluteFile)
+        require(!launcher.path.startsWith("..")) { "Launcher is outside the install folder" }
+        val job = ApplyUpdate.Job(ProcessHandle.current().pid(), file, target, exe, marker, AppPaths.dataDir)
+        val dir = runnerDir
+        synchronized(runnerLock) {
+            ApplyUpdate.deleteTree(dir)
+            ApplyUpdate.copyApp(target, dir, skip = setOf(AppPaths.dataDir))
+        }
+        val runner = File(dir, launcher.path)
+        require(runner.isFile) { "Updater copy has no launcher" }
+        val ready = ApplyUpdate.readyFile(file).apply { delete() }
+        val process = ApplyUpdate.launch(listOf(runner.absolutePath) + ApplyUpdate.arguments(job), dir)
+        val deadline = System.currentTimeMillis() + RunnerStartMs
+        while (!ready.isFile) {
+            if (!process.isAlive || System.currentTimeMillis() > deadline) {
+                process.destroy()
+                error("Updater copy did not start")
+            }
+            Thread.sleep(RunnerPollMs)
+        }
+        ready.delete()
+        true
+    }.getOrElse {
+        AppLog.write("Update window could not start, falling back to the script", it)
+        false
+    }
+
+    fun cleanUp() {
+        val dir = runnerDir
+        if (!dir.isDirectory) return
+        if (launcher()?.let { ApplyUpdate.isInside(it.toPath(), dir) } == true) return
+        Thread {
+            ProcessHandle.allProcesses()
+                .filter { process -> process.info().command().map { ApplyUpdate.isInside(java.nio.file.Path.of(it), dir) }.orElse(false) }
+                .forEach { process -> runCatching { process.onExit().get(RunnerExitWaitSeconds, java.util.concurrent.TimeUnit.SECONDS) } }
+            synchronized(runnerLock) {
+                var attempt = 0
+                while (!ApplyUpdate.deleteTree(dir) && ++attempt < CleanUpAttempts) Thread.sleep(CleanUpDelayMs)
+            }
+        }.apply {
+            isDaemon = true
+            name = "pixelgram-updater-cleanup"
+        }.start()
+    }
+
     private fun applyArchive(file: File) {
         val exe = launcher() ?: error("Unknown launcher")
         val target = AppPaths.appDir ?: error("Unknown install folder")
         File(AppPaths.dataDir, "update-error.log").delete()
+        if (startRunner(file, exe, target)) return
         val pid = ProcessHandle.current().pid().toString()
         val dir = file.parentFile
         if (AppPaths.isWindows) {
@@ -236,10 +295,7 @@ object Updater {
             ).start()
         } else {
             val script = File(dir, "apply-update.sh").apply { writeText(LinuxScript) }
-            ProcessBuilder("nohup", "sh", script.absolutePath, pid, file.absolutePath, target.absolutePath, exe.absolutePath, marker.absolutePath)
-                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-                .redirectError(ProcessBuilder.Redirect.DISCARD)
-                .start()
+            ApplyUpdate.launch(listOf("nohup", "sh", script.absolutePath, pid, file.absolutePath, target.absolutePath, exe.absolutePath, marker.absolutePath), null)
         }
     }
 
@@ -253,6 +309,28 @@ object Updater {
                 .onFailure { state = UpdateState.Failed(it.message ?: "Could not open the disk image") }
             return
         }
+        if (isArchive(file)) {
+            if (installing) return
+            installing = true
+            Thread {
+                val result = runCatching { applyArchive(file) }
+                javax.swing.SwingUtilities.invokeLater {
+                    result.onSuccess {
+                        beforeExit()
+                        shutdown()
+                        exitProcess(0)
+                    }.onFailure {
+                        installing = false
+                        AppLog.write("Update install failed", it)
+                        state = UpdateState.Failed(it.message ?: "Install failed")
+                    }
+                }
+            }.apply {
+                isDaemon = true
+                name = "pixelgram-update-install"
+            }.start()
+            return
+        }
         runCatching {
             when {
                 file.name.endsWith(".msi") -> {
@@ -261,7 +339,6 @@ object Updater {
                     val relaunch = if (exe.isNotEmpty()) " && start \"\" \"$exe\"" else ""
                     ProcessBuilder("cmd", "/c", "msiexec /i \"${file.absolutePath}\" /passive$relaunch").start()
                 }
-                isArchive(file) -> applyArchive(file)
                 file.name.endsWith(".AppImage", ignoreCase = true) -> {
                     val current = File(System.getenv("APPIMAGE") ?: error("Not running from an AppImage"))
                     file.setExecutable(true)

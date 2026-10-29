@@ -35,6 +35,7 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -794,8 +795,17 @@ private val MacPaneCornerRadius = 28.dp
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun EmptyShapes() {
+internal fun EmptyShapes(spin: Boolean = false, scale: Float = 1f) {
     val scheme = MaterialTheme.colorScheme
+    val turn = if (spin) {
+        androidx.compose.animation.core.rememberInfiniteTransition().animateFloat(
+            0f,
+            360f,
+            androidx.compose.animation.core.infiniteRepeatable(tween(EmptySpinMs, easing = androidx.compose.animation.core.LinearEasing)),
+        )
+    } else {
+        null
+    }
     val shapes = listOf(
         EmptyShape(androidx.compose.material3.MaterialShapes.Cookie12Sided, scheme.primaryContainer, -0.28f, -0.22f, 120.dp, 12f),
         EmptyShape(androidx.compose.material3.MaterialShapes.Flower, scheme.tertiaryContainer, 0.3f, -0.26f, 96.dp, -18f),
@@ -805,14 +815,14 @@ private fun EmptyShapes() {
         EmptyShape(androidx.compose.material3.MaterialShapes.SoftBurst, scheme.secondaryContainer, 0.04f, 0.36f, 64.dp, -10f),
     )
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
-        shapes.forEach { item ->
+        shapes.forEachIndexed { index, item ->
             Box(
                 Modifier
                     .align(Alignment.Center)
                     .offset(maxWidth * item.x, maxHeight * item.y)
-                    .size(item.size)
+                    .size(item.size * scale)
                     .graphicsLayer {
-                        rotationZ = item.rotation
+                        rotationZ = item.rotation + (turn?.value ?: 0f) * (index % 3 + 1) * if (index % 2 == 0) 1 else -1
                         alpha = EmptyShapeAlpha
                     }
                     .background(item.color, item.shape.toShape()),
@@ -831,3 +841,4 @@ private class EmptyShape(
 )
 
 private const val EmptyShapeAlpha = 0.55f
+private const val EmptySpinMs = 24_000

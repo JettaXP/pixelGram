@@ -118,6 +118,12 @@ fun main(args: Array<String>) {
         System.setProperty("apple.awt.application.name", "pixelGram")
         System.setProperty("apple.laf.useScreenMenuBar", "true")
     }
+    com.pixelgram.desktop.core.ApplyUpdate.parse(args)?.let { job ->
+        System.setProperty(AppPaths.DataDirProperty, job.dataDir.absolutePath)
+        com.pixelgram.desktop.core.ApplyUpdate.signalReady(job)
+        com.pixelgram.desktop.ui.runUpdateWindow(job)
+        return
+    }
     com.pixelgram.desktop.core.Autostart.launchedAtLogin = com.pixelgram.desktop.core.Autostart.Flag in args
     val link = args.firstOrNull { Links.isTelegram(it) }
     when (SingleInstance.acquire(link)) {
@@ -134,6 +140,7 @@ fun main(args: Array<String>) {
         }
     }
     com.pixelgram.desktop.core.AppLog.start()
+    Updater.cleanUp()
     link?.takeIf(Links::isTelegram)?.let { Links.pending = it }
     SingleInstance.onOpen = { if (Links.isTelegram(it)) Links.pending = it }
     UrlScheme.register()
