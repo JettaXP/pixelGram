@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.43.0 Arrow
+
+### Video chats and live streams
+- Groups and channels with an active video chat show a bar above the messages with the number of participants and a Join button.
+- The video chat window shows participants' video, your camera and screen sharing as tiles, and a participant list with speaking, muted and raised-hand states.
+- Controls for microphone, camera, screen sharing, raising your hand and leaving.
+- Admins can start a video chat or a live stream from the chat menu, see the RTMP link and stream key, mute participants or let them speak, change their volume, lower hands and end the chat for everyone.
+- Live streams in channels can be watched.
+
+### Notifications
+- After starting the app, you no longer get notifications for messages that arrived while it was closed.
+
 ## 0.42.3 Fan
 
 ### Stories and video
