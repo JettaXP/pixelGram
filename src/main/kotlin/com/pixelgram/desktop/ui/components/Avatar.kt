@@ -123,6 +123,13 @@ fun Avatar(
 }
 
 @Composable
+fun chatAvatarShape(chat: ChatState, telegram: Telegram, settings: AppSettings): Shape = when {
+    telegram.isOfficial(chat) -> MaterialShapes.Cookie12Sided.toShape()
+    telegram.isSavedMessages(chat.id) -> settings.avatarShape.value.toShape(settings.avatarCorner.value)
+    else -> settings.avatarShapeFor(telegram.avatarKind(chat)).toShape(settings.avatarCorner.value)
+}
+
+@Composable
 fun ChatAvatar(
     chat: ChatState,
     telegram: Telegram,

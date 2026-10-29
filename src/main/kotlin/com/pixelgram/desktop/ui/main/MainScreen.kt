@@ -75,6 +75,7 @@ import com.pixelgram.desktop.ui.icons.outlined.Call
 import com.pixelgram.desktop.ui.icons.outlined.Campaign
 import com.pixelgram.desktop.ui.icons.outlined.Contacts
 import com.pixelgram.desktop.ui.icons.outlined.DarkMode
+import com.pixelgram.desktop.ui.icons.outlined.LightMode
 import com.pixelgram.desktop.ui.icons.outlined.Groups
 import com.pixelgram.desktop.ui.icons.outlined.PersonAdd
 import com.pixelgram.desktop.ui.icons.outlined.Settings
@@ -116,6 +117,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.ThemeMode
@@ -519,7 +521,7 @@ private fun MainMenu(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.width(AccountsWidth).padding(horizontal = 12.dp).padding(bottom = 12.dp),
         ) {
-            QuickTile(Icons.Outlined.DarkMode, "Night", dark, Modifier.weight(1f)) {
+            QuickTile(if (dark) Icons.Outlined.DarkMode else Icons.Outlined.LightMode, if (dark) "Night" else "Day", dark, Modifier.weight(1f)) {
                 settings.themeMode.value = if (dark) ThemeMode.Light else ThemeMode.Dark
             }
             QuickTile(Icons.Outlined.Bookmark, "Saved", false, Modifier.weight(1f), onOpenSaved)
@@ -633,16 +635,23 @@ private fun QuickTile(icon: ImageVector, label: String, active: Boolean, modifie
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 14.dp),
         ) {
             Icon(icon, contentDescription = null)
-            Text(label, style = MaterialTheme.typography.titleSmall)
+            val style = MaterialTheme.typography.titleSmall
+            androidx.compose.foundation.text.BasicText(
+                com.pixelgram.desktop.core.tr(label),
+                style = style.copy(color = LocalContentColor.current),
+                maxLines = 1,
+                autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = TileMinLabel, maxFontSize = style.fontSize),
+            )
         }
     }
 }
 
 private val TileHeight = 64.dp
+private val TileMinLabel = 10.sp
 private val DrawerBannerHeight = 120.dp
 private val TileCorner = 20.dp
 private val TileActiveCorner = 32.dp

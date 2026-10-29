@@ -334,10 +334,14 @@ object Updater {
         runCatching {
             when {
                 file.name.endsWith(".msi") -> {
-                    marker.writeText("updated")
+                    File(AppPaths.dataDir, "update-error.log").delete()
                     val exe = System.getProperty("jpackage.app-path").orEmpty()
-                    val relaunch = if (exe.isNotEmpty()) " && start \"\" \"$exe\"" else ""
-                    ProcessBuilder("cmd", "/c", "msiexec /i \"${file.absolutePath}\" /passive$relaunch").start()
+                    val script = File(file.parentFile, "install-update.ps1").apply { writeText(MsiScript) }
+                    ProcessBuilder(
+                        "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", script.absolutePath,
+                        "-ProcessId", ProcessHandle.current().pid().toString(), "-Msi", file.absolutePath,
+                        "-Exe", exe.ifEmpty { "-" }, "-Marker", marker.absolutePath,
+                    ).redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD).start()
                 }
                 file.name.endsWith(".AppImage", ignoreCase = true) -> {
                     val current = File(System.getenv("APPIMAGE") ?: error("Not running from an AppImage"))
@@ -387,6 +391,23 @@ try {
     Remove-Item -LiteralPath ${'$'}temp -Recurse -Force -ErrorAction SilentlyContinue
 }
 Start-Process -FilePath ${'$'}Exe
+""".trimStart()
+
+private val MsiScript = """
+param([int]${'$'}ProcessId, [string]${'$'}Msi, [string]${'$'}Exe, [string]${'$'}Marker)
+Wait-Process -Id ${'$'}ProcessId -Timeout 60 -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 500
+try {
+    ${'$'}install = Start-Process -FilePath 'msiexec.exe' -ArgumentList @('/i', ('"' + ${'$'}Msi + '"'), '/passive', '/norestart') -Wait -PassThru
+    if (${'$'}install.ExitCode -eq 0 -or ${'$'}install.ExitCode -eq 3010) {
+        Set-Content -LiteralPath ${'$'}Marker -Value 'updated'
+        Remove-Item -LiteralPath ${'$'}Msi -Force -ErrorAction SilentlyContinue
+    }
+    elseif (${'$'}install.ExitCode -ne 1602) { Add-Content -LiteralPath (Join-Path (Split-Path ${'$'}Marker) 'update-error.log') -Value "msiexec exit ${'$'}(${'$'}install.ExitCode)" }
+} catch {
+    Add-Content -LiteralPath (Join-Path (Split-Path ${'$'}Marker) 'update-error.log') -Value ${'$'}_.Exception.Message
+}
+if (${'$'}Exe -ne '-' -and (Test-Path -LiteralPath ${'$'}Exe)) { Start-Process -FilePath ${'$'}Exe }
 """.trimStart()
 
 private val LinuxScript = """

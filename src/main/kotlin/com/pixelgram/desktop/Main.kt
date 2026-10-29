@@ -508,7 +508,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
         val failure = Updater.consumeFailure()
         if (updated || failure != null) {
             delay(UpdatedNoticeDelayMs)
-            TopNotice.text = if (updated) "pixelGram Updated!" else "Update failed: $failure"
+            TopNotice.text = if (updated) com.pixelgram.desktop.core.tr("pixelGram Updated!") else "${com.pixelgram.desktop.core.tr("Update failed")}: $failure"
         }
     }
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {

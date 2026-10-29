@@ -93,6 +93,7 @@ import com.pixelgram.desktop.telegram.ChatState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.contentText
 import com.pixelgram.desktop.ui.components.ChatAvatar
+import com.pixelgram.desktop.ui.components.chatAvatarShape
 import com.pixelgram.desktop.ui.theme.EmojiText
 import com.pixelgram.desktop.ui.toShape
 import java.time.Instant
@@ -379,14 +380,14 @@ private fun CompactChatList(
                 }
             }
             items(chatsFor(listKey), key = { it.id }) { chat ->
-                Box(
-                    itemMotion()
-                        .size(CompactItemSize)
-                        .clip(MaterialTheme.shapes.large)
-                        .background(if (chat.id == selectedChatId) colors.secondaryContainer else Color.Transparent)
-                        .clickable { onOpen(chat.id) },
-                    contentAlignment = Alignment.Center,
-                ) {
+                Box(itemMotion().size(CompactItemSize), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .clip(chatAvatarShape(chat, telegram, settings))
+                            .background(if (chat.id == selectedChatId) colors.secondaryContainer else Color.Transparent)
+                            .clickable { onOpen(chat.id) },
+                    )
                     OnlineAvatar(chat, telegram, settings, 48.dp)
                     if (chat.unreadCount > 0) {
                         Badge(
