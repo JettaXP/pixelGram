@@ -7,6 +7,7 @@ import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.Structure
 import com.sun.jna.ptr.ByteByReference
+import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
 
 class SizeT(value: Long = 0) : IntegerType(Native.SIZE_T_SIZE, value, true) {
@@ -36,6 +37,24 @@ object NtgDevice {
     const val Speaker = 1
     const val Camera = 2
     const val Screen = 3
+}
+
+object NtgPartStatus {
+    const val NotReady = 0
+    const val ResyncNeeded = 1
+    const val Success = 3
+}
+
+object NtgQuality {
+    const val None = 0
+    const val Thumbnail = 1
+    const val Medium = 2
+    const val Full = 3
+}
+
+object NtgConnectionMode {
+    const val Stream = 2
+    const val Rtmp = 3
 }
 
 object NtgState {
@@ -166,6 +185,52 @@ open class NtgMediaState : Structure() {
     class ByValue : NtgMediaState(), Structure.ByValue
 }
 
+@Structure.FieldOrder("semantics", "ssrcs", "ssrcs_len")
+open class NtgSsrcGroup(pointer: Pointer? = null) : Structure(pointer) {
+    @JvmField var semantics: String? = null
+    @JvmField var ssrcs: Pointer? = null
+    @JvmField var ssrcs_len: SizeT = SizeT()
+}
+
+@Structure.FieldOrder("user_id", "ssrc")
+open class NtgSsrcMapping(pointer: Pointer? = null) : Structure(pointer) {
+    @JvmField var user_id: Long = 0
+    @JvmField var ssrc: Int = 0
+}
+
+@Structure.FieldOrder("segment_id", "part_id", "limit", "timestamp", "quality_update", "channel_id", "quality")
+open class NtgSegmentPartRequest : Structure() {
+    @JvmField var segment_id: Long = 0
+    @JvmField var part_id: Int = 0
+    @JvmField var limit: Int = 0
+    @JvmField var timestamp: Long = 0
+    @JvmField var quality_update: Byte = 0
+    @JvmField var channel_id: Int = 0
+    @JvmField var quality: Int = 0
+
+    class ByValue : NtgSegmentPartRequest(), Structure.ByValue
+}
+
+@Structure.FieldOrder("ssrcs", "ssrcs_len")
+open class NtgParticipantsRequest : Structure() {
+    @JvmField var ssrcs: Pointer? = null
+    @JvmField var ssrcs_len: SizeT = SizeT()
+
+    class ByValue : NtgParticipantsRequest(), Structure.ByValue
+}
+
+fun interface NtgBroadcastPartCallback : Callback {
+    fun invoke(handle: Pointer?, chatId: Long, request: NtgSegmentPartRequest.ByValue, user: Pointer?)
+}
+
+fun interface NtgBroadcastTimestampCallback : Callback {
+    fun invoke(handle: Pointer?, chatId: Long, user: Pointer?)
+}
+
+fun interface NtgParticipantsCallback : Callback {
+    fun invoke(handle: Pointer?, chatId: Long, request: NtgParticipantsRequest.ByValue, user: Pointer?)
+}
+
 fun interface NtgSignalingCallback : Callback {
     fun invoke(handle: Pointer?, chatId: Long, data: Pointer?, length: SizeT, user: Pointer?)
 }
@@ -208,6 +273,33 @@ interface NtgLibrary : Library {
         p2pAllowed: Boolean,
         customParameters: String,
     ): Int
+    fun ntg_create_call(handle: Pointer, chatId: Long, out: PointerByReference): Int
+    fun ntg_init_presentation(handle: Pointer, chatId: Long, out: PointerByReference): Int
+    fun ntg_connect(handle: Pointer, chatId: Long, params: String, isPresentation: Boolean): Int
+    fun ntg_stop_presentation(handle: Pointer, chatId: Long): Int
+    fun ntg_add_incoming_video(
+        handle: Pointer,
+        chatId: Long,
+        userId: Long,
+        endpoint: String,
+        groups: NtgSsrcGroup?,
+        groupsLength: SizeT,
+        out: IntByReference,
+    ): Int
+    fun ntg_remove_incoming_video(handle: Pointer, chatId: Long, endpoint: String, out: ByteByReference): Int
+    fun ntg_get_connection_mode(handle: Pointer, chatId: Long, out: IntByReference): Int
+    fun ntg_send_broadcast_timestamp(handle: Pointer, chatId: Long, timestamp: Long): Int
+    fun ntg_send_broadcast_part(
+        handle: Pointer,
+        chatId: Long,
+        segmentId: Long,
+        partId: Int,
+        status: Int,
+        qualityUpdate: Boolean,
+        data: ByteArray?,
+        length: SizeT,
+    ): Int
+    fun ntg_update_audio_ssrc_mappings(handle: Pointer, chatId: Long, mappings: NtgSsrcMapping?, length: SizeT): Int
     fun ntg_set_stream_sources(handle: Pointer, chatId: Long, mode: Int, media: NtgMedia.ByValue): Int
     fun ntg_mute(handle: Pointer, chatId: Long, out: ByteByReference): Int
     fun ntg_unmute(handle: Pointer, chatId: Long, out: ByteByReference): Int
@@ -225,4 +317,7 @@ interface NtgLibrary : Library {
     fun ntg_on_remote_source_change_callback(handle: Pointer, callback: NtgRemoteSourceCallback, user: Pointer?): Int
     fun ntg_on_upgrade_callback(handle: Pointer, callback: NtgUpgradeCallback, user: Pointer?): Int
     fun ntg_on_update_emojis_callback(handle: Pointer, callback: NtgEmojisCallback, user: Pointer?): Int
+    fun ntg_on_request_broadcast_part_callback(handle: Pointer, callback: NtgBroadcastPartCallback, user: Pointer?): Int
+    fun ntg_on_request_broadcast_timestamp_callback(handle: Pointer, callback: NtgBroadcastTimestampCallback, user: Pointer?): Int
+    fun ntg_on_request_participants_callback(handle: Pointer, callback: NtgParticipantsCallback, user: Pointer?): Int
 }

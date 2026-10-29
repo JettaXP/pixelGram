@@ -104,6 +104,10 @@ import com.pixelgram.desktop.telegram.ChatState
 import it.tdlight.jni.TdApi
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.canManage
+import com.pixelgram.desktop.telegram.canManageVideoChats
+import com.pixelgram.desktop.telegram.activeVideoChat
+import com.pixelgram.desktop.ui.icons.outlined.Sensors
+import com.pixelgram.desktop.ui.icons.outlined.Videocam
 import com.pixelgram.desktop.ui.icons.outlined.Forum
 import com.pixelgram.desktop.ui.icons.outlined.Tune
 import com.pixelgram.desktop.ui.icons.outlined.Timer
@@ -138,6 +142,7 @@ fun ChatActions(
     var autoDeleting by remember(chat.id) { mutableStateOf(false) }
     var keyShown by remember(chat.id) { mutableStateOf(false) }
     var theming by remember(chat.id) { mutableStateOf(false) }
+    var startingVideoChat by remember(chat.id) { mutableStateOf(false) }
     var secretError by remember(chat.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(chat.id, at != null) {
         if (at != null && chat.privateUserId != 0L) telegram.userFullInfo(chat.privateUserId) {}
@@ -188,6 +193,10 @@ fun ChatActions(
                             if (showProfile) add(MenuEntry(Icons.Outlined.AccountCircle, "View profile", onClick = act { profile = true }))
                             if (chat.privateUserId == 0L && telegram.canManage(chat)) {
                                 add(MenuEntry(Icons.Outlined.Tune, if (chat.isChannel) "Manage channel" else "Manage group", onClick = act { managing = true }))
+                            }
+                            if (telegram.canManageVideoChats(chat) && telegram.activeVideoChat(chat) == null) {
+                                add(MenuEntry(if (chat.isChannel) Icons.Outlined.Sensors else Icons.Outlined.Videocam, if (chat.isChannel) "Start live stream" else "Start video chat",
+                                    onClick = act { startingVideoChat = true }))
                             }
                             if (telegram.canSetAutoDelete(chat)) {
                                 add(MenuEntry(Icons.Outlined.Timer, "Auto-delete", onClick = act { autoDeleting = true }))
@@ -296,6 +305,7 @@ fun ChatActions(
     if (managing) ManageChatDialog(chat, telegram, settings = settings, onDismiss = { managing = false })
     if (keyShown) EncryptionKeyDialog(chat, telegram) { keyShown = false }
     if (theming) ChatThemeDialog(chat, telegram, settings) { theming = false }
+    if (startingVideoChat) StartVideoChatDialog(chat, telegram) { startingVideoChat = false }
     secretError?.let { error ->
         AlertDialog(
             onDismissRequest = { secretError = null },

@@ -1245,3 +1245,59 @@ Color	צבע
 Input	קלט
 Capitalize sentences	אות גדולה בתחילת משפט
 The first letter of each sentence becomes a capital letter as you type.	האות הראשונה בכל משפט הופכת לאות גדולה בזמן ההקלדה.
+Video chat	צ'אט וידאו
+Live stream	שידור חי
+Start video chat	התחלת צ'אט וידאו
+Start live stream	התחלת שידור חי
+Start video chat?	להתחיל צ'אט וידאו?
+Start live stream?	להתחיל שידור חי?
+Members of this group will be able to join the video chat.	חברי הקבוצה יוכלו להצטרף לצ'אט הווידאו.
+Subscribers will be able to watch and listen to your live stream.	המנויים יוכלו לצפות ולהאזין לשידור החי שלך.
+Stream with other apps	שידור דרך אפליקציות אחרות
+Use OBS or another app to stream over RTMP.	אפשר להשתמש ב-OBS או באפליקציה אחרת כדי לשדר ב-RTMP.
+Paste these into your streaming app. Keep the stream key secret.	יש להדביק את הפרטים האלה באפליקציית השידור. יש לשמור את מפתח השידור בסוד.
+Server URL	כתובת השרת
+Stream key	מפתח שידור
+Couldn't get the stream key	לא ניתן לקבל את מפתח השידור
+No one is here yet	עדיין אין כאן אף אחד
+{n} watching	{n} {צופה|צופים}
+{n} participant	{n} {משתתף|משתתפים}
+{n} participants	{n} {משתתף|משתתפים}
+Watch	צפייה
+Join call	הצטרפות
+End live stream?	לסיים את השידור החי?
+End video chat?	לסיים את צ'אט הווידאו?
+The live stream will end for all viewers.	השידור החי יסתיים עבור כל הצופים.
+The video chat will end for all participants.	צ'אט הווידאו יסתיים עבור כל המשתתפים.
+End	סיום
+End live stream	סיום השידור החי
+End video chat	סיום צ'אט הווידאו
+LIVE	בשידור
+Joining…	מצטרף…
+Video chat ended	צ'אט הווידאו הסתיים
+Live stream ended	השידור החי הסתיים
+Your screen	המסך שלך
+wants to speak	רוצה לדבר
+speaking	מדבר
+muted for you	מושתק עבורך
+muted	מושתק
+listening	מאזין
+Allow to speak	לאפשר לדבר
+Mute for everyone	השתקה לכולם
+Unmute for me	ביטול השתקה עבורי
+Mute for me	השתקה עבורי
+Lower hand	הורדת יד
+Raise hand	הרמת יד
+Hand raised	היד מורמת
+Waiting for the stream…	ממתין לשידור…
+The stream has no video yet	בשידור עדיין אין וידאו
+Stop video	כיבוי וידאו
+Screen	מסך
+Leave	יציאה
+You left the video chat	יצאת מצ'אט הווידאו
+Couldn't join the video chat	לא ניתן להצטרף לצ'אט הווידאו
+Screen sharing stopped	שיתוף המסך הופסק
+Couldn't share the screen	לא ניתן לשתף את המסך
+Leave the current video chat first	יש לצאת קודם מצ'אט הווידאו הנוכחי
+Finish the current call first	יש לסיים קודם את השיחה הנוכחית
+Loading…	טוען…

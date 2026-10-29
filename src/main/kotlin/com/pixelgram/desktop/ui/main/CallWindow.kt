@@ -219,8 +219,8 @@ private fun Controls(call: ActiveCall, modifier: Modifier) {
             return@AnimatedVisibility
         }
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Toggle(if (call.muted) Icons.Filled.MicOff else Icons.Filled.Mic, if (call.muted) "Unmute" else "Mute", active = !call.muted, onClick = Calls::toggleMute)
-            Toggle(if (call.camera) Icons.Filled.Videocam else Icons.Filled.VideocamOff, if (call.camera) "Turn camera off" else "Turn camera on", active = call.camera, onClick = Calls::toggleCamera)
+            CallToggle(if (call.muted) Icons.Filled.MicOff else Icons.Filled.Mic, if (call.muted) "Unmute" else "Mute", active = !call.muted, onClick = Calls::toggleMute)
+            CallToggle(if (call.camera) Icons.Filled.Videocam else Icons.Filled.VideocamOff, if (call.camera) "Turn camera off" else "Turn camera on", active = call.camera, onClick = Calls::toggleCamera)
             ScreenButton(call)
             RoundAction(Icons.Filled.CallEnd, "End call", EndSize, colors.error, colors.onError, onClick = Calls::hangUp)
         }
@@ -228,28 +228,31 @@ private fun Controls(call: ActiveCall, modifier: Modifier) {
 }
 
 @Composable
-private fun ScreenButton(call: ActiveCall) {
-    var screens by remember { mutableStateOf<List<CallDevice>?>(null) }
+private fun ScreenButton(call: ActiveCall) = ScreenShareButton(call.screen != null, Calls::screens, Calls::share)
+
+@Composable
+internal fun ScreenShareButton(sharing: Boolean, screens: () -> List<CallDevice>, onShare: (CallDevice?) -> Unit) {
+    var choices by remember { mutableStateOf<List<CallDevice>?>(null) }
     Box {
-        Toggle(
-            if (call.screen != null) Icons.Filled.StopScreenShare else Icons.Filled.ScreenShare,
-            if (call.screen != null) "Stop sharing" else "Share screen",
-            active = call.screen != null,
+        CallToggle(
+            if (sharing) Icons.Filled.StopScreenShare else Icons.Filled.ScreenShare,
+            if (sharing) "Stop sharing" else "Share screen",
+            active = sharing,
         ) {
-            if (call.screen != null) Calls.share(null) else screens = Calls.screens()
+            if (sharing) onShare(null) else choices = screens()
         }
-        DropdownMenu(expanded = screens != null, onDismissRequest = { screens = null }) {
-            val list = screens.orEmpty()
+        DropdownMenu(expanded = choices != null, onDismissRequest = { choices = null }) {
+            val list = choices.orEmpty()
             if (list.isEmpty()) {
-                DropdownMenuItem(text = { Text("Nothing to share") }, onClick = { screens = null }, enabled = false)
+                DropdownMenuItem(text = { Text("Nothing to share") }, onClick = { choices = null }, enabled = false)
             }
             list.forEach { device ->
                 DropdownMenuItem(
                     text = { EmojiText(device.name, maxLines = 1) },
                     leadingIcon = { Icon(Icons.Filled.ScreenShare, contentDescription = null) },
                     onClick = {
-                        screens = null
-                        Calls.share(device)
+                        choices = null
+                        onShare(device)
                     },
                 )
             }
@@ -258,7 +261,7 @@ private fun ScreenButton(call: ActiveCall) {
 }
 
 @Composable
-private fun Toggle(icon: ImageVector, label: String, active: Boolean, onClick: () -> Unit) {
+internal fun CallToggle(icon: ImageVector, label: String, active: Boolean, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val container by animateColorAsState(if (active) colors.secondaryContainer else colors.surfaceContainerHighest)
     val content by animateColorAsState(if (active) colors.onSecondaryContainer else colors.onSurfaceVariant)
@@ -266,7 +269,7 @@ private fun Toggle(icon: ImageVector, label: String, active: Boolean, onClick: (
 }
 
 @Composable
-private fun RoundAction(icon: ImageVector, label: String, size: Dp, container: Color, content: Color, active: Boolean = true, onClick: () -> Unit) {
+internal fun RoundAction(icon: ImageVector, label: String, size: Dp, container: Color, content: Color, active: Boolean = true, onClick: () -> Unit) {
     val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
@@ -299,7 +302,7 @@ private fun RoundAction(icon: ImageVector, label: String, size: Dp, container: C
     }
 }
 
-private class MorphShape(private val morph: Morph, private val progress: Float) : Shape {
+internal class MorphShape(private val morph: Morph, private val progress: Float) : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
         val path = Path()
         var first = true

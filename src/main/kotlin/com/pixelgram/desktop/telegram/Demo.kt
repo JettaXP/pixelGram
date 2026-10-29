@@ -79,6 +79,18 @@ fun Telegram.loadDemo() {
     if (System.getProperty("pixelgram.demo.secret") == "true") loadSecretDemo(now)
     loadThemesDemo()
     if (System.getProperty("pixelgram.demo.call") == "true") com.pixelgram.desktop.calls.Calls.showDemo(this)
+    System.getProperty("pixelgram.demo.videochat")?.let { mode ->
+        loadVideoChatDemo()
+        val chatId = when (mode) {
+            "join" -> 104L
+            "stream" -> 106L
+            else -> null
+        }
+        if (chatId != null) kotlinx.coroutines.MainScope().launch {
+            kotlinx.coroutines.delay(DemoVideoChatDelayMs)
+            chats[chatId]?.let { com.pixelgram.desktop.calls.VideoChats.join(this@loadDemo, it) }
+        }
+    }
     System.getProperty("pixelgram.demo.play")?.let { path ->
         kotlinx.coroutines.MainScope().launch {
             kotlinx.coroutines.delay(DemoPlayDelayMs)
@@ -687,6 +699,7 @@ fun demoStoryViewers(): List<TdApi.StoryInteraction> {
 
 private const val DemoMiniAppDelayMs = 12_000L
 private const val DemoPlayDelayMs = 6_000L
+private const val DemoVideoChatDelayMs = 3_000L
 
 fun demoStickers(): List<TdApi.Sticker> {
     val dir = System.getProperty("pixelgram.demo.stickers") ?: return emptyList()

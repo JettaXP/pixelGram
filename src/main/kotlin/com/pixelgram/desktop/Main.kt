@@ -313,6 +313,7 @@ private fun ApplicationScope.PixelApp() {
     ToastWindow(toasts, settings, onOpen = openFromNotification)
     com.pixelgram.desktop.calls.Calls.settings = settings
     com.pixelgram.desktop.ui.main.CallWindow(settings, icon)
+    com.pixelgram.desktop.ui.main.VideoChatWindow(settings, icon)
     com.pixelgram.desktop.ui.webapp.MiniAppHost(settings, icon)
 
     val close = { if (trayOn) visible = false else quit() }

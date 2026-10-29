@@ -1247,3 +1247,59 @@ Color	Цвет
 Input	Ввод
 Capitalize sentences	Заглавная буква в начале предложения
 The first letter of each sentence becomes a capital letter as you type.	Первая буква каждого предложения становится заглавной при вводе.
+Video chat	Видеочат
+Live stream	Трансляция
+Start video chat	Начать видеочат
+Start live stream	Начать трансляцию
+Start video chat?	Начать видеочат?
+Start live stream?	Начать трансляцию?
+Members of this group will be able to join the video chat.	Участники группы смогут присоединиться к видеочату.
+Subscribers will be able to watch and listen to your live stream.	Подписчики смогут смотреть и слушать вашу трансляцию.
+Stream with other apps	Трансляция через другие приложения
+Use OBS or another app to stream over RTMP.	Используйте OBS или другое приложение для трансляции по RTMP.
+Paste these into your streaming app. Keep the stream key secret.	Вставьте эти данные в приложение для трансляций. Никому не сообщайте ключ трансляции.
+Server URL	URL сервера
+Stream key	Ключ трансляции
+Couldn't get the stream key	Не удалось получить ключ трансляции
+No one is here yet	Пока никого нет
+{n} watching	{n} {зритель|зрителя|зрителей}
+{n} participant	{n} {участник|участника|участников}
+{n} participants	{n} {участник|участника|участников}
+Watch	Смотреть
+Join call	Присоединиться
+End live stream?	Завершить трансляцию?
+End video chat?	Завершить видеочат?
+The live stream will end for all viewers.	Трансляция завершится для всех зрителей.
+The video chat will end for all participants.	Видеочат завершится для всех участников.
+End	Завершить
+End live stream	Завершить трансляцию
+End video chat	Завершить видеочат
+LIVE	В ЭФИРЕ
+Joining…	Присоединение…
+Video chat ended	Видеочат завершён
+Live stream ended	Трансляция завершена
+Your screen	Ваш экран
+wants to speak	хочет выступить
+speaking	говорит
+muted for you	заглушён для вас
+muted	микрофон выключен
+listening	слушает
+Allow to speak	Разрешить говорить
+Mute for everyone	Выключить микрофон для всех
+Unmute for me	Включить звук для меня
+Mute for me	Заглушить для меня
+Lower hand	Опустить руку
+Raise hand	Поднять руку
+Hand raised	Рука поднята
+Waiting for the stream…	Ожидание трансляции…
+The stream has no video yet	В трансляции пока нет видео
+Stop video	Выкл. видео
+Screen	Экран
+Leave	Выйти
+You left the video chat	Вы покинули видеочат
+Couldn't join the video chat	Не удалось присоединиться к видеочату
+Screen sharing stopped	Демонстрация экрана остановлена
+Couldn't share the screen	Не удалось показать экран
+Leave the current video chat first	Сначала выйдите из текущего видеочата
+Finish the current call first	Сначала завершите текущий звонок
+Loading…	Загрузка…

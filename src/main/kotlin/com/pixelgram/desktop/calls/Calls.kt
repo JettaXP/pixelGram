@@ -98,7 +98,7 @@ object Calls {
         demo || (CallLibrary.supported && userId != telegram.me?.id && telegram.users[userId]?.type is TdApi.UserTypeRegular)
 
     fun start(telegram: Telegram, userId: Long, video: Boolean) {
-        if (current != null) return
+        if (current != null || VideoChats.current != null) return
         AppLog.trace(if (video) "start video call" else "start call")
         val call = ActiveCall(telegram, userId, outgoing = true, video = video)
         current = call
@@ -251,9 +251,9 @@ object Calls {
 
     fun screens(): List<CallDevice> = if (demo) listOf(CallDevice("Display 1 (2560×1440)", ""), CallDevice("Display 2 (1680×1050)", "")) else devices()?.screens.orEmpty()
 
-    private class DeviceLists(val microphones: List<CallDevice>, val speakers: List<CallDevice>, val cameras: List<CallDevice>, val screens: List<CallDevice>)
+    internal class DeviceLists(val microphones: List<CallDevice>, val speakers: List<CallDevice>, val cameras: List<CallDevice>, val screens: List<CallDevice>)
 
-    private fun devices(): DeviceLists? {
+    internal fun devices(): DeviceLists? {
         val lib = CallLibrary.load() ?: return null
         val devices = NtgDevices()
         if (lib.ntg_get_media_devices(devices) != Ok) return null
@@ -279,7 +279,7 @@ object Calls {
         }
     }
 
-    private fun pick(list: List<CallDevice>, preferred: String?): CallDevice? =
+    internal fun pick(list: List<CallDevice>, preferred: String?): CallDevice? =
         list.firstOrNull { !preferred.isNullOrBlank() && (it.name == preferred || it.name.contains(preferred) || preferred.contains(it.name)) }
             ?: list.firstOrNull()
 
@@ -409,35 +409,8 @@ object Calls {
     private fun capture(call: ActiveCall) {
         val handle = call.handle ?: return
         val lib = call.library ?: return
-        val lists = devices()
-        val media = NtgMedia.ByValue()
-        pick(lists?.microphones.orEmpty(), settings?.inputDevice?.value)?.let { device ->
-            media.microphone = NtgAudio.ByReference().apply {
-                media_source = NtgSource.Device
-                sample_rate = SampleRate
-                channel_count = Channels
-                input = device.metadata
-            }
-        }
-        val screen = call.screen
-        if (screen != null) {
-            media.screen = NtgVideo.ByReference().apply {
-                media_source = NtgSource.Desktop
-                width = ScreenWidth
-                height = ScreenHeight
-                fps = Fps
-                input = screen.metadata
-            }
-        } else if (call.camera) {
-            pick(lists?.cameras.orEmpty(), settings?.cameraDevice?.value)?.let { device ->
-                media.camera = NtgVideo.ByReference().apply {
-                    media_source = NtgSource.Device
-                    width = CameraWidth
-                    height = CameraHeight
-                    fps = Fps
-                    input = device.metadata
-                }
-            } ?: main {
+        val media = captureMedia(call.camera && call.screen == null, call.screen) {
+            main {
                 call.camera = false
                 call.status = "No camera found"
             }
@@ -451,6 +424,46 @@ object Calls {
     private fun playback(call: ActiveCall) {
         val handle = call.handle ?: return
         val lib = call.library ?: return
+        if (lib.ntg_set_stream_sources(handle, call.userId, NtgMode.Playback, playbackMedia()) != Ok) {
+            AppLog.write("Call playback failed: ${lib.ntg_last_error()}")
+        }
+    }
+
+    internal fun captureMedia(camera: Boolean, screen: CallDevice?, noCamera: () -> Unit): NtgMedia.ByValue {
+        val lists = devices()
+        val media = NtgMedia.ByValue()
+        pick(lists?.microphones.orEmpty(), settings?.inputDevice?.value)?.let { device ->
+            media.microphone = NtgAudio.ByReference().apply {
+                media_source = NtgSource.Device
+                sample_rate = SampleRate
+                channel_count = Channels
+                input = device.metadata
+            }
+        }
+        if (screen != null) {
+            media.screen = NtgVideo.ByReference().apply {
+                media_source = NtgSource.Desktop
+                width = ScreenWidth
+                height = ScreenHeight
+                fps = Fps
+                input = screen.metadata
+            }
+        }
+        if (camera) {
+            pick(lists?.cameras.orEmpty(), settings?.cameraDevice?.value)?.let { device ->
+                media.camera = NtgVideo.ByReference().apply {
+                    media_source = NtgSource.Device
+                    width = CameraWidth
+                    height = CameraHeight
+                    fps = Fps
+                    input = device.metadata
+                }
+            } ?: noCamera()
+        }
+        return media
+    }
+
+    internal fun playbackMedia(): NtgMedia.ByValue {
         val media = NtgMedia.ByValue()
         pick(devices()?.speakers.orEmpty(), settings?.outputDevice?.value)?.let { device ->
             media.speaker = NtgAudio.ByReference().apply {
@@ -472,9 +485,7 @@ object Calls {
             height = -1
             fps = Fps
         }
-        if (lib.ntg_set_stream_sources(handle, call.userId, NtgMode.Playback, media) != Ok) {
-            AppLog.write("Call playback failed: ${lib.ntg_last_error()}")
-        }
+        return media
     }
 
     private fun ring(call: ActiveCall) {
@@ -513,7 +524,7 @@ object Calls {
         }.apply { isDaemon = true }.start()
     }
 
-    private fun i420(frame: NtgFrame): Image? {
+    internal fun i420(frame: NtgFrame): Image? {
         val width = frame.frame_data.width.toInt() and 0xFFFF
         val height = frame.frame_data.height.toInt() and 0xFFFF
         val data = frame.data ?: return null

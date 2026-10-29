@@ -116,6 +116,7 @@ class ChatState(val id: Long) {
     var background by mutableStateOf<TdApi.ChatBackground?>(null)
     var theme by mutableStateOf<TdApi.ChatTheme?>(null)
     var permissions by mutableStateOf<TdApi.ChatPermissions?>(null)
+    var videoChat by mutableStateOf<TdApi.VideoChat?>(null)
     val positions = mutableStateMapOf<ChatListKey, Long>()
     val pinned = mutableStateMapOf<ChatListKey, Boolean>()
 }
@@ -1103,6 +1104,12 @@ class Telegram(
                 }
             }
             is TdApi.UpdateCall -> com.pixelgram.desktop.calls.Calls.onUpdate(this, update.call)
+            is TdApi.UpdateChatVideoChat -> chats[update.chatId]?.videoChat = update.videoChat
+            is TdApi.UpdateGroupCall -> {
+                groupCalls[update.groupCall.id] = update.groupCall
+                com.pixelgram.desktop.calls.VideoChats.onGroupCall(this, update.groupCall)
+            }
+            is TdApi.UpdateGroupCallParticipant -> com.pixelgram.desktop.calls.VideoChats.onParticipant(this, update.groupCallId, update.participant)
             is TdApi.UpdateNewCallSignalingData -> com.pixelgram.desktop.calls.Calls.onSignaling(this, update.callId, update.data)
             is TdApi.UpdateChatNotificationSettings -> {
                 muteOverrides.remove(update.chatId)
@@ -1274,6 +1281,8 @@ class Telegram(
         basicGroupInfo.clear()
         chatRoles.clear()
         roleRequests.clear()
+        groupCalls.clear()
+        groupCallRequests.clear()
         chatTopics.clear()
         topicsVersion.clear()
         topicNames.clear()
@@ -1304,6 +1313,7 @@ class Telegram(
             background = chat.background
             theme = chat.theme
             permissions = chat.permissions
+            videoChat = chat.videoChat
         }
         if (state.privateUserId != 0L) blockedUsers[state.privateUserId] = chat.blockList != null
         chat.positions?.forEach { applyPosition(state, it) }
@@ -1540,6 +1550,20 @@ class Telegram(
     }
 
     fun isForum(chat: ChatState): Boolean = chat.supergroupId != 0L && forums[chat.supergroupId] == true
+
+    val groupCalls = KeyedState<Int, TdApi.GroupCall>()
+    private val groupCallRequests = HashSet<Int>()
+
+    fun groupCall(id: Int): TdApi.GroupCall? {
+        if (id == 0) return null
+        groupCalls[id]?.let { return it }
+        if (System.getProperty("pixelgram.demo") != "true" && groupCallRequests.add(id)) {
+            send(TdApi.GetGroupCall(id)) { result ->
+                if (result is TdApi.GroupCall) groupCalls[id] = result else groupCallRequests.remove(id)
+            }
+        }
+        return null
+    }
 
     private val chatRoles = KeyedState<Long, Map<Long, MemberRole>>()
     private val roleRequests = HashSet<Long>()
