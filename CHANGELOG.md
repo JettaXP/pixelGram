@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.42.3 Fan
+
+### Stories and video
+- The story viewer opens and closes with a fade and scale animation, and the viewers list slides up from the bottom.
+- The viewers list shows likes and other reactions, and the header shows the reaction count.
+- Video and story playback no longer slows down: sound is converted to a standard format, and the picture keeps its own steady clock.
+
+### Chats
+- Enter confirms the delete message, pin message, delete chat, clear history and block dialogs.
+- Jumping to an unread reaction or mention marks it as read, so the badge goes away.
+- The mentions folder also shows unread private chats.
+- Capitalize sentences also works on pasted text.
+- The bot command and mention popups animate out when you erase the / or @.
+- Avatars highlight in their own shape on hover instead of a square.
+- Holding a chat to preview it takes a little longer, so normal clicks don't open the preview.
+- Opening and closing a forum animates smoothly, without text wrapping or jumps.
+
+### Updates and crash reports
+- Portable updates show a rounded "pixelGram is updating…" window in your language while the files are replaced.
+- Crash reports list the last things the app did before it closed.
+
 ## 0.42.2 Fan
 
 - New setting in Chat Settings: Capitalize sentences. When it's on, the first letter of each sentence becomes a capital letter as you type.
