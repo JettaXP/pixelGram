@@ -104,3 +104,57 @@ fun Telegram.boostChat(chatId: Long, done: (String?) -> Unit) {
         send(TdApi.BoostChat(chatId, intArrayOf(slot.slotId))) { done(failure(it)) }
     }
 }
+
+enum class StoryAudience(val title: String) { Everyone("Everyone"), Contacts("My contacts"), CloseFriends("Close friends") }
+
+fun Telegram.postStory(
+    chatId: Long,
+    file: java.io.File,
+    video: Boolean,
+    duration: Double,
+    caption: String,
+    audience: StoryAudience,
+    hours: Int,
+    keepOnPage: Boolean,
+    done: (String?) -> Unit,
+) {
+    if (isDemo) return done(null)
+    val content = if (video) {
+        TdApi.InputStoryContentVideo(TdApi.InputFileLocal(file.absolutePath), IntArray(0), duration, 0.0, false)
+    } else {
+        TdApi.InputStoryContentPhoto(TdApi.InputFileLocal(file.absolutePath), IntArray(0))
+    }
+    val privacy = when (audience) {
+        StoryAudience.Everyone -> TdApi.StoryPrivacySettingsEveryone(LongArray(0))
+        StoryAudience.Contacts -> TdApi.StoryPrivacySettingsContacts(LongArray(0))
+        StoryAudience.CloseFriends -> TdApi.StoryPrivacySettingsCloseFriends()
+    }
+    send(TdApi.CanPostStory(chatId)) { check ->
+        val blocked = when (check) {
+            is TdApi.CanPostStoryResultPremiumNeeded -> "Posting more stories needs Telegram Premium"
+            is TdApi.CanPostStoryResultBoostNeeded -> "The channel needs more boosts to post stories"
+            is TdApi.CanPostStoryResultActiveStoryLimitExceeded -> "Too many active stories"
+            is TdApi.CanPostStoryResultWeeklyLimitExceeded -> "Weekly story limit reached"
+            is TdApi.CanPostStoryResultMonthlyLimitExceeded -> "Monthly story limit reached"
+            is TdApi.Error -> failure(check)
+            else -> null
+        }
+        if (blocked != null) return@send done(blocked)
+        send(
+            TdApi.PostStory(
+                chatId,
+                content,
+                null,
+                TdApi.FormattedText(caption, emptyArray()),
+                privacy,
+                IntArray(0),
+                hours * SecondsInHour,
+                null,
+                keepOnPage,
+                false,
+            ),
+        ) { done(failure(it)) }
+    }
+}
+
+private const val SecondsInHour = 3600

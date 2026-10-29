@@ -65,6 +65,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.AddAPhoto
 import com.pixelgram.desktop.ui.icons.automirrored.filled.MenuOpen
 import com.pixelgram.desktop.ui.icons.filled.Check
 import com.pixelgram.desktop.ui.icons.filled.KeyboardArrowDown
@@ -526,9 +527,12 @@ private fun MainMenu(
             }
             QuickTile(Icons.Outlined.Bookmark, "Saved", false, Modifier.weight(1f), onOpenSaved)
         }
+        var postingStory by remember { mutableStateOf(false) }
+        if (postingStory) telegram.me?.id?.let { myId -> StoryComposerDialog(telegram, myId, own = true) { postingStory = false } }
         val groups = listOf(
             listOf(
                 Triple(Icons.Outlined.AccountCircle, "My Profile") { onNavigate(Screen.Profile) },
+                Triple(Icons.Outlined.AddAPhoto, "New story") { postingStory = true },
                 Triple(Icons.Outlined.Contacts, "Contacts") { onNavigate(Screen.Contacts) },
                 Triple(Icons.Outlined.Call, "Calls") { onNavigate(Screen.Calls) },
             ),
