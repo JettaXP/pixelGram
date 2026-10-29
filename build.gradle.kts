@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.43.0"
+version = "0.43.1"
 val codename = "Arrow"
 
 kotlin {

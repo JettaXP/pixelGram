@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.43.1 Arrow
+
+- Updating the installed Windows version works again: the installer starts after the app closes, and the app reopens when it finishes. If the install fails, the next start says why.
+- The update notice is shown in your language.
+- The theme button in the side menu shows Day or Night for the current theme.
+- Labels on the side menu buttons stay on one line.
+- In the compact chat list next to a forum, the hover and selection highlight follows the avatar shape.
+
 ## 0.43.0 Arrow
 
 ### Video chats and live streams
