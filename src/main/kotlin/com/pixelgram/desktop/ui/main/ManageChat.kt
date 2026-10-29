@@ -74,6 +74,9 @@ import com.pixelgram.desktop.ui.components.expressive.IconButton
 import com.pixelgram.desktop.ui.components.expressive.TextButton
 import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.Upgrade
+import com.pixelgram.desktop.ui.icons.outlined.BarChart
+import com.pixelgram.desktop.ui.icons.outlined.AddReaction
 import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
 import com.pixelgram.desktop.ui.icons.outlined.AdminPanelSettings
 import com.pixelgram.desktop.ui.icons.outlined.Block
@@ -108,6 +111,10 @@ private sealed interface ManagePage {
     data class Members(val list: MemberList) : ManagePage
     data object Log : ManagePage
     data object Links : ManagePage
+    data object Reactions : ManagePage
+    data object Discussion : ManagePage
+    data object Statistics : ManagePage
+    data object Boosts : ManagePage
     data class Member(val member: TdApi.ChatMember, val askBan: Boolean = false) : ManagePage
     data class Rights(val member: TdApi.ChatMember) : ManagePage
     data class Restrict(val member: TdApi.ChatMember) : ManagePage
@@ -275,6 +282,10 @@ fun ManageChatDialog(
                         is ManagePage.Members -> MembersPage(chat, telegram, shown.list) { go(ManagePage.Member(it)) }
                         ManagePage.Log -> LogPage(chat, telegram)
                         ManagePage.Links -> settings?.let { InviteLinksPage(chat, telegram, it) }
+                        ManagePage.Reactions -> ReactionsPage(chat, telegram, back)
+                        ManagePage.Discussion -> DiscussionPage(chat, telegram, settings)
+                        ManagePage.Statistics -> StatisticsPage(chat, telegram, settings?.let { com.pixelgram.desktop.ui.theme.isDarkTheme(it) } ?: false)
+                        ManagePage.Boosts -> Column(Modifier.verticalScroll(rememberScrollState())) { BoostsContent(chat, telegram, canBoost = false) }
                         is ManagePage.Member -> MemberPage(chat, telegram, shown.member, go, back, shown.askBan)
                         is ManagePage.Rights -> RightsPage(chat, telegram, shown.member, back)
                         is ManagePage.Restrict -> RestrictPage(chat, telegram, shown.member, back)
@@ -297,6 +308,10 @@ private fun pageTitle(page: ManagePage, chat: ChatState, telegram: Telegram): St
     }
     ManagePage.Log -> "Recent actions"
     ManagePage.Links -> "Invite links"
+    ManagePage.Reactions -> "Reactions"
+    ManagePage.Discussion -> if (chat.isChannel) "Discussion" else "Linked channel"
+    ManagePage.Statistics -> "Statistics"
+    ManagePage.Boosts -> "Boosts"
     is ManagePage.Member -> telegram.senderTitle(page.member.memberId)
     is ManagePage.Rights -> "Admin rights"
     is ManagePage.Restrict -> "Restrictions"
@@ -321,6 +336,10 @@ private fun HomePage(chat: ChatState, telegram: Telegram, settings: com.pixelgra
         if (supergroup && group && restrict) add(HomeRow(Icons.Outlined.PanTool, "Exceptions", null) { go(ManagePage.Members(MemberList.Restricted)) })
         if (supergroup && restrict) add(HomeRow(Icons.Outlined.Block, "Removed users", null) { go(ManagePage.Members(MemberList.Banned)) })
         if (supergroup) add(HomeRow(Icons.Outlined.History, "Recent actions", null) { go(ManagePage.Log) })
+        if (changeInfo) add(HomeRow(Icons.Outlined.AddReaction, "Reactions", null) { go(ManagePage.Reactions) })
+        if (supergroup && changeInfo) add(HomeRow(Icons.Outlined.Forum, if (chat.isChannel) "Discussion" else "Linked channel", null) { go(ManagePage.Discussion) })
+        if (supergroup) add(HomeRow(Icons.Outlined.BarChart, "Statistics", null) { go(ManagePage.Statistics) })
+        if (supergroup) add(HomeRow(Icons.Outlined.Upgrade, "Boosts", null) { go(ManagePage.Boosts) })
     }
     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {

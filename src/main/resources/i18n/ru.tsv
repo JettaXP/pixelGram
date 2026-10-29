@@ -1324,3 +1324,36 @@ Connect	Подключиться
 Proxy on	Прокси вкл.
 Connect to Telegram through a SOCKS5, HTTP or MTProto proxy. The proxy is used by all accounts.	Подключайтесь к Telegram через прокси SOCKS5, HTTP или MTProto. Прокси используется всеми аккаунтами.
 Connect through this proxy? It will be used by all accounts.	Подключиться через этот прокси? Он будет использоваться всеми аккаунтами.
+All reactions	Все реакции
+Some reactions	Некоторые реакции
+No reactions	Без реакций
+Choose which reactions people can use.	Выберите, какие реакции можно ставить.
+Linked channel	Привязанный канал
+Comments under posts are sent to the discussion group.	Комментарии к постам попадают в группу обсуждения.
+This group is used for comments of the linked channel.	Эта группа используется для комментариев привязанного канала.
+Discussion group	Группа обсуждения
+Unlink group	Отвязать группу
+Unlink channel	Отвязать канал
+You have no groups that can be linked. Create a public group first.	Нет групп, которые можно привязать. Сначала создайте публичную группу.
+Choose a group	Выберите группу
+Statistics	Статистика
+Statistics are not available for this chat	Статистика для этого чата недоступна
+Views per post	Просмотров на пост
+Shares per post	Репостов на пост
+Reactions per post	Реакций на пост
+Views per story	Просмотров на историю
+Shares per story	Репостов на историю
+Reactions per story	Реакций на историю
+Viewing members	Читающие участники
+Posting members	Пишущие участники
+Notifications enabled	Уведомления включены
+Boosts	Бусты
+Level	Уровень
+Premium subscribers	Подписчики с Premium
+Boost link	Ссылка для буста
+Thanks for the boost!	Спасибо за буст!
+Boost channel	Бустить канал
+Boost group	Бустить группу
+Boosting needs Telegram Premium	Для буста нужен Telegram Premium
+You already boost this chat	Вы уже бустите этот чат
+All your boosts are on cooldown	Все ваши бусты на перезарядке

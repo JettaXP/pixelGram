@@ -57,6 +57,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.Upgrade
 import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
 import com.pixelgram.desktop.ui.icons.automirrored.filled.KeyboardArrowRight
 import com.pixelgram.desktop.ui.icons.automirrored.outlined.OpenInNew
@@ -142,6 +143,7 @@ fun ChatActions(
     var autoDeleting by remember(chat.id) { mutableStateOf(false) }
     var keyShown by remember(chat.id) { mutableStateOf(false) }
     var theming by remember(chat.id) { mutableStateOf(false) }
+    var boosting by remember(chat.id) { mutableStateOf(false) }
     var startingVideoChat by remember(chat.id) { mutableStateOf(false) }
     var secretError by remember(chat.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(chat.id, at != null) {
@@ -204,6 +206,7 @@ fun ChatActions(
                             if (telegram.canSetChatTheme(chat)) {
                                 add(MenuEntry(Icons.Outlined.Palette, "Chat theme", onClick = act { theming = true }))
                             }
+                            if (chat.supergroupId != 0L) add(MenuEntry(Icons.Outlined.Upgrade, if (chat.isChannel) "Boost channel" else "Boost group", onClick = act { boosting = true }))
                             if (chat.unreadMentions > 0) add(MenuEntry(Icons.Outlined.AlternateEmail, "Read all mentions", onClick = act { telegram.readAllMentions(chat) }))
                             if (chat.unreadReactions > 0) add(MenuEntry(Icons.Outlined.FavoriteBorder, "Read all reactions", onClick = act { telegram.readAllReactions(chat) }))
                             onToBeginning?.let { add(MenuEntry(Icons.Outlined.KeyboardDoubleArrowUp, "To beginning", onClick = act(it))) }
@@ -305,6 +308,7 @@ fun ChatActions(
     if (managing) ManageChatDialog(chat, telegram, settings = settings, onDismiss = { managing = false })
     if (keyShown) EncryptionKeyDialog(chat, telegram) { keyShown = false }
     if (theming) ChatThemeDialog(chat, telegram, settings) { theming = false }
+    if (boosting) BoostDialog(chat, telegram) { boosting = false }
     if (startingVideoChat) StartVideoChatDialog(chat, telegram) { startingVideoChat = false }
     secretError?.let { error ->
         AlertDialog(
