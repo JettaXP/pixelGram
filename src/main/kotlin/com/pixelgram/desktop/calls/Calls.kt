@@ -99,6 +99,7 @@ object Calls {
 
     fun start(telegram: Telegram, userId: Long, video: Boolean) {
         if (current != null) return
+        AppLog.trace(if (video) "start video call" else "start call")
         val call = ActiveCall(telegram, userId, outgoing = true, video = video)
         current = call
         if (demo) {

@@ -109,7 +109,7 @@ fun FoldersSection(telegram: Telegram, settings: AppSettings) {
             val (title, icon, subtitle) = when (key) {
                 ChatListKey.Main -> Triple("All chats", "All", if (settings.hideAllChats.value) "Hidden" else "All your chats")
                 ChatListKey.Unread -> Triple(settings.unreadFolderName.value, settings.unreadFolderIcon.value, "Chats with unread messages")
-                ChatListKey.Mentions -> Triple(settings.mentionsFolderName.value, settings.mentionsFolderIcon.value, "Chats where you were mentioned")
+                ChatListKey.Mentions -> Triple(settings.mentionsFolderName.value, settings.mentionsFolderIcon.value, "Mentions and unread private messages")
                 is ChatListKey.Folder -> byId[key.id]?.let { Triple(it.title, overrides[it.id] ?: it.icon, "Folder") } ?: return@forEachIndexed
                 else -> return@forEachIndexed
             }

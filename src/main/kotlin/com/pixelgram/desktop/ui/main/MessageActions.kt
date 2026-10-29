@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.ConfirmOnEnter
 import com.pixelgram.desktop.ui.theme.outgoingAccent
 
 import com.pixelgram.desktop.ui.icons.outlined.Gif
@@ -429,13 +430,15 @@ fun DeleteMessageDialog(
         icon = { Icon(Icons.Outlined.Delete, contentDescription = null) },
         title = { Text("Delete message?") },
         text = {
-            if (canRevoke) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable { revoke = !revoke },
-                ) {
-                    Checkbox(checked = revoke, onCheckedChange = { revoke = it })
-                    EmojiText(revokeLabel, modifier = Modifier.padding(end = 12.dp))
+            ConfirmOnEnter({ onConfirm(canRevoke && revoke) }) {
+                if (canRevoke) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable { revoke = !revoke },
+                    ) {
+                        Checkbox(checked = revoke, onCheckedChange = { revoke = it })
+                        EmojiText(revokeLabel, modifier = Modifier.padding(end = 12.dp))
+                    }
                 }
             }
         },

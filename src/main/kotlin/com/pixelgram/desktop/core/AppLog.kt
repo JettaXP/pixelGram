@@ -31,12 +31,22 @@ object AppLog {
         }
         Thread.setDefaultUncaughtExceptionHandler { thread, error -> write("Uncaught error in ${thread.name}", error) }
         runCatching {
-            running.writeText(ProcessHandle.current().pid().toString())
+            writeMarker()
             Runtime.getRuntime().addShutdownHook(Thread { running.delete() })
         }
     }
 
     private val running: File get() = File(AppPaths.logsDir, "running.marker")
+    private val trail = ArrayDeque<String>()
+
+    @Synchronized
+    fun trace(event: String) {
+        trail.addLast("${LocalDateTime.now()} $event")
+        while (trail.size > TrailLines) trail.removeFirst()
+        runCatching { if (running.isFile) writeMarker() }
+    }
+
+    private fun writeMarker() = running.writeText((listOf(ProcessHandle.current().pid().toString()) + trail).joinToString("\n"))
 
     private fun reportUncleanExit() {
         val marker = running.takeIf { it.isFile } ?: return
@@ -44,10 +54,11 @@ object AppLog {
             .atZone(ZoneId.systemDefault()).format(stamp)
         val recent = previous.takeIf { it.isFile }?.readLines()?.takeLast(CrashContextLines)?.joinToString("\n").orEmpty()
         val tdlib = File(AppPaths.logsDir, "tdlib.log").takeIf { it.isFile }?.let(::tail).orEmpty()
+        val actions = runCatching { marker.readLines().drop(1).joinToString("\n") }.getOrDefault("")
         File(AppPaths.logsDir, "crash-$time.log").writeText(
             "pixelGram ${BuildConfig.VERSION} ${BuildConfig.CODENAME} (${BuildConfig.COMMIT})\n\n" +
                 "The previous session ended unexpectedly, without a Java error. This usually means a native crash or the process being killed.\n\n" +
-                "Recent log:\n$recent\n\nRecent TDLib log:\n$tdlib\n",
+                "Last actions:\n$actions\n\nRecent log:\n$recent\n\nRecent TDLib log:\n$tdlib\n",
         )
         marker.delete()
     }
@@ -137,6 +148,7 @@ object AppLog {
     private const val DumpScanLines = 20_000
     private const val TailBytes = 64L * 1024
     private const val KeptCrashes = 20
+    private const val TrailLines = 30
 }
 
 fun Throwable.describe(): String = generateSequence(this) { it.cause }

@@ -1333,7 +1333,7 @@ class Telegram(
                     val order = chat.positions[source] ?: continue
                     val keep = when (key) {
                         ChatListKey.Unread -> chat.unreadCount > 0 || chat.markedUnread
-                        ChatListKey.Mentions -> chat.unreadMentions > 0
+                        ChatListKey.Mentions -> chat.unreadMentions > 0 || (chat.privateUserId != 0L && !isBot(chat) && (chat.unreadCount > 0 || chat.markedUnread))
                         else -> true
                     }
                     if (keep) ordered += chat to order
@@ -1998,6 +1998,7 @@ class Telegram(
     }
 
     fun openChat(chatId: Long) {
+        AppLog.trace("open chat")
         openChats[chatId] = (openChats[chatId] ?: 0) + 1
         send(TdApi.OpenChat().apply { this.chatId = chatId })
         val list = messages(chatId)
@@ -2160,7 +2161,13 @@ class Telegram(
     fun nextUnread(chatId: Long, mentions: Boolean, onFound: (Long) -> Unit) {
         val filter = if (mentions) TdApi.SearchMessagesFilterUnreadMention() else TdApi.SearchMessagesFilterUnreadReaction()
         send(TdApi.SearchChatMessages(chatId, null, "", null, 0L, 0, 1, filter)) { result ->
-            (result as? TdApi.FoundChatMessages)?.messages?.firstOrNull()?.let { onFound(it.id) }
+            val found = (result as? TdApi.FoundChatMessages)?.messages?.firstOrNull() ?: return@send
+            markRead(chatId, listOf(found.id))
+            chats[chatId]?.let { chat ->
+                if (mentions) chat.unreadMentions = (chat.unreadMentions - 1).coerceAtLeast(0)
+                else chat.unreadReactions = (chat.unreadReactions - 1).coerceAtLeast(0)
+            }
+            onFound(found.id)
         }
     }
 

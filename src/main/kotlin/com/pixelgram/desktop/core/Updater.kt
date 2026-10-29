@@ -153,6 +153,7 @@ object Updater {
         System.getProperty("jpackage.app-path")?.startsWith("/usr/") == true || File("/usr/lib/pixelgram").isDirectory
 
     fun download() {
+        AppLog.trace("download update")
         val available = state as? UpdateState.Available ?: return
         state = UpdateState.Downloading(available.asset, available.version)
         progress = 0f
@@ -243,6 +244,7 @@ object Updater {
     }
 
     fun install(beforeExit: () -> Unit) {
+        AppLog.trace("install update")
         val ready = state as? UpdateState.Ready ?: return
         val file = ready.file
         if (file.name.endsWith(".dmg")) {

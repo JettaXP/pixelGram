@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.ConfirmOnEnter
 import com.pixelgram.desktop.ui.icons.outlined.Edit
 import com.pixelgram.desktop.ui.icons.outlined.DriveFileRenameOutline
 import com.pixelgram.desktop.ui.icons.outlined.PersonAdd
@@ -256,6 +257,14 @@ fun ChatActions(
     }
     confirm?.let { which ->
         val title = telegram.chatTitle(chat)
+        val apply = {
+            when (which) {
+                Confirm.Clear -> telegram.clearHistory(chat)
+                Confirm.Delete -> telegram.deleteChat(chat)
+                Confirm.Block -> telegram.block(chat)
+            }
+            confirm = null
+        }
         AlertDialog(
             onDismissRequest = { confirm = null },
             title = {
@@ -268,23 +277,18 @@ fun ChatActions(
                 )
             },
             text = {
-                Text(
-                    when (which) {
-                        Confirm.Clear -> "All messages in this chat will be deleted for you."
-                        Confirm.Delete -> "The chat will be removed from your chat list."
-                        Confirm.Block -> "They won't be able to message you."
-                    }
-                )
+                ConfirmOnEnter(apply) {
+                    Text(
+                        when (which) {
+                            Confirm.Clear -> "All messages in this chat will be deleted for you."
+                            Confirm.Delete -> "The chat will be removed from your chat list."
+                            Confirm.Block -> "They won't be able to message you."
+                        }
+                    )
+                }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    when (which) {
-                        Confirm.Clear -> telegram.clearHistory(chat)
-                        Confirm.Delete -> telegram.deleteChat(chat)
-                        Confirm.Block -> telegram.block(chat)
-                    }
-                    confirm = null
-                }) { Text(if (which == Confirm.Clear) "Clear" else if (which == Confirm.Block) "Block" else "Delete", color = MaterialTheme.colorScheme.error) }
+                TextButton(onClick = apply) { Text(if (which == Confirm.Clear) "Clear" else if (which == Confirm.Block) "Block" else "Delete", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } },
         )

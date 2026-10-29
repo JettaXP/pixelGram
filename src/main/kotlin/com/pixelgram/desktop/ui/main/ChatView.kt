@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.ConfirmOnEnter
 import com.pixelgram.desktop.ui.icons.outlined.AlternateEmail
 import com.pixelgram.desktop.ui.icons.outlined.FavoriteBorder
 
@@ -435,12 +436,16 @@ private fun ChatViewContent(
         val saved = telegram.isSavedMessages(chat.id)
         val private = chat.privateUserId != 0L && !saved
         var also by remember(message.key) { mutableStateOf(true) }
+        val pin = {
+            if (private) telegram.togglePin(message, notify = true, onlyForSelf = !also) else telegram.togglePin(message, notify = also)
+            pinning = null
+        }
         AlertDialog(
             onDismissRequest = { pinning = null },
             icon = { Icon(Icons.Outlined.PushPin, contentDescription = null) },
             title = { Text("Pin message") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ConfirmOnEnter(pin) { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Would you like to pin this message?")
                     if (!saved) {
                         val label = when {
@@ -456,14 +461,9 @@ private fun ChatViewContent(
                             EmojiText(label, modifier = Modifier.padding(end = 12.dp))
                         }
                     }
-                }
+                } }
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (private) telegram.togglePin(message, notify = true, onlyForSelf = !also) else telegram.togglePin(message, notify = also)
-                    pinning = null
-                }) { Text("Pin") }
-            },
+            confirmButton = { TextButton(onClick = pin) { Text("Pin") } },
             dismissButton = { TextButton(onClick = { pinning = null }) { Text("Cancel") } },
         )
     }
@@ -2533,15 +2533,27 @@ private val SentenceEnds = setOf('.', '!', '?')
 
 private fun capitalizeTyped(old: String, typed: TextFieldValue): TextFieldValue {
     val new = typed.text
-    val at = typed.selection.end - 1
-    if (!typed.selection.collapsed || new.length != old.length + 1 || at < 0) return typed
-    val char = new[at]
-    if (!char.isLowerCase() || new.removeRange(at, at + 1) != old) return typed
-    var before = at - 1
-    if (before >= 0 && new[before] != '\n') {
-        if (new[before] != ' ') return typed
-        while (before >= 0 && new[before] == ' ') before--
-        if (before >= 0 && new[before] !in SentenceEnds && new[before] != '\n') return typed
+    if (!typed.selection.collapsed || new.length <= old.length) return typed
+    val start = new.commonPrefixWith(old).length
+    val tail = old.length - start
+    val suffix = new.takeLast(tail).commonSuffixWith(old.takeLast(tail)).length
+    if (start + suffix != old.length) return typed
+    val end = new.length - suffix
+    val chars = new.toCharArray()
+    var changed = false
+    for (at in start until end) {
+        if (chars[at].isLowerCase() && startsSentence(chars, at)) {
+            chars[at] = chars[at].uppercaseChar()
+            changed = true
+        }
     }
-    return typed.copy(text = new.substring(0, at) + char.uppercaseChar() + new.substring(at + 1))
+    return if (changed) typed.copy(text = String(chars)) else typed
+}
+
+private fun startsSentence(chars: CharArray, at: Int): Boolean {
+    var before = at - 1
+    if (before < 0 || chars[before] == '\n') return true
+    if (chars[before] != ' ') return false
+    while (before >= 0 && chars[before] == ' ') before--
+    return before < 0 || chars[before] in SentenceEnds || chars[before] == '\n'
 }
