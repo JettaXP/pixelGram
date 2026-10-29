@@ -158,3 +158,29 @@ fun Telegram.postStory(
 }
 
 private const val SecondsInHour = 3600
+
+fun Telegram.joinByRequest(chat: ChatState): Boolean = supergroupOf(chat)?.joinByRequest == true
+
+fun Telegram.setJoinByRequest(chat: ChatState, enabled: Boolean, done: (String?) -> Unit) {
+    if (isDemo) {
+        supergroupOf(chat)?.joinByRequest = enabled
+        return done(null)
+    }
+    send(TdApi.ToggleSupergroupJoinByRequest(chat.supergroupId, enabled, 0L, false)) { done(failure(it)) }
+}
+
+fun Telegram.joinRequests(chatId: Long, done: (List<TdApi.ChatJoinRequest>) -> Unit) {
+    if (isDemo) return done(listOf(TdApi.ChatJoinRequest(2L, (System.currentTimeMillis() / 1000).toInt() - 600, "Hi, I'd like to join")))
+    send(TdApi.GetChatJoinRequests(chatId, "", "", null, JoinRequestsPage)) { result ->
+        val list = (result as? TdApi.ChatJoinRequests)?.requests?.toList().orEmpty()
+        list.forEach { ensureUser(it.userId) }
+        done(list)
+    }
+}
+
+fun Telegram.answerJoinRequest(chatId: Long, userId: Long, approve: Boolean, done: (String?) -> Unit) {
+    if (isDemo) return done(null)
+    send(TdApi.ProcessChatJoinRequest(chatId, userId, approve)) { done(failure(it)) }
+}
+
+private const val JoinRequestsPage = 100

@@ -71,3 +71,32 @@ fun speechText(result: TdApi.SpeechRecognitionResult?): Pair<String, Boolean>? =
     is TdApi.SpeechRecognitionResultError -> (result.error?.message?.let(::friendlyError) ?: "Couldn't recognize speech") to false
     else -> null
 }
+
+private var demoPassword: TdApi.PasswordState = TdApi.PasswordState().apply { passwordHint = "" }
+
+fun Telegram.passwordState(done: (TdApi.PasswordState?) -> Unit) {
+    if (isDemo) return done(demoPassword)
+    send(TdApi.GetPasswordState()) { done(it as? TdApi.PasswordState) }
+}
+
+fun Telegram.setCloudPassword(old: String, new: String, hint: String, email: String, done: (TdApi.PasswordState?, String?) -> Unit) {
+    if (isDemo) {
+        demoPassword = TdApi.PasswordState().apply {
+            hasPassword = new.isNotEmpty()
+            passwordHint = hint
+            hasRecoveryEmailAddress = email.isNotBlank()
+        }
+        return done(demoPassword, null)
+    }
+    send(TdApi.SetPassword(old, new, hint, email.isNotBlank(), email.trim())) { result -> done(result as? TdApi.PasswordState, failure(result)) }
+}
+
+fun Telegram.confirmRecoveryEmail(code: String, done: (TdApi.PasswordState?, String?) -> Unit) {
+    if (isDemo) return done(demoPassword, null)
+    send(TdApi.CheckRecoveryEmailAddressCode(code.trim())) { result -> done(result as? TdApi.PasswordState, failure(result)) }
+}
+
+fun Telegram.stopLiveLocation(message: UiMessage) {
+    if (isDemo) return
+    send(TdApi.EditMessageLiveLocation(message.chatId, message.id, null, null))
+}

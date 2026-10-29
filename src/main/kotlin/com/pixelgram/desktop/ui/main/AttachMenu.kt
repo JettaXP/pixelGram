@@ -502,21 +502,35 @@ private fun CheckRow(title: String, checked: Boolean, onChange: (Boolean) -> Uni
     }
 }
 
+private val LivePeriods = listOf(0 to "Once", 15 * 60 to "15 min", 60 * 60 to "1 hour", 8 * 60 * 60 to "8 hours")
+
 private val Coordinates = Regex("""(-?\d{1,3}(?:\.\d+)?)\s*[,; ]\s*(-?\d{1,3}(?:\.\d+)?)""")
 
 @Composable
 private fun LocationDialog(telegram: Telegram, chatId: Long, replyToId: Long, onDismiss: () -> Unit, onSent: () -> Unit) {
     var input by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    var live by remember { mutableStateOf(0) }
     val match = Coordinates.find(input)
     val latitude = match?.groupValues?.get(1)?.toDoubleOrNull()?.takeIf { it in -90.0..90.0 }
     val longitude = match?.groupValues?.get(2)?.toDoubleOrNull()?.takeIf { it in -180.0..180.0 }
     FormDialog("Send location", "Send", latitude != null && longitude != null, error, onDismiss, onConfirm = {
-        val content = TdApi.InputMessageLocation().apply { location = TdApi.Location(latitude ?: 0.0, longitude ?: 0.0, 0.0) }
+        val point = TdApi.Location(latitude ?: 0.0, longitude ?: 0.0, 0.0)
+        val content: TdApi.InputMessageContent = if (live > 0) {
+            TdApi.InputMessageLiveLocation(TdApi.LiveLocation(point, live, 0, 0))
+        } else {
+            TdApi.InputMessageLocation(point)
+        }
         telegram.sendContent(chatId, content, replyToId) { failure -> if (failure == null) onSent() else error = failure }
     }) {
         Text("Paste coordinates or a map link, for example 55.7539, 37.6208.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(input, { input = it }, placeholder = { Text("Latitude, longitude") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Section("Share")
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            LivePeriods.forEach { (seconds, label) ->
+                androidx.compose.material3.FilterChip(selected = live == seconds, onClick = { live = seconds }, label = { Text(label) })
+            }
+        }
         if (latitude != null && longitude != null) {
             TextButton(onClick = { Links.confirmOpen("https://www.openstreetmap.org/?mlat=$latitude&mlon=$longitude#map=16/$latitude/$longitude") }) {
                 Text("Check on the map")

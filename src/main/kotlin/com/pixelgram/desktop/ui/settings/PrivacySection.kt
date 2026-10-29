@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.settings
 
+import com.pixelgram.desktop.telegram.passwordState
+import com.pixelgram.desktop.ui.icons.outlined.Key
 import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.EasterEgg
 import com.pixelgram.desktop.ui.IsraelBlue
@@ -178,13 +180,18 @@ private fun PrivacyMain(telegram: Telegram, settings: AppSettings, sessionCount:
         all.forEach { item -> telegram.privacyRules(item.setting) { result -> result?.let { rules[item.title] = it } } }
         telegram.newChatPrivacy { newChats = it }
     }
+    var cloud by remember { mutableStateOf<TdApi.PasswordState?>(null) }
+    var cloudDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { telegram.passwordState { cloud = it } }
     Header("Security")
     SegmentedGroup {
-        ValueRow(0, 4, Icons.Outlined.Lock, "Local passcode", if (AppLock.enabled) "On" else "Off") { passcodeDialog = true }
-        ValueRow(1, 4, Icons.Outlined.Block, "Blocked users", blockedTotal?.let { if (it == 0) "None" else it.toString() }, onClick = onBlocked)
-        ValueRow(2, 4, Icons.Outlined.Timer, "Auto-delete messages", defaultAutoDelete?.let { com.pixelgram.desktop.ui.main.autoDeleteLabel(it) }) { autoDeleting = true }
-        ValueRow(3, 4, Icons.Outlined.Devices, "Active sessions", sessionCount?.toString(), onClick = onSessions)
+        ValueRow(0, 5, Icons.Outlined.Lock, "Local passcode", if (AppLock.enabled) "On" else "Off") { passcodeDialog = true }
+        ValueRow(1, 5, Icons.Outlined.Key, "Two-step verification", cloud?.let { if (it.hasPassword) "On" else "Off" }) { if (cloud != null) cloudDialog = true }
+        ValueRow(2, 5, Icons.Outlined.Block, "Blocked users", blockedTotal?.let { if (it == 0) "None" else it.toString() }, onClick = onBlocked)
+        ValueRow(3, 5, Icons.Outlined.Timer, "Auto-delete messages", defaultAutoDelete?.let { com.pixelgram.desktop.ui.main.autoDeleteLabel(it) }) { autoDeleting = true }
+        ValueRow(4, 5, Icons.Outlined.Devices, "Active sessions", sessionCount?.toString(), onClick = onSessions)
     }
+    if (cloudDialog) cloud?.let { state -> CloudPasswordDialog(telegram, state, onChanged = { cloud = it }) { cloudDialog = false } }
     Header("Privacy")
     val count = all.size + 1
     SegmentedGroup {

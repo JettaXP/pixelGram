@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.telegram.setJoinByRequest
+import com.pixelgram.desktop.telegram.joinByRequest
+import com.pixelgram.desktop.ui.icons.outlined.HowToReg
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -115,6 +118,7 @@ private sealed interface ManagePage {
     data object Discussion : ManagePage
     data object Statistics : ManagePage
     data object Boosts : ManagePage
+    data object JoinRequests : ManagePage
     data class Member(val member: TdApi.ChatMember, val askBan: Boolean = false) : ManagePage
     data class Rights(val member: TdApi.ChatMember) : ManagePage
     data class Restrict(val member: TdApi.ChatMember) : ManagePage
@@ -286,6 +290,7 @@ fun ManageChatDialog(
                         ManagePage.Discussion -> DiscussionPage(chat, telegram, settings)
                         ManagePage.Statistics -> StatisticsPage(chat, telegram, settings?.let { com.pixelgram.desktop.ui.theme.isDarkTheme(it) } ?: false)
                         ManagePage.Boosts -> Column(Modifier.verticalScroll(rememberScrollState())) { BoostsContent(chat, telegram, canBoost = false) }
+                        ManagePage.JoinRequests -> JoinRequestsPage(chat, telegram, settings)
                         is ManagePage.Member -> MemberPage(chat, telegram, shown.member, go, back, shown.askBan)
                         is ManagePage.Rights -> RightsPage(chat, telegram, shown.member, back)
                         is ManagePage.Restrict -> RestrictPage(chat, telegram, shown.member, back)
@@ -312,6 +317,7 @@ private fun pageTitle(page: ManagePage, chat: ChatState, telegram: Telegram): St
     ManagePage.Discussion -> if (chat.isChannel) "Discussion" else "Linked channel"
     ManagePage.Statistics -> "Statistics"
     ManagePage.Boosts -> "Boosts"
+    ManagePage.JoinRequests -> "Join requests"
     is ManagePage.Member -> telegram.senderTitle(page.member.memberId)
     is ManagePage.Rights -> "Admin rights"
     is ManagePage.Restrict -> "Restrictions"
@@ -336,6 +342,7 @@ private fun HomePage(chat: ChatState, telegram: Telegram, settings: com.pixelgra
         if (supergroup && group && restrict) add(HomeRow(Icons.Outlined.PanTool, "Exceptions", null) { go(ManagePage.Members(MemberList.Restricted)) })
         if (supergroup && restrict) add(HomeRow(Icons.Outlined.Block, "Removed users", null) { go(ManagePage.Members(MemberList.Banned)) })
         if (supergroup) add(HomeRow(Icons.Outlined.History, "Recent actions", null) { go(ManagePage.Log) })
+        if (supergroup && telegram.can(chat) { it.canInviteUsers }) add(HomeRow(Icons.Outlined.PersonAdd, "Join requests", chat.joinRequests.takeIf { it > 0 }?.toString()) { go(ManagePage.JoinRequests) })
         if (changeInfo) add(HomeRow(Icons.Outlined.AddReaction, "Reactions", null) { go(ManagePage.Reactions) })
         if (supergroup && changeInfo) add(HomeRow(Icons.Outlined.Forum, if (chat.isChannel) "Discussion" else "Linked channel", null) { go(ManagePage.Discussion) })
         if (supergroup) add(HomeRow(Icons.Outlined.BarChart, "Statistics", null) { go(ManagePage.Statistics) })
@@ -351,6 +358,25 @@ private fun HomePage(chat: ChatState, telegram: Telegram, settings: com.pixelgra
                     trailingContent = row.detail?.let { { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
                 ) { Text(row.title) }
             }
+        }
+        if (supergroup && telegram.can(chat) { it.canInviteUsers }) {
+            var approve by remember(chat.id) { mutableStateOf(telegram.joinByRequest(chat)) }
+            var failure by remember { mutableStateOf<String?>(null) }
+            SwitchItem(
+                Icons.Outlined.HowToReg,
+                "Approve new members",
+                if (chat.isChannel) "New subscribers need an admin's approval." else "New members need an admin's approval.",
+                approve,
+                index = 0,
+                count = 1,
+            ) { enabled ->
+                approve = enabled
+                telegram.setJoinByRequest(chat, enabled) { error ->
+                    failure = error
+                    if (error != null) approve = !enabled
+                }
+            }
+            failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
         if (group && supergroup && (telegram.isOwner(chat) || changeInfo)) {
             var busy by remember { mutableStateOf(false) }

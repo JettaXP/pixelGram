@@ -617,6 +617,7 @@ private fun ChatViewContent(
             }
         }
         VideoChatBar(chat, telegram, Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
+        JoinRequestsBar(chat, telegram, settings, Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
         val pins = telegram.pinnedMessages[chat.id].orEmpty()
         AnimatedVisibility(
             visible = pins.isNotEmpty(),

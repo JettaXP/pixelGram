@@ -101,6 +101,7 @@ class ChatState(val id: Long) {
     var unreadCount by mutableStateOf(0)
     var unreadMentions by mutableStateOf(0)
     var unreadReactions by mutableStateOf(0)
+    var joinRequests by mutableStateOf(0)
     var protectedContent by mutableStateOf(false)
     var autoDelete by mutableStateOf(0)
     var secretChatId = 0
@@ -1056,6 +1057,7 @@ class Telegram(
             is TdApi.UpdateChatMessageAutoDeleteTime -> chats[update.chatId]?.autoDelete = update.messageAutoDeleteTime
             is TdApi.UpdateSecretChat -> secretChats[update.secretChat.id] = update.secretChat
             is TdApi.UpdateChatHasProtectedContent -> chats[update.chatId]?.protectedContent = update.hasProtectedContent
+            is TdApi.UpdateChatPendingJoinRequests -> chats[update.chatId]?.joinRequests = update.pendingJoinRequests?.totalCount ?: 0
             is TdApi.UpdateChatUnreadReactionCount -> chats[update.chatId]?.unreadReactions = update.unreadReactionCount
             is TdApi.UpdateMessageUnreadReactions -> chats[update.chatId]?.unreadReactions = update.unreadReactionCount
             is TdApi.UpdateChatIsMarkedAsUnread -> chats[update.chatId]?.let { chat ->
@@ -1330,6 +1332,7 @@ class Telegram(
             unreadCount = chat.unreadCount
             unreadMentions = chat.unreadMentionCount
             unreadReactions = chat.unreadReactionCount
+            joinRequests = chat.pendingJoinRequests?.totalCount ?: 0
             protectedContent = chat.hasProtectedContent
             autoDelete = chat.messageAutoDeleteTime
             markedUnread = chat.isMarkedAsUnread
@@ -1560,6 +1563,8 @@ class Telegram(
 
     private val forums = KeyedState<Long, Boolean>()
     private val supergroupInfo = KeyedState<Long, TdApi.Supergroup>()
+
+    fun supergroupOf(chat: ChatState): TdApi.Supergroup? = supergroupInfo[chat.supergroupId]
 
     fun canPost(chat: ChatState): Boolean {
         if (!chat.isChannel) return true
@@ -3318,6 +3323,7 @@ fun contentText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageSticker -> "${content.sticker?.emoji ?: ""} Sticker".trim()
     is TdApi.MessageAnimation -> mediaPreview("🎞", "GIF", content.caption?.text)
     is TdApi.MessageContact -> "👤 Contact"
+    is TdApi.MessageLiveLocation -> "📍 Live location"
     is TdApi.MessageLocation -> "📍 Location"
     is TdApi.MessagePoll -> "📊 Poll"
     is TdApi.MessageSupergroupChatCreate -> "Created «${content.title}»"

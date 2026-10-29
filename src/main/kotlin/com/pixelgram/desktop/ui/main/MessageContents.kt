@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.core.tr
+import com.pixelgram.desktop.telegram.stopLiveLocation
 import com.pixelgram.desktop.telegram.recognizeSpeech
 import com.pixelgram.desktop.ui.icons.outlined.ExpandLess
 import com.pixelgram.desktop.ui.icons.outlined.Subtitles
@@ -635,6 +637,23 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
                 contact.phoneNumber.let { if (it.startsWith("+")) it else "+$it" },
                 false,
             ) {}
+        }
+        is TdApi.MessageLiveLocation -> {
+            val location = content.location.location
+            val active = content.expiresIn > 0
+            Column {
+                FileRow(
+                    Icons.Filled.Place,
+                    "Live location",
+                    if (active) "%.5f, %.5f · %s".format(location.latitude, location.longitude, tr("live")) else tr("Sharing ended"),
+                    false,
+                ) {
+                    openUrl("https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}#map=16/${location.latitude}/${location.longitude}")
+                }
+                if (active && message.isOutgoing) {
+                    com.pixelgram.desktop.ui.components.expressive.TextButton(onClick = { telegram.stopLiveLocation(message) }) { Text("Stop sharing") }
+                }
+            }
         }
         is TdApi.MessageLocation -> {
             val location = content.location
