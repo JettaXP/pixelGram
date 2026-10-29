@@ -14,39 +14,29 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.launch
 
-private const val ShowAfterItems = 3
+private const val ShowAfterItems = 1
 private const val SnapCloserItems = 20
 private const val SnapToItem = 6
 
 @Composable
 fun ScrollDownButton(listState: LazyListState, modifier: Modifier = Modifier, forceVisible: Boolean = false, onLatest: (() -> Unit)? = null) {
-    var visible by remember { mutableStateOf(false) }
+    val away by remember(listState) { derivedStateOf { listState.firstVisibleItemIndex >= ShowAfterItems } }
+    var dismissed by remember { mutableStateOf(false) }
+    LaunchedEffect(away) { if (!away) dismissed = false }
+    val visible = away && !dismissed
     val scope = rememberCoroutineScope()
-    LaunchedEffect(listState) {
-        var last = 0L
-        snapshotFlow { listState.firstVisibleItemIndex.toLong() * Int.MAX_VALUE + listState.firstVisibleItemScrollOffset }
-            .collect { position ->
-                visible = when {
-                    listState.firstVisibleItemIndex < ShowAfterItems -> false
-                    position < last -> true
-                    position > last -> false
-                    else -> visible
-                }
-                last = position
-            }
-    }
     AnimatedVisibility(
         visible = visible || forceVisible,
         enter = scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()),
@@ -55,7 +45,7 @@ fun ScrollDownButton(listState: LazyListState, modifier: Modifier = Modifier, fo
     ) {
         SmallFloatingActionButton(
             onClick = {
-                visible = false
+                dismissed = true
                 if (onLatest != null) return@SmallFloatingActionButton onLatest()
                 scope.launch {
                     if (listState.firstVisibleItemIndex > SnapCloserItems) listState.scrollToItem(SnapToItem)

@@ -2090,7 +2090,7 @@ class Telegram(
         return next
     }
 
-    fun loadMoreMessages(chatId: Long, pageSize: Int = 50, onLoaded: (Int) -> Unit = {}) {
+    fun loadMoreMessages(chatId: Long, pageSize: Int = HistoryPageSize, onLoaded: (Int) -> Unit = {}) {
         val list = messages(chatId)
         val fromId = list.lastOrNull()?.id ?: 0L
         val requested = generation(chatId)

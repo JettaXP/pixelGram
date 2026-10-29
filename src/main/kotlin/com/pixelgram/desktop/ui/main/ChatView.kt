@@ -239,7 +239,7 @@ private fun ChatViewContent(
         derivedStateOf {
             val info = listState.layoutInfo
             val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0
-            info.totalItemsCount > 0 && last >= info.totalItemsCount - 5
+            info.totalItemsCount > 0 && last >= info.totalItemsCount - HistoryPrefetchItems
         }
     }
     LaunchedEffect(nearTop, messages.size) {
@@ -737,13 +737,14 @@ private fun ChatViewContent(
                 verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom),
             ) {
                 if (shown.isEmpty()) item(key = TypingKey) { TypingBubble(chat, telegram) }
-                itemsIndexed(shown, key = { _, message -> message.key }) { index, message ->
+                itemsIndexed(shown, key = { _, message -> message.key }, contentType = { _, message -> messageContentType(message) }) { index, message ->
                     val newDay = index == shown.lastIndex || !sameDay(message.date, shown[index + 1].date)
                     val rise = remember { Animatable(if (PowerSaving.messageAnimations && message.fresh && slidIn.add(message.key)) 1f else 0f) }
-                    LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
+                    if (rise.value != 0f || rise.isRunning) LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
                     val flash = remember { Animatable(0f) }
-                    LaunchedEffect(highlight) {
-                        if (highlight?.first == message.id) {
+                    val flashed = highlight?.takeIf { it.first == message.id }
+                    if (flashed != null) {
+                        LaunchedEffect(flashed) {
                             flash.snapTo(1f)
                             delay(HighlightHoldMs)
                             flash.animateTo(0f, tween(HighlightFadeMs))
@@ -2562,3 +2563,20 @@ private fun startsSentence(chars: CharArray, at: Int): Boolean {
     while (before >= 0 && chars[before] == ' ') before--
     return before < 0 || chars[before] in SentenceEnds || chars[before] == '\n'
 }
+
+private fun messageContentType(message: UiMessage): Int = when {
+    message.service -> 0
+    message.album.isNotEmpty() -> 1
+    else -> when (message.content) {
+        is TdApi.MessageSticker -> 2
+        is TdApi.MessagePhoto -> 3
+        is TdApi.MessageVideo, is TdApi.MessageAnimation -> 4
+        is TdApi.MessageVideoNote -> 5
+        is TdApi.MessageVoiceNote, is TdApi.MessageAudio -> 6
+        is TdApi.MessageDocument -> 7
+        null, is TdApi.MessageText -> if (message.photo != null) 3 else 8
+        else -> 9
+    }
+}
+
+private const val HistoryPrefetchItems = 30
