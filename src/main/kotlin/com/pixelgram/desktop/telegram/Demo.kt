@@ -79,6 +79,17 @@ fun Telegram.loadDemo() {
     if (System.getProperty("pixelgram.demo.secret") == "true") loadSecretDemo(now)
     loadThemesDemo()
     if (System.getProperty("pixelgram.demo.call") == "true") com.pixelgram.desktop.calls.Calls.showDemo(this)
+    System.getProperty("pixelgram.demo.play")?.let { path ->
+        kotlinx.coroutines.MainScope().launch {
+            kotlinx.coroutines.delay(DemoPlayDelayMs)
+            com.pixelgram.desktop.ui.main.VideoPlayer.open(this@loadDemo, TdApi.Video().apply {
+                duration = 0
+                fileName = java.io.File(path).name
+                mimeType = "video/mp4"
+                video = demoFile(990_000, path, java.io.File(path).length())
+            }, "")
+        }
+    }
     System.getProperty("pixelgram.demo.miniapp")?.let { path ->
         kotlinx.coroutines.MainScope().launch {
             kotlinx.coroutines.delay(DemoMiniAppDelayMs)
@@ -434,7 +445,7 @@ fun demoStories(chatId: Long, album: Int = 0): List<TdApi.Story> {
                         width = 720
                         height = 1280
                         thumbnail = TdApi.Thumbnail(TdApi.ThumbnailFormatJpeg(), 720, 1280, file)
-                        video = demoFile(951_000 + index, null, 3_000_000)
+                        video = demoFile(951_000 + index, System.getProperty("pixelgram.demo.storyVideo"), 3_000_000)
                     },
                     null,
                 )
@@ -675,6 +686,7 @@ fun demoStoryViewers(): List<TdApi.StoryInteraction> {
 }
 
 private const val DemoMiniAppDelayMs = 12_000L
+private const val DemoPlayDelayMs = 6_000L
 
 fun demoStickers(): List<TdApi.Sticker> {
     val dir = System.getProperty("pixelgram.demo.stickers") ?: return emptyList()

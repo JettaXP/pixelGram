@@ -47,6 +47,7 @@ import androidx.compose.material3.Surface
 import com.pixelgram.desktop.ui.components.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -91,7 +92,7 @@ import java.nio.ShortBuffer
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.SourceDataLine
-import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.Data
 import org.jetbrains.skia.impl.BufferUtil
 
 class VideoRequest(
@@ -116,6 +117,7 @@ object VideoPlayer {
     }
 
     private fun open(request: VideoRequest) {
+        AppLog.trace("play video")
         if (AudioPlayer.playing) AudioPlayer.pauseOrResume()
         request.telegram.download(request.file)
         current = request
@@ -136,6 +138,15 @@ private const val AudioBufferSeconds = 0.4
 private const val MaxDecodeWidth = 1920
 private const val MaxFrameGapNs = 100_000_000L
 private const val AudioDrainPollMs = 10L
+private const val AudioStartWaitNs = 1_500_000_000L
+private const val AudioPollMs = 5L
+private const val ResyncUs = 250_000L
+private const val DriftShare = 8
+private const val OutputRate = 48_000
+private const val OutputChannels = 2
+private val OutputRates = setOf(44_100, 48_000)
+private const val SpareFrames = 3
+private const val RetiredFrames = 8
 private val VolumeSliderWidth = 110.dp
 
 internal class VideoEngine(private val path: String, private val loop: Boolean, private val sound: Boolean = true, private val maxWidth: Int = MaxDecodeWidth) {
@@ -157,7 +168,12 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
     @Volatile private var audioBaseUs = 0L
     @Volatile private var lineMarkUs = 0L
     private var audioThread: Thread? = null
-    private var shown: org.jetbrains.skia.Image? = null
+    private var shown: PooledFrame? = null
+    private val spare = java.util.concurrent.ConcurrentLinkedQueue<Data>()
+    private val retired = ArrayList<PooledFrame>()
+    private var released = false
+
+    private class PooledFrame(val image: org.jetbrains.skia.Image, val data: Data)
 
     private val thread = Thread(::run, "pixelgram-video").apply { isDaemon = true }
 
@@ -187,8 +203,20 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
 
     private fun audioClockUs(): Long? {
         val output = line ?: return null
-        if (audioDone) return null
+        if (audioDone || audioSeekTo >= 0) return null
         return audioBaseUs + (output.microsecondPosition - lineMarkUs)
+    }
+
+    private fun awaitAudio(): Long? {
+        val deadline = System.nanoTime() + AudioStartWaitNs
+        var first: Long? = null
+        while (running && playing && seekTo < 0 && !audioDone && System.nanoTime() < deadline) {
+            val heard = audioClockUs()
+            if (heard != null && first == null) first = heard
+            if (heard != null && heard != first) return heard
+            Thread.sleep(AudioPollMs)
+        }
+        return null
     }
 
     private fun run() {
@@ -206,15 +234,18 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
                 grabber.start()
             }
             duration = grabber.lengthInTime / 1000
-            if (grabber.audioChannels > 0 && !loop && sound) {
+            var startAudio = grabber.audioChannels > 0 && !loop && sound
+            if (startAudio) {
                 audioDone = false
                 audioThread = Thread(::runAudio, "pixelgram-video-audio").apply {
                     isDaemon = true
+                    priority = Thread.MAX_PRIORITY
                     start()
                 }
             }
             var base = System.nanoTime()
             var baseUs = 0L
+            var heard = -1L
             var lastShown = 0L
             while (running) {
                 if (!playing && seekTo < 0) {
@@ -222,6 +253,7 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
                     if (!running) break
                     base = System.nanoTime()
                     baseUs = position * 1000
+                    heard = -1
                 }
                 val target = seekTo
                 if (target >= 0) {
@@ -229,11 +261,19 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
                     grabber.setTimestamp(target * 1000, true)
                     base = System.nanoTime()
                     baseUs = target * 1000
+                    heard = -1
                     position = target
                     if (!playing) {
                         grabber.grabImage()?.let { show(it) }
                         continue
                     }
+                }
+                if (startAudio && frame != null) {
+                    startAudio = false
+                    val started = awaitAudio()
+                    base = System.nanoTime()
+                    baseUs = started ?: (position * 1000)
+                    heard = started ?: -1
                 }
                 val next = grabber.grabImage()
                 if (next == null) {
@@ -250,12 +290,19 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
                     continue
                 }
                 val audible = audioClockUs()
-                val clock = audible ?: (baseUs + (System.nanoTime() - base) / 1000)
                 if (audible != null) {
-                    base = System.nanoTime()
-                    baseUs = audible
+                    if (heard >= 0 && audible != heard) {
+                        val drift = audible - (baseUs + (System.nanoTime() - base) / 1000)
+                        if (kotlin.math.abs(drift) > ResyncUs) {
+                            base = System.nanoTime()
+                            baseUs = audible
+                        } else {
+                            baseUs += drift / DriftShare
+                        }
+                    }
+                    heard = audible
                 }
-                val wait = next.timestamp - clock
+                val wait = next.timestamp - (baseUs + (System.nanoTime() - base) / 1000)
                 if (wait > 0) Thread.sleep(wait / 1000, ((wait % 1000) * 1000).toInt())
                 val now = System.nanoTime()
                 if (wait > -LateFrameUs || frame == null || now - lastShown > MaxFrameGapNs) {
@@ -271,6 +318,7 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
             synchronized(lock) { lock.notifyAll() }
             runCatching { grabber.stop() }
             runCatching { grabber.release() }
+            java.awt.EventQueue.invokeLater(::releaseFrames)
         }
     }
 
@@ -279,7 +327,10 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
         var output: SourceDataLine? = null
         try {
             grabber.start()
-            output = openLine(grabber.sampleRate, grabber.audioChannels) ?: return
+            val rate = grabber.sampleRate.takeIf { it in OutputRates } ?: OutputRate
+            grabber.sampleRate = rate
+            grabber.audioChannels = OutputChannels
+            output = openLine(rate, OutputChannels) ?: return
             lineMarkUs = output.microsecondPosition
             audioBaseUs = 0
             line = output
@@ -353,26 +404,43 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
         val stride = frame.imageStride
         val size = stride * frame.imageHeight
         val info = ImageInfo(frame.imageWidth, frame.imageHeight, ColorType.BGRA_8888, ColorAlphaType.OPAQUE)
-        val bitmap = Bitmap()
-        try {
-            if (!bitmap.allocPixels(info, stride)) return
-            val pixmap = bitmap.peekPixels() ?: return
-            try {
-                val source = buffer.duplicate().apply { rewind() }
-                source.limit(minOf(source.capacity(), size))
-                BufferUtil.getByteBufferFromPointer(pixmap.addr, size).put(source)
-            } finally {
-                pixmap.close()
-            }
-            bitmap.setImmutable()
-            val image = org.jetbrains.skia.Image.makeFromBitmap(bitmap)
-            val stale = shown
-            shown = image
-            this.frame = image
-            if (stale != null) java.awt.EventQueue.invokeLater { stale.close() }
-        } finally {
-            bitmap.close()
+        var data = spare.poll()
+        while (data != null && data.size != size) {
+            data.close()
+            data = spare.poll()
         }
+        val pixels = data ?: Data.makeUninitialized(size)
+        val source = buffer.duplicate().apply { rewind() }
+        source.limit(minOf(source.capacity(), size))
+        BufferUtil.getByteBufferFromPointer(pixels.writableData(), size).put(source)
+        val image = org.jetbrains.skia.Image.makeRaster(info, pixels, stride)
+        val stale = shown
+        shown = PooledFrame(image, pixels)
+        this.frame = image
+        if (stale != null) java.awt.EventQueue.invokeLater { retire(stale) }
+    }
+
+    private fun retire(stale: PooledFrame) {
+        retired.add(stale)
+        val iterator = retired.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            val unused = entry.image.refCount == 1 && entry.image !== frame
+            if (!unused && retired.size <= RetiredFrames) continue
+            iterator.remove()
+            entry.image.close()
+            if (unused && !released && spare.size < SpareFrames) spare.add(entry.data) else entry.data.close()
+        }
+    }
+
+    private fun releaseFrames() {
+        released = true
+        retired.forEach { entry ->
+            entry.image.close()
+            entry.data.close()
+        }
+        retired.clear()
+        while (true) spare.poll()?.close() ?: break
     }
 
 }
@@ -442,16 +510,17 @@ private fun VideoSurface(request: VideoRequest, engine: VideoEngine?, close: () 
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = close),
         contentAlignment = Alignment.Center,
     ) {
-        val frame = engine?.frame
+        val ratio by remember(engine) { derivedStateOf { engine?.frame?.let { it.width.toFloat() / it.height.coerceAtLeast(1) } } }
+        val aspect = ratio
         val media = Modifier
             .fillMaxSize()
             .padding(horizontal = MediaInsetX, vertical = MediaInsetY)
-        if (frame != null) {
+        if (engine != null && aspect != null) {
             Box(media, contentAlignment = Alignment.Center) {
                 VideoFrame(
                     engine,
                     Modifier
-                        .aspectRatio(frame.width.toFloat() / frame.height.coerceAtLeast(1))
+                        .aspectRatio(aspect)
                         .clip(RoundedCornerShape(16.dp))
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { engine.toggle() },
                 )

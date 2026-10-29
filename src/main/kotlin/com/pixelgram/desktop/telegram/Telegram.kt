@@ -1891,7 +1891,8 @@ class Telegram(
 
     fun storyViewers(story: TdApi.Story, offset: String, done: (List<TdApi.StoryInteraction>, String) -> Unit) {
         if (System.getProperty("pixelgram.demo") == "true") return done(if (offset.isEmpty()) demoStoryViewers() else emptyList(), "")
-        val mine = (story.posterId as? TdApi.MessageSenderUser)?.userId == myUserId
+        val poster = (story.posterId as? TdApi.MessageSenderUser)?.userId ?: story.posterChatId.takeIf { story.posterId == null }
+        val mine = poster == myUserId
         val request: TdApi.Function<*> = if (mine) {
             TdApi.GetStoryInteractions(story.id, "", false, false, true, offset, StoryViewersPage)
         } else {
