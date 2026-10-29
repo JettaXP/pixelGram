@@ -32,8 +32,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.ui.unit.isSpecified
 import com.pixelgram.desktop.telegram.MessageStatus
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -115,12 +120,25 @@ fun ChatList(
     onSearch: (() -> Unit)? = null,
     belowHeader: @Composable () -> Unit = {},
     archiveOn: ChatListKey = ChatListKey.Main,
+    compactWidth: Dp = Dp.Unspecified,
+    expandedWidth: Dp = Dp.Unspecified,
 ) {
     Box(Modifier.fillMaxSize()) {
-        ChatListBody(
-            listKey, title, chatsFor, order, vertical, compact, selectedChatId, telegram, settings,
-            onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen, onSearch, belowHeader, archiveOn,
-        )
+        val enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec())
+        val exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec())
+        AnimatedVisibility(compact, Modifier.width(compactWidth).fillMaxHeight(), enter, exit) {
+            CompactChatList(
+                listKey, chatsFor, selectedChatId, telegram, settings,
+                onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen, archiveOn,
+            )
+        }
+        val expanded = if (expandedWidth.isSpecified) Modifier.wrapContentWidth(Alignment.Start, unbounded = true).width(expandedWidth) else Modifier
+        AnimatedVisibility(!compact, expanded.fillMaxHeight(), enter, exit) {
+            ChatListBody(
+                listKey, title, chatsFor, order, vertical, selectedChatId, telegram, settings,
+                onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen, onSearch, belowHeader, archiveOn,
+            )
+        }
         ConnectionPill(
             status = telegram.connection,
             modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
@@ -135,7 +153,6 @@ private fun ChatListBody(
     chatsFor: (ChatListKey) -> List<ChatState>,
     order: (ChatListKey) -> Int,
     vertical: Boolean,
-    compact: Boolean,
     selectedChatId: Long?,
     telegram: Telegram,
     settings: AppSettings,
@@ -149,13 +166,6 @@ private fun ChatListBody(
     belowHeader: @Composable () -> Unit = {},
     archiveOn: ChatListKey = ChatListKey.Main,
 ) {
-    if (compact) {
-        CompactChatList(
-            listKey, chatsFor, selectedChatId, telegram, settings,
-            onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen, archiveOn,
-        )
-        return
-    }
     Column {
         Row(
             modifier = Modifier
@@ -564,4 +574,4 @@ private const val LockAnimationMs = 260L
 
 private const val ChatRowType = "chat"
 
-private const val PreviewHoldMs = 450L
+private const val PreviewHoldMs = 675L

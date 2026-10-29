@@ -42,6 +42,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -59,6 +61,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.pixelgram.desktop.ui.icons.Icons
@@ -203,6 +206,7 @@ fun MainScreen(
                 if (compact) CompactWidth else dragWidth.coerceAtMost(maxListWidth).dp,
                 MaterialTheme.motionScheme.defaultSpatialSpec(),
             )
+            val expandedWidth = maxOf(listWidth, maxOf(dragWidth.coerceAtMost(maxListWidth), CompactThreshold.value).dp)
             val push = settings.sideMenuStyle.value == com.pixelgram.desktop.core.SideMenuStyle.Push
             Row(Modifier.fillMaxSize()) {
                 when {
@@ -213,10 +217,11 @@ fun MainScreen(
                     Modifier
                         .width(listWidth)
                         .fillMaxHeight()
+                        .clipToBounds()
                         .padding(vertical = if (AppPaths.isMac) 0.dp else 8.dp),
                 ) {
                     val topFolders = @Composable {
-                        if (!foldersLeft && !compact && selectedKey != ChatListKey.Archive) {
+                        if (!foldersLeft && selectedKey != ChatListKey.Archive) {
                             if (settings.capsuleFolders.value) {
                                 CapsuleFolders(tabs, selectedKey, settings, onSelect = { if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
                             } else {
@@ -257,6 +262,8 @@ fun MainScreen(
                                     onSearch = { MessageSearch.start(null) },
                                     menuOpen = menuOpen,
                                     belowHeader = topFolders,
+                                    compactWidth = CompactWidth,
+                                    expandedWidth = expandedWidth,
                                     archiveOn = if (tabs.any { it.key == ChatListKey.Main }) ChatListKey.Main else tabs.firstOrNull()?.key ?: ChatListKey.Main,
                                     onBack = if (selectedKey == ChatListKey.Archive) {
                                         { selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main }
@@ -264,12 +271,18 @@ fun MainScreen(
                                         null
                                     },
                                 )
-                                if (!compact && selectedKey != ChatListKey.Archive) {
-                                    NewChatFab(
-                                        onNewChat = { channel -> newChat = channel },
-                                        onContacts = { onNavigate(Screen.Contacts) },
+                                Box(Modifier.wrapContentWidth(Alignment.Start, unbounded = true).width(expandedWidth).fillMaxHeight()) {
+                                    androidx.compose.animation.AnimatedVisibility(
+                                        visible = !compact && selectedKey != ChatListKey.Archive,
                                         modifier = Modifier.align(Alignment.BottomEnd),
-                                    )
+                                        enter = scaleIn(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(fade),
+                                        exit = scaleOut(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(fade),
+                                    ) {
+                                        NewChatFab(
+                                            onNewChat = { channel -> newChat = channel },
+                                            onContacts = { onNavigate(Screen.Contacts) },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -294,8 +307,8 @@ fun MainScreen(
                 )
                 androidx.compose.animation.AnimatedVisibility(
                     visible = forum != null,
-                    enter = fadeIn(fade) + androidx.compose.animation.expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()),
-                    exit = fadeOut(fade) + androidx.compose.animation.shrinkHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()),
+                    enter = fadeIn(fade) + expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), expandFrom = Alignment.Start),
+                    exit = fadeOut(fade) + shrinkHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), shrinkTowards = Alignment.Start),
                 ) {
                     var shownForum by remember { mutableStateOf(forum) }
                     if (forum != null) shownForum = forum

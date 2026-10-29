@@ -1858,8 +1858,8 @@ internal fun SenderAvatar(message: UiMessage, telegram: Telegram, settings: AppS
         telegram,
         settings,
         SenderAvatarSize,
-        Modifier.pointerHoverIcon(PointerIcon.Hand).clickable(onClick = onClick),
         kind = AvatarKind.Private,
+        onClick = onClick,
     )
 }
 private const val DraftSaveDelayMs = 1_500L
@@ -2005,6 +2005,8 @@ private fun Composer(
     val commandQuery = if (text.selection.collapsed) CommandQuery.matchEntire(text.text)?.groupValues?.get(1) else null
     val commandMatches = commandQuery?.let { query -> commands.filter { it.command.startsWith(query, ignoreCase = true) }.take(CommandLimit) }.orEmpty()
     val showCommands = commandMatches.isNotEmpty()
+    var shownCommands by remember(chatId) { mutableStateOf(commandMatches) }
+    if (showCommands) shownCommands = commandMatches
     val pickCommand = { item: BotCommandItem ->
         val manyBots = commands.map { it.botId }.distinct().size > 1
         val suffix = if (manyBots) telegram.users[item.botId]?.usernames?.activeUsernames?.firstOrNull()?.let { "@$it" }.orEmpty() else ""
@@ -2016,6 +2018,8 @@ private fun Composer(
     val keyboard = composerChat?.keyboard
     var keyboardOpen by remember(chatId, keyboard) { mutableStateOf(true) }
     val showSuggestions = mentionQuery != null && suggestions.isNotEmpty()
+    var shownSuggestions by remember(chatId) { mutableStateOf(suggestions) }
+    if (showSuggestions) shownSuggestions = suggestions
     val pickMention = { userId: Long ->
         val query = mentionQuery.orEmpty()
         val user = telegram.users[userId]
@@ -2153,7 +2157,7 @@ private fun Composer(
         exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
     ) {
         MentionSuggestions(
-            suggestions,
+            shownSuggestions,
             suggestionIndex,
             telegram,
             settings,
@@ -2167,7 +2171,7 @@ private fun Composer(
         exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
     ) {
         CommandSuggestions(
-            commandMatches,
+            shownCommands,
             -1,
             telegram,
             settings,

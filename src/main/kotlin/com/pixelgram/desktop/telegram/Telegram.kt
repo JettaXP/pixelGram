@@ -2409,6 +2409,7 @@ class Telegram(
     fun botInfo(userId: Long, onResult: (TdApi.BotInfo?) -> Unit) = userFullInfo(userId) { onResult(it?.botInfo) }
 
     fun chatCommands(chat: ChatState, onResult: (List<BotCommandItem>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(demoCommands(chat.id))
         fun flatten(groups: Array<TdApi.BotCommands>?) = groups.orEmpty().flatMap { bot ->
             ensureUser(bot.botUserId)
             bot.commands.orEmpty().map { BotCommandItem(bot.botUserId, it.command, it.description) }

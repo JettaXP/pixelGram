@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialShapes
 import com.pixelgram.desktop.core.AvatarKind
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import com.pixelgram.desktop.ui.icons.Icons
@@ -22,6 +23,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -113,9 +116,10 @@ fun Avatar(
     modifier: Modifier = Modifier,
     full: TdApi.File? = null,
     kind: AvatarKind? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     val shape = settings.avatarShapeFor(kind).toShape(settings.avatarCorner.value)
-    AvatarImage(title, photo, telegram, shape, size, modifier, full)
+    AvatarImage(title, photo, telegram, shape, size, modifier, full, onClick)
 }
 
 @Composable
@@ -125,13 +129,14 @@ fun ChatAvatar(
     settings: AppSettings,
     size: Dp,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     if (telegram.isOfficial(chat)) {
-        AvatarImage(chat.title, chat.photo, telegram, MaterialShapes.Cookie12Sided.toShape(), size, modifier)
+        AvatarImage(chat.title, chat.photo, telegram, MaterialShapes.Cookie12Sided.toShape(), size, modifier, onClick = onClick)
         return
     }
     if (!telegram.isSavedMessages(chat.id)) {
-        Avatar(chat.title, chat.photo, telegram, settings, size, modifier, kind = telegram.avatarKind(chat))
+        Avatar(chat.title, chat.photo, telegram, settings, size, modifier, kind = telegram.avatarKind(chat), onClick = onClick)
         return
     }
     val colors = MaterialTheme.colorScheme
@@ -139,6 +144,7 @@ fun ChatAvatar(
         modifier = modifier
             .size(size)
             .clip(settings.avatarShape.value.toShape(settings.avatarCorner.value))
+            .avatarClick(onClick)
             .background(colors.primary),
         contentAlignment = Alignment.Center,
     ) {
@@ -160,6 +166,7 @@ fun AvatarImage(
     size: Dp,
     modifier: Modifier = Modifier,
     full: TdApi.File? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     LaunchedEffect(photo?.id) { telegram.download(photo) }
     LaunchedEffect(full?.id) { telegram.download(full) }
@@ -173,6 +180,7 @@ fun AvatarImage(
         modifier = modifier
             .size(size)
             .clip(shape)
+            .avatarClick(onClick)
             .background(colors.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
@@ -194,6 +202,9 @@ fun AvatarImage(
         }
     }
 }
+
+private fun Modifier.avatarClick(onClick: (() -> Unit)?): Modifier =
+    if (onClick == null) this else pointerHoverIcon(PointerIcon.Hand).clickable(onClick = onClick)
 
 @Composable
 fun ShapePreview(shape: AvatarShape, cornerPercent: Int, size: Dp, selected: Boolean) {

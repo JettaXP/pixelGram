@@ -621,6 +621,21 @@ fun demoTopics(chatId: Long): List<TdApi.ForumTopic> {
     }
 }
 
+private const val DemoBotChat = 102L
+private const val DemoBotUser = 3L
+
+fun demoCommands(chatId: Long): List<BotCommandItem> =
+    if (chatId != DemoBotChat) {
+        emptyList()
+    } else {
+        listOf(
+            BotCommandItem(DemoBotUser, "start", "Start the bot"),
+            BotCommandItem(DemoBotUser, "help", "Show what I can do"),
+            BotCommandItem(DemoBotUser, "birthday", "Set your birthday date"),
+            BotCommandItem(DemoBotUser, "settings", "Notification settings"),
+        )
+    }
+
 fun demoCreateTopic(chatId: Long, name: String) {
     if (name.isNotBlank()) demoCreatedTopics.add(name)
 }

@@ -29,9 +29,6 @@ import androidx.compose.animation.animateColorAsState
 import com.pixelgram.desktop.ui.icons.outlined.MoreHoriz
 import com.pixelgram.desktop.ui.icons.automirrored.outlined.Chat
 import com.pixelgram.desktop.ui.profile.ProfileMusic
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.clickable
 import com.pixelgram.desktop.ui.icons.outlined.Numbers
 import com.pixelgram.desktop.ui.icons.outlined.Info
 import com.pixelgram.desktop.ui.icons.outlined.Phone
@@ -431,9 +428,17 @@ fun ChatInfoDialog(
                 modifier = Modifier.verticalScroll(scroll).padding(24.dp),
             ) {
                 var photos by remember(chat.id) { mutableStateOf(false) }
-                Box(Modifier.clip(CircleShape).clickable(enabled = chat.privateUserId != 0L && chat.photo != null) { photos = true }) {
-                    ChatAvatar(chat, telegram, settings, size = 96.dp)
-                }
+                ChatAvatar(
+                    chat,
+                    telegram,
+                    settings,
+                    size = 96.dp,
+                    onClick = if (chat.privateUserId != 0L && chat.photo != null) {
+                        { photos = true }
+                    } else {
+                        null
+                    },
+                )
                 if (photos) ProfilePhotosDialog(telegram, chat.privateUserId, onDismiss = { photos = false })
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
