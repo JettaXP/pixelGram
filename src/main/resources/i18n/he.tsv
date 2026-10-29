@@ -1302,3 +1302,23 @@ Leave the current video chat first	יש לצאת קודם מצ'אט הווידא
 Finish the current call first	יש לסיים קודם את השיחה הנוכחית
 Loading…	טוען…
 Update failed	העדכון נכשל
+Proxy	פרוקסי
+Use proxy	השתמש בפרוקסי
+Add proxy	הוסף פרוקסי
+Edit proxy	ערוך פרוקסי
+Proxies	שרתי פרוקסי
+Connection	חיבור
+Server	שרת
+Port	פורט
+Type	סוג
+Secret	סוד
+Proxy link	קישור לפרוקסי
+Username (optional)	שם משתמש (אופציונלי)
+Password (optional)	סיסמה (אופציונלי)
+Unavailable	לא זמין
+ms	מ״ש
+Add a proxy first	הוסף קודם פרוקסי
+Connect	התחבר
+Proxy on	פרוקסי פעיל
+Connect to Telegram through a SOCKS5, HTTP or MTProto proxy. The proxy is used by all accounts.	התחבר לטלגרם דרך פרוקסי SOCKS5,‏ HTTP או MTProto. הפרוקסי משמש את כל החשבונות.
+Connect through this proxy? It will be used by all accounts.	להתחבר דרך הפרוקסי הזה? הוא ישמש את כל החשבונות.

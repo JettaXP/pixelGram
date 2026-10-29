@@ -30,6 +30,32 @@ fun LinkDialogs(settings: AppSettings, onOpenChat: (Long) -> Unit) {
     Links.invite?.let { request -> InviteDialog(request, settings, onOpenChat) { Links.invite = null } }
     Links.confirm?.let { url -> OpenLinkDialog(url) { Links.confirm = null } }
     Links.nft?.let { (telegram, name) -> NftDialog(telegram, name) { Links.nft = null } }
+    Links.proxy?.let { proxy ->
+        AlertDialog(
+            onDismissRequest = { Links.proxy = null },
+            title = { Text("Proxy") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Connect through this proxy? It will be used by all accounts.")
+                    Text("${com.pixelgram.desktop.core.tr("Server")}: ${proxy.server}")
+                    Text("${com.pixelgram.desktop.core.tr("Port")}: ${proxy.port}")
+                    Text("${com.pixelgram.desktop.core.tr("Type")}: ${proxy.kind.title}")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val list = com.pixelgram.desktop.core.ProxyEntry.decode(settings.proxies.value)
+                    val index = list.indexOf(proxy).takeIf { it >= 0 }
+                    val updated = if (index == null) list + proxy else list
+                    settings.proxies.value = com.pixelgram.desktop.core.ProxyEntry.encode(updated)
+                    settings.proxySelected.value = index ?: updated.lastIndex
+                    settings.proxyOn.value = true
+                    Links.proxy = null
+                }) { Text("Connect") }
+            },
+            dismissButton = { TextButton(onClick = { Links.proxy = null }) { Text("Cancel") } },
+        )
+    }
     Links.notFound?.let { username ->
         AlertDialog(
             onDismissRequest = { Links.notFound = null },

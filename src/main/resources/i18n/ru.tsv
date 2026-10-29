@@ -1304,3 +1304,23 @@ Leave the current video chat first	Сначала выйдите из текущ
 Finish the current call first	Сначала завершите текущий звонок
 Loading…	Загрузка…
 Update failed	Обновление не удалось
+Proxy	Прокси
+Use proxy	Использовать прокси
+Add proxy	Добавить прокси
+Edit proxy	Изменить прокси
+Proxies	Прокси-серверы
+Connection	Подключение
+Server	Сервер
+Port	Порт
+Type	Тип
+Secret	Секрет
+Proxy link	Ссылка на прокси
+Username (optional)	Имя пользователя (необязательно)
+Password (optional)	Пароль (необязательно)
+Unavailable	Недоступен
+ms	мс
+Add a proxy first	Сначала добавьте прокси
+Connect	Подключиться
+Proxy on	Прокси вкл.
+Connect to Telegram through a SOCKS5, HTTP or MTProto proxy. The proxy is used by all accounts.	Подключайтесь к Telegram через прокси SOCKS5, HTTP или MTProto. Прокси используется всеми аккаунтами.
+Connect through this proxy? It will be used by all accounts.	Подключиться через этот прокси? Он будет использоваться всеми аккаунтами.

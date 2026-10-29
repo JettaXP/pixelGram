@@ -206,6 +206,10 @@ class AppSettings private constructor(private val props: Properties, private val
 
     val miniAppsAndroid = bool("miniAppsAndroid", false)
 
+    val proxies = string("proxies", "")
+    val proxySelected = int("proxySelected", 0)
+    val proxyOn = bool("proxyOn", false)
+
     val apiId = int("apiId", 0)
     val apiHash = string("apiHash", "")
 
@@ -225,12 +229,12 @@ class AppSettings private constructor(private val props: Properties, private val
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,
         deviceName, israelLogo, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
         stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, restoreWindow, windowBounds, emptyShapes, autostart, launchMinimized, language, localNames, bigReactions, liquidCursor, cursorStyle, trailFast, trailSlow, trailThreshold, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
-        miniAppsAndroid,
+        miniAppsAndroid, proxies, proxySelected, proxyOn,
         apiId, apiHash,
         accounts, activeAccount,
     ) + avatarKindShapes.values
 
-    private val localOnly = setOf(apiId, apiHash, accounts, activeAccount, outputDevice, inputDevice, cameraDevice, windowBounds, autostart, launchMinimized)
+    private val localOnly = setOf(apiId, apiHash, accounts, activeAccount, proxies, proxySelected, proxyOn, outputDevice, inputDevice, cameraDevice, windowBounds, autostart, launchMinimized)
 
     fun resetAll() {
         val keep = localOnly + setOf(passcodeHash, passcodeSalt, autoLockMinutes, deviceName)

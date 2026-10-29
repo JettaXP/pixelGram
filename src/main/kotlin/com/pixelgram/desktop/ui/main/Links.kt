@@ -20,6 +20,7 @@ object Links : UriHandler {
     var confirm by mutableStateOf<String?>(null)
     var nft by mutableStateOf<Pair<Telegram, String>?>(null)
     var notFound by mutableStateOf<String?>(null)
+    var proxy by mutableStateOf<com.pixelgram.desktop.core.ProxyEntry?>(null)
 
     class InviteRequest(val telegram: Telegram, val link: String, val info: TdApi.ChatInviteLinkInfo)
 
@@ -47,6 +48,10 @@ object Links : UriHandler {
 
     fun open(url: String) {
         if (!isTelegram(url)) return openBrowser(url)
+        com.pixelgram.desktop.core.ProxyEntry.parseLink(url)?.let { found ->
+            SwingUtilities.invokeLater { proxy = found }
+            return
+        }
         val telegram = active?.invoke() ?: run {
             pending = url
             return

@@ -13,6 +13,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.pixelgram.desktop.BuildConfig
 import com.pixelgram.desktop.core.AppLog
+import com.pixelgram.desktop.core.ProxyEntry
 import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.Sounds
@@ -29,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 data class CodeInfo(
@@ -335,7 +337,38 @@ class Telegram(
             ExceptionHandler { AppLog.write("TDLib update error", it) },
             ExceptionHandler { AppLog.write("TDLib error", it) },
         )
+        applyProxy()
+        if (proxyWatch == null) {
+            proxyWatch = scope.launch(Dispatchers.Main) {
+                androidx.compose.runtime.snapshotFlow { Triple(settings.proxies.value, settings.proxySelected.value, settings.proxyOn.value) }
+                    .drop(1)
+                    .collect { applyProxy() }
+            }
+        }
         loadCountries()
+    }
+
+    private var proxyWatch: kotlinx.coroutines.Job? = null
+
+    private fun applyProxy() {
+        val wanted = if (settings.proxyOn.value) ProxyEntry.decode(settings.proxies.value).getOrNull(settings.proxySelected.value) else null
+        send(TdApi.GetProxies()) { result ->
+            val added = (result as? TdApi.AddedProxies)?.proxies.orEmpty()
+            val current = added.firstOrNull { it.isEnabled }
+            if (wanted != null && current != null && ProxyEntry.from(current.proxy) == wanted) return@send
+            if (wanted == null && current == null) return@send
+            added.forEach { send(TdApi.RemoveProxy(it.id)) }
+            if (wanted != null) {
+                send(TdApi.AddProxy(wanted.toTd(), true, "")) { added ->
+                    if (added is TdApi.Error) AppLog.write("Proxy was not accepted: ${added.message}")
+                }
+            }
+        }
+    }
+
+    fun pingProxy(proxy: ProxyEntry, onResult: (Double?) -> Unit) {
+        if (client == null) return onResult(null)
+        send(TdApi.PingProxy(proxy.toTd())) { result -> onResult((result as? TdApi.Seconds)?.seconds) }
     }
 
     var countries by mutableStateOf<List<Country>>(emptyList())

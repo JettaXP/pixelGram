@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.auth
 
+import com.pixelgram.desktop.ui.icons.outlined.VpnKey
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.unit.IntOffset
@@ -163,6 +166,35 @@ fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
                             }
                         }
                     }
+                }
+            }
+            val settings = com.pixelgram.desktop.ui.theme.LocalAppSettings.current
+            if (settings != null) {
+                var proxies by remember { mutableStateOf(false) }
+                com.pixelgram.desktop.ui.components.expressive.TextButton(
+                    onClick = { proxies = true },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+                ) {
+                    androidx.compose.material3.Icon(
+                        com.pixelgram.desktop.ui.icons.Icons.Outlined.VpnKey,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp).size(18.dp),
+                    )
+                    Text(if (settings.proxyOn.value) "Proxy on" else "Proxy")
+                }
+                if (proxies) {
+                    com.pixelgram.desktop.ui.components.expressive.AlertDialog(
+                        onDismissRequest = { proxies = false },
+                        title = { Text("Proxy") },
+                        text = {
+                            Column(Modifier.verticalScroll(rememberScrollState())) {
+                                com.pixelgram.desktop.ui.settings.ProxySection(telegram, settings)
+                            }
+                        },
+                        confirmButton = {
+                            com.pixelgram.desktop.ui.components.expressive.TextButton(onClick = { proxies = false }) { Text("Done") }
+                        },
+                    )
                 }
             }
         }

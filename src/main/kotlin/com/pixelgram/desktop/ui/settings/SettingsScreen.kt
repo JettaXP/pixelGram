@@ -77,6 +77,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.VpnKey
 import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
 import com.pixelgram.desktop.ui.icons.automirrored.filled.KeyboardArrowRight
 import com.pixelgram.desktop.ui.icons.automirrored.outlined.Logout
@@ -188,6 +189,7 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
     ChatSettings("Chat Settings", Icons.Outlined.ChatBubbleOutline),
     Folders("Folders", Icons.Outlined.Folder),
     Advanced("Advanced", Icons.Outlined.Tune),
+    Proxy("Proxy", Icons.Outlined.VpnKey),
     SpeakersCamera("Speakers and Camera", Icons.Outlined.Headphones),
     Battery("Battery and Animations", Icons.Outlined.BatterySaver),
     Language("Language", Icons.Outlined.Translate),
@@ -501,6 +503,7 @@ fun SettingsScreen(
                         Section.ChatSettings -> ChatSettingsSection(settings)
                         Section.Folders -> FoldersSection(telegram, settings)
                         Section.Advanced -> AdvancedSection(telegram, settings)
+                        Section.Proxy -> ProxySection(telegram, settings)
                         Section.Language -> LanguageSection(settings)
                         Section.Profile -> com.pixelgram.desktop.ui.profile.ProfileContent(telegram, settings, onOpenChat)
                         Section.Notifications -> NotificationsSection(telegram, settings)
