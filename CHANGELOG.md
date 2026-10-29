@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.44.0 Puffy
+
+### Proxy
+- New Proxy section in Settings for SOCKS5, HTTP and MTProto proxies, with ping, copy link, edit and delete. The proxy is used by all accounts.
+- The sign-in screen has a Proxy button, so you can connect before signing in.
+- t.me/proxy and t.me/socks links ask to connect.
+
+### Stories and channels
+- Post stories from the side menu: a photo or video, a caption, who can see it, how long it stays and whether it stays on your profile. Channel admins can post stories from the chat menu.
+- Manage chat has Reactions (all, some or none), Discussion to link a comments group, Statistics with growth, Boosts with level progress and the boost link, and Join requests.
+- Boost channels and groups from the chat menu.
+
+### Chats
+- Translate messages into the app language.
+- Report messages and chats with Telegram's report reasons.
+- Transcribe voice and round video messages.
+- Share your location live for 15 minutes, an hour or 8 hours, and stop sharing at any time.
+- Admins see pending join requests in the chat, can approve or dismiss them and can require approval for new members.
+- The scroll-down button shows whenever you are away from the newest messages, also in channels.
+- Scrolling up through long chats is smoother and older messages load earlier.
+
+### Security
+- Two-step verification in Privacy and Security: set, change or turn off the cloud password, with a hint and a recovery email.
+
 ## 0.43.1 Arrow
 
 - Updating the installed Windows version works again: the installer starts after the app closes, and the app reopens when it finishes. If the install fails, the next start says why.
