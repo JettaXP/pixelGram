@@ -184,6 +184,7 @@ enum class MessageStatus { Sending, Sent, Read, Failed }
 
 private const val AUTH_TIMEOUT_MS = 30_000L
 private const val PinnedLimit = 100
+private const val MissedNotificationSeconds = 300
 private const val StoryViewersPage = 50
 const val StoryLike = "\u2764"
 private const val JumpPageSize = 60
@@ -1027,12 +1028,15 @@ class Telegram(
                 chat.markedUnread = update.isMarkedAsUnread
                 chatListsChanged()
             }
-            is TdApi.UpdateConnectionState -> connection = when (update.state) {
-                is TdApi.ConnectionStateWaitingForNetwork -> ConnectionStatus.WaitingForNetwork
-                is TdApi.ConnectionStateConnectingToProxy -> ConnectionStatus.ConnectingToProxy
-                is TdApi.ConnectionStateConnecting -> ConnectionStatus.Connecting
-                is TdApi.ConnectionStateUpdating -> ConnectionStatus.Updating
-                else -> ConnectionStatus.Ready
+            is TdApi.UpdateConnectionState -> {
+                connection = when (update.state) {
+                    is TdApi.ConnectionStateWaitingForNetwork -> ConnectionStatus.WaitingForNetwork
+                    is TdApi.ConnectionStateConnectingToProxy -> ConnectionStatus.ConnectingToProxy
+                    is TdApi.ConnectionStateConnecting -> ConnectionStatus.Connecting
+                    is TdApi.ConnectionStateUpdating -> ConnectionStatus.Updating
+                    else -> ConnectionStatus.Ready
+                }
+                if (connection == ConnectionStatus.Ready) synced = true
             }
             is TdApi.UpdateUnreadChatCount -> ChatListKey.of(update.chatList)?.let { key ->
                 unread[key] = UnreadCount(update.unreadCount, update.unreadUnmutedCount)
@@ -1389,8 +1393,12 @@ class Telegram(
         if (ids.isNotEmpty()) markRead(chatId, ids)
     }
 
+    private var synced = System.getProperty("pixelgram.demo") == "true"
+
     private fun shouldNotify(message: TdApi.Message): Boolean {
         if (message.isOutgoing || settings.notificationsMuted.value) return false
+        if (!synced || connection != ConnectionStatus.Ready) return false
+        if (System.currentTimeMillis() / 1000 - message.date > MissedNotificationSeconds) return false
         if (message.chatId in openChats && windowFocused) return false
         val chat = chats[message.chatId] ?: return false
         if (message.content is TdApi.MessageContactRegistered && contactJoinedMuted) return false
