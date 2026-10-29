@@ -348,6 +348,10 @@ private fun ChatViewContent(
     }
     LaunchedEffect(chat.id) { telegram.loadPinned(chat.id) }
     var pinIndex by remember(chat.id) { mutableStateOf(0) }
+    var translating by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
+    var reporting by remember(chat.id) { mutableStateOf<LongArray?>(null) }
+    translating?.let { message -> TranslateDialog(telegram, message, settings.language.value) { translating = null } }
+    reporting?.let { ids -> ReportDialog(telegram, chat.id, ids) { reporting = null } }
     val canReact = !telegram.isSavedMessages(chat.id) || telegram.me?.isPremium == true
     val actions = remember(chat.id, canReact, chat.protectedContent) {
         MessageActions(
@@ -373,6 +377,8 @@ private fun ChatViewContent(
             canEdit = { message, done -> telegram.canEdit(message, done) },
             properties = { message, done -> telegram.messageProperties(message, done) },
             protectedContent = chat.protectedContent,
+            onTranslate = { translating = it },
+            onReport = { message -> reporting = message.album.takeIf { it.isNotEmpty() }?.map { it.id }?.toLongArray() ?: longArrayOf(message.id) },
             onReact = { message, emoji -> telegram.toggleReaction(message, emoji) },
             loadReactions = { message, done -> telegram.availableReactions(message, done) },
             canReact = canReact,

@@ -57,6 +57,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.Flag
 import com.pixelgram.desktop.ui.icons.outlined.AddAPhoto
 import com.pixelgram.desktop.ui.icons.outlined.Upgrade
 import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
@@ -147,6 +148,7 @@ fun ChatActions(
     var theming by remember(chat.id) { mutableStateOf(false) }
     var boosting by remember(chat.id) { mutableStateOf(false) }
     var postingStory by remember(chat.id) { mutableStateOf(false) }
+    var reportingChat by remember(chat.id) { mutableStateOf(false) }
     var startingVideoChat by remember(chat.id) { mutableStateOf(false) }
     var secretError by remember(chat.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(chat.id, at != null) {
@@ -254,6 +256,7 @@ fun ChatActions(
                                     add(MenuEntry(Icons.Outlined.Block, if (telegram.isBot(chat)) "Stop and block bot" else "Block user", onClick = act { confirm = Confirm.Block }))
                                 }
                             }
+                            if (!telegram.isSavedMessages(chat.id) && !telegram.isOfficial(chat)) add(MenuEntry(Icons.Outlined.Flag, "Report", onClick = act { reportingChat = true }))
                             add(MenuEntry(Icons.Outlined.CleaningServices, "Clear history", onClick = act { confirm = Confirm.Clear }))
                             add(MenuEntry(
                                 Icons.Outlined.Delete,
@@ -314,6 +317,7 @@ fun ChatActions(
     if (theming) ChatThemeDialog(chat, telegram, settings) { theming = false }
     if (boosting) BoostDialog(chat, telegram) { boosting = false }
     if (postingStory) StoryComposerDialog(telegram, chat.id, own = false) { postingStory = false }
+    if (reportingChat) ReportDialog(telegram, chat.id, LongArray(0)) { reportingChat = false }
     if (startingVideoChat) StartVideoChatDialog(chat, telegram) { startingVideoChat = false }
     secretError?.let { error ->
         AlertDialog(

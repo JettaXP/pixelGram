@@ -1,5 +1,9 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.telegram.recognizeSpeech
+import com.pixelgram.desktop.ui.icons.outlined.ExpandLess
+import com.pixelgram.desktop.ui.icons.outlined.Subtitles
+import androidx.compose.ui.focus.focusProperties
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import com.pixelgram.desktop.core.Downloads
@@ -700,6 +704,7 @@ private fun VoiceContent(message: UiMessage, voice: TdApi.VoiceNote, telegram: T
     val color = androidx.compose.material3.LocalContentColor.current
     val active = AudioPlayer.current == key
     val progress = AudioPlayer.progress(key)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PlayButton(key, message.chatId, "Voice message", voice.voice, telegram)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -723,6 +728,51 @@ private fun VoiceContent(message: UiMessage, voice: TdApi.VoiceNote, telegram: T
                 color = LocalContentColorAlpha(),
             )
         }
+        TranscribeButton(message, voice.speechRecognitionResult, telegram)
+    }
+    TranscriptText(message, voice.speechRecognitionResult)
+    }
+}
+
+private val transcriptsShown = androidx.compose.runtime.mutableStateMapOf<Long, Boolean>()
+
+@Composable
+private fun TranscribeButton(message: UiMessage, result: TdApi.SpeechRecognitionResult?, telegram: Telegram) {
+    var busy by remember(message.key) { mutableStateOf(false) }
+    var error by remember(message.key) { mutableStateOf<String?>(null) }
+    val shown = transcriptsShown[message.key] == true
+    androidx.compose.material3.FilledTonalIconButton(
+        onClick = {
+            if (result != null) {
+                transcriptsShown[message.key] = !shown
+            } else if (!busy) {
+                busy = true
+                transcriptsShown[message.key] = true
+                telegram.recognizeSpeech(message) { failure ->
+                    busy = false
+                    error = failure
+                }
+            }
+        },
+        modifier = Modifier.size(32.dp).focusProperties { canFocus = false },
+    ) {
+        Icon(if (shown && result != null) Icons.Outlined.ExpandLess else Icons.Outlined.Subtitles, contentDescription = "Transcribe", modifier = Modifier.size(18.dp))
+    }
+    error?.let { failure ->
+        LaunchedEffect(failure) { TopNotice.text = failure }
+    }
+}
+
+@Composable
+private fun TranscriptText(message: UiMessage, result: TdApi.SpeechRecognitionResult?) {
+    val (text, pending) = com.pixelgram.desktop.telegram.speechText(result) ?: return
+    androidx.compose.animation.AnimatedVisibility(transcriptsShown[message.key] == true) {
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (pending) LocalContentColorAlpha() else androidx.compose.material3.LocalContentColor.current,
+            modifier = Modifier.width(WaveWidth + 88.dp),
+        )
     }
 }
 
@@ -1066,7 +1116,7 @@ fun BareContent(message: UiMessage, telegram: Telegram) {
             if (sticker != null) StickerView(sticker, telegram, StickerSize / 1.4f, animate = PowerSaving.stickersInChat) else
                 Text("${content.emoji} ${content.value}", fontSize = 40.sp)
         }
-        is TdApi.MessageVideoNote -> {
+        is TdApi.MessageVideoNote -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val note = content.videoNote
             val (busy, open) = rememberOpener(note.video, telegram, ::openFile)
             Box(
@@ -1074,6 +1124,7 @@ fun BareContent(message: UiMessage, telegram: Telegram) {
                 contentAlignment = Alignment.Center,
             ) {
                 ThumbImage(note.thumbnail?.file, note.minithumbnail, telegram, Modifier.fillMaxSize())
+                Box(Modifier.align(Alignment.BottomEnd).padding(10.dp)) { TranscribeButton(message, note.speechRecognitionResult, telegram) }
                 if (busy) {
                     Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
                         TransferRing(telegram.progress(note.video), Color.White, { telegram.cancelDownload(note.video) }, 44.dp)
@@ -1082,6 +1133,7 @@ fun BareContent(message: UiMessage, telegram: Telegram) {
                     PlayBadge(false)
                 }
             }
+            TranscriptText(message, note.speechRecognitionResult)
         }
         else -> Unit
     }

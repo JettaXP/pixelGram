@@ -55,6 +55,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.Flag
+import com.pixelgram.desktop.ui.icons.outlined.Translate
 import com.pixelgram.desktop.ui.icons.automirrored.outlined.Reply
 import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
 import com.pixelgram.desktop.ui.icons.outlined.Delete
@@ -118,6 +120,8 @@ class MessageActions(
     val canEdit: (UiMessage, (Boolean) -> Unit) -> Unit = { message, done -> done(message.editable) },
     val properties: ((UiMessage, (TdApi.MessageProperties?) -> Unit) -> Unit)? = null,
     val protectedContent: Boolean = false,
+    val onTranslate: ((UiMessage) -> Unit)? = null,
+    val onReport: ((UiMessage) -> Unit)? = null,
 )
 
 private class MenuTarget(val at: DpOffset, val link: String?, val button: TdApi.InlineKeyboardButton?)
@@ -376,6 +380,9 @@ private fun MessageMenu(
     }
     val copies = buildList {
         if (message.text.isNotEmpty()) add(MenuEntry(Icons.Outlined.ContentCopy, "Copy text", enabled = canSave, onClick = act { copy(message.text) }))
+        actions.onTranslate?.takeIf { message.text.isNotBlank() }?.let { translate ->
+            add(MenuEntry(Icons.Outlined.Translate, "Translate", onClick = act { translate(message) }))
+        }
         (message.content as? TdApi.MessageAnimatedEmoji)?.emoji?.takeIf { message.text.isEmpty() }?.let { emoji ->
             add(MenuEntry(Icons.Outlined.ContentCopy, "Copy emoji", onClick = act { copy(emoji) }))
         }
@@ -396,6 +403,9 @@ private fun MessageMenu(
     val manage = buildList {
         actions.onSelect?.takeIf { !message.service }?.let { select ->
             add(MenuEntry(Icons.Outlined.CheckCircle, "Select", onClick = act { select(message) }))
+        }
+        actions.onReport?.takeIf { !message.isOutgoing && !message.service }?.let { report ->
+            add(MenuEntry(Icons.Outlined.Flag, "Report", onClick = act { report(message) }))
         }
         if (canDelete) add(MenuEntry(Icons.Outlined.Delete, "Delete", color = MaterialTheme.colorScheme.error, onClick = act { actions.onDelete(message) }))
     }
