@@ -391,7 +391,7 @@ private fun StickerSearch(
                 columns = GridCells.Adaptive(StickerCell),
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
             ) {
-                items(results, key = { it.sticker.id }) { sticker ->
+                items(results.distinctBy { it.sticker.id }, key = { it.sticker.id }) { sticker ->
                     Box(
                         Modifier
                             .size(StickerCell)
@@ -463,11 +463,11 @@ private fun GifsTab(
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
             ) {
                 if (searching && results != null) {
-                    items(results.results.filterIsInstance<TdApi.InlineQueryResultAnimation>(), key = { it.id }) { result ->
+                    items(results.results.filterIsInstance<TdApi.InlineQueryResultAnimation>().distinctBy { it.id }, key = { it.id }) { result ->
                         GifCellView(result.animation, telegram) { onInline(results.inlineQueryId, result.id) }
                     }
                 } else {
-                    items(saved.orEmpty(), key = { it.animation.id }) { animation ->
+                    items(saved.orEmpty().distinctBy { it.animation.id }, key = { it.animation.id }) { animation ->
                         GifCellView(animation, telegram) { onGif(animation) }
                     }
                 }

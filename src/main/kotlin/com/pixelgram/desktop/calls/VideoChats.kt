@@ -489,7 +489,9 @@ object VideoChats {
             target.write()
         }
         val out = IntByReference()
-        if (lib.ntg_add_incoming_video(handle, call.chatId, owner, endpoint, array?.firstOrNull(), SizeT(groups.size.toLong()), out) == Ok) {
+        val added = lib.ntg_add_incoming_video(handle, call.chatId, owner, endpoint, array?.firstOrNull(), SizeT(groups.size.toLong()), out)
+        java.lang.ref.Reference.reachabilityFence(array)
+        if (added == Ok) {
             call.ssrcs[out.value.toLong() and UnsignedMask] = endpoint
         } else {
             AppLog.write("Video chat incoming video failed: ${lib.ntg_last_error()}")

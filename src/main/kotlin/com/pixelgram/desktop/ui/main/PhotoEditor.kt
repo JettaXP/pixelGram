@@ -930,15 +930,15 @@ private fun dragCrop(state: EditState, start: Rect, grip: CropGrip, delta: Offse
     val maxH = state.orientedHeight.toFloat()
     return when (grip) {
         CropGrip.Move -> {
-            val dx = delta.x.coerceIn(-start.left, maxW - start.right)
-            val dy = delta.y.coerceIn(-start.top, maxH - start.bottom)
+            val dx = delta.x.within(-start.left, maxW - start.right)
+            val dy = delta.y.within(-start.top, maxH - start.bottom)
             start.translate(dx, dy)
         }
         is CropGrip.Edge -> when (grip.side) {
-            0 -> start.copy(left = (start.left + delta.x).coerceIn(0f, start.right - minSide))
-            1 -> start.copy(top = (start.top + delta.y).coerceIn(0f, start.bottom - minSide))
-            2 -> start.copy(right = (start.right + delta.x).coerceIn(start.left + minSide, maxW))
-            else -> start.copy(bottom = (start.bottom + delta.y).coerceIn(start.top + minSide, maxH))
+            0 -> start.copy(left = (start.left + delta.x).within(0f, start.right - minSide))
+            1 -> start.copy(top = (start.top + delta.y).within(0f, start.bottom - minSide))
+            2 -> start.copy(right = (start.right + delta.x).within(start.left + minSide, maxW))
+            else -> start.copy(bottom = (start.bottom + delta.y).within(start.top + minSide, maxH))
         }
         is CropGrip.Corner -> {
             val dirX = if (grip.index % 2 == 0) -1f else 1f
@@ -947,8 +947,8 @@ private fun dragCrop(state: EditState, start: Rect, grip: CropGrip, delta: Offse
             val moving = Offset(if (dirX < 0) start.left else start.right, if (dirY < 0) start.top else start.bottom) + delta
             val roomW = if (dirX < 0) anchor.x else maxW - anchor.x
             val roomH = if (dirY < 0) anchor.y else maxH - anchor.y
-            var width = ((moving.x - anchor.x) * dirX).coerceIn(minSide, roomW)
-            var height = ((moving.y - anchor.y) * dirY).coerceIn(minSide, roomH)
+            var width = ((moving.x - anchor.x) * dirX).within(minSide, roomW)
+            var height = ((moving.y - anchor.y) * dirY).within(minSide, roomH)
             val ratio = state.ratioValue()
             if (ratio != null && state.ratio != CropRatio.Free) {
                 width = maxOf(width, height * ratio)
@@ -1013,3 +1013,5 @@ private const val OutlineShade = 0.35f
 private const val CrossShare = 0.4f
 private const val RemoveColor = 0xFFE53935
 private const val CanvasBackdrop = 0xFF16161A
+
+private fun Float.within(min: Float, max: Float): Float = if (max < min) min else coerceIn(min, max)

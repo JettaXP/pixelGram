@@ -373,6 +373,7 @@ object Calls {
             state.allowP2p,
             state.customParameters.ifBlank { "{}" },
         )
+        java.lang.ref.Reference.reachabilityFence(servers)
         if (result != Ok) main { fail(call, lib.ntg_last_error() ?: "Couldn't connect") }
     }
 

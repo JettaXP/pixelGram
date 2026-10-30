@@ -56,7 +56,7 @@ object VideoStickers {
                     if (eldest.key == key) continue
                     total -= eldest.value.bytes
                     iterator.remove()
-                    skia.remove(eldest.key)?.let { old -> java.awt.EventQueue.invokeLater { old.forEach(Image::close) } }
+                    skia.remove(eldest.key)
                 }
             }
             decoded.first
@@ -131,7 +131,7 @@ fun VideoStickerView(path: String, modifier: Modifier, play: Boolean = true) {
         }
         Canvas(Modifier.matchParentSize().graphicsLayer()) {
             val current = clip ?: return@Canvas
-            val frame = current.frames[index]
+            val frame = current.frames.getOrNull(index) ?: current.frames.firstOrNull() ?: return@Canvas
             val fit = minOf(size.width / frame.width, size.height / frame.height)
             val w = (frame.width * fit).roundToInt()
             val h = (frame.height * fit).roundToInt()

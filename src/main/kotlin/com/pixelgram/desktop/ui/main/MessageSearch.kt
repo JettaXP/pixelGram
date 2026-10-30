@@ -164,7 +164,7 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
             ) {
                 if (foundChats.isNotEmpty()) {
                     item(key = "chats-header") { SearchSection("Chats") }
-                    itemsIndexed(foundChats, key = { _, id -> "chat:$id" }) { index, id ->
+                    itemsIndexed(foundChats.distinct(), key = { _, id -> "chat:$id" }) { index, id ->
                         val chat = telegram.chats[id] ?: return@itemsIndexed
                         SegmentedListItem(
                             onClick = { onOpen(id) },
@@ -176,7 +176,7 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
                     }
                     if (results.isNotEmpty()) item(key = "messages-header") { SearchSection("Messages") }
                 }
-                itemsIndexed(results, key = { _, m -> "${m.chatId}:${m.id}" }) { index, message ->
+                itemsIndexed(results.distinctBy { "${it.chatId}:${it.id}" }, key = { _, m -> "${m.chatId}:${m.id}" }) { index, message ->
                     val chat = telegram.chats[message.chatId] ?: return@itemsIndexed
                     val ui = message.toUiOrNull()
                     SegmentedListItem(

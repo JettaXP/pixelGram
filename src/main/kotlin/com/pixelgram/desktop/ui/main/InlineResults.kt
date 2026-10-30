@@ -92,7 +92,7 @@ fun InlineResultsPanel(
         shadowElevation = 3.dp,
         modifier = modifier,
     ) {
-        val items = results?.results.orEmpty().mapNotNull { it.item() }
+        val items = results?.results.orEmpty().mapNotNull { it.item() }.distinctBy { it.id }
         when {
             results == null -> Box(Modifier.fillMaxWidth().height(96.dp), contentAlignment = Alignment.Center) { LoadingIndicator() }
             items.isEmpty() -> Text(

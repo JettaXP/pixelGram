@@ -45,7 +45,7 @@ fun MentionSuggestions(
         modifier = modifier,
     ) {
         LazyColumn(Modifier.heightIn(max = 280.dp).padding(vertical = 6.dp)) {
-            itemsIndexed(ids, key = { _, id -> id }) { index, id ->
+            itemsIndexed(ids.distinct(), key = { _, id -> id }) { index, id ->
                 val user = telegram.users[id]
                 val name = user?.let { listOf(it.firstName, it.lastName).filter(String::isNotBlank).joinToString(" ") } ?: ""
                 val username = user?.usernames?.activeUsernames?.firstOrNull()
