@@ -1436,7 +1436,6 @@ Removes stacked Zalgo symbols from names and messages.	מסיר סמלי Zalgo �
 Website	אתר אינטרנט
 Credits	קרדיטים
 Ideas for the preferences layout and some features	רעיונות לעיצוב תפריט ההעדפות ולכמה תכונות
-Experimental	ניסיוני
 These features are still in testing and may change or break.	תכונות אלה עדיין בבדיקה ועשויות להשתנות או להפסיק לפעול.
 Python in messages	Python בהודעות
 Run Python from messages	הפעלת Python מתוך הודעות
@@ -1456,3 +1455,5 @@ Ideas for the preferences layout, the calculator in the message field and more	�
 Chat list title	כותרת רשימת הצ'אטים
 The text above the chat list. Your username updates when you change it.	הטקסט שמעל רשימת הצ'אטים. שם המשתמש שלך מתעדכן כשאתה משנה אותו.
 Title text	טקסט הכותרת
+Experimental	תכונות ניסיוניות
+Custom text	טקסט משלך

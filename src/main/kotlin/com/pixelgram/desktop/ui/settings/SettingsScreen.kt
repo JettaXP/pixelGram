@@ -9,7 +9,6 @@ import com.pixelgram.desktop.core.PythonRunner
 import com.pixelgram.desktop.ui.icons.outlined.DataObject
 import com.pixelgram.desktop.ui.icons.outlined.Computer
 import com.pixelgram.desktop.ui.icons.outlined.MoreHoriz
-import com.pixelgram.desktop.ui.icons.outlined.FormatColorFill
 import com.pixelgram.desktop.ui.icons.outlined.FormatListBulleted
 import com.pixelgram.desktop.ui.icons.outlined.Keyboard
 import com.pixelgram.desktop.ui.icons.outlined.ArrowForward
@@ -211,7 +210,6 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
     Window("Window and system", Icons.Outlined.Computer, pixel = true),
     Experimental("Experimental", Icons.Outlined.DataObject, pixel = true),
     Other("Other", Icons.Outlined.MoreHoriz, pixel = true),
-    Colors("Theme and colors", Icons.Outlined.FormatColorFill, pixel = true, parent = Appearance),
     Fonts("Fonts", Icons.Outlined.TextFields, pixel = true, parent = Appearance),
     Avatars("Avatars", Icons.Outlined.Face, pixel = true, parent = Appearance),
     Bubbles("Message bubbles", Icons.Outlined.ChatBubbleOutline, pixel = true, parent = Appearance),
@@ -534,7 +532,6 @@ fun SettingsScreen(
                         Section.Window -> WindowSection(settings)
                         Section.Experimental -> ExperimentalSection(settings)
                         Section.Other -> OtherSection(telegram, settings) { section = it }
-                        Section.Colors -> ColorsSection(settings)
                         Section.Fonts -> FontsSection(settings)
                         Section.FolderStyle -> FolderStyleSection(settings)
                         Section.Navigation -> NavigationSection(settings)
@@ -888,8 +885,6 @@ private fun GeneralSection(settings: AppSettings) {
 
 @Composable
 private fun AppearanceSection(settings: AppSettings, onOpen: (Section) -> Unit) {
-    Header("Theme")
-    ThemeModeButtons(settings)
     Header("Emoji")
     EmojiStyleChoice(settings)
     Header("Chat list title")
@@ -898,7 +893,7 @@ private fun AppearanceSection(settings: AppSettings, onOpen: (Section) -> Unit) 
         listOf(
             com.pixelgram.desktop.core.TitleText.App to "pixelGram",
             com.pixelgram.desktop.core.TitleText.Username to "Username",
-            com.pixelgram.desktop.core.TitleText.Custom to "Custom",
+            com.pixelgram.desktop.core.TitleText.Custom to "Custom text",
         ),
         settings.titleText.value,
         { settings.titleText.value = it },
@@ -1353,6 +1348,7 @@ private fun CursorSection(settings: AppSettings) {
 private fun ChatSettingsSection(settings: AppSettings) {
     Header("Theme")
     ThemeModeButtons(settings)
+    ColorsSection(settings)
     WallpaperSettings(settings)
 }
 

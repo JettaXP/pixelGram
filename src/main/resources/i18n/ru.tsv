@@ -1438,7 +1438,6 @@ Removes stacked Zalgo symbols from names and messages.	Удаляет повто
 Website	Веб-сайт
 Credits	Благодарности
 Ideas for the preferences layout and some features	Идеи для устройства настроек и некоторых функций
-Experimental	Эксперименты
 These features are still in testing and may change or break.	Эти функции пока тестируются и могут измениться или перестать работать.
 Python in messages	Python в сообщениях
 Run Python from messages	Запуск Python из сообщений
@@ -1458,3 +1457,5 @@ Ideas for the preferences layout, the calculator in the message field and more	�
 Chat list title	Заголовок списка чатов
 The text above the chat list. Your username updates when you change it.	Текст над списком чатов. Имя пользователя обновляется, когда вы его меняете.
 Title text	Текст заголовка
+Experimental	Экспериментальные функции
+Custom text	Свой текст
