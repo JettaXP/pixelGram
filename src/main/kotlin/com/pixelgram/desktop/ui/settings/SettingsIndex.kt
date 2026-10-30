@@ -157,6 +157,7 @@ internal val SettingsIndex = listOf(
     "FolderStyle" to "Style on top",
     "FolderStyle" to "Tabs",
     "FolderStyle" to "Capsule",
+    "FolderStyle" to "Capsules",
     "FolderStyle" to "Spacing",
     "FolderStyle" to "Reset to default",
     "Appearance" to "All chats",
@@ -225,4 +226,8 @@ internal val SettingsIndex = listOf(
     "Chats" to "Calculator in the message field",
     "Appearance" to "Chat list title",
     "Appearance" to "Title text",
+    "FolderStyle" to "Folder title",
+    "FolderStyle" to "Names with icons",
+    "FolderStyle" to "Names only",
+    "FolderStyle" to "Icons only",
 )

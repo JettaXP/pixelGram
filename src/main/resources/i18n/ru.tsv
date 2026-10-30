@@ -1464,3 +1464,9 @@ Noto is Google's latest emoji set and is built in. Noto 3D is the new style from
 Messages, Poll votes	Сообщения, голоса в опросах
 Shown by your desktop's notification daemon instead of pixelGram's own Material 3 cards.	Показываются системным сервисом уведомлений вместо собственных карточек Material 3 в pixelGram.
 Portable mode	Портативный режим
+Folder title	Подписи папок
+Names with icons	Названия с иконками
+Names only	Только названия
+Icons only	Только иконки
+The title above the chat list shows the name of the open folder.	Заголовок над списком чатов показывает название открытой папки.
+Capsules	Капсулы

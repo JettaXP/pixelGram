@@ -144,20 +144,27 @@ internal data class FolderTab(
 
 @Composable
 internal fun FolderIcon(tab: FolderTab, selected: Boolean, tint: Color = LocalContentColor.current) {
-    val unread = tab.unread?.takeIf { it.chats > 0 }
-    BadgedBox(
-        badge = {
-            if (unread != null) {
-                Badge(
-                    containerColor = if (unread.unmuted > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                    contentColor = if (unread.unmuted > 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.surface,
-                ) {
-                    Text(if (unread.chats > 999) "999+" else unread.chats.toString())
-                }
-            }
-        },
-    ) {
+    BadgedBox(badge = { FolderBadge(tab) }) {
         Icon(folderIcon(tab.icon, selected), contentDescription = tab.title, tint = tint)
+    }
+}
+
+@Composable
+internal fun FolderBadge(tab: FolderTab) {
+    val unread = tab.unread?.takeIf { it.chats > 0 } ?: return
+    Badge(
+        containerColor = if (unread.unmuted > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+        contentColor = if (unread.unmuted > 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.surface,
+    ) {
+        Text(if (unread.chats > 999) "999+" else unread.chats.toString())
+    }
+}
+
+@Composable
+internal fun FolderName(tab: FolderTab, tint: Color = LocalContentColor.current) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        EmojiText(tab.title, color = tint, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        FolderBadge(tab)
     }
 }
 
@@ -227,7 +234,7 @@ fun MainScreen(
                             if (settings.capsuleFolders.value) {
                                 CapsuleFolders(tabs, selectedKey, settings, onSelect = { if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
                             } else {
-                                TopFolders(tabs, selectedKey, onSelect = { if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
+                                TopFolders(tabs, selectedKey, settings.folderTitle.value, onSelect = { if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
                             }
                         }
                     }
@@ -249,7 +256,12 @@ fun MainScreen(
                             Box(Modifier.fillMaxSize()) {
                                 ChatList(
                                     listKey = selectedKey,
-                                    title = if (selectedKey == ChatListKey.Archive) "Archived chats" else listTitle(telegram, settings),
+                                    title = when {
+                                        selectedKey == ChatListKey.Archive -> "Archived chats"
+                                        settings.folderTitle.value == com.pixelgram.desktop.core.FolderTitle.Icons && selectedKey != ChatListKey.Main ->
+                                            tabs.firstOrNull { it.key == selectedKey }?.title ?: listTitle(telegram, settings)
+                                        else -> listTitle(telegram, settings)
+                                    },
                                     chatsFor = telegram::chatList,
                                     order = { key -> if (key == ChatListKey.Archive) -1 else tabs.indexOfFirst { it.key == key } },
                                     vertical = foldersLeft,
@@ -481,11 +493,16 @@ private fun PixelRail(
                 showFolders -> Column {
                     tabs.forEach { tab ->
                         val isSelected = tab.key == selected
+                        val mode = settings.folderTitle.value
                         WideNavigationRailItem(
                             selected = isSelected,
                             onClick = { onSelect(tab.key) },
-                            icon = { FolderIcon(tab, isSelected) },
-                            label = { EmojiText(tab.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            icon = { if (mode == com.pixelgram.desktop.core.FolderTitle.Names) FolderName(tab) else FolderIcon(tab, isSelected) },
+                            label = if (mode == com.pixelgram.desktop.core.FolderTitle.NamesAndIcons) {
+                                { EmojiText(tab.title, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                            } else {
+                                null
+                            },
                             railExpanded = false,
                         )
                     }
@@ -764,6 +781,7 @@ private fun AccountHeader(
 private fun TopFolders(
     tabs: List<FolderTab>,
     selected: ChatListKey,
+    mode: com.pixelgram.desktop.core.FolderTitle,
     onSelect: (ChatListKey) -> Unit,
 ) {
     if (tabs.size < 2) return
@@ -778,10 +796,14 @@ private fun TopFolders(
             ShortNavigationBarItem(
                 selected = isSelected,
                 onClick = { onSelect(tab.key) },
-                icon = { FolderIcon(tab, isSelected) },
-                label = { EmojiText(tab.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                icon = { if (mode == com.pixelgram.desktop.core.FolderTitle.Names) FolderName(tab) else FolderIcon(tab, isSelected) },
+                label = if (mode == com.pixelgram.desktop.core.FolderTitle.NamesAndIcons) {
+                    { EmojiText(tab.title, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                } else {
+                    null
+                },
                 iconPosition = NavigationItemIconPosition.Top,
-                modifier = Modifier.width(TopFolderWidth),
+                modifier = if (mode == com.pixelgram.desktop.core.FolderTitle.Names) Modifier else Modifier.width(TopFolderWidth),
             )
         }
     }

@@ -81,6 +81,7 @@ internal fun CapsuleFolders(
     val height = settings.capsuleHeight.value.dp - CapsuleInset * 2
     val spec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val colors = MaterialTheme.colorScheme
+    val mode = settings.folderTitle.value
 
     val bounds = remember { mutableStateMapOf<ChatListKey, Pair<Float, Float>>() }
     val scroll = rememberScrollState()
@@ -136,25 +137,15 @@ internal fun CapsuleFolders(
                                 .selectable(selected = isSelected, role = Role.Tab) { onSelect(tab.key) }
                                 .padding(horizontal = IndicatorSidePadding),
                         ) {
-                            FolderIcon(tab, isSelected, tint = content)
-                            if (progress > 0f) {
-                                EmojiText(
-                                    tab.title,
-                                    color = content,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    maxLines = 1,
-                                    modifier = Modifier
-                                        .clipToBounds()
-                                        .layout { measurable, constraints ->
-                                            val placeable = measurable.measure(
-                                                constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity)
-                                            )
-                                            val gap = LabelGap.roundToPx()
-                                            val width = ((placeable.width + gap) * progress).roundToInt()
-                                            layout(width, placeable.height) { placeable.place(gap, 0) }
-                                        }
-                                        .graphicsLayer { alpha = progress },
-                                )
+                            if (mode != com.pixelgram.desktop.core.FolderTitle.Names) FolderIcon(tab, isSelected, tint = content)
+                            if (mode != com.pixelgram.desktop.core.FolderTitle.Icons) {
+                                Box(Modifier.padding(start = if (mode == com.pixelgram.desktop.core.FolderTitle.Names) 0.dp else LabelGap)) {
+                                    if (mode == com.pixelgram.desktop.core.FolderTitle.Names) {
+                                        FolderName(tab, tint = content)
+                                    } else {
+                                        EmojiText(tab.title, color = content, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                                    }
+                                }
                             }
                         }
                     }

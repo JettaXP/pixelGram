@@ -179,8 +179,6 @@ import com.pixelgram.desktop.ui.components.AvatarImage
 import com.pixelgram.desktop.ui.components.InfoGroup
 import com.pixelgram.desktop.ui.components.InfoRow
 import com.pixelgram.desktop.ui.components.ShapePreview
-import com.pixelgram.desktop.ui.main.CapsuleFolders
-import com.pixelgram.desktop.ui.main.FolderTab
 import com.pixelgram.desktop.ui.main.MessageBubble
 import com.pixelgram.desktop.ui.main.formatChatDate
 import com.pixelgram.desktop.ui.storage.MemoryContent
@@ -831,13 +829,6 @@ internal fun SwitchRow(
     }
 }
 
-private val CapsulePreviewTabs = listOf(
-    FolderTab(ChatListKey.Main, "All chats", "All"),
-    FolderTab(ChatListKey.Folder(1), "Personal", "Private"),
-    FolderTab(ChatListKey.Folder(2), "Work", "Work"),
-    FolderTab(ChatListKey.Folder(3), "Channels", "Channels"),
-)
-
 @Composable
 private fun GeneralSection(settings: AppSettings) {
     Header("Messages")
@@ -1007,7 +998,19 @@ private fun NavigationSection(settings: AppSettings) {
 
 @Composable
 private fun FolderStyleSection(settings: AppSettings) {
-    var capsulePreview by remember { mutableIntStateOf(0) }
+    Header("Folder title")
+    ConnectedChoice(
+        listOf(
+            com.pixelgram.desktop.core.FolderTitle.NamesAndIcons to "Names with icons",
+            com.pixelgram.desktop.core.FolderTitle.Names to "Names only",
+            com.pixelgram.desktop.core.FolderTitle.Icons to "Icons only",
+        ),
+        settings.folderTitle.value,
+        { settings.folderTitle.value = it },
+    )
+    Reveal(settings.folderTitle.value == com.pixelgram.desktop.core.FolderTitle.Icons) {
+        Description("The title above the chat list shows the name of the open folder.")
+    }
     Header("Chat folders")
     Text("Position", style = MaterialTheme.typography.bodyLarge)
     val capsule = settings.capsuleFolders.value
@@ -1031,14 +1034,7 @@ private fun FolderStyleSection(settings: AppSettings) {
         },
     )
 
-    Header("Capsule")
-    Description("The selected folder shows its name, the others only their icon. Try it here:")
-    CapsuleFolders(
-        tabs = CapsulePreviewTabs,
-        selected = CapsulePreviewTabs[capsulePreview].key,
-        settings = settings,
-        onSelect = { key -> capsulePreview = CapsulePreviewTabs.indexOfFirst { it.key == key } },
-    )
+    Header("Capsules")
     Text("Spacing", style = MaterialTheme.typography.bodyLarge)
     Row(verticalAlignment = Alignment.CenterVertically) {
         Slider(
