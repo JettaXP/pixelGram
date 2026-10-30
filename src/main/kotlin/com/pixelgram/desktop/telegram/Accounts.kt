@@ -51,9 +51,14 @@ class Accounts(private val settings: AppSettings, private val scope: CoroutineSc
         settings.activeAccount.value = telegram.account
     }
 
+    private val adding = HashSet<Int>()
+
+    fun isAdding(telegram: Telegram): Boolean = telegram.account in adding && telegram.authState != AuthState.Ready
+
     fun add() {
         if (!canAdd) return
         val telegram = create(list.maxOf { it.account } + 1)
+        adding.add(telegram.account)
         list.add(telegram)
         save()
         telegram.start()
@@ -61,7 +66,8 @@ class Accounts(private val settings: AppSettings, private val scope: CoroutineSc
     }
 
     fun cancelAdding(telegram: Telegram) {
-        if (list.size < 2 || telegram.authState == AuthState.Ready) return
+        if (list.size < 2 || !isAdding(telegram)) return
+        adding.remove(telegram.account)
         telegram.close()
         remove(telegram)
     }

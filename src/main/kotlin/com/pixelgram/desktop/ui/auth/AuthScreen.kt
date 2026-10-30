@@ -150,7 +150,7 @@ fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
                     val onPhone = state is AuthState.WaitPhone || editingNumber
                     val pill: Pair<String, () -> Unit>? = when {
                         onQr -> "Back" to { editingNumber = true }
-                        onCancel != null && !onPhone -> "Cancel" to onCancel
+                        onCancel != null && !onPhone && state != AuthState.Starting && state != AuthState.Closing -> "Cancel" to onCancel
                         else -> null
                     }
                     var lastPill by remember { mutableStateOf(pill) }

@@ -543,7 +543,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
                 when {
                     !isReady -> AuthScreen(
                         telegram,
-                        onCancel = if (accounts.list.size > 1) {
+                        onCancel = if (accounts.list.size > 1 && accounts.isAdding(telegram)) {
                             { accounts.cancelAdding(telegram) }
                         } else {
                             null
