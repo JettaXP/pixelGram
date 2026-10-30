@@ -892,6 +892,27 @@ private fun AppearanceSection(settings: AppSettings, onOpen: (Section) -> Unit) 
     ThemeModeButtons(settings)
     Header("Emoji")
     EmojiStyleChoice(settings)
+    Header("Chat list title")
+    Description("The text above the chat list. Your username updates when you change it.")
+    ConnectedChoice(
+        listOf(
+            com.pixelgram.desktop.core.TitleText.App to "pixelGram",
+            com.pixelgram.desktop.core.TitleText.Username to "Username",
+            com.pixelgram.desktop.core.TitleText.Custom to "Custom",
+        ),
+        settings.titleText.value,
+        { settings.titleText.value = it },
+    )
+    Reveal(settings.titleText.value == com.pixelgram.desktop.core.TitleText.Custom) {
+        OutlinedTextField(
+            value = settings.titleCustom.value,
+            visualTransformation = EmojiVisualTransformation,
+            onValueChange = { settings.titleCustom.value = it.replace("\n", "").take(TitleLimit) },
+            label = { Text("Title text") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
     SubsectionLinks(Section.Appearance, onOpen)
 }
 
@@ -1886,6 +1907,7 @@ private fun ExperimentalSection(settings: AppSettings) {
 
 private val PythonExample = ".py \"import requests\nprint(requests.get('https://api.ipify.org').text)\""
 private const val PipLogLines = 6
+private const val TitleLimit = 32
 
 @Composable
 private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {

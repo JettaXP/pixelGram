@@ -223,4 +223,6 @@ internal val SettingsIndex = listOf(
     "Experimental" to "Packages",
     "Experimental" to "Package name",
     "Chats" to "Calculator in the message field",
+    "Appearance" to "Chat list title",
+    "Appearance" to "Title text",
 )

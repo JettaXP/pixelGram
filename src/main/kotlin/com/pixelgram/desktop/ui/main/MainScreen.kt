@@ -249,7 +249,7 @@ fun MainScreen(
                             Box(Modifier.fillMaxSize()) {
                                 ChatList(
                                     listKey = selectedKey,
-                                    title = if (selectedKey == ChatListKey.Archive) "Archived chats" else "pixelGram",
+                                    title = if (selectedKey == ChatListKey.Archive) "Archived chats" else listTitle(telegram, settings),
                                     chatsFor = telegram::chatList,
                                     order = { key -> if (key == ChatListKey.Archive) -1 else tabs.indexOfFirst { it.key == key } },
                                     vertical = foldersLeft,
@@ -853,3 +853,13 @@ private class EmptyShape(
 
 private const val EmptyShapeAlpha = 0.55f
 private const val EmptySpinMs = 24_000
+
+private fun listTitle(telegram: Telegram, settings: AppSettings): String = when (settings.titleText.value) {
+    com.pixelgram.desktop.core.TitleText.App -> AppTitle
+    com.pixelgram.desktop.core.TitleText.Username -> telegram.me?.let { me ->
+        me.usernames?.activeUsernames?.firstOrNull() ?: me.firstName
+    }?.takeIf { it.isNotBlank() } ?: AppTitle
+    com.pixelgram.desktop.core.TitleText.Custom -> settings.titleCustom.value.trim().ifEmpty { AppTitle }
+}
+
+private const val AppTitle = "pixelGram"
