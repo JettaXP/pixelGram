@@ -218,4 +218,8 @@ internal val SettingsIndex = listOf(
     "About" to "Website",
     "About" to "Credits",
     "About" to "exteraGram",
+    "Experimental" to "Python in messages",
+    "Experimental" to "Run Python from messages",
+    "Experimental" to "Packages",
+    "Experimental" to "Package name",
 )

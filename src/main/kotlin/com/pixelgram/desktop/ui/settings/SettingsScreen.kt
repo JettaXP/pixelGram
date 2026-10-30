@@ -5,6 +5,8 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.focusRequester
 import com.pixelgram.desktop.ui.icons.outlined.Edit
 import com.pixelgram.desktop.ui.icons.outlined.Settings
+import com.pixelgram.desktop.core.PythonRunner
+import com.pixelgram.desktop.ui.icons.outlined.DataObject
 import com.pixelgram.desktop.ui.icons.outlined.Computer
 import com.pixelgram.desktop.ui.icons.outlined.MoreHoriz
 import com.pixelgram.desktop.ui.icons.outlined.FormatColorFill
@@ -207,6 +209,7 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
     Appearance("Appearance", Icons.Outlined.Palette, pixel = true),
     Chats("Chats", Icons.AutoMirrored.Outlined.Chat, pixel = true),
     Window("Window and system", Icons.Outlined.Computer, pixel = true),
+    Experimental("Experimental", Icons.Outlined.DataObject, pixel = true),
     Other("Other", Icons.Outlined.MoreHoriz, pixel = true),
     Colors("Theme and colors", Icons.Outlined.FormatColorFill, pixel = true, parent = Appearance),
     Fonts("Fonts", Icons.Outlined.TextFields, pixel = true, parent = Appearance),
@@ -529,6 +532,7 @@ fun SettingsScreen(
                         Section.Appearance -> AppearanceSection(settings) { section = it }
                         Section.Chats -> ChatsSection(settings) { section = it }
                         Section.Window -> WindowSection(settings)
+                        Section.Experimental -> ExperimentalSection(settings)
                         Section.Other -> OtherSection(telegram, settings) { section = it }
                         Section.Colors -> ColorsSection(settings)
                         Section.Fonts -> FontsSection(settings)
@@ -1806,6 +1810,73 @@ private fun WindowSection(settings: AppSettings) {
         }
     }
 }
+
+@Composable
+private fun ExperimentalSection(settings: AppSettings) {
+    val scope = rememberCoroutineScope()
+    var version by remember { mutableStateOf<String?>(null) }
+    var checked by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
+    var installing by remember { mutableStateOf(false) }
+    var log by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        version = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { PythonRunner.version() }.getOrNull() }
+        checked = true
+    }
+    Description("These features are still in testing and may change or break.")
+    Header("Python in messages")
+    SwitchRow(
+        0,
+        1,
+        "Run Python from messages",
+        "Send .py \"code\" and pixelGram runs it on this computer, then sends the output in a quote with the code in a second quote. Only messages you send are run.",
+        settings.pythonMessages.value,
+    ) { settings.pythonMessages.value = it }
+    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+        Text(PythonExample, style = MaterialTheme.typography.bodySmall, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, modifier = Modifier.padding(12.dp))
+    }
+    AnimatedDescription(
+        when {
+            !checked -> "Looking for Python…"
+            version != null -> com.pixelgram.desktop.core.tr("Interpreter") + ": " + version
+            AppPaths.isWindows -> "Python 3 was not found. Install it from python.org, then restart pixelGram."
+            else -> "Python 3 was not found. Install it with your package manager, then restart pixelGram."
+        }
+    )
+    Header("Packages")
+    Description("Install packages from PyPI for your code, for example requests. They are stored in the pixelGram data folder.")
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it.filter { c -> c.isLetterOrDigit() || c in "-_.=<>[]," } },
+            label = { Text("Package name") },
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+        )
+        androidx.compose.material3.FilledTonalButton(
+            enabled = name.isNotBlank() && !installing && version != null,
+            onClick = {
+                installing = true
+                log = null
+                val target = name.trim()
+                scope.launch {
+                    val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PythonRunner.install(target) }
+                    log = result.output.trim().lines().takeLast(PipLogLines).joinToString("\n")
+                    installing = false
+                    if (!result.failed) name = ""
+                }
+            },
+        ) { Text(if (installing) "Installing…" else "Install") }
+    }
+    log?.let { text ->
+        Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+            Text(text, style = MaterialTheme.typography.bodySmall, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, modifier = Modifier.padding(12.dp))
+        }
+    }
+}
+
+private val PythonExample = ".py \"import requests\nprint(requests.get('https://api.ipify.org').text)\""
+private const val PipLogLines = 6
 
 @Composable
 private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {

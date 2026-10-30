@@ -1088,7 +1088,16 @@ private fun ChatViewContent(
                     asFiles = false
                     spoiler = false
                 } else if (text.isNotBlank()) {
-                    telegram.sendText(chat.id, text, replyId, entities)
+                    val code = if (com.pixelgram.desktop.core.Tweaks.settings?.pythonMessages?.value == true) com.pixelgram.desktop.core.PythonRunner.code(text) else null
+                    if (code != null) {
+                        val chatId = chat.id
+                        Thread {
+                            val (output, quotes) = com.pixelgram.desktop.core.PythonRunner.message(code, com.pixelgram.desktop.core.PythonRunner.run(code))
+                            telegram.sendText(chatId, output, replyId, quotes)
+                        }.apply { isDaemon = true }.start()
+                    } else {
+                        telegram.sendText(chat.id, text, replyId, entities)
+                    }
                 }
                 sendWith = null
                 if (edited == null) PendingForward.send(telegram, chat.id)

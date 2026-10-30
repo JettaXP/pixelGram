@@ -1436,3 +1436,17 @@ Removes stacked Zalgo symbols from names and messages.	מסיר סמלי Zalgo �
 Website	אתר אינטרנט
 Credits	קרדיטים
 Ideas for the preferences layout and some features	רעיונות לעיצוב תפריט ההעדפות ולכמה תכונות
+Experimental	ניסיוני
+These features are still in testing and may change or break.	תכונות אלה עדיין בבדיקה ועשויות להשתנות או להפסיק לפעול.
+Python in messages	Python בהודעות
+Run Python from messages	הפעלת Python מתוך הודעות
+Send .py "code" and pixelGram runs it on this computer, then sends the output in a quote with the code in a second quote. Only messages you send are run.	שלחו .py "קוד" ו-pixelGram יריץ אותו במחשב הזה, ואז ישלח את הפלט בציטוט ואת הקוד בציטוט נוסף. רק הודעות ששלחת מורצות.
+Looking for Python…	מחפש Python…
+Interpreter	מפרש
+Python 3 was not found. Install it from python.org, then restart pixelGram.	לא נמצא Python 3. התקן אותו מ-python.org והפעל מחדש את pixelGram.
+Python 3 was not found. Install it with your package manager, then restart pixelGram.	לא נמצא Python 3. התקן אותו באמצעות מנהל החבילות והפעל מחדש את pixelGram.
+Packages	חבילות
+Install packages from PyPI for your code, for example requests. They are stored in the pixelGram data folder.	התקן חבילות מ-PyPI עבור הקוד שלך, למשל requests. הן נשמרות בתיקיית הנתונים של pixelGram.
+Package name	שם החבילה
+Install	התקן
+Installing…	מתקין…
