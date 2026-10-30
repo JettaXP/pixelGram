@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.45.1 Sunny
+
+### QR codes
+- QR codes now appear with an animation: the background grows in, the code pieces pop out from the center to the edges, then the corner rings and their centers. When the sign-in QR code refreshes, the old code folds away and the new one builds up.
+- The centers of the corner marks get a random cookie shape every time a QR code is made.
+- In the light theme the QR code background is now visible against the dialog.
+
+### Windows installer
+- When installation finishes, the logo turns into a cookie, the checkmark draws in, and the cookie slowly turns.
+
+### Interface
+- Removed story posting from the side menu and the channel menu. Stories can still be viewed.
+- Removed the version label from the side menu.
+
+### Performance
+- Fast scrolling through chats with many GIFs and videos no longer freezes the app. Videos start playing only after they stay on screen for a moment, and at most six play at once.
+
 ## 0.45.0 Sunny
 
 ### Windows installer
