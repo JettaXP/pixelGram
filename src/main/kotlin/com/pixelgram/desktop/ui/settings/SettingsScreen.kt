@@ -1346,10 +1346,10 @@ private fun CursorSection(settings: AppSettings) {
 
 @Composable
 private fun ChatSettingsSection(settings: AppSettings) {
+    WallpaperSettings(settings)
     Header("Theme")
     ThemeModeButtons(settings)
     ColorsSection(settings)
-    WallpaperSettings(settings)
 }
 
 @Composable
