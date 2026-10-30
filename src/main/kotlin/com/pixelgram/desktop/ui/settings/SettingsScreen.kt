@@ -1367,13 +1367,22 @@ private fun ChatsSection(settings: AppSettings, onOpen: (Section) -> Unit) {
         settings.typingBubble.value,
     ) { settings.typingBubble.value = it }
     Header("Input")
-    SwitchRow(
-        0,
-        1,
-        "Capitalize sentences",
-        "The first letter of each sentence becomes a capital letter as you type.",
-        settings.autoCapitalize.value,
-    ) { settings.autoCapitalize.value = it }
+    SegmentedGroup {
+        SwitchRow(
+            0,
+            2,
+            "Capitalize sentences",
+            "The first letter of each sentence becomes a capital letter as you type.",
+            settings.autoCapitalize.value,
+        ) { settings.autoCapitalize.value = it }
+        SwitchRow(
+            1,
+            2,
+            "Calculator in the message field",
+            "Type an example ending with =, like 5+5=, to see the answer in gray. Press → to insert it.",
+            settings.inlineMath.value,
+        ) { settings.inlineMath.value = it }
+    }
     SubsectionLinks(Section.Chats, onOpen)
 }
 
@@ -1910,7 +1919,7 @@ private fun AboutSection(telegram: Telegram, onOpenChat: (Long) -> Unit) {
     }
     Header("Credits")
     SegmentedGroup {
-        LinkItem(0, 1, Icons.Outlined.Lightbulb, "exteraGram", "Ideas for the preferences layout and some features") { openUrl(ExteraGramUrl) }
+        LinkItem(0, 1, Icons.Outlined.Lightbulb, "exteraGram", "Ideas for the preferences layout, the calculator in the message field and more") { openUrl(ExteraGramUrl) }
     }
 }
 

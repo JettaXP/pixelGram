@@ -2321,11 +2321,20 @@ private fun Composer(
                     onClear = { spans = clearFormat(spans, text.selection) },
                 )
             }
+            val mathAnswer = remember(text.text, settings.inlineMath.value) {
+                if (settings.inlineMath.value) com.pixelgram.desktop.core.InlineMath.answer(text.text) else null
+            }?.takeIf { text.selection.collapsed && text.selection.end == text.text.length }
             com.pixelgram.desktop.ui.components.ComposerField(
                 value = text,
                 onValueChange = setText,
                 placeholder = if (hasAttachments) "Add a caption" else "Message",
-                visualTransformation = FormatTransformation(spans, MaterialTheme.colorScheme.primary, com.pixelgram.desktop.ui.components.codeColors()),
+                visualTransformation = FormatTransformation(
+                    spans,
+                    MaterialTheme.colorScheme.primary,
+                    com.pixelgram.desktop.ui.components.codeColors(),
+                    mathAnswer,
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                ),
                 settings = settings,
                 shape = MaterialTheme.shapes.extraLarge,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -2372,6 +2381,11 @@ private fun Composer(
                                 true
                             }
                             event.type != KeyEventType.KeyDown -> false
+                            mathAnswer != null && event.key == Key.DirectionRight && !event.isShiftPressed -> {
+                                val filled = text.text + mathAnswer
+                                setText(TextFieldValue(filled, TextRange(filled.length)))
+                                true
+                            }
                             event.key == Key.Enter && !event.isShiftPressed -> {
                                 send()
                                 true

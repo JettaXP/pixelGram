@@ -222,4 +222,5 @@ internal val SettingsIndex = listOf(
     "Experimental" to "Run Python from messages",
     "Experimental" to "Packages",
     "Experimental" to "Package name",
+    "Chats" to "Calculator in the message field",
 )

@@ -1452,3 +1452,6 @@ Install packages from PyPI for your code, for example requests. They are stored 
 Package name	Название пакета
 Install	Установить
 Installing…	Установка…
+Calculator in the message field	Калькулятор в поле ввода сообщения
+Type an example ending with =, like 5+5=, to see the answer in gray. Press → to insert it.	Введите пример, заканчивающийся знаком =, например 5+5=, и ответ появится серым. Нажмите →, чтобы вставить его.
+Ideas for the preferences layout, the calculator in the message field and more	Идеи для устройства настроек, калькулятора в поле ввода и не только

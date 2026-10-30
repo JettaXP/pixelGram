@@ -2,6 +2,7 @@ package com.pixelgram.desktop.ui.main
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
@@ -142,7 +143,13 @@ fun autoCodeBlock(text: String, spans: List<FormatSpan>, cursor: Int): Triple<St
     return Triple(updated, shifted + FormatSpan(start, start + code.length, FormatType.Code, url = language), newCursor)
 }
 
-class FormatTransformation(private val spans: List<FormatSpan>, private val accent: Color, private val code: com.pixelgram.desktop.ui.components.CodeColors? = null) : VisualTransformation {
+class FormatTransformation(
+    private val spans: List<FormatSpan>,
+    private val accent: Color,
+    private val code: com.pixelgram.desktop.ui.components.CodeColors? = null,
+    private val ghost: String? = null,
+    private val ghostColor: Color = Color.Gray,
+) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val builder = AnnotatedString.Builder(emojiText(text.text))
         val length = text.length
@@ -166,9 +173,17 @@ class FormatTransformation(private val spans: List<FormatSpan>, private val acce
                 com.pixelgram.desktop.ui.components.highlightSpans(builder, text.text.substring(start, end), start, span.url, code)
             }
         }
-        return TransformedText(builder.toAnnotatedString(), OffsetMapping.Identity)
+        if (ghost.isNullOrEmpty()) return TransformedText(builder.toAnnotatedString(), OffsetMapping.Identity)
+        builder.withStyle(SpanStyle(color = ghostColor)) { append(ghost) }
+        return TransformedText(
+            builder.toAnnotatedString(),
+            object : OffsetMapping {
+                override fun originalToTransformed(offset: Int) = offset
+                override fun transformedToOriginal(offset: Int) = offset.coerceAtMost(length)
+            },
+        )
     }
 
-    override fun equals(other: Any?) = other is FormatTransformation && other.spans == spans && other.accent == accent && other.code == code
-    override fun hashCode() = spans.hashCode() * 31 + accent.hashCode()
+    override fun equals(other: Any?) = other is FormatTransformation && other.spans == spans && other.accent == accent && other.code == code && other.ghost == ghost && other.ghostColor == ghostColor
+    override fun hashCode() = (spans.hashCode() * 31 + accent.hashCode()) * 31 + ghost.hashCode()
 }

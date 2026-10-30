@@ -1450,3 +1450,6 @@ Install packages from PyPI for your code, for example requests. They are stored 
 Package name	שם החבילה
 Install	התקן
 Installing…	מתקין…
+Calculator in the message field	מחשבון בשדה ההודעה
+Type an example ending with =, like 5+5=, to see the answer in gray. Press → to insert it.	הקלד דוגמה המסתיימת ב-=, כגון 5+5=, כדי לראות את התשובה באפור. לחץ על → כדי להוסיף אותה.
+Ideas for the preferences layout, the calculator in the message field and more	רעיונות לעיצוב תפריט ההגדרות, המחשבון בשדה ההודעה ועוד
