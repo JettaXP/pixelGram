@@ -120,6 +120,8 @@ class AppSettings private constructor(private val props: Properties, private val
     val customTitleBar = bool("customTitleBar", !AppPaths.isLinux)
     val messageSeconds = bool("messageSeconds", false)
     val hidePhone = bool("hidePhone", false)
+    val exactNumbers = bool("exactNumbers", false)
+    val zalgoFilter = bool("zalgoFilter", false)
     val checkUpdates = bool("checkUpdates", true)
     val doubleClickOwn = enum("doubleClickOwn", DoubleClickAction.Reaction)
     val settingsStyle = enum("settingsStyle", SettingsStyle.Expressive)
@@ -223,7 +225,7 @@ class AppSettings private constructor(private val props: Properties, private val
         notifyAllAccounts, flashTaskbar, notifyShowName, notifyShowText, badgeIncludeMuted, folderIncludeMuted, badgeCountMessages, respectFocus,
         materialFolders, hideAllChats, folderOrder, folderIcons,
         unreadFolder, unreadFolderName, unreadFolderIcon, mentionsFolder, mentionsFolderName, mentionsFolderIcon,
-        capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, checkUpdates,
+        capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, exactNumbers, zalgoFilter, checkUpdates,
         doubleClickOwn, doubleClickOther, doubleClickEmoji, swipeLeft, swipeRight, typingBubble, autoCapitalize, settingsStyle, sideMenuStyle,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,

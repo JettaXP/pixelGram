@@ -1424,3 +1424,17 @@ Rendering	Отрисовка
 Applies after restart. Auto uses DirectX on Windows and switches to OpenGL if pixelGram closed unexpectedly twice in a row.	Применяется после перезапуска. «Авто» использует DirectX в Windows и переключается на OpenGL, если pixelGram дважды подряд закрылся с ошибкой.
 Auto	Авто
 Software	Программная
+General	Основные
+Window and system	Окно и система
+Other	Прочее
+Theme and colors	Тема и цвета
+Fonts	Шрифты
+Side menu and settings	Боковое меню и настройки
+Message actions	Действия с сообщениями
+Disable number rounding	Отключить округление чисел
+Show 1,234 views instead of 1.2K.	Показывать 1 234 просмотра вместо 1,2 тыс.
+Filter Zalgo	Фильтр «Залго»
+Removes stacked Zalgo symbols from names and messages.	Удаляет повторяющиеся символы «Zalgo» из имён и сообщений.
+Website	Веб-сайт
+Credits	Благодарности
+Ideas for the preferences layout and some features	Идеи для устройства настроек и некоторых функций

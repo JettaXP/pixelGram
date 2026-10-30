@@ -1599,6 +1599,7 @@ private fun MessageMeta(
 }
 
 private fun formatViews(count: Int): String = when {
+    com.pixelgram.desktop.core.Tweaks.exactNumbers -> "%,d".format(java.util.Locale.US, count)
     count >= 1_000_000 -> "%.1fM".format(java.util.Locale.US, count / 1_000_000f).replace(".0M", "M")
     count >= 1_000 -> "%.1fK".format(java.util.Locale.US, count / 1_000f).replace(".0K", "K")
     else -> count.toString()

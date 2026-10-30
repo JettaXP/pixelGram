@@ -564,8 +564,8 @@ class Telegram(
 
     fun chatTitle(chat: ChatState): String = when {
         isSavedMessages(chat.id) -> SavedMessagesTitle
-        chat.privateUserId != 0L -> com.pixelgram.desktop.core.LocalNames.get(chat.privateUserId) ?: chat.title
-        else -> chat.title
+        chat.privateUserId != 0L -> com.pixelgram.desktop.core.LocalNames.get(chat.privateUserId) ?: com.pixelgram.desktop.core.Tweaks.name(chat.title)
+        else -> com.pixelgram.desktop.core.Tweaks.name(chat.title)
     }
 
     fun openSavedMessages(onChat: (Long) -> Unit) {
@@ -874,7 +874,7 @@ class Telegram(
     fun userName(userId: Long): String {
         ensureUser(userId)
         com.pixelgram.desktop.core.LocalNames.get(userId)?.let { return it }
-        return users[userId]?.fullName() ?: ""
+        return com.pixelgram.desktop.core.Tweaks.name(users[userId]?.fullName() ?: "")
     }
 
     fun myFullInfo(onResult: (TdApi.UserFullInfo?) -> Unit) {
@@ -3208,6 +3208,7 @@ fun TdApi.User.fullName(): String =
 
 fun TdApi.Message.toUi(): UiMessage {
     val sender = senderId
+    val (cleanText, cleanEntities) = com.pixelgram.desktop.core.Tweaks.clean(messageText(content), messageEntities(content))
     val photo = (content as? TdApi.MessagePhoto)?.let { chatPhotoSize(it.photo) }
     return UiMessage(
         id = id,
@@ -3216,7 +3217,7 @@ fun TdApi.Message.toUi(): UiMessage {
         senderChatId = (sender as? TdApi.MessageSenderChat)?.chatId ?: 0L,
         isOutgoing = isOutgoing,
         date = date,
-        text = messageText(content),
+        text = cleanText,
         photo = photo?.photo,
         photoWidth = photo?.width ?: 0,
         photoHeight = photo?.height ?: 0,
@@ -3228,7 +3229,7 @@ fun TdApi.Message.toUi(): UiMessage {
         editable = isOutgoing && (content is TdApi.MessageText || content is TdApi.MessagePhoto || content is TdApi.MessageVideo ||
             content is TdApi.MessageAnimation || content is TdApi.MessageDocument || content is TdApi.MessageAudio || content is TdApi.MessageVoiceNote),
         content = content,
-        entities = messageEntities(content),
+        entities = cleanEntities,
         forwardOrigin = forwardInfo?.origin,
         reactions = interactionInfo?.reactions?.reactions?.toList().orEmpty(),
         keyboard = inlineRows(replyMarkup),

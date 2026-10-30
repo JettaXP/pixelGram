@@ -183,7 +183,10 @@ private fun ApplicationScope.PixelApp() {
         runCatching { FileKit.init("com.pixelgram.desktop") }
         Sounds.warmUp()
         com.pixelgram.desktop.core.VideoNoteRecorder.warmUp()
-        AppSettings.load().also { EmojiFonts.settings = it }
+        AppSettings.load().also {
+            EmojiFonts.settings = it
+            com.pixelgram.desktop.core.Tweaks.settings = it
+        }
     }
     val accounts = remember {
         Accounts(settings, MainScope()).apply { onDuplicate = { TopNotice.text = "This account is already added to pixelGram" } }

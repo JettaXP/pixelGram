@@ -1422,3 +1422,17 @@ Rendering	רינדור
 Applies after restart. Auto uses DirectX on Windows and switches to OpenGL if pixelGram closed unexpectedly twice in a row.	חל לאחר הפעלה מחדש. «אוטומטי» משתמש ב-DirectX ב-Windows ועובר ל-OpenGL אם pixelGram נסגר באופן לא צפוי פעמיים ברציפות.
 Auto	אוטומטי
 Software	תוכנה
+General	כללי
+Window and system	חלון ומערכת
+Other	אחר
+Theme and colors	נושא וצבעים
+Fonts	גופנים
+Side menu and settings	תפריט צדדי והגדרות
+Message actions	פעולות הודעה
+Disable number rounding	השבת עיגול המספרים
+Show 1,234 views instead of 1.2K.	הצג 1,234 צפיות במקום 1.2K.
+Filter Zalgo	סנן Zalgo
+Removes stacked Zalgo symbols from names and messages.	מסיר סמלי Zalgo מוערמים משמות ומהודעות.
+Website	אתר אינטרנט
+Credits	קרדיטים
+Ideas for the preferences layout and some features	רעיונות לעיצוב תפריט ההעדפות ולכמה תכונות

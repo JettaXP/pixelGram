@@ -4,6 +4,16 @@ import kotlin.math.roundToInt
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.focusRequester
 import com.pixelgram.desktop.ui.icons.outlined.Edit
+import com.pixelgram.desktop.ui.icons.outlined.Settings
+import com.pixelgram.desktop.ui.icons.outlined.Computer
+import com.pixelgram.desktop.ui.icons.outlined.MoreHoriz
+import com.pixelgram.desktop.ui.icons.outlined.FormatColorFill
+import com.pixelgram.desktop.ui.icons.outlined.FormatListBulleted
+import com.pixelgram.desktop.ui.icons.outlined.Keyboard
+import com.pixelgram.desktop.ui.icons.outlined.ArrowForward
+import com.pixelgram.desktop.ui.icons.outlined.Language
+import com.pixelgram.desktop.ui.icons.outlined.Lightbulb
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Chat
 import com.pixelgram.desktop.ui.icons.outlined.Person
 import com.pixelgram.desktop.ui.icons.outlined.PersonAdd
 import com.pixelgram.desktop.ui.icons.outlined.RestartAlt
@@ -182,7 +192,7 @@ import it.tdlight.jni.TdApi
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 
-private enum class Section(val title: String, val icon: ImageVector, val pixel: Boolean = false) {
+private enum class Section(val title: String, val icon: ImageVector, val pixel: Boolean = false, val parent: Section? = null) {
     Profile("My Profile", Icons.Outlined.Person),
     Notifications("Notifications and Sounds", Icons.Outlined.Notifications),
     Privacy("Privacy and Security", Icons.Outlined.Lock),
@@ -193,13 +203,24 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
     SpeakersCamera("Speakers and Camera", Icons.Outlined.Headphones),
     Battery("Battery and Animations", Icons.Outlined.BatterySaver),
     Language("Language", Icons.Outlined.Translate),
+    General("General", Icons.Outlined.Settings, pixel = true),
     Appearance("Appearance", Icons.Outlined.Palette, pixel = true),
-    Avatars("Avatars", Icons.Outlined.Face, pixel = true),
-    Bubbles("Message bubbles", Icons.Outlined.ChatBubbleOutline, pixel = true),
-    Corners("Corners", Icons.Outlined.RoundedCorner, pixel = true),
-    Cursor("Cursor", Icons.Outlined.TextFields, pixel = true),
-    About("About", Icons.Outlined.Info, pixel = true),
+    Chats("Chats", Icons.AutoMirrored.Outlined.Chat, pixel = true),
+    Window("Window and system", Icons.Outlined.Computer, pixel = true),
+    Other("Other", Icons.Outlined.MoreHoriz, pixel = true),
+    Colors("Theme and colors", Icons.Outlined.FormatColorFill, pixel = true, parent = Appearance),
+    Fonts("Fonts", Icons.Outlined.TextFields, pixel = true, parent = Appearance),
+    Avatars("Avatars", Icons.Outlined.Face, pixel = true, parent = Appearance),
+    Bubbles("Message bubbles", Icons.Outlined.ChatBubbleOutline, pixel = true, parent = Appearance),
+    Corners("Corners", Icons.Outlined.RoundedCorner, pixel = true, parent = Appearance),
+    FolderStyle("Chat folders", Icons.Outlined.Folder, pixel = true, parent = Appearance),
+    Navigation("Side menu and settings", Icons.Outlined.FormatListBulleted, pixel = true, parent = Appearance),
+    Actions("Message actions", Icons.Outlined.SwipeRight, pixel = true, parent = Chats),
+    Cursor("Cursor", Icons.Outlined.Keyboard, pixel = true, parent = Chats),
+    About("About", Icons.Outlined.Info, pixel = true, parent = Other),
 }
+
+private val Section.subsections: List<Section> get() = Section.entries.filter { it.parent == this }
 
 private val QrAvatarSize = 80.dp
 private const val DisabledAlpha = 0.38f
@@ -227,6 +248,7 @@ private fun SearchResultRow(index: Int, count: Int, target: Section, title: Stri
     val path = buildList {
         add(com.pixelgram.desktop.core.tr("Settings"))
         if (target.pixel) add(com.pixelgram.desktop.core.tr(PixelPreferencesTitle))
+        target.parent?.let { add(com.pixelgram.desktop.core.tr(it.title)) }
         if (title != null) add(com.pixelgram.desktop.core.tr(target.title))
     }.joinToString(" › ")
     androidx.compose.material3.SegmentedListItem(
@@ -243,6 +265,8 @@ private fun SearchResultRow(index: Int, count: Int, target: Section, title: Stri
 private const val ChannelUsername = "pixelgramclient"
 private const val ChannelUrl = "https://t.me/$ChannelUsername"
 private const val GitHubUrl = "https://github.com/JettaXP/pixelGram"
+private const val WebsiteHost = "pixelgram.jettax.xyz"
+private const val ExteraGramUrl = "https://exteragram.app"
 
 @Composable
 fun SettingsScreen(
@@ -258,7 +282,7 @@ fun SettingsScreen(
         val initial = System.getProperty("pixelgram.section")
         mutableStateOf(
             Section.entries.firstOrNull { it.name == initial }
-                ?: if (startInPreferences) Section.Appearance else Section.Profile
+                ?: if (startInPreferences) Section.General else Section.Profile
         )
     }
     var inPreferences by rememberSaveable { mutableStateOf(section.pixel) }
@@ -280,9 +304,12 @@ fun SettingsScreen(
         query = ""
     }
     OnEscape {
+        val parent = section.parent
         if (searching) {
             searching = false
             query = ""
+        } else if (parent != null) {
+            section = parent
         } else if (inPreferences) {
             inPreferences = false
             section = Section.Profile
@@ -387,10 +414,10 @@ fun SettingsScreen(
                 if (preferencesPane) {
                     PreferencesHeader(telegram)
                     Header("Categories")
-                    val items = Section.entries.filter { it.pixel }
+                    val items = Section.entries.filter { it.pixel && it.parent == null }
                     SegmentedGroup {
                         items.forEachIndexed { index, item ->
-                            NavItem(index, items.size, item.title, item.icon, item == section, settings.settingsStyle.value == com.pixelgram.desktop.core.SettingsStyle.MaterialYou) {
+                            NavItem(index, items.size, item.title, item.icon, item == section || item == section.parent, settings.settingsStyle.value == com.pixelgram.desktop.core.SettingsStyle.MaterialYou) {
                                 section = item
                             }
                         }
@@ -431,7 +458,7 @@ fun SettingsScreen(
                             Spacer(Modifier.height(12.dp))
                             PreferencesEntry {
                                 inPreferences = true
-                                section = Section.Appearance
+                                section = Section.General
                             }
                             Spacer(Modifier.height(12.dp))
                         }
@@ -481,24 +508,38 @@ fun SettingsScreen(
                 ) {
                     if (shown.pixel) {
                         Text(
-                            PixelPreferencesTitle,
+                            listOfNotNull(PixelPreferencesTitle, shown.parent?.title).joinToString(" › ") { com.pixelgram.desktop.core.tr(it) },
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        shown.parent?.let { parent ->
+                            IconButton(onClick = { section = parent }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            }
+                        }
                         Text(shown.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
                         if (shown == Section.Profile) AccountMenuButton(telegram, onAddAccount)
                     }
                     Spacer(Modifier.height(8.dp))
                     androidx.compose.runtime.CompositionLocalProvider(com.pixelgram.desktop.ui.components.LocalHighlightText provides highlight) {
                     when (shown) {
-                        Section.Appearance -> AppearanceSection(settings)
+                        Section.General -> GeneralSection(settings)
+                        Section.Appearance -> AppearanceSection(settings) { section = it }
+                        Section.Chats -> ChatsSection(settings) { section = it }
+                        Section.Window -> WindowSection(settings)
+                        Section.Other -> OtherSection(telegram, settings) { section = it }
+                        Section.Colors -> ColorsSection(settings)
+                        Section.Fonts -> FontsSection(settings)
+                        Section.FolderStyle -> FolderStyleSection(settings)
+                        Section.Navigation -> NavigationSection(settings)
+                        Section.Actions -> ActionsSection(settings)
                         Section.Avatars -> AvatarsSection(settings)
                         Section.Bubbles -> BubblesSection(settings)
                         Section.Corners -> CornersSection(settings)
                         Section.Cursor -> CursorSection(settings)
-                        Section.About -> AboutSection(telegram, settings, onOpenChat)
+                        Section.About -> AboutSection(telegram, onOpenChat)
                         Section.Privacy -> PrivacySection(telegram, settings)
                         Section.ChatSettings -> ChatSettingsSection(settings)
                         Section.Folders -> FoldersSection(telegram, settings)
@@ -797,23 +838,35 @@ private val CapsulePreviewTabs = listOf(
 )
 
 @Composable
-private fun AppearanceSection(settings: AppSettings) {
-    var capsulePreview by remember { mutableIntStateOf(0) }
-    Header("Theme")
-    ThemeModeButtons(settings)
-
-    Header("Side menu")
-    Description("Over the chats keeps the window still and dims it. Push aside moves the chats to make room for the menu.")
-    ConnectedChoice(
-        listOf(com.pixelgram.desktop.core.SideMenuStyle.Overlay to "Over the chats", com.pixelgram.desktop.core.SideMenuStyle.Push to "Push aside"),
-        settings.sideMenuStyle.value,
-        { settings.sideMenuStyle.value = it },
+private fun GeneralSection(settings: AppSettings) {
+    Header("Messages")
+    SegmentedGroup {
+        SwitchRow(
+            index = 0,
+            count = 2,
+            title = "Seconds in message time",
+            subtitle = "Show 18:52:33 instead of 18:52 under messages.",
+            checked = settings.messageSeconds.value,
+            onChange = { settings.messageSeconds.value = it },
+        )
+        SwitchRow(
+            index = 1,
+            count = 2,
+            title = "Disable number rounding",
+            subtitle = "Show 1,234 views instead of 1.2K.",
+            checked = settings.exactNumbers.value,
+            onChange = { settings.exactNumbers.value = it },
+        )
+    }
+    Header("Text")
+    SwitchRow(
+        index = 0,
+        count = 1,
+        title = "Filter Zalgo",
+        subtitle = "Removes stacked Zalgo symbols from names and messages.",
+        checked = settings.zalgoFilter.value,
+        onChange = { settings.zalgoFilter.value = it },
     )
-
-    Header("Settings style")
-    Description("Expressive groups the sections into segmented cards. Material You shows a flat list with a highlighted pill, like Android settings.")
-    SettingsStyleChoice(settings)
-
     Header("Privacy")
     SwitchRow(
         index = 0,
@@ -823,20 +876,23 @@ private fun AppearanceSection(settings: AppSettings) {
         checked = settings.hidePhone.value,
         onChange = { settings.hidePhone.value = it },
     )
+    Header("Mini apps")
+    SwitchRow(0, 1, "Spoof client as Android", "Mini apps see pixelGram as Telegram for Android. Some apps unlock mobile-only features.", settings.miniAppsAndroid.value) {
+        settings.miniAppsAndroid.value = it
+    }
+}
 
-    Header("Messages")
-    SwitchRow(
-        index = 0,
-        count = 1,
-        title = "Seconds in message time",
-        subtitle = "Show 18:52:33 instead of 18:52 under messages.",
-        checked = settings.messageSeconds.value,
-        onChange = { settings.messageSeconds.value = it },
-    )
-
+@Composable
+private fun AppearanceSection(settings: AppSettings, onOpen: (Section) -> Unit) {
+    Header("Theme")
+    ThemeModeButtons(settings)
     Header("Emoji")
     EmojiStyleChoice(settings)
+    SubsectionLinks(Section.Appearance, onOpen)
+}
 
+@Composable
+private fun ColorsSection(settings: AppSettings) {
     Header("Your colors")
     Description("Pick a style. Expressive, Vibrant and the others are the bright Material 3 Expressive schemes from Google's Material color utilities.")
     ColorStyleRow(settings)
@@ -912,7 +968,26 @@ private fun AppearanceSection(settings: AppSettings) {
             Text("Copy config")
         }
     }
+}
 
+@Composable
+private fun NavigationSection(settings: AppSettings) {
+    Header("Side menu")
+    Description("Over the chats keeps the window still and dims it. Push aside moves the chats to make room for the menu.")
+    ConnectedChoice(
+        listOf(com.pixelgram.desktop.core.SideMenuStyle.Overlay to "Over the chats", com.pixelgram.desktop.core.SideMenuStyle.Push to "Push aside"),
+        settings.sideMenuStyle.value,
+        { settings.sideMenuStyle.value = it },
+    )
+
+    Header("Settings style")
+    Description("Expressive groups the sections into segmented cards. Material You shows a flat list with a highlighted pill, like Android settings.")
+    SettingsStyleChoice(settings)
+}
+
+@Composable
+private fun FolderStyleSection(settings: AppSettings) {
+    var capsulePreview by remember { mutableIntStateOf(0) }
     Header("Chat folders")
     Text("Position", style = MaterialTheme.typography.bodyLarge)
     val capsule = settings.capsuleFolders.value
@@ -967,6 +1042,24 @@ private fun AppearanceSection(settings: AppSettings) {
         )
         Text("${settings.capsuleHeight.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
         ResetButton(settings.capsuleHeight)
+    }
+}
+
+@Composable
+private fun SubsectionLinks(parent: Section, onOpen: (Section) -> Unit) {
+    val items = parent.subsections
+    Header("More")
+    SegmentedGroup {
+        items.forEachIndexed { index, item ->
+            SegmentedListItem(
+                onClick = { onOpen(item) },
+                shapes = groupShapes(index, items.size),
+                leadingContent = { Icon(item.icon, contentDescription = null) },
+                trailingContent = { Icon(Icons.Outlined.ArrowForward, contentDescription = null) },
+            ) {
+                Text(item.title)
+            }
+        }
     }
 }
 
@@ -1236,7 +1329,15 @@ private fun ChatSettingsSection(settings: AppSettings) {
     Header("Theme")
     ThemeModeButtons(settings)
     WallpaperSettings(settings)
+}
+
+@Composable
+private fun FontsSection(settings: AppSettings) {
     MessageFontSettings(settings)
+}
+
+@Composable
+private fun ChatsSection(settings: AppSettings, onOpen: (Section) -> Unit) {
     Header("Reactions")
     SwitchRow(
         0,
@@ -1253,6 +1354,27 @@ private fun ChatSettingsSection(settings: AppSettings) {
         "Shapes behind the hint when no chat is open.",
         settings.emptyShapes.value,
     ) { settings.emptyShapes.value = it }
+    Header("Typing")
+    SwitchRow(
+        0,
+        1,
+        "Show typing as a message bubble",
+        "When off, only the chat header says that someone is typing.",
+        settings.typingBubble.value,
+    ) { settings.typingBubble.value = it }
+    Header("Input")
+    SwitchRow(
+        0,
+        1,
+        "Capitalize sentences",
+        "The first letter of each sentence becomes a capital letter as you type.",
+        settings.autoCapitalize.value,
+    ) { settings.autoCapitalize.value = it }
+    SubsectionLinks(Section.Chats, onOpen)
+}
+
+@Composable
+private fun ActionsSection(settings: AppSettings) {
     Header("Double click on a message")
     val options = listOf(
         DoubleClickAction.Reaction to "Reaction",
@@ -1287,22 +1409,6 @@ private fun ChatSettingsSection(settings: AppSettings) {
             DoubleClickEmoji(settings)
         }
     }
-    Header("Typing")
-    SwitchRow(
-        0,
-        1,
-        "Show typing as a message bubble",
-        "When off, only the chat header says that someone is typing.",
-        settings.typingBubble.value,
-    ) { settings.typingBubble.value = it }
-    Header("Input")
-    SwitchRow(
-        0,
-        1,
-        "Capitalize sentences",
-        "The first letter of each sentence becomes a capital letter as you type.",
-        settings.autoCapitalize.value,
-    ) { settings.autoCapitalize.value = it }
 }
 
 @Composable
@@ -1648,7 +1754,7 @@ private data class SystemRow(
 )
 
 @Composable
-private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {
+private fun WindowSection(settings: AppSettings) {
     Header("Rendering")
     Description("Applies after restart. Auto uses DirectX on Windows and switches to OpenGL if pixelGram closed unexpectedly twice in a row.")
     ConnectedChoice(
@@ -1699,10 +1805,10 @@ private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {
             SwitchRow(last.value.first, last.value.second, row.title, row.subtitle, row.checked, row.onChange)
         }
     }
-    Header("Mini apps")
-    SwitchRow(0, 1, "Spoof client as Android", "Mini apps see pixelGram as Telegram for Android. Some apps unlock mobile-only features.", settings.miniAppsAndroid.value) {
-        settings.miniAppsAndroid.value = it
-    }
+}
+
+@Composable
+private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {
     Header("Data and storage")
     MemoryContent(telegram)
     Header("Data folder")
@@ -1721,20 +1827,28 @@ private fun openUrl(url: String) {
 }
 
 @Composable
-private fun AboutSection(telegram: Telegram, settings: AppSettings, onOpenChat: (Long) -> Unit) {
+private fun AboutSection(telegram: Telegram, onOpenChat: (Long) -> Unit) {
+    Description("pixelGram ${BuildConfig.VERSION}. A Telegram client with Material 3 Expressive, built on TDLib.")
+    Header("Links")
+    SegmentedGroup {
+        LinkItem(0, 3, Icons.Outlined.Campaign, "Channel", "@$ChannelUsername") {
+            telegram.openPublicChat(ChannelUsername, onOpenChat, onFail = { openUrl(ChannelUrl) })
+        }
+        LinkItem(1, 3, Icons.Outlined.Code, "GitHub", "JettaXP/pixelGram") { openUrl(GitHubUrl) }
+        LinkItem(2, 3, Icons.Outlined.Language, "Website", WebsiteHost) { openUrl("https://$WebsiteHost") }
+    }
+    Header("Credits")
+    SegmentedGroup {
+        LinkItem(0, 1, Icons.Outlined.Lightbulb, "exteraGram", "Ideas for the preferences layout and some features") { openUrl(ExteraGramUrl) }
+    }
+}
+
+@Composable
+private fun OtherSection(telegram: Telegram, settings: AppSettings, onOpen: (Section) -> Unit) {
     val scope = rememberCoroutineScope()
     var exporting by remember { mutableStateOf<File?>(null) }
     var importing by remember { mutableStateOf<File?>(null) }
     var status by remember { mutableStateOf<String?>(null) }
-
-    Description("pixelGram ${BuildConfig.VERSION}. A Telegram client with Material 3 Expressive, built on TDLib.")
-    Header("Links")
-    SegmentedGroup {
-        LinkItem(0, 2, Icons.Outlined.Campaign, "Channel", "@$ChannelUsername") {
-            telegram.openPublicChat(ChannelUsername, onOpenChat, onFail = { openUrl(ChannelUrl) })
-        }
-        LinkItem(1, 2, Icons.Outlined.Code, "GitHub", "JettaXP/pixelGram") { openUrl(GitHubUrl) }
-    }
 
     Header("Backup")
     Description("Save pixelGram Preferences to a .backup file and send it to any chat, or load them from one. Accounts are not included.")
@@ -1806,6 +1920,7 @@ private fun AboutSection(telegram: Telegram, settings: AppSettings, onOpenChat: 
             if (done != null) status = if (done) "Settings imported." else "Couldn't read ${file.name}."
         }
     }
+    SubsectionLinks(Section.Other, onOpen)
 }
 
 @Composable
