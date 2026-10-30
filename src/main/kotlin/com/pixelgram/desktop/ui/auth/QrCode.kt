@@ -61,11 +61,11 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
     val neutral = if (darkTheme) scheme.inverseOnSurface.copy(alpha = 0.85f) else scheme.onSurfaceVariant
     val accent = if (darkTheme) scheme.tertiaryContainer else scheme.tertiary
     val backShape = MaterialShapes.Cookie4Sided.toShape()
-    val eyeShapes = listOf(
-        MaterialShapes.Cookie9Sided.toShape(),
-        MaterialShapes.Cookie7Sided.toShape(),
-        MaterialShapes.Cookie12Sided.toShape(),
-    )
+    val eyePolygons = remember(shown) {
+        val pool = listOf(MaterialShapes.Cookie7Sided, MaterialShapes.Cookie9Sided, MaterialShapes.Cookie12Sided)
+        List(3) { pool.random() }
+    }
+    val eyeShapes = eyePolygons.map { it.toShape() }
     val blobShapes = listOf(
         MaterialShapes.Circle.toShape(),
         MaterialShapes.Cookie7Sided.toShape(),
