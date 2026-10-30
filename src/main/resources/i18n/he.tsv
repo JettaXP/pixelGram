@@ -1457,3 +1457,8 @@ The text above the chat list. Your username updates when you change it.	הטקס
 Title text	טקסט הכותרת
 Experimental	תכונות ניסיוניות
 Custom text	טקסט משלך
+Add these lines to ~/.config/matugen/config.toml, then run matugen. pixelGram applies new colors automatically.	הוסף את השורות האלה ל-~/.config/matugen/config.toml והפעל את matugen. pixelGram יחיל את הצבעים החדשים אוטומטית.
+Noto is Google's latest emoji set and is built in. Noto 3D is the new style from Android 17: each emoji is loaded from Google the first time it is shown. Apple is the iOS set (Emoji 16), loaded the same way.	Noto היא ערכת האמוג'י העדכנית של Google, והיא מובנית בלקוח. Noto 3D הוא הסגנון החדש מ-Android 17: כל אמוג'י נטען מ-Google בפעם הראשונה שהוא מוצג. Apple היא ערכת ה-iOS (Emoji 16), שנטענת באותו אופן.
+Messages, Poll votes	הודעות, הצבעות בסקרים
+Shown by your desktop's notification daemon instead of pixelGram's own Material 3 cards.	מוצג על ידי שירות ההתראות של המערכת במקום כרטיסי Material 3 של pixelGram.
+Portable mode	מצב נייד

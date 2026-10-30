@@ -1911,7 +1911,7 @@ private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {
     MemoryContent(telegram)
     Header("Data folder")
     Description(
-        (if (AppPaths.isPortable) "Portable mode: " else "") + AppPaths.dataDir.absolutePath
+        (if (AppPaths.isPortable) com.pixelgram.desktop.core.tr("Portable mode") + ": " else "") + AppPaths.dataDir.absolutePath
     )
     OutlinedButton(onClick = {
         Thread { runCatching { com.pixelgram.desktop.core.SystemOpen.file(AppPaths.dataDir) }.onFailure { com.pixelgram.desktop.core.AppLog.write("Open folder failed", it) } }.apply { isDaemon = true }.start()
