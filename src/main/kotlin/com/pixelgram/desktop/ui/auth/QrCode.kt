@@ -1,6 +1,16 @@
 package com.pixelgram.desktop.ui.auth
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.lerp
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.runtime.getValue
@@ -31,11 +41,22 @@ private class Piece(val x: Int, val y: Int, val length: Int, val kind: PieceKind
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun QrCode(text: String, modifier: Modifier = Modifier) {
-    val qr = remember(text) { Qr.encodeText(text, Qr.Ecc.HIGH) }
+    var shown by remember { mutableStateOf(text) }
+    val clock = remember { Animatable(0f) }
+    val backdrop = remember { Animatable(0f) }
+    LaunchedEffect(text) {
+        launch { backdrop.animateTo(1f, tween(BackdropMs, easing = FastOutSlowInEasing)) }
+        if (shown != text) {
+            clock.animateTo(0f, tween((clock.value / RevealMs * HideMs).toInt(), easing = LinearEasing))
+            shown = text
+        }
+        clock.animateTo(RevealMs, tween((RevealMs - clock.value).toInt(), easing = LinearEasing))
+    }
+    val qr = remember(shown) { Qr.encodeText(shown, Qr.Ecc.HIGH) }
     val pieces = remember(qr) { pieces(qr) }
     val scheme = MaterialTheme.colorScheme
     val darkTheme = scheme.surface.luminance() < 0.5f
-    val background = if (darkTheme) scheme.inverseSurface else scheme.surfaceContainerHigh
+    val background = if (darkTheme) scheme.inverseSurface else scheme.secondaryContainer
     val main = if (darkTheme) scheme.inversePrimary else scheme.primary
     val neutral = if (darkTheme) scheme.inverseOnSurface.copy(alpha = 0.85f) else scheme.onSurfaceVariant
     val accent = if (darkTheme) scheme.tertiaryContainer else scheme.tertiary
@@ -59,20 +80,37 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
         while (true) withFrameMillis { value = (it - start) / 1000f }
     }
     Canvas(modifier) {
-        drawShape(backShape, Offset.Zero, size, background)
+        val fade = backdrop.value
+        scale(BackdropStartScale + (1f - BackdropStartScale) * fade) {
+            drawShape(backShape, Offset.Zero, size, lerp(scheme.surfaceContainerHighest, background, fade).copy(alpha = (fade * BackdropAppear).coerceAtMost(1f)))
+        }
         val area = size.minDimension * QrArea
         val cell = area / qr.size
         val origin = Offset((size.width - area) / 2, (size.height - area) / 2)
+        val now = clock.value
+        val middle = qr.size / 2f
+        fun pop(start: Float) = overshoot(((now - start) / PopMs).coerceIn(0f, 1f))
+        fun pop(cx: Float, cy: Float, hash: Int): Float {
+            val distance = kotlin.math.hypot(cx - middle, cy - middle) / (middle * Sqrt2)
+            val jitter = (hash % JitterSteps) / JitterSteps.toFloat()
+            return pop(LeadMs + (distance * (1f - Jitter) + jitter * Jitter) * SpreadMs)
+        }
         translate(origin.x, origin.y) {
             listOf(0 to 0, qr.size - 7 to 0, 0 to qr.size - 7).forEachIndexed { index, (ex, ey) ->
                 val center = Offset((ex + 3.5f) * cell, (ey + 3.5f) * cell)
-                drawCircle(main, radius = cell * 3f, center = center, style = Stroke(width = cell))
-                val eye = cell * 3.3f
-                rotate(EyeSpin[index] * time % 360f, pivot = center) {
-                    drawShape(eyeShapes[index], center - Offset(eye / 2, eye / 2), Size(eye, eye), main)
+                val ring = pop(RingMs)
+                if (ring > 0f) scale(ring, pivot = center) {
+                    drawCircle(main, radius = cell * 3f, center = center, style = Stroke(width = cell))
+                }
+                val pupil = pop(PupilMs)
+                if (pupil > 0f) scale(pupil, pivot = center) {
+                    val eye = cell * 3.3f
+                    rotate(EyeSpin[index] * time % 360f, pivot = center) {
+                        drawShape(eyeShapes[index], center - Offset(eye / 2, eye / 2), Size(eye, eye), main)
+                    }
                 }
             }
-            val faint = neutral.copy(alpha = 0.08f)
+            val faint = neutral.copy(alpha = 0.08f * fade)
             for (y in -2 until qr.size + 2) {
                 for (x in -2 until qr.size + 2) {
                     val inside = x in 0 until qr.size && y in 0 until qr.size
@@ -96,7 +134,15 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
                 }
                 val left = piece.x * cell
                 val top = piece.y * cell
-                when (piece.kind) {
+                val span = when (piece.kind) {
+                    PieceKind.Blob -> Offset(1f, 1f)
+                    PieceKind.Horizontal -> Offset(piece.length / 2f, 0.5f)
+                    PieceKind.Vertical -> Offset(0.5f, piece.length / 2f)
+                    PieceKind.Dot -> Offset(0.5f, 0.5f)
+                }
+                val grow = pop(piece.x + span.x, piece.y + span.y, piece.hash)
+                if (grow <= 0f) return@forEach
+                scale(grow, pivot = Offset(left + span.x * cell, top + span.y * cell)) { when (piece.kind) {
                     PieceKind.Blob -> {
                         val blob = cell * 1.8f
                         val center = Offset(left + cell, top + cell)
@@ -125,7 +171,7 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
                         size = Size(thickness, piece.length * cell - (cell - thickness)),
                         cornerRadius = CornerRadius(thickness / 2),
                     )
-                }
+                } }
             }
         }
     }
@@ -182,6 +228,26 @@ private fun pieces(qr: Qr): List<Piece> {
     return result
 }
 
+private fun overshoot(t: Float): Float {
+    if (t <= 0f) return 0f
+    val x = t - 1f
+    return 1f + (Overshoot + 1f) * x * x * x + Overshoot * x * x
+}
+
 private const val QrArea = 0.66f
+private const val LeadMs = 100f
+private const val SpreadMs = 600f
+private const val PopMs = 170f
+private const val RingMs = 650f
+private const val PupilMs = 1050f
+private const val RevealMs = PupilMs + PopMs
+private const val HideMs = 300f
+private const val Jitter = 0.35f
+private const val JitterSteps = 997
+private const val BackdropMs = 380
+private const val BackdropStartScale = 0.8f
+private const val BackdropAppear = 4f
+private const val Overshoot = 1.7f
+private const val Sqrt2 = 1.4142135f
 private const val MaxRun = 4
 private val EyeSpin = floatArrayOf(72f, 84f, 66f)
