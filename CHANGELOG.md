@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.45.0 Sunny
+
+### Windows installer
+- New pixelGram Setup.exe in Material 3 Expressive: the logo in your theme colors, the install folder with its own folder picker (home, apps, drives, new folder, or the system dialog), a static wavy progress bar that shows the real installation progress and the current step, and a Launch pixelGram checkbox with a Done button at the end. The installer follows the Windows theme and language. The .msi and the portable .zip are still available.
+
+### Accounts
+- The Cancel button on the sign-in screen appears only while adding a new account. It no longer shows on the loading screen, where it could remove an account that was already signed in.
+
 ## 0.44.1 Puffy
 
 - Fixed a crash when many animated video stickers were shown, for example while scrolling the sticker or emoji panel.

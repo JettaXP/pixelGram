@@ -2,7 +2,7 @@
 # Packages the prebuilt Compose distributable from build/compose/binaries,
 # copied next to this file as ./app with LICENSE by CI (see .github/workflows/build.yml).
 pkgname=pixelgram
-pkgver=0.44.1
+pkgver=0.45.0
 pkgrel=1
 pkgdesc="Telegram client with Material 3 Expressive"
 arch=('x86_64')
