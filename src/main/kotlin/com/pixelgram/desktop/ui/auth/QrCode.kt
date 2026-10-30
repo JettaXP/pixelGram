@@ -8,7 +8,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -79,11 +81,15 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
         val start = withFrameMillis { it }
         while (true) withFrameMillis { value = (it - start) / 1000f }
     }
-    Canvas(modifier) {
-        val fade = backdrop.value
-        scale(BackdropStartScale + (1f - BackdropStartScale) * fade) {
-            drawShape(backShape, Offset.Zero, size, lerp(scheme.surfaceContainerHigh, background, fade).copy(alpha = (fade * BackdropAppear).coerceAtMost(1f)))
-        }
+    Canvas(
+        modifier.graphicsLayer {
+            val fade = backdrop.value
+            alpha = fade
+            scaleX = BackdropStartScale + (1f - BackdropStartScale) * fade
+            scaleY = scaleX
+        },
+    ) {
+        drawShape(backShape, Offset.Zero, size, background)
         val area = size.minDimension * QrArea
         val cell = area / qr.size
         val origin = Offset((size.width - area) / 2, (size.height - area) / 2)
@@ -95,7 +101,9 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
             val jitter = (hash % JitterSteps) / JitterSteps.toFloat()
             return LeadMs + (distance + (jitter - 0.5f) * Jitter).coerceAtLeast(0f) * SpreadMs
         }
-        translate(origin.x, origin.y) {
+        val backPath = (backShape.createOutline(size, layoutDirection, this) as? Outline.Generic)?.path ?: Path()
+        val margin = kotlin.math.ceil(origin.x / cell).toInt() + 1
+        clipPath(backPath) { translate(origin.x, origin.y) {
             listOf(0 to 0, qr.size - 7 to 0, 0 to qr.size - 7).forEachIndexed { index, (ex, ey) ->
                 val center = Offset((ex + 3.5f) * cell, (ey + 3.5f) * cell)
                 val ring = grow(RingMs, RingGrowMs)
@@ -110,12 +118,12 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
                     }
                 }
             }
-            val faint = neutral.copy(alpha = 0.08f * fade)
-            for (y in -2 until qr.size + 2) {
-                for (x in -2 until qr.size + 2) {
+            val faint = neutral.copy(alpha = 0.08f)
+            for (y in -margin until qr.size + margin) {
+                for (x in -margin until qr.size + margin) {
                     val inside = x in 0 until qr.size && y in 0 until qr.size
                     if (inside && qr.getModule(x, y)) continue
-                    if (!inside && (x * 7 + y * 13 + x * y) % 3 != 0) continue
+                    if (!inside && cellHash(x + margin, y + margin) % EdgeDotEvery != 0) continue
                     val dot = if (inside) grow(wave(x + 0.5f, y + 0.5f, cellHash(x, y)) - FaintAheadMs, FaintGrowMs) else 1f
                     if (dot <= 0f) continue
                     val side = cell * 0.6f * dot
@@ -176,7 +184,7 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
                     )
                 } }
             }
-        }
+        } }
     }
 }
 
@@ -239,9 +247,9 @@ private fun decelerate(t: Float): Float {
 private fun cellHash(x: Int, y: Int) = ((x * 73856093) xor (y * 19349663)).and(0x7fffffff) / 7
 
 private const val QrArea = 0.66f
-private const val LeadMs = 80f
-private const val SpreadMs = 800f
-private const val PieceGrowMs = 400f
+private const val LeadMs = 110f
+private const val SpreadMs = 1000f
+private const val PieceGrowMs = 450f
 private const val FaintAheadMs = 80f
 private const val FaintGrowMs = 300f
 private const val RingMs = 690f
@@ -250,12 +258,12 @@ private const val PupilMs = 1120f
 private const val PupilGrowMs = 700f
 private const val RevealMs = PupilMs + PupilGrowMs
 private const val HideMs = 300f
-private const val Jitter = 0.35f
-private const val WaveCurve = 0.6f
+private const val Jitter = 0.25f
+private const val WaveCurve = 1f
+private const val EdgeDotEvery = 4
 private const val JitterSteps = 997
 private const val BackdropMs = 300
 private const val BackdropStartScale = 0.8f
-private const val BackdropAppear = 4f
 private const val Sqrt2 = 1.4142135f
 private const val MaxRun = 4
 private val EyeSpin = floatArrayOf(72f, 84f, 66f)
