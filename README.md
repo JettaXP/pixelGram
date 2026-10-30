@@ -42,7 +42,7 @@ Every [release](https://github.com/JettaXP/pixelGram/releases) has the same set 
 | `pixelGram-…-windows-x64-setup.exe` | **Windows, recommended.** The Material 3 installer: choose a folder, watch the progress, launch pixelGram at the end. |
 | `pixelGram-…-windows-x64.msi` | Windows, if you prefer the standard Windows Installer, deploy pixelGram with scripts (`msiexec /i … /qn`), or the Setup.exe is blocked on your PC. Installs the same app. |
 | `pixelGram-…-windows-x64-portable.zip` | Windows without installing: unpack anywhere, even on a USB drive. Your data stays in the `pixelgram-data` folder next to the app. |
-| `pixelgram-…-x86_64.pkg.tar.zst` | Arch Linux and derivatives (CachyOS, EndeavourOS, Manjaro). |
+| `pixelgram-…-x86_64.pkg.tar.zst` | Arch Linux and derivatives (CachyOS, EndeavourOS, Manjaro, etc). |
 | `pixelGram-…-x86_64.AppImage` | Any other Linux distribution, as a single file. |
 | `pixelGram-…-linux-x86_64.tar.gz` | Any Linux, as a plain folder you unpack and run. |
 | `pixelGram-…-macos-arm64.dmg` | macOS on Apple Silicon (M1 and newer). Intel Macs are not supported. |
