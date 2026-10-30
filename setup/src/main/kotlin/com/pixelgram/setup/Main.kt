@@ -1,5 +1,17 @@
 package com.pixelgram.setup
 
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.Path
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -197,7 +209,7 @@ private fun SetupContent(msi: File?, version: String, dark: Boolean, onExit: () 
                     step = Step.Welcome
                 }, onBack = { step = Step.Welcome })
                 Step.Installing -> Installing(logo, progress, action, onCancel = { cancelled = true })
-                Step.Done -> Finished(launch, { launch = it }, onDone = {
+                Step.Done -> Finished(logo, launch, { launch = it }, onDone = {
                     if (launch && !demo) openApp(target)
                     onExit()
                 })
@@ -273,13 +285,10 @@ private fun Installing(logo: androidx.compose.ui.graphics.ImageBitmap?, progress
 }
 
 @Composable
-private fun Finished(launch: Boolean, onLaunch: (Boolean) -> Unit, onDone: () -> Unit) {
+private fun Finished(logo: androidx.compose.ui.graphics.ImageBitmap?, launch: Boolean, onLaunch: (Boolean) -> Unit, onDone: () -> Unit) {
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Box(Modifier.weight(1f))
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(LogoBox).clip(MaterialShapes.Cookie12Sided.toShape())) {
-            Surface(color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxSize()) {}
-            Icon(SetupIcons.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(CheckSize))
-        }
+        DoneBadge(logo)
         Text(tr("pixelGram is installed"), style = MaterialTheme.typography.headlineSmall)
         Surface(
             onClick = { onLaunch(!launch) },
@@ -294,6 +303,63 @@ private fun Finished(launch: Boolean, onLaunch: (Boolean) -> Unit, onDone: () ->
         Box(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
             Button(onClick = onDone) { Text(tr("Done")) }
+        }
+    }
+}
+
+@Composable
+private fun DoneBadge(logo: androidx.compose.ui.graphics.ImageBitmap?) {
+    val reveal = remember { Animatable(0f) }
+    val draw = remember { Animatable(0f) }
+    val turn = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        reveal.animateTo(1f, tween(RevealMs, easing = FastOutSlowInEasing))
+        draw.animateTo(1f, tween(CheckDrawMs, easing = LinearOutSlowInEasing))
+        while (true) {
+            turn.snapTo(0f)
+            turn.animateTo(FullTurn, tween(TurnMs, easing = LinearEasing))
+        }
+    }
+    val primary = MaterialTheme.colorScheme.primary
+    val mark = MaterialTheme.colorScheme.onPrimary
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(LogoBox)) {
+        Box(
+            Modifier
+                .matchParentSize()
+                .graphicsLayer {
+                    rotationZ = turn.value
+                    alpha = reveal.value
+                    val grow = CookieStartScale + (1f - CookieStartScale) * reveal.value
+                    scaleX = grow
+                    scaleY = grow
+                }
+                .clip(MaterialShapes.Cookie12Sided.toShape())
+                .background(primary),
+        )
+        logo?.let {
+            Image(
+                it,
+                contentDescription = null,
+                modifier = Modifier.matchParentSize().graphicsLayer {
+                    alpha = 1f - reveal.value
+                    val shrink = 1f - LogoShrink * reveal.value
+                    scaleX = shrink
+                    scaleY = shrink
+                },
+            )
+        }
+        Canvas(Modifier.size(CheckSize)) {
+            val progress = draw.value
+            if (progress <= 0f) return@Canvas
+            val path = Path().apply {
+                moveTo(size.width * 0.16f, size.height * 0.53f)
+                lineTo(size.width * 0.41f, size.height * 0.77f)
+                lineTo(size.width * 0.86f, size.height * 0.29f)
+            }
+            val measure = PathMeasure().apply { setPath(path, false) }
+            val drawn = Path()
+            measure.getSegment(0f, measure.length * progress, drawn, true)
+            drawPath(drawn, mark, style = Stroke(width = size.width * CheckStroke, cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
     }
 }
@@ -354,3 +420,10 @@ private const val PulseScale = 1.06f
 private const val EnterScale = 0.94f
 private const val Percent = 100
 private const val MaskBackground = 74f
+private const val RevealMs = 420
+private const val CheckDrawMs = 340
+private const val TurnMs = 14000
+private const val FullTurn = 360f
+private const val CookieStartScale = 0.7f
+private const val LogoShrink = 0.25f
+private const val CheckStroke = 0.13f
