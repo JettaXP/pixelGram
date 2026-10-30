@@ -15,3 +15,5 @@ dependencyResolutionManagement {
         maven("https://mvn.mchv.eu/repository/mchv/")
     }
 }
+
+include(":setup")
