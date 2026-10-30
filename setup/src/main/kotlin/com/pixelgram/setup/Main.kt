@@ -48,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.loadImageBitmap
@@ -148,9 +150,8 @@ private fun SetupContent(msi: File?, version: String, dark: Boolean, onExit: () 
     var progress by remember { mutableFloatStateOf(0f) }
     var action by remember { mutableStateOf(tr("Preparing")) }
     var cancelled by remember { mutableStateOf(false) }
-    val logo = remember(dark) {
-        Thread.currentThread().contextClassLoader.getResourceAsStream(if (dark) "icon-dark.png" else "icon-light.png")?.use(::loadImageBitmap)
-    }
+    val scheme = MaterialTheme.colorScheme
+    val logo = remember(scheme.primaryContainer, scheme.onPrimaryContainer) { themedLogo(scheme.primaryContainer, scheme.onPrimaryContainer) }
     fun start() {
         if (msi == null && !demo) {
             step = Step.Failed(tr("The installer package is missing."), null)
@@ -318,6 +319,25 @@ private fun Failed(step: Step.Failed, onRetry: () -> Unit, onClose: () -> Unit) 
     }
 }
 
+private fun themedLogo(background: Color, glyph: Color): androidx.compose.ui.graphics.ImageBitmap? {
+    val source = Thread.currentThread().contextClassLoader.getResourceAsStream("icon-dark.png")?.use { javax.imageio.ImageIO.read(it) } ?: return null
+    val bg = background.toArgb()
+    val fg = glyph.toArgb()
+    val result = java.awt.image.BufferedImage(source.width, source.height, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+    for (y in 0 until source.height) {
+        for (x in 0 until source.width) {
+            val pixel = source.getRGB(x, y)
+            val alpha = pixel ushr 24
+            if (alpha == 0) continue
+            val gray = ((pixel shr 16 and 0xFF) + (pixel shr 8 and 0xFF) + (pixel and 0xFF)) / 3f
+            val t = ((gray - MaskBackground) / (255f - MaskBackground)).coerceIn(0f, 1f)
+            fun mix(shift: Int) = ((bg shr shift and 0xFF) * (1 - t) + (fg shr shift and 0xFF) * t).toInt()
+            result.setRGB(x, y, (alpha shl 24) or (mix(16) shl 16) or (mix(8) shl 8) or mix(0))
+        }
+    }
+    return result.toComposeImageBitmap()
+}
+
 private fun openApp(target: File) {
     val exe = File(target, "pixelGram.exe")
     if (exe.isFile) runCatching { ProcessBuilder(exe.absolutePath).directory(target).start() }
@@ -333,3 +353,4 @@ private const val PulseMs = 900
 private const val PulseScale = 1.06f
 private const val EnterScale = 0.94f
 private const val Percent = 100
+private const val MaskBackground = 74f
