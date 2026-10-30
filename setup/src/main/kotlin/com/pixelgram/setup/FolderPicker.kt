@@ -39,7 +39,6 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.pixelgram.setup.Strings.tr
 import java.io.File
 
 private const val UpTurn = 180f
@@ -50,8 +49,8 @@ private fun places(): List<Place> {
     val home = File(System.getProperty("user.home"))
     val apps = System.getenv("LOCALAPPDATA")?.let(::File)?.takeIf { it.isDirectory }
     return buildList {
-        add(Place(tr("Home"), SetupIcons.Home, home))
-        apps?.let { add(Place(tr("Apps"), SetupIcons.FolderOpen, it)) }
+        add(Place("Home", SetupIcons.Home, home))
+        apps?.let { add(Place("Apps", SetupIcons.FolderOpen, it)) }
         File.listRoots().orEmpty().filter { it.exists() }.forEach { root -> add(Place(root.path.trimEnd('\\', '/').ifEmpty { "/" }, SetupIcons.Storage, root)) }
     }
 }
@@ -69,8 +68,8 @@ fun FolderPicker(start: File, onPicked: (File) -> Unit, onBack: () -> Unit) {
     val children = remember(current) { folders(current) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack, modifier = Modifier.focusProperties { canFocus = false }) { Icon(SetupIcons.ArrowBack, contentDescription = tr("Cancel")) }
-            Text(tr("Choose a folder"), style = MaterialTheme.typography.titleLarge)
+            IconButton(onClick = onBack, modifier = Modifier.focusProperties { canFocus = false }) { Icon(SetupIcons.ArrowBack, contentDescription = "Cancel") }
+            Text("Choose a folder", style = MaterialTheme.typography.titleLarge)
         }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             remember { places() }.forEach { place ->
@@ -92,7 +91,7 @@ fun FolderPicker(start: File, onPicked: (File) -> Unit, onBack: () -> Unit) {
         }
         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (children.isEmpty()) {
-                Box(contentAlignment = Alignment.Center) { Text(tr("This folder is empty"), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                Box(contentAlignment = Alignment.Center) { Text("This folder is empty", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             } else {
                 LazyColumn(Modifier.padding(6.dp)) {
                     items(children, key = { it.absolutePath }) { folder ->
@@ -112,7 +111,7 @@ fun FolderPicker(start: File, onPicked: (File) -> Unit, onBack: () -> Unit) {
         }
         AnimatedVisibility(creating, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it.filter { ch -> ch !in "\\/:*?\"<>|" } }, label = { Text(tr("Folder name")) }, singleLine = true, modifier = Modifier.weight(1f))
+                OutlinedTextField(name, { name = it.filter { ch -> ch !in "\\/:*?\"<>|" } }, label = { Text("Folder name") }, singleLine = true, modifier = Modifier.weight(1f))
                 FilledTonalButton(onClick = {
                     val folder = File(current, name.trim())
                     if (name.isNotBlank() && (folder.isDirectory || folder.mkdirs())) {
@@ -121,22 +120,22 @@ fun FolderPicker(start: File, onPicked: (File) -> Unit, onBack: () -> Unit) {
                         name = ""
                         error = null
                     } else {
-                        error = tr("Couldn't create the folder")
+                        error = "Couldn't create the folder"
                     }
-                }, enabled = name.isNotBlank()) { Text(tr("Create")) }
+                }, enabled = name.isNotBlank()) { Text("Create") }
             }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilledTonalButton(onClick = { creating = !creating }) {
                 Icon(SetupIcons.CreateNewFolder, contentDescription = null, modifier = Modifier.padding(end = 8.dp).size(18.dp))
-                Text(tr("New folder"))
+                Text("New folder")
             }
-            TextButton(onClick = { systemFolder(current)?.let { current = it } }) { Text(tr("System dialog")) }
+            TextButton(onClick = { systemFolder(current)?.let { current = it } }) { Text("System dialog") }
             Box(Modifier.weight(1f))
             Button(onClick = {
-                if (writable(current)) onPicked(current) else error = tr("No write access to this folder. Choose a folder inside your user folder.")
-            }) { Text(tr("Select")) }
+                if (writable(current)) onPicked(current) else error = "No write access to this folder. Choose a folder inside your user folder."
+            }) { Text("Select") }
         }
     }
 }
@@ -152,7 +151,7 @@ fun writable(dir: File): Boolean {
 private fun systemFolder(start: File): File? {
     val chooser = javax.swing.JFileChooser(start).apply {
         fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
-        dialogTitle = tr("Choose a folder")
+        dialogTitle = "Choose a folder"
     }
     return if (chooser.showOpenDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
 }

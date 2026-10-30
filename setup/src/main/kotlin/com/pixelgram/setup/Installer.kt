@@ -58,10 +58,12 @@ object WindowsInstaller : Installer {
     private const val Success = 0
     private const val RebootRequired = 3010
     private const val UserCancelled = 1602
+    private const val AnotherInstall = 1618
+    private const val NoAccess = 1925
+    private const val PackageOpenFailed = 1619
     private const val IdOk = 1
     private const val IdCancel = 2
     private const val TypeMask = 0xFF000000.toInt()
-    private const val MessageFatal = 0x00000000
     private const val MessageError = 0x01000000
     private const val MessageActionStart = 0x08000000
     private const val MessageActionData = 0x09000000
@@ -79,14 +81,12 @@ object WindowsInstaller : Installer {
         }
         val log = File(System.getProperty("java.io.tmpdir"), "pixelGram-setup.log").apply { delete() }
         val progress = MsiProgress(listener)
-        var lastError: String? = null
         val handler = MsiUiHandler { _, type, message ->
             val text = message?.getWideString(0).orEmpty()
             when (type and TypeMask) {
                 MessageProgress -> progress.onProgress(text)
                 MessageActionData -> progress.onActionData()
                 MessageActionStart -> actionTitle(text)?.let(listener::action)
-                MessageError, MessageFatal -> lastError = text.ifBlank { lastError }
             }
             if (cancelled()) IdCancel else if (type and TypeMask == MessageError) 0 else IdOk
         }
@@ -102,14 +102,39 @@ object WindowsInstaller : Installer {
                 InstallResult.Done
             }
             UserCancelled -> InstallResult.Cancelled
-            else -> InstallResult.Failed(lastError ?: "Windows Installer error $code", log)
+            else -> InstallResult.Failed(failureMessage(code), log)
         }
     }
 
-    private fun actionTitle(text: String): String? {
-        val parts = text.substringAfter(": ", "").split(". ")
-        return parts.getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() }
+    private fun failureMessage(code: Int): String = when (code) {
+        AnotherInstall -> "Another installation is in progress. Try again when it finishes."
+        NoAccess -> "The installer couldn't write to the chosen folder. Choose a folder inside your user folder."
+        PackageOpenFailed -> "The installer package couldn't be opened."
+        else -> "Windows Installer error $code. Open the log for details."
     }
+
+    private fun actionTitle(text: String): String? {
+        val action = text.substringAfter(": ", "").substringBefore(".").trim()
+        return ActionTitles.entries.firstOrNull { (prefix, _) -> action.startsWith(prefix) }?.value
+    }
+
+    private val ActionTitles = linkedMapOf(
+        "RemoveExistingProducts" to "Removing the previous version",
+        "Remove" to "Removing the previous version",
+        "Unpublish" to "Removing the previous version",
+        "InstallFiles" to "Copying new files",
+        "MoveFiles" to "Copying new files",
+        "DuplicateFiles" to "Copying new files",
+        "CreateShortcuts" to "Creating shortcuts",
+        "Register" to "Finishing",
+        "Publish" to "Finishing",
+        "InstallFinalize" to "Finishing",
+        "InstallValidate" to "Preparing",
+        "InstallInitialize" to "Preparing",
+        "CostInitialize" to "Preparing",
+        "FileCost" to "Preparing",
+        "CostFinalize" to "Preparing",
+    )
 
     private class MsiProgress(private val listener: InstallListener) {
         private var total = 0

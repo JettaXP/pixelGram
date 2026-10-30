@@ -74,7 +74,6 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.pixelgram.setup.Strings.tr
 import java.io.File
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
@@ -126,6 +125,8 @@ private val LightScheme = lightColorScheme(primary = Purple)
 private val DarkScheme = darkColorScheme(primary = Color(0xFFD0BCFF))
 
 fun main(args: Array<String>) {
+    java.util.Locale.setDefault(java.util.Locale.ENGLISH)
+    javax.swing.JComponent.setDefaultLocale(java.util.Locale.ENGLISH)
     val msi = payload(args)
     val dark = darkSystem()
     val version = runCatching { Thread.currentThread().contextClassLoader.getResource("setup-version.txt")?.readText()?.trim() }.getOrNull().orEmpty()
@@ -141,7 +142,7 @@ fun main(args: Array<String>) {
             icon = BitmapPainter(loadImageBitmap(Thread.currentThread().contextClassLoader.getResourceAsStream("icon-light.png")!!)),
         ) {
             MaterialExpressiveTheme(colorScheme = if (dark) DarkScheme else LightScheme) {
-                CompositionLocalProvider(LocalLayoutDirection provides if (Strings.rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     WindowDraggableArea {
                         Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxSize()) {
                             SetupContent(msi, version, dark, onExit = ::exitApplication)
@@ -160,13 +161,13 @@ private fun SetupContent(msi: File?, version: String, dark: Boolean, onExit: () 
     var target by remember { mutableStateOf(defaultTarget()) }
     var launch by remember { mutableStateOf(true) }
     var progress by remember { mutableFloatStateOf(0f) }
-    var action by remember { mutableStateOf(tr("Preparing")) }
+    var action by remember { mutableStateOf("Preparing") }
     var cancelled by remember { mutableStateOf(false) }
     val scheme = MaterialTheme.colorScheme
     val logo = remember(scheme.primaryContainer, scheme.onPrimaryContainer) { themedLogo(scheme.primaryContainer, scheme.onPrimaryContainer) }
     fun start() {
         if (msi == null && !demo) {
-            step = Step.Failed(tr("The installer package is missing."), null)
+            step = Step.Failed("The installer package is missing.", null)
             return
         }
         cancelled = false
@@ -179,13 +180,13 @@ private fun SetupContent(msi: File?, version: String, dark: Boolean, onExit: () 
                     javax.swing.SwingUtilities.invokeLater { progress = fraction }
                 }
                 override fun action(text: String) {
-                    javax.swing.SwingUtilities.invokeLater { action = tr(text) }
+                    javax.swing.SwingUtilities.invokeLater { action = text }
                 }
             }) { cancelled }
             javax.swing.SwingUtilities.invokeLater {
                 step = when (result) {
                     InstallResult.Done -> Step.Done
-                    InstallResult.Cancelled -> Step.Failed(tr("Installation was cancelled"), null, cancelled = true)
+                    InstallResult.Cancelled -> Step.Failed("Installation was cancelled", null, cancelled = true)
                     is InstallResult.Failed -> Step.Failed(result.message, result.log)
                 }
             }
@@ -194,7 +195,7 @@ private fun SetupContent(msi: File?, version: String, dark: Boolean, onExit: () 
     Box(Modifier.fillMaxSize()) {
         if (step != Step.Installing) {
             IconButton(onClick = onExit, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
-                Icon(SetupIcons.Close, contentDescription = tr("Close"))
+                Icon(SetupIcons.Close, contentDescription = "Close")
             }
         }
         AnimatedContent(
@@ -242,7 +243,7 @@ private fun Welcome(
         Logo(logo, pulsing = false)
         Text("pixelGram", style = MaterialTheme.typography.headlineMedium)
         Text(
-            tr("Telegram client in Material 3 Expressive") + if (version.isNotEmpty()) " · $version" else "",
+            "Telegram client in Material 3 Expressive" + if (version.isNotEmpty()) " · $version" else "",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -251,16 +252,16 @@ private fun Welcome(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)) {
                 Icon(SetupIcons.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                    Text(tr("Install to"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Install to", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(target.absolutePath, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.StartEllipsis)
                 }
-                FilledTonalButton(onClick = onChange) { Text(tr("Change")) }
+                FilledTonalButton(onClick = onChange) { Text("Change") }
             }
         }
         Box(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), modifier = Modifier.fillMaxWidth()) {
-            TextButton(onClick = onCancel) { Text(tr("Cancel")) }
-            Button(onClick = onInstall) { Text(tr("Install")) }
+            TextButton(onClick = onCancel) { Text("Cancel") }
+            Button(onClick = onInstall) { Text("Install") }
         }
     }
 }
@@ -270,7 +271,7 @@ private fun Installing(logo: androidx.compose.ui.graphics.ImageBitmap?, progress
     val shown by animateFloatAsState(progress, tween(ProgressMs))
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
         Logo(logo, pulsing = true)
-        Text(tr("Installing pixelGram…"), style = MaterialTheme.typography.titleLarge)
+        Text("Installing pixelGram…", style = MaterialTheme.typography.titleLarge)
         LinearWavyProgressIndicator(
             progress = { shown },
             waveSpeed = 0.dp,
@@ -280,7 +281,7 @@ private fun Installing(logo: androidx.compose.ui.graphics.ImageBitmap?, progress
             Text(action, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f), maxLines = 1)
             Text("${(shown * Percent).toInt()}%", style = MaterialTheme.typography.labelLarge)
         }
-        TextButton(onClick = onCancel) { Text(tr("Cancel")) }
+        TextButton(onClick = onCancel) { Text("Cancel") }
     }
 }
 
@@ -289,7 +290,7 @@ private fun Finished(logo: androidx.compose.ui.graphics.ImageBitmap?, launch: Bo
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Box(Modifier.weight(1f))
         DoneBadge(logo)
-        Text(tr("pixelGram is installed"), style = MaterialTheme.typography.headlineSmall)
+        Text("pixelGram is installed", style = MaterialTheme.typography.headlineSmall)
         Surface(
             onClick = { onLaunch(!launch) },
             shape = MaterialTheme.shapes.large,
@@ -297,12 +298,12 @@ private fun Finished(logo: androidx.compose.ui.graphics.ImageBitmap?, launch: Bo
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 6.dp, end = 18.dp, top = 4.dp, bottom = 4.dp)) {
                 Checkbox(checked = launch, onCheckedChange = onLaunch)
-                Text(tr("Open pixelGram when done"), style = MaterialTheme.typography.bodyLarge)
+                Text("Open pixelGram when done", style = MaterialTheme.typography.bodyLarge)
             }
         }
         Box(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-            Button(onClick = onDone) { Text(tr("Done")) }
+            Button(onClick = onDone) { Text("Done") }
         }
     }
 }
@@ -371,16 +372,16 @@ private fun Failed(step: Step.Failed, onRetry: () -> Unit, onClose: () -> Unit) 
             Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxSize()) {}
             Icon(SetupIcons.Close, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(CheckSize))
         }
-        Text(tr(if (step.cancelled) "Installation was cancelled" else "Installation failed"), style = MaterialTheme.typography.headlineSmall)
+        Text(if (step.cancelled) "Installation was cancelled" else "Installation failed", style = MaterialTheme.typography.headlineSmall)
         if (!step.cancelled) {
             Text(step.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, maxLines = 4)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             step.log?.takeIf { it.isFile }?.let { log ->
-                TextButton(onClick = { runCatching { java.awt.Desktop.getDesktop().open(log) } }) { Text(tr("Show log")) }
+                TextButton(onClick = { runCatching { java.awt.Desktop.getDesktop().open(log) } }) { Text("Show log") }
             }
-            TextButton(onClick = onClose) { Text(tr("Close")) }
-            Button(onClick = onRetry) { Text(tr("Try again")) }
+            TextButton(onClick = onClose) { Text("Close") }
+            Button(onClick = onRetry) { Text("Try again") }
         }
     }
 }
