@@ -1649,6 +1649,14 @@ private data class SystemRow(
 
 @Composable
 private fun AdvancedSection(telegram: Telegram, settings: AppSettings) {
+    Header("Rendering")
+    Description("Applies after restart. Auto uses DirectX on Windows and switches to OpenGL if pixelGram closed unexpectedly twice in a row.")
+    ConnectedChoice(
+        listOf("Auto" to "Auto", "DirectX" to "DirectX", "OpenGL" to "OpenGL", "Software" to "Software"),
+        settings.renderApi.value,
+        { settings.renderApi.value = it },
+        enabled = { it != "DirectX" || com.pixelgram.desktop.core.AppPaths.isWindows },
+    )
     Header("Window title bar")
     val titleRows = buildList {
         add(Triple("Show chat name", settings.titleChatName.value) { value: Boolean -> settings.titleChatName.value = value })

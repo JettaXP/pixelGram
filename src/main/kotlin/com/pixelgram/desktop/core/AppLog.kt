@@ -16,6 +16,9 @@ object AppLog {
     private val stamp = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
     private val dump = Regex("""(hs_err_pid|crash-)\d+\.log""")
 
+    var uncleanStreak = 0
+        private set
+
     fun start() {
         runCatching {
             if (file.isFile) {
@@ -24,8 +27,12 @@ object AppLog {
             }
             File(AppPaths.dataDir, "pixelgram.log").takeIf { it.isFile }?.let { legacy -> move(legacy, File(AppPaths.logsDir, "old.log")) }
             File(AppPaths.dataDir, "tdlib.log").takeIf { it.isFile }?.delete()
+            val crashed = running.isFile
             val dumped = collectDumps()
             if (dumped) running.delete() else reportUncleanExit()
+            val streak = File(AppPaths.logsDir, "unclean-streak")
+            uncleanStreak = if (crashed) (runCatching { streak.readText().trim().toInt() }.getOrDefault(0) + 1) else 0
+            streak.writeText(uncleanStreak.toString())
             pruneCrashes()
             file.writeText("${LocalDateTime.now()} pixelGram ${BuildConfig.VERSION} ${BuildConfig.CODENAME} (${BuildConfig.COMMIT}) on ${System.getProperty("os.name")} ${System.getProperty("os.version")}, Java ${System.getProperty("java.version")}\n")
         }

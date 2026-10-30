@@ -140,6 +140,7 @@ fun main(args: Array<String>) {
         }
     }
     com.pixelgram.desktop.core.AppLog.start()
+    chooseRenderApi()
     Updater.cleanUp()
     link?.takeIf(Links::isTelegram)?.let { Links.pending = it }
     SingleInstance.onOpen = { if (Links.isTelegram(it)) Links.pending = it }
@@ -157,6 +158,21 @@ fun main(args: Array<String>) {
         }
     }
 }
+
+private fun chooseRenderApi() {
+    val choice = runCatching { AppSettings.load(readOnly = true).renderApi.value }.getOrDefault("Auto")
+    val api = when {
+        choice == "Software" -> "SOFTWARE_FAST"
+        choice == "OpenGL" -> "OPENGL"
+        choice == "DirectX" && AppPaths.isWindows -> "DIRECT3D"
+        choice == "Auto" && AppPaths.isWindows && com.pixelgram.desktop.core.AppLog.uncleanStreak >= CrashesBeforeFallback -> "OPENGL"
+        else -> return
+    }
+    System.setProperty("skiko.renderApi", api)
+    com.pixelgram.desktop.core.AppLog.write("Render API forced to $api ($choice, unclean exits in a row: ${com.pixelgram.desktop.core.AppLog.uncleanStreak})")
+}
+
+private const val CrashesBeforeFallback = 2
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable

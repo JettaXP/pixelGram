@@ -1418,3 +1418,7 @@ Once	פעם אחת
 Live location	מיקום חי
 live	חי
 Sharing ended	השיתוף הסתיים
+Rendering	רינדור
+Applies after restart. Auto uses DirectX on Windows and switches to OpenGL if pixelGram closed unexpectedly twice in a row.	חל לאחר הפעלה מחדש. «אוטומטי» משתמש ב-DirectX ב-Windows ועובר ל-OpenGL אם pixelGram נסגר באופן לא צפוי פעמיים ברציפות.
+Auto	אוטומטי
+Software	תוכנה

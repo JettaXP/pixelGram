@@ -1420,3 +1420,7 @@ Once	Один раз
 Live location	Трансляция геопозиции
 live	в эфире
 Sharing ended	Трансляция завершена
+Rendering	Отрисовка
+Applies after restart. Auto uses DirectX on Windows and switches to OpenGL if pixelGram closed unexpectedly twice in a row.	Применяется после перезапуска. «Авто» использует DirectX в Windows и переключается на OpenGL, если pixelGram дважды подряд закрылся с ошибкой.
+Auto	Авто
+Software	Программная
