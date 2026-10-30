@@ -11,6 +11,11 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.asSkiaPath
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.geometry.Rect
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -77,19 +82,18 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
         MaterialShapes.Cookie9Sided.toShape(),
         MaterialShapes.Cookie4Sided.toShape(),
     )
+    val edgeCache = remember(qr) { HashMap<Size, List<Pair<Int, Int>>>() }
     val time by produceState(0f) {
         val start = withFrameMillis { it }
         while (true) withFrameMillis { value = (it - start) / 1000f }
     }
     Canvas(
         modifier.graphicsLayer {
-            val fade = backdrop.value
-            alpha = fade
-            scaleX = BackdropStartScale + (1f - BackdropStartScale) * fade
+            scaleX = BackdropStartScale + (1f - BackdropStartScale) * backdrop.value
             scaleY = scaleX
         },
     ) {
-        drawShape(backShape, Offset.Zero, size, background)
+        val fade = backdrop.value
         val area = size.minDimension * QrArea
         val cell = area / qr.size
         val origin = Offset((size.width - area) / 2, (size.height - area) / 2)
@@ -102,7 +106,9 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
             return LeadMs + (distance + (jitter - 0.5f) * Jitter).coerceAtLeast(0f) * SpreadMs
         }
         val backPath = (backShape.createOutline(size, layoutDirection, this) as? Outline.Generic)?.path ?: Path()
-        val margin = kotlin.math.ceil(origin.x / cell).toInt() + 1
+        val edgeDots = edgeCache.getOrPut(size) { edgeCells(backPath, origin, cell, qr.size) }
+        drawIntoCanvas { it.saveLayer(Rect(Offset.Zero, size), Paint().apply { alpha = fade }) }
+        drawShape(backShape, Offset.Zero, size, background)
         clipPath(backPath) { translate(origin.x, origin.y) {
             listOf(0 to 0, qr.size - 7 to 0, 0 to qr.size - 7).forEachIndexed { index, (ex, ey) ->
                 val center = Offset((ex + 3.5f) * cell, (ey + 3.5f) * cell)
@@ -119,12 +125,10 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
                 }
             }
             val faint = neutral.copy(alpha = 0.08f)
-            for (y in -margin until qr.size + margin) {
-                for (x in -margin until qr.size + margin) {
-                    val inside = x in 0 until qr.size && y in 0 until qr.size
-                    if (inside && qr.getModule(x, y)) continue
-                    if (!inside && cellHash(x + margin, y + margin) % EdgeDotEvery != 0) continue
-                    val dot = if (inside) grow(wave(x + 0.5f, y + 0.5f, cellHash(x, y)) - FaintAheadMs, FaintGrowMs) else 1f
+            for (y in 0 until qr.size) {
+                for (x in 0 until qr.size) {
+                    if (qr.getModule(x, y)) continue
+                    val dot = grow(wave(x + 0.5f, y + 0.5f, cellHash(x, y)) - FaintAheadMs, FaintGrowMs)
                     if (dot <= 0f) continue
                     val side = cell * 0.6f * dot
                     drawRoundRect(
@@ -185,7 +189,41 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
                 } }
             }
         } }
+        drawIntoCanvas { it.restore() }
+        val edgeColor = lerp(background, main, EdgeTint).copy(alpha = (fade * EdgeAppear).coerceAtMost(1f))
+        translate(origin.x, origin.y) {
+            edgeDots.forEach { (x, y) ->
+                drawRoundRect(
+                    edgeColor,
+                    topLeft = Offset(x * cell + cell * 0.2f, y * cell + cell * 0.2f),
+                    size = Size(cell * 0.6f, cell * 0.6f),
+                    cornerRadius = CornerRadius(cell * 0.18f),
+                )
+            }
+        }
     }
+}
+
+private fun edgeCells(shape: Path, origin: Offset, cell: Float, count: Int): List<Pair<Int, Int>> {
+    val outline = shape.asSkiaPath()
+    val margin = kotlin.math.ceil(origin.x / cell).toInt() + 1
+    val reach = cell * EdgeBand
+    val result = ArrayList<Pair<Int, Int>>()
+    for (y in -margin until count + margin) {
+        for (x in -margin until count + margin) {
+            if (x in 0 until count && y in 0 until count) continue
+            if (cellHash(x + margin, y + margin) % EdgeDotEvery != 0) continue
+            val cx = origin.x + (x + 0.5f) * cell
+            val cy = origin.y + (y + 0.5f) * cell
+            if (!outline.contains(cx, cy)) continue
+            val nearEdge = (0 until EdgeProbes).any {
+                val angle = it * 2 * Math.PI / EdgeProbes
+                !outline.contains(cx + reach * kotlin.math.cos(angle).toFloat(), cy + reach * kotlin.math.sin(angle).toFloat())
+            }
+            if (nearEdge) result += x to y
+        }
+    }
+    return result
 }
 
 private fun DrawScope.drawShape(shape: Shape, topLeft: Offset, size: Size, color: Color) {
@@ -261,8 +299,12 @@ private const val HideMs = 300f
 private const val Jitter = 0.25f
 private const val WaveCurve = 1f
 private const val EdgeDotEvery = 4
+private const val EdgeBand = 1.6f
+private const val EdgeProbes = 8
+private const val EdgeTint = 0.12f
+private const val EdgeAppear = 2.5f
 private const val JitterSteps = 997
-private const val BackdropMs = 300
+private const val BackdropMs = 350
 private const val BackdropStartScale = 0.8f
 private const val Sqrt2 = 1.4142135f
 private const val MaxRun = 4
