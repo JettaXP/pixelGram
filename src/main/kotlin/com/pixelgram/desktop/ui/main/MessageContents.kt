@@ -308,6 +308,7 @@ private object LottieCache {
     }
 }
 private const val AutoplayVideoBytes = 20L * 1024 * 1024
+private const val AutoplayDownloadDelayMs = 400L
 
 @Composable
 private fun AnimatedEmojiView(message: UiMessage, content: TdApi.MessageAnimatedEmoji, telegram: Telegram) {
@@ -1013,7 +1014,13 @@ fun MediaContent(message: UiMessage, telegram: Telegram, corner: Dp) {
     val gif = content is TdApi.MessageAnimation
     val autoplay = !message.sending && if (gif) PowerSaving.autoplayGifs else PowerSaving.autoplayVideos && ((file?.size ?: 0L) in 1..AutoplayVideoBytes)
     var started by remember(file?.id) { mutableStateOf(false) }
-    LaunchedEffect(file?.id, autoplay, started) { if (autoplay || started) telegram.download(file) }
+    LaunchedEffect(file?.id, autoplay, started) {
+        if (started) telegram.download(file)
+        else if (autoplay) {
+            kotlinx.coroutines.delay(AutoplayDownloadDelayMs)
+            telegram.download(file)
+        }
+    }
     val path = telegram.localPath(file)
     val inline = path != null && (autoplay || started)
     val open = {

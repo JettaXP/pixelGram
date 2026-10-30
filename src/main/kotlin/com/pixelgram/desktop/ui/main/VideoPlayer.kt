@@ -619,12 +619,45 @@ private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
 
 @Composable
 fun InlineVideo(path: String, modifier: Modifier = Modifier, maxWidth: Int = InlineDecodeWidth) {
-    val engine = remember(path) { VideoEngine(path, loop = true, sound = false, maxWidth = maxWidth).apply { start() } }
-    DisposableEffect(engine) { onDispose { engine.close() } }
+    var settled by remember(path) { mutableStateOf(false) }
+    LaunchedEffect(path) {
+        kotlinx.coroutines.delay(InlineStartDelayMs)
+        settled = true
+    }
+    if (!settled) return
+    val engine = remember(path) { if (InlineSlots.acquire()) VideoEngine(path, loop = true, sound = false, maxWidth = maxWidth).apply { start() } else null }
+    DisposableEffect(engine) {
+        onDispose {
+            if (engine != null) {
+                engine.close()
+                InlineSlots.release()
+            }
+        }
+    }
+    val playing = engine ?: return
     val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
-    LaunchedEffect(engine, focused) { if (engine.playing != focused) engine.toggle() }
-    VideoFrame(engine, modifier)
+    LaunchedEffect(playing, focused) { if (playing.playing != focused) playing.toggle() }
+    VideoFrame(playing, modifier)
 }
+
+private object InlineSlots {
+    private var used = 0
+
+    @Synchronized
+    fun acquire(): Boolean {
+        if (used >= MaxInlineVideos) return false
+        used++
+        return true
+    }
+
+    @Synchronized
+    fun release() {
+        used = (used - 1).coerceAtLeast(0)
+    }
+}
+
+private const val InlineStartDelayMs = 350L
+private const val MaxInlineVideos = 6
 
 @Composable
 internal fun VideoFrame(engine: VideoEngine, modifier: Modifier) {
