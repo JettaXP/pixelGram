@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.44.1 Puffy
+
+- Fixed a crash when many animated video stickers were shown, for example while scrolling the sticker or emoji panel.
+- Fixed a possible crash when starting a call or receiving video in a video chat.
+- Fixed a crash when dragging a crop corner at the edge of a photo or cropping a very small photo.
+- Search results, mentions and bot results with repeated items no longer crash the list.
+- New Rendering setting in Advanced: Auto, DirectX, OpenGL or Software. In Auto mode on Windows, pixelGram switches to OpenGL after it closes unexpectedly twice in a row.
+
 ## 0.44.0 Puffy
 
 ### Proxy
