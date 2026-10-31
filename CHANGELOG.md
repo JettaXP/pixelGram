@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.46.1 Gem
+
+- The icon pack descriptions and the About text are translated into Russian and Hebrew.
+- The emoji style description shows only the selected set.
+- Credits moved from About to the README.
+
 ## 0.46.0 Gem
 
 ### Icon packs
