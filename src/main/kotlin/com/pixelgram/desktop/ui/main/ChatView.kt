@@ -2324,6 +2324,20 @@ private fun Composer(
             val mathAnswer = remember(text.text, settings.inlineMath.value) {
                 if (settings.inlineMath.value) com.pixelgram.desktop.core.InlineMath.answer(text.text) else null
             }?.takeIf { text.selection.collapsed && text.selection.end == text.text.length }
+            val ghostFade = remember { Animatable(0f) }
+            LaunchedEffect(mathAnswer) {
+                if (mathAnswer == null) ghostFade.snapTo(0f) else ghostFade.animateTo(1f, tween(GhostFadeMs))
+            }
+            var settled by remember { mutableStateOf<IntRange?>(null) }
+            val settle = remember { Animatable(1f) }
+            LaunchedEffect(settled) {
+                if (settled == null) return@LaunchedEffect
+                settle.snapTo(0f)
+                settle.animateTo(1f, tween(GhostFadeMs))
+                settled = null
+            }
+            var trailJump by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+            val ghostColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = GhostAlpha)
             com.pixelgram.desktop.ui.components.ComposerField(
                 value = text,
                 onValueChange = setText,
@@ -2333,8 +2347,11 @@ private fun Composer(
                     MaterialTheme.colorScheme.primary,
                     com.pixelgram.desktop.ui.components.codeColors(),
                     mathAnswer,
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    ghostColor.copy(alpha = GhostAlpha * ghostFade.value),
+                    settled,
+                    androidx.compose.ui.graphics.lerp(ghostColor, MaterialTheme.colorScheme.onSurface, settle.value),
                 ),
+                trailJump = trailJump,
                 settings = settings,
                 shape = MaterialTheme.shapes.extraLarge,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -2383,6 +2400,8 @@ private fun Composer(
                             event.type != KeyEventType.KeyDown -> false
                             mathAnswer != null && event.key == Key.DirectionRight && !event.isShiftPressed -> {
                                 val filled = text.text + mathAnswer
+                                settled = text.text.length until filled.length
+                                trailJump++
                                 setText(TextFieldValue(filled, TextRange(filled.length)))
                                 true
                             }
@@ -2611,3 +2630,6 @@ private fun messageContentType(message: UiMessage): Int = when {
 }
 
 private const val HistoryPrefetchItems = 30
+
+private const val GhostFadeMs = 220
+private const val GhostAlpha = 0.6f

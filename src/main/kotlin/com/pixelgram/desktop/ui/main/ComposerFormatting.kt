@@ -149,6 +149,8 @@ class FormatTransformation(
     private val code: com.pixelgram.desktop.ui.components.CodeColors? = null,
     private val ghost: String? = null,
     private val ghostColor: Color = Color.Gray,
+    private val settled: IntRange? = null,
+    private val settledColor: Color = Color.Unspecified,
 ) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val builder = AnnotatedString.Builder(emojiText(text.text))
@@ -173,6 +175,11 @@ class FormatTransformation(
                 com.pixelgram.desktop.ui.components.highlightSpans(builder, text.text.substring(start, end), start, span.url, code)
             }
         }
+        settled?.let { range ->
+            val start = range.first.coerceIn(0, length)
+            val end = (range.last + 1).coerceIn(start, length)
+            if (start < end) builder.addStyle(SpanStyle(color = settledColor), start, end)
+        }
         if (ghost.isNullOrEmpty()) return TransformedText(builder.toAnnotatedString(), OffsetMapping.Identity)
         builder.withStyle(SpanStyle(color = ghostColor)) { append(ghost) }
         return TransformedText(
@@ -184,6 +191,7 @@ class FormatTransformation(
         )
     }
 
-    override fun equals(other: Any?) = other is FormatTransformation && other.spans == spans && other.accent == accent && other.code == code && other.ghost == ghost && other.ghostColor == ghostColor
+    override fun equals(other: Any?) = other is FormatTransformation && other.spans == spans && other.accent == accent && other.code == code && other.ghost == ghost && other.ghostColor == ghostColor &&
+        other.settled == settled && other.settledColor == settledColor
     override fun hashCode() = (spans.hashCode() * 31 + accent.hashCode()) * 31 + ghost.hashCode()
 }

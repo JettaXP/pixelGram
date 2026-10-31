@@ -69,6 +69,7 @@ fun ComposerField(
     shape: Shape,
     color: Color,
     modifier: Modifier = Modifier,
+    trailJump: Long = 0L,
 ) {
     val scroll = rememberScrollState()
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -108,7 +109,7 @@ fun ComposerField(
                     .onFocusChanged { focused = it.isFocused },
             )
             if (images) EmojiOverlay(layout)
-            if (liquid) CustomCaret(value.selection, layout, focused, settings, colors.primary, Modifier.matchParentSize())
+            if (liquid) CustomCaret(value.selection, layout, focused, settings, colors.primary, Modifier.matchParentSize(), trailJump)
         }
     }
 }
@@ -180,8 +181,9 @@ private fun CustomCaret(
     settings: AppSettings,
     color: Color,
     modifier: Modifier,
+    trailJump: Long = 0L,
 ) {
-    if (settings.cursorStyle.value == CursorStyle.Kitty) TrailCaret(selection, layout, focused, settings, color, modifier)
+    if (settings.cursorStyle.value == CursorStyle.Kitty) TrailCaret(selection, layout, focused, settings, color, modifier, trailJump)
     else LiquidCaret(selection, layout, focused, settings, color, modifier)
 }
 
@@ -193,10 +195,15 @@ private fun TrailCaret(
     settings: AppSettings,
     color: Color,
     modifier: Modifier,
+    trailJump: Long = 0L,
 ) {
     val visible = focused && selection.collapsed && layout != null
     val rect = layout?.let { it.getCursorRect(selection.end.coerceIn(0, it.layoutInput.text.length)) }
     val trail = remember { CursorTrail() }
+    if (trailJump != trail.jump) {
+        trail.jump = trailJump
+        trail.forceNext = true
+    }
     var moved by remember { mutableLongStateOf(0L) }
     val latest by rememberUpdatedState(rect)
     val width = with(LocalDensity.current) { settings.cursorWidth.value.coerceAtLeast(1).dp.toPx() }
@@ -248,6 +255,8 @@ private class CursorTrail {
     private var edges = FloatArray(4)
     var tick by mutableLongStateOf(0L)
         private set
+    var jump = 0L
+    var forceNext = false
 
     fun aim(rect: androidx.compose.ui.geometry.Rect, width: Float, threshold: Int): Boolean {
         val next = floatArrayOf(rect.left, rect.top, rect.left + width, rect.bottom)
@@ -255,7 +264,8 @@ private class CursorTrail {
         val cell = rect.height * CellAspect
         val jumpX = kotlin.math.abs(next[0] - edges[0]) / cell
         val jumpY = kotlin.math.abs(next[1] - edges[1]) / rect.height.coerceAtLeast(1f)
-        val small = jumpX <= threshold && jumpY < 1f && threshold > 0
+        val small = jumpX <= threshold && jumpY < 1f && threshold > 0 && !(forceNext && ready)
+        forceNext = false
         edges = next
         if (!ready || (!active && small)) {
             snap()
