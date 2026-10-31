@@ -186,6 +186,7 @@ private fun ApplicationScope.PixelApp() {
         AppSettings.load().also {
             EmojiFonts.settings = it
             com.pixelgram.desktop.core.Tweaks.settings = it
+            com.pixelgram.desktop.ui.icons.IconPacks.settings = it
         }
     }
     val accounts = remember {

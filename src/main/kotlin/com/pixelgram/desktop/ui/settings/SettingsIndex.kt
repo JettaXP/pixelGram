@@ -230,4 +230,7 @@ internal val SettingsIndex = listOf(
     "FolderStyle" to "Names with icons",
     "FolderStyle" to "Names only",
     "FolderStyle" to "Icons only",
+    "Appearance" to "Icons",
+    "About" to "Solar Icon Set",
+    "About" to "Material Symbols",
 )

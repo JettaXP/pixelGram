@@ -1,20 +1,21 @@
 package com.pixelgram.desktop.ui.icons.automirrored.rounded
 
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.pixelgram.desktop.ui.icons.IconPacks
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.symbol
 
 private val arrowBackSymbol by lazy { symbol("Rounded.ArrowBack", "M326 526 513 712Q527 726 526.5 744.5Q526 763 512 776Q498 789 480.0 789.5Q462 790 448 776L184 512Q177 505 174.0 497.0Q171 489 171.0 480.0Q171 471 174.0 463.0Q177 455 184 448L448 184Q461 171 479.5 171.0Q498 171 512 184Q526 197 526.0 216.0Q526 235 512 249L326 434H763Q782 434 795.0 447.5Q808 461 808.0 480.0Q808 499 795.0 512.5Q782 526 763 526Z", mirror = true) }
-val Icons.AutoMirrored.Rounded.ArrowBack: ImageVector get() = arrowBackSymbol
+val Icons.AutoMirrored.Rounded.ArrowBack: ImageVector get() = IconPacks.icon("AutoMirrored.Rounded.ArrowBack", arrowBackSymbol)
 
 private val keyboardArrowLeftSymbol by lazy { symbol("Rounded.KeyboardArrowLeft", "M440 480 592 632Q605 645 605.0 664.0Q605 683 592.0 696.0Q579 709 560.0 709.0Q541 709 528 696L344 512Q338 505 334.5 497.0Q331 489 331.0 480.0Q331 471 334.5 463.0Q338 455 344 448L528 264Q541 251 560.0 251.0Q579 251 592.0 264.0Q605 277 605.0 296.0Q605 315 592 328Z", mirror = true) }
-val Icons.AutoMirrored.Rounded.KeyboardArrowLeft: ImageVector get() = keyboardArrowLeftSymbol
+val Icons.AutoMirrored.Rounded.KeyboardArrowLeft: ImageVector get() = IconPacks.icon("AutoMirrored.Rounded.KeyboardArrowLeft", keyboardArrowLeftSymbol)
 
 private val keyboardArrowRightSymbol by lazy { symbol("Rounded.KeyboardArrowRight", "M496 480 344 328Q331 315 331.0 296.0Q331 277 344.0 264.0Q357 251 376.0 251.0Q395 251 408 264L592 448Q598 455 601.5 463.0Q605 471 605.0 480.0Q605 489 601.5 497.0Q598 505 592 512L408 696Q395 709 376.0 709.0Q357 709 344.0 696.0Q331 683 331.0 664.0Q331 645 344 632Z", mirror = true) }
-val Icons.AutoMirrored.Rounded.KeyboardArrowRight: ImageVector get() = keyboardArrowRightSymbol
+val Icons.AutoMirrored.Rounded.KeyboardArrowRight: ImageVector get() = IconPacks.icon("AutoMirrored.Rounded.KeyboardArrowRight", keyboardArrowRightSymbol)
 
 private val volumeOffSymbol by lazy { symbol("Rounded.VolumeOff", "M673 790Q663 796 653.5 801.0Q644 806 634 811Q618 818 602.0 810.5Q586 803 580 786Q574 771 581.0 757.0Q588 743 601 735Q604 734 607.0 732.5Q610 731 613 729L486 602V709Q486 740 458.0 751.5Q430 763 408 742L275 608H155Q136 608 123.0 595.0Q110 582 110 563V397Q110 378 123.0 365.0Q136 352 155 352H238L77 189Q65 177 65.0 159.5Q65 142 77 131Q89 119 106.5 119.0Q124 119 135 131L824 824Q836 836 836.0 853.5Q836 871 824 882Q812 894 794.5 894.0Q777 894 765 882ZM766 479Q766 396 722.0 328.0Q678 260 605 225Q589 218 582.0 203.0Q575 188 581 172Q587 155 603.0 148.0Q619 141 636 148Q733 192 791.5 280.5Q850 369 850 479Q850 512 844.0 544.0Q838 576 827 606Q819 629 802.0 635.0Q785 641 770.0 635.5Q755 630 746.0 616.5Q737 603 745 585Q756 560 761.0 533.5Q766 507 766 479ZM599 335Q632 358 651.0 399.0Q670 440 670 480Q670 484 670.0 488.5Q670 493 669 498Q667 512 653.5 516.5Q640 521 629 510L579 460Q573 454 569.5 445.5Q566 437 566 428V353Q566 341 577.0 335.0Q588 329 599 335ZM390 269Q383 262 383.0 253.0Q383 244 390 237L408 218Q430 197 458.0 208.5Q486 220 486 251V311Q486 327 472.0 332.5Q458 338 447 327Z", mirror = true) }
-val Icons.AutoMirrored.Rounded.VolumeOff: ImageVector get() = volumeOffSymbol
+val Icons.AutoMirrored.Rounded.VolumeOff: ImageVector get() = IconPacks.icon("AutoMirrored.Rounded.VolumeOff", volumeOffSymbol)
 
 private val volumeUpSymbol by lazy { symbol("Rounded.VolumeUp", "M766 479Q766 396 722.0 328.0Q678 260 605 225Q589 218 582.0 203.0Q575 188 581 172Q587 155 603.0 148.0Q619 141 636 148Q733 192 791.5 281.0Q850 370 850.0 479.0Q850 588 791.5 677.0Q733 766 636 810Q619 817 603.0 810.0Q587 803 581 786Q575 770 582.0 755.0Q589 740 605 733Q678 698 722.0 630.0Q766 562 766 479ZM275 608H156Q137 608 123.5 595.0Q110 582 110 563V397Q110 378 123.5 365.0Q137 352 156 352H275L409 218Q430 197 458.0 208.5Q486 220 486 251V709Q486 740 458.0 751.5Q430 763 409 742ZM670 480Q670 522 650.5 560.0Q631 598 599 623Q588 629 577.0 623.0Q566 617 566 605V353Q566 341 577.0 335.0Q588 329 599 335Q631 361 650.5 399.5Q670 438 670 480Z", mirror = true) }
-val Icons.AutoMirrored.Rounded.VolumeUp: ImageVector get() = volumeUpSymbol
+val Icons.AutoMirrored.Rounded.VolumeUp: ImageVector get() = IconPacks.icon("AutoMirrored.Rounded.VolumeUp", volumeUpSymbol)

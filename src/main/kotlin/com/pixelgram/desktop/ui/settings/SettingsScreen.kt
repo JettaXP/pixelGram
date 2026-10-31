@@ -4,6 +4,10 @@ import kotlin.math.roundToInt
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.focusRequester
 import com.pixelgram.desktop.ui.icons.outlined.Edit
+import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
+import com.pixelgram.desktop.ui.icons.outlined.PushPin
+import com.pixelgram.desktop.ui.icons.outlined.Delete
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Reply
 import com.pixelgram.desktop.ui.icons.outlined.Settings
 import com.pixelgram.desktop.core.PythonRunner
 import com.pixelgram.desktop.ui.icons.outlined.DataObject
@@ -876,6 +880,29 @@ private fun GeneralSection(settings: AppSettings) {
 
 @Composable
 private fun AppearanceSection(settings: AppSettings, onOpen: (Section) -> Unit) {
+    Header("Icons")
+    ConnectedChoice(
+        listOf(
+            com.pixelgram.desktop.core.IconPack.Material to "Material",
+            com.pixelgram.desktop.core.IconPack.Solar to "Solar",
+            com.pixelgram.desktop.core.IconPack.Telegram to "Telegram",
+        ),
+        settings.iconPack.value,
+        { settings.iconPack.value = it },
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+        listOf(
+            Icons.Outlined.Search, Icons.Outlined.Settings, Icons.AutoMirrored.Outlined.Reply, Icons.Outlined.ContentCopy,
+            Icons.Outlined.PushPin, Icons.Outlined.Delete, Icons.Outlined.Notifications, Icons.Outlined.Lock,
+        ).forEach { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+    }
+    AnimatedDescription(
+        when (settings.iconPack.value) {
+            com.pixelgram.desktop.core.IconPack.Material -> "Material Symbols by Google."
+            com.pixelgram.desktop.core.IconPack.Solar -> "Solar Icon Set by 480 Design."
+            com.pixelgram.desktop.core.IconPack.Telegram -> "Icons from Telegram Desktop."
+        },
+    )
     Header("Emoji")
     EmojiStyleChoice(settings)
     Header("Chat list title")
@@ -1933,7 +1960,10 @@ private fun AboutSection(telegram: Telegram, onOpenChat: (Long) -> Unit) {
     }
     Header("Credits")
     SegmentedGroup {
-        LinkItem(0, 1, Icons.Outlined.Lightbulb, "exteraGram", "Ideas for the preferences layout, the calculator in the message field and more") { openUrl(ExteraGramUrl) }
+        LinkItem(0, 4, Icons.Outlined.Lightbulb, "exteraGram", "Ideas for the preferences layout, the calculator in the message field and more") { openUrl(ExteraGramUrl) }
+        LinkItem(1, 4, Icons.Outlined.Palette, "Material Symbols", "Google, Apache License 2.0") { openUrl("https://fonts.google.com/icons") }
+        LinkItem(2, 4, Icons.Outlined.Palette, "Solar Icon Set", "480 Design, CC BY 4.0") { openUrl("https://icon-sets.iconify.design/solar/") }
+        LinkItem(3, 4, Icons.Outlined.Palette, "Telegram Desktop icons", "Telegram, GPL v3") { openUrl("https://github.com/telegramdesktop/tdesktop") }
     }
 }
 
