@@ -1112,10 +1112,12 @@ private fun EmojiStyleChoice(settings: AppSettings) {
         onSelect = { settings.emojiStyle.value = it },
     )
     EmojiText("😀 😍 🥳 🫠 🤔 👍 🎉 ❤️ 🔥 🐱 🍕 🚀", fontSize = 30.sp, modifier = Modifier.padding(vertical = 4.dp))
-    Description(
-        "Noto is Google's latest emoji set and is built in. Noto 3D is the new style " +
-            "from Android 17: each emoji is loaded from Google the first time it is shown. " +
-            "Apple is the iOS set (Emoji 16), loaded the same way."
+    AnimatedDescription(
+        when (settings.emojiStyle.value) {
+            EmojiStyle.Noto -> "Google's latest emoji set. It is built into pixelGram."
+            EmojiStyle.Noto3D -> "The new 3D style from Android 17. Each emoji is loaded from Google the first time it is shown."
+            EmojiStyle.Apple -> "The iOS emoji set (Emoji 16). Each emoji is loaded the first time it is shown."
+        },
     )
 }
 

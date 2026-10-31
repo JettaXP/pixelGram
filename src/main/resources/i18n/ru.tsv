@@ -1481,3 +1481,6 @@ Google, Apache License 2.0	Google, лицензия Apache 2.0
 480 Design, CC BY 4.0	480 Design, лицензия CC BY 4.0
 Telegram, GPL v3	Telegram, лицензия GPL v3
 A Telegram client with Material 3 Expressive, built on TDLib.	Клиент Telegram в стиле Material 3 Expressive на основе TDLib.
+Google's latest emoji set. It is built into pixelGram.	Новейший набор эмодзи от Google. Встроен в pixelGram.
+The new 3D style from Android 17. Each emoji is loaded from Google the first time it is shown.	Новый объёмный стиль из Android 17. Каждый эмодзи загружается с серверов Google при первом показе.
+The iOS emoji set (Emoji 16). Each emoji is loaded the first time it is shown.	Набор эмодзи из iOS (Emoji 16). Каждый эмодзи загружается при первом показе.
