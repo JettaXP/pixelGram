@@ -41,12 +41,12 @@ fun MemoryContent(telegram: Telegram) {
         val total = current.filesSize + current.databaseSize + current.languagePackDatabaseSize + current.logSize
         Text(formatSize(total), style = MaterialTheme.typography.displaySmallEmphasized)
         Text(
-            "used by pixelGram in ${AppPaths.dataDir.absolutePath}",
+            com.pixelgram.desktop.core.tr("Used by pixelGram in") + " " + AppPaths.dataDir.absolutePath,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         InfoGroup(listOf(
-            InfoRow(Icons.Outlined.PermMedia, "Media and files (${current.fileCount})", formatSize(current.filesSize)),
+            InfoRow(Icons.Outlined.PermMedia, com.pixelgram.desktop.core.tr("Media and files") + " (${current.fileCount})", formatSize(current.filesSize)),
             InfoRow(Icons.Outlined.Storage, "Message database", formatSize(current.databaseSize)),
             InfoRow(Icons.Outlined.Language, "Language pack", formatSize(current.languagePackDatabaseSize)),
             InfoRow(Icons.Outlined.Description, "Logs", formatSize(current.logSize)),
@@ -61,7 +61,7 @@ fun MemoryContent(telegram: Telegram) {
             },
             enabled = !clearing && current.filesSize > 0,
         ) {
-            Text(if (clearing) "Clearing…" else "Clear cache (${formatSize(current.filesSize)})")
+            Text(if (clearing) "Clearing…" else com.pixelgram.desktop.core.tr("Clear cache") + " (${formatSize(current.filesSize)})")
         }
         Text(
             "Clears downloaded media and files. Chats and messages stay, media downloads again when needed.",
@@ -79,5 +79,5 @@ fun formatSize(bytes: Long): String {
         value /= 1024
         unit++
     }
-    return if (unit == 0) "$bytes B" else "%.1f %s".format(value, units[unit])
+    return if (unit == 0) "$bytes ${com.pixelgram.desktop.core.tr(units[0])}" else "%.1f %s".format(value, com.pixelgram.desktop.core.tr(units[unit]))
 }

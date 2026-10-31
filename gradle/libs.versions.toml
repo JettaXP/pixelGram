@@ -13,7 +13,7 @@ jlayer = "1.0.1.4"
 javacv = "1.5.11"
 ffmpeg = "7.1-1.5.11"
 markdown = "0.7.18"
-javafx = "21.0.13"
+javafx = "23.0.2"
 
 [libraries]
 material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }

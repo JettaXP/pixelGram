@@ -229,7 +229,7 @@ fun FrameWindowScope.MacTitleBar() {
 }
 
 @Composable
-fun FrameWindowScope.TitleBar(chrome: WindowChrome, onClose: () -> Unit) {
+fun FrameWindowScope.TitleBar(chrome: WindowChrome, onClose: () -> Unit, title: String? = null) {
     val lastClick = remember { longArrayOf(0L) }
     Row(
         modifier = Modifier.fillMaxWidth().height(TitleBarHeight).background(MaterialTheme.colorScheme.surfaceContainer),
@@ -257,7 +257,7 @@ fun FrameWindowScope.TitleBar(chrome: WindowChrome, onClose: () -> Unit) {
             ) {
                 themedAppIcon()?.let { Image(it, contentDescription = null, modifier = Modifier.size(20.dp)) }
                 Text(
-                    com.pixelgram.desktop.core.WindowTitle.text(),
+                    title ?: com.pixelgram.desktop.core.WindowTitle.text(),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )

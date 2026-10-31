@@ -52,6 +52,9 @@ import com.pixelgram.desktop.ui.icons.filled.MoreVert
 import com.pixelgram.desktop.ui.icons.outlined.Refresh
 import com.pixelgram.desktop.ui.icons.outlined.Settings
 import com.pixelgram.desktop.ui.main.Links
+import com.pixelgram.desktop.ui.ResizeHandles
+import com.pixelgram.desktop.ui.TitleBar
+import com.pixelgram.desktop.ui.rememberWindowChrome
 import com.pixelgram.desktop.ui.theme.PixelTheme
 import com.pixelgram.desktop.ui.theme.appColorScheme
 import it.tdlight.jni.TdApi
@@ -152,7 +155,9 @@ fun MiniAppHost(settings: AppSettings, icon: Painter?) {
 
 @Composable
 private fun MiniAppWindow(session: MiniAppSession, settings: AppSettings, icon: Painter?, onClose: () -> Unit) {
-    Window(onCloseRequest = onClose, title = session.title, icon = icon, state = rememberWindowState(size = DpSize(440.dp, 760.dp))) {
+    val ownFrame = remember { settings.customTitleBar.value && !com.pixelgram.desktop.core.AppPaths.isMac }
+    Window(onCloseRequest = onClose, title = session.title, icon = icon, undecorated = ownFrame, state = rememberWindowState(size = DpSize(440.dp, 760.dp))) {
+        val chrome = rememberWindowChrome()
         PixelTheme(settings) {
             val colors = MaterialTheme.colorScheme
             var mainButton by remember { mutableStateOf<MainButton?>(null) }
@@ -231,12 +236,18 @@ private fun MiniAppWindow(session: MiniAppSession, settings: AppSettings, icon: 
                 browser.load(platformUrl(session.url, android), if (android) AndroidUserAgent else null, rgb(colors.surface))
                 onDispose { browser.dispose() }
             }
+            Box(Modifier.fillMaxSize()) {
             Surface(color = colors.surface, modifier = Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize()) {
+                    if (ownFrame) TitleBar(chrome, onClose = onClose, title = session.title)
                     Surface(color = header ?: colors.surfaceContainer) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp)) {
-                            IconButton(onClick = { if (backButton) browser.send("back_button_pressed") else onClose() }) {
-                                Icon(if (backButton) Icons.AutoMirrored.Filled.ArrowBack else Icons.Filled.Close, contentDescription = if (backButton) "Back" else "Close")
+                            if (backButton || !ownFrame) {
+                                IconButton(onClick = { if (backButton) browser.send("back_button_pressed") else onClose() }) {
+                                    Icon(if (backButton) Icons.AutoMirrored.Filled.ArrowBack else Icons.Filled.Close, contentDescription = if (backButton) "Back" else "Close")
+                                }
+                            } else {
+                                androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
                             }
                             Text(
                                 session.title,
@@ -278,6 +289,8 @@ private fun MiniAppWindow(session: MiniAppSession, settings: AppSettings, icon: 
                         ) { Text(button.text, maxLines = 1) }
                     }
                 }
+            }
+            if (ownFrame) ResizeHandles(chrome)
             }
             popup?.let { shown ->
                 val close = { id: String ->

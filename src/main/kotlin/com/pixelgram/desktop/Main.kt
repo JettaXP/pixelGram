@@ -114,6 +114,7 @@ import kotlinx.coroutines.MainScope
 @OptIn(ExperimentalComposeUiApi::class)
 fun main(args: Array<String>) {
     System.setProperty("sun.awt.noerasebackground", "true")
+    if (System.getProperty("prism.order") == null) System.setProperty("prism.order", "sw")
     if (AppPaths.isMac) {
         System.setProperty("apple.awt.application.name", "pixelGram")
         System.setProperty("apple.laf.useScreenMenuBar", "true")

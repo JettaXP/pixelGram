@@ -191,7 +191,7 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
         } }
         drawIntoCanvas { it.restore() }
         val edgeColor = lerp(background, main, EdgeTint).copy(alpha = (fade * EdgeAppear).coerceAtMost(1f))
-        translate(origin.x, origin.y) {
+        clipPath(backPath) { translate(origin.x, origin.y) {
             edgeDots.forEach { (x, y) ->
                 drawRoundRect(
                     edgeColor,
@@ -200,7 +200,7 @@ fun QrCode(text: String, modifier: Modifier = Modifier) {
                     cornerRadius = CornerRadius(cell * 0.18f),
                 )
             }
-        }
+        } }
     }
 }
 
