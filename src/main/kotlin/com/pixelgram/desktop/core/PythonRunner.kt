@@ -49,13 +49,20 @@ object PythonRunner {
     }
 
     fun message(code: String, result: Result): Pair<String, Array<TdApi.TextEntity>> {
-        val room = MessageLimit - code.length - 1
-        val output = result.output.trimEnd().ifEmpty { "(no output)" }.let { if (room > 0 && it.length > room) it.take(room - 1) + "…" else it }
-        val body = code.take(MessageLimit - output.length - 1)
-        val text = "$output\n$body"
+        val outputTitle = tr("Output")
+        val codeTitle = tr("Code")
+        val room = MessageLimit - code.length - outputTitle.length - codeTitle.length - Separators
+        val output = result.output.trimEnd().ifEmpty { tr("(no output)") }.let { if (room > 0 && it.length > room) it.take(room - 1) + "…" else it }
+        val body = code.take((MessageLimit - output.length - outputTitle.length - codeTitle.length - Separators).coerceAtLeast(0))
+        val text = "$outputTitle\n$output\n\n$codeTitle\n$body"
+        val outputStart = outputTitle.length + 1
+        val codeTitleStart = outputStart + output.length + 2
+        val bodyStart = codeTitleStart + codeTitle.length + 1
         return text to arrayOf(
-            TdApi.TextEntity(0, output.length, TdApi.TextEntityTypeBlockQuote()),
-            TdApi.TextEntity(output.length + 1, body.length, TdApi.TextEntityTypeBlockQuote()),
+            TdApi.TextEntity(0, outputTitle.length, TdApi.TextEntityTypeBold()),
+            TdApi.TextEntity(outputStart, output.length, TdApi.TextEntityTypeBlockQuote()),
+            TdApi.TextEntity(codeTitleStart, codeTitle.length, TdApi.TextEntityTypeBold()),
+            TdApi.TextEntity(bodyStart, body.length, TdApi.TextEntityTypePreCode("python")),
         )
     }
 
@@ -103,4 +110,5 @@ object PythonRunner {
     private const val OutputLimit = 16_384
     private const val BufferSize = 4_096
     private const val MessageLimit = 4_096
+    private const val Separators = 4
 }

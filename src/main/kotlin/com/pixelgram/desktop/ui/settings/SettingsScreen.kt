@@ -1880,7 +1880,7 @@ private fun ExperimentalSection(settings: AppSettings) {
         0,
         1,
         "Run Python from messages",
-        "Send .py \"code\" and pixelGram runs it on this computer, then sends the output in a quote with the code in a second quote. Only messages you send are run.",
+        "Send .py \"code\" and pixelGram runs it on this computer, then sends the output in a quote and the code as a code block. Only messages you send are run.",
         settings.pythonMessages.value,
     ) { settings.pythonMessages.value = it }
     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {

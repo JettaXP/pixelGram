@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.telegram.hasMainWebApp
+import com.pixelgram.desktop.telegram.openMainWebApp
 import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import androidx.compose.foundation.layout.Arrangement
@@ -157,7 +159,6 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
             )
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            if (busy && results.isEmpty()) LoadingIndicator(Modifier.align(Alignment.TopCenter).padding(top = 24.dp))
             LazyColumn(
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
@@ -166,15 +167,26 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
                     item(key = "chats-header") { SearchSection("Chats") }
                     itemsIndexed(foundChats.distinct(), key = { _, id -> "chat:$id" }) { index, id ->
                         val chat = telegram.chats[id] ?: return@itemsIndexed
+                        val app = if (chat.privateUserId != 0L && telegram.isBot(chat) && telegram.hasMainWebApp(chat.privateUserId)) {
+                            BotApp(null) { telegram.openMainWebApp(chat.id, chat.privateUserId) }
+                        } else {
+                            null
+                        }
                         SegmentedListItem(
                             onClick = { onOpen(id) },
                             shapes = groupShapes(index, foundChats.size),
                             leadingContent = { ChatAvatar(chat, telegram, settings, size = 44.dp) },
+                            trailingContent = app?.let { { BotAppButton(it) } },
                         ) {
                             EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                     if (results.isNotEmpty()) item(key = "messages-header") { SearchSection("Messages") }
+                }
+                if (busy && results.isEmpty()) {
+                    item(key = "loading") {
+                        Box(Modifier.fillMaxWidth().padding(top = 24.dp), contentAlignment = Alignment.TopCenter) { LoadingIndicator() }
+                    }
                 }
                 itemsIndexed(results.distinctBy { "${it.chatId}:${it.id}" }, key = { _, m -> "${m.chatId}:${m.id}" }) { index, message ->
                     val chat = telegram.chats[message.chatId] ?: return@itemsIndexed

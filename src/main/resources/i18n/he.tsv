@@ -1439,7 +1439,6 @@ Ideas for the preferences layout and some features	רעיונות לעיצוב �
 These features are still in testing and may change or break.	תכונות אלה עדיין בבדיקה ועשויות להשתנות או להפסיק לפעול.
 Python in messages	Python בהודעות
 Run Python from messages	הפעלת Python מתוך הודעות
-Send .py "code" and pixelGram runs it on this computer, then sends the output in a quote with the code in a second quote. Only messages you send are run.	שלחו .py "קוד" ו-pixelGram יריץ אותו במחשב הזה, ואז ישלח את הפלט בציטוט ואת הקוד בציטוט נוסף. רק הודעות ששלחת מורצות.
 Looking for Python…	מחפש Python…
 Interpreter	מפרש
 Python 3 was not found. Install it from python.org, then restart pixelGram.	לא נמצא Python 3. התקן אותו מ-python.org והפעל מחדש את pixelGram.
@@ -1485,3 +1484,6 @@ Apple's emoji set from iOS (Emoji 16).	ערכת האמוג'י של Apple מ-iOS 
 Used by pixelGram in	בשימוש של pixelGram בתיקייה
 Media and files	מדיה וקבצים
 Clear cache	נקה מטמון
+Output	פלט
+(no output)	(אין פלט)
+Send .py "code" and pixelGram runs it on this computer, then sends the output in a quote and the code as a code block. Only messages you send are run.	שלחו .py "קוד" ו-pixelGram יריץ אותו במחשב הזה, ואז ישלח את הפלט בציטוט ואת הקוד כבלוק קוד. רק הודעות ששלחת מורצות.

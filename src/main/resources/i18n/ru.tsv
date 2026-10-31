@@ -1441,7 +1441,6 @@ Ideas for the preferences layout and some features	Идеи для устрой�
 These features are still in testing and may change or break.	Эти функции пока тестируются и могут измениться или перестать работать.
 Python in messages	Python в сообщениях
 Run Python from messages	Запуск Python из сообщений
-Send .py "code" and pixelGram runs it on this computer, then sends the output in a quote with the code in a second quote. Only messages you send are run.	Отправьте .py "код", и pixelGram выполнит его на этом компьютере, а затем отправит вывод в цитате, а сам код — во второй цитате. Выполняются только ваши сообщения.
 Looking for Python…	Ищем Python…
 Interpreter	Интерпретатор
 Python 3 was not found. Install it from python.org, then restart pixelGram.	Python 3 не найден. Установите его с python.org и перезапустите pixelGram.
@@ -1492,3 +1491,6 @@ KB	КБ
 MB	МБ
 GB	ГБ
 TB	ТБ
+Output	Вывод
+(no output)	(нет вывода)
+Send .py "code" and pixelGram runs it on this computer, then sends the output in a quote and the code as a code block. Only messages you send are run.	Отправьте .py "код", и pixelGram выполнит его на этом компьютере, а затем отправит вывод в цитате, а код — блоком кода. Выполняются только ваши сообщения.

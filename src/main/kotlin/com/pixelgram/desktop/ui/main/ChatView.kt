@@ -588,7 +588,6 @@ private fun ChatViewContent(
                     Icon(Icons.Filled.Videocam, contentDescription = "Video call")
                 }
             }
-            if (chat.privateUserId != 0L && telegram.isBot(chat)) BotAppButton(chat, telegram)
             IconButton(onClick = { MessageSearch.start(chat.id) }) {
                 Icon(Icons.Filled.Search, contentDescription = "Search in chat")
             }
@@ -2253,7 +2252,10 @@ private fun Composer(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (commands.isNotEmpty()) {
+        val botApp = rememberBotApp(composerChat, telegram)
+        if (botApp != null) {
+            BotAppButton(botApp)
+        } else if (commands.isNotEmpty()) {
             val openCommands = {
                 setText(TextFieldValue("/", TextRange(1)))
                 runCatching { focus.requestFocus() }

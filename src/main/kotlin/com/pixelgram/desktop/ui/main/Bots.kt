@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -156,18 +157,32 @@ fun BotWelcome(botId: Long, telegram: Telegram, onStart: () -> Unit, modifier: M
     }
 }
 
+class BotApp(val label: String?, val open: () -> Unit)
+
 @Composable
-fun BotAppButton(chat: com.pixelgram.desktop.telegram.ChatState, telegram: Telegram) {
-    val bot = chat.privateUserId
+fun rememberBotApp(chat: com.pixelgram.desktop.telegram.ChatState?, telegram: Telegram): BotApp? {
+    val bot = chat?.privateUserId?.takeIf { it != 0L && telegram.isBot(chat) } ?: return null
     var menuButton by remember(bot) { mutableStateOf<it.tdlight.jni.TdApi.BotMenuButton?>(null) }
     LaunchedEffect(bot) { telegram.userFullInfo(bot) { info -> menuButton = info?.botInfo?.menuButton } }
     val main = telegram.hasMainWebApp(bot)
     val button = menuButton?.takeIf { it.url.isNotBlank() }
-    if (!main && button == null) return
+    if (!main && button == null) return null
+    return BotApp(button?.text?.takeIf { it.isNotBlank() }) {
+        if (button != null) telegram.openWebApp(chat.id, bot, button.url) else telegram.openMainWebApp(chat.id, bot)
+    }
+}
+
+@Composable
+fun BotAppButton(app: BotApp, modifier: Modifier = Modifier) {
     FilledTonalButton(
-        onClick = { if (button != null) telegram.openWebApp(chat.id, bot, button.url) else telegram.openMainWebApp(chat.id, bot) },
-        modifier = Modifier.padding(horizontal = 4.dp),
+        onClick = app.open,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp),
+        modifier = modifier.height(36.dp),
     ) {
-        Text(button?.text?.takeIf { it.isNotBlank() } ?: "Open", maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (app.label != null) {
+            androidx.compose.material3.Text(app.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        } else {
+            Text("Open", maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
