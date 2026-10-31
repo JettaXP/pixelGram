@@ -7,8 +7,8 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.45.1"
-val codename = "Sunny"
+version = "0.46.0"
+val codename = "Gem"
 
 kotlin {
     jvmToolchain(21)

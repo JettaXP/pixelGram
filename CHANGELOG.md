@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.46.0 Gem
+
+### Icon packs
+- Choose the icons for the whole app in pixelGram Preferences → Appearance: Material (Google), Solar (480 Design) or Telegram (Telegram Desktop). Each icon is replaced with the closest one from the pack.
+
+### pixelGram Preferences
+- The preferences are grouped into General, Appearance, Chats, Window and system, Experimental features and Other, with subsections for fonts, avatars, bubbles, corners, chat folders, the side menu, message actions, the cursor and About.
+- The theme and accent colors moved to Chat Settings, with the wallpaper at the top.
+- Disable number rounding: show 1,234 views instead of 1.2K.
+- Zalgo filter: removes stacked combining symbols from names and messages.
+- Chat list title: pixelGram, your username or your own text.
+- Folder titles: names with icons, names only or icons only. With icons only, the chat list title shows the open folder's name.
+- About has a link to the website and credits for exteraGram, Material Symbols, Solar and Telegram Desktop.
+
+### Chats
+- Calculator in the message field: type an example ending with =, like 5+5=, and the answer appears in gray. Press → to insert it.
+- Experimental: run Python from messages. With the option on, send .py "code" and pixelGram runs it with the system Python 3, then sends the output and the code in two quotes. Only messages you send are run. PyPI packages can be installed in the same section.
+
+### QR codes
+- The QR reveal follows the Android 16 share screen: the code fades in as one layer while the pieces grow outward from the center, dots light up along the backdrop edge first, and the corner rings and their cookie centers come in last.
+
+### Windows installer
+- The installer is in English only.
+
+### Translations
+- The remaining settings strings are translated into Russian and Hebrew.
+
 ## 0.45.1 Sunny
 
 ### QR codes
