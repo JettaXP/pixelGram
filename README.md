@@ -126,6 +126,10 @@ The previous C++ version (AyuGram Desktop fork) is kept in the `legacy-cpp` bran
 - [Telegram Desktop](https://github.com/telegramdesktop/tdesktop) (GPLv3): swipe to reply with a touchpad follows its `swipe_handler.cpp`: direction lock, reply on release, damped overswipe and the bounce at the threshold.
 - [kitty](https://github.com/kovidgoyal/kitty) by Kovid Goyal (GPLv3): the Kitty trail cursor style is ported from its `cursor_trail.c`.
 - [NTgCalls](https://github.com/pytgcalls/ntgcalls) by the PyTgCalls team (LGPL-3.0): voice and video calls and screen sharing. pixelGram downloads its unmodified shared library from the official release on the first call and checks its SHA-256.
+- [exteraGram](https://github.com/exteraSquad/exteraGram): ideas for the pixelGram Preferences layout, the calculator in the message field, the Zalgo filter, number rounding, folder titles and the chat list title.
+- [Material Symbols](https://fonts.google.com/icons) by Google (Apache License 2.0): the default icons.
+- [Solar Icon Set](https://www.figma.com/community/file/1166831539721848736) by 480 Design (CC BY 4.0): the Solar icon pack, taken from [@iconify-json/solar](https://www.npmjs.com/package/@iconify-json/solar).
+- [Telegram Desktop](https://github.com/telegramdesktop/tdesktop) (GPLv3): the Telegram icon pack is traced from its icons.
 
 ## License
 

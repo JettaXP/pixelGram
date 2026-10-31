@@ -217,8 +217,6 @@ internal val SettingsIndex = listOf(
     "About" to "Channel",
     "About" to "GitHub",
     "About" to "Website",
-    "About" to "Credits",
-    "About" to "exteraGram",
     "Experimental" to "Python in messages",
     "Experimental" to "Run Python from messages",
     "Experimental" to "Packages",
@@ -231,6 +229,4 @@ internal val SettingsIndex = listOf(
     "FolderStyle" to "Names only",
     "FolderStyle" to "Icons only",
     "Appearance" to "Icons",
-    "About" to "Solar Icon Set",
-    "About" to "Material Symbols",
 )

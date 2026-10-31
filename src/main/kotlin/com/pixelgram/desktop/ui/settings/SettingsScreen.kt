@@ -17,7 +17,6 @@ import com.pixelgram.desktop.ui.icons.outlined.FormatListBulleted
 import com.pixelgram.desktop.ui.icons.outlined.Keyboard
 import com.pixelgram.desktop.ui.icons.outlined.ArrowForward
 import com.pixelgram.desktop.ui.icons.outlined.Language
-import com.pixelgram.desktop.ui.icons.outlined.Lightbulb
 import com.pixelgram.desktop.ui.icons.automirrored.outlined.Chat
 import com.pixelgram.desktop.ui.icons.outlined.Person
 import com.pixelgram.desktop.ui.icons.outlined.PersonAdd
@@ -269,7 +268,6 @@ private const val ChannelUsername = "pixelgramclient"
 private const val ChannelUrl = "https://t.me/$ChannelUsername"
 private const val GitHubUrl = "https://github.com/JettaXP/pixelGram"
 private const val WebsiteHost = "pixelgram.jettax.xyz"
-private const val ExteraGramUrl = "https://exteragram.app"
 
 @Composable
 fun SettingsScreen(
@@ -1949,7 +1947,7 @@ private fun openUrl(url: String) {
 
 @Composable
 private fun AboutSection(telegram: Telegram, onOpenChat: (Long) -> Unit) {
-    Description("pixelGram ${BuildConfig.VERSION}. A Telegram client with Material 3 Expressive, built on TDLib.")
+    Description("pixelGram ${BuildConfig.VERSION}. " + com.pixelgram.desktop.core.tr("A Telegram client with Material 3 Expressive, built on TDLib."))
     Header("Links")
     SegmentedGroup {
         LinkItem(0, 3, Icons.Outlined.Campaign, "Channel", "@$ChannelUsername") {
@@ -1957,13 +1955,6 @@ private fun AboutSection(telegram: Telegram, onOpenChat: (Long) -> Unit) {
         }
         LinkItem(1, 3, Icons.Outlined.Code, "GitHub", "JettaXP/pixelGram") { openUrl(GitHubUrl) }
         LinkItem(2, 3, Icons.Outlined.Language, "Website", WebsiteHost) { openUrl("https://$WebsiteHost") }
-    }
-    Header("Credits")
-    SegmentedGroup {
-        LinkItem(0, 4, Icons.Outlined.Lightbulb, "exteraGram", "Ideas for the preferences layout, the calculator in the message field and more") { openUrl(ExteraGramUrl) }
-        LinkItem(1, 4, Icons.Outlined.Palette, "Material Symbols", "Google, Apache License 2.0") { openUrl("https://fonts.google.com/icons") }
-        LinkItem(2, 4, Icons.Outlined.Palette, "Solar Icon Set", "480 Design, CC BY 4.0") { openUrl("https://icon-sets.iconify.design/solar/") }
-        LinkItem(3, 4, Icons.Outlined.Palette, "Telegram Desktop icons", "Telegram, GPL v3") { openUrl("https://github.com/telegramdesktop/tdesktop") }
     }
 }
 
