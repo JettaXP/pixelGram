@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.46.4 Gem
+
+### Mini apps
+- Fixed a crash when opening mini apps on Windows: JavaFX is updated to 23.0.2 with a newer WebKit, and mini apps render without the GPU.
+- Mini app windows use the pixelGram title bar when the custom title bar is on.
+- Bots with a mini app have an Open button next to the message field and in search. Commands appear when you type /. The mini app button is gone from the chat header.
+
+### Chats
+- Python results are sent as "Output" with the result in a quote and "Code" with the code in a python code block, labeled in the app language.
+- The search loader sits below the found chats.
+- QR code edge dots stay inside the backdrop.
+
+### Translations
+- The storage section in Advanced is translated, including the size units.
+
 ## 0.46.3 Gem
 
 - Calculator in the message field: the answer fades in, blends into the text when inserted, and the Kitty cursor trails to the end of the number.
