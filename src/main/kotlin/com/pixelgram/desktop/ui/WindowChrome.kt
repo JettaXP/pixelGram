@@ -24,10 +24,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.window.WindowDraggableArea
 import com.pixelgram.desktop.ui.icons.Icons
-import com.pixelgram.desktop.ui.icons.filled.Close
-import com.pixelgram.desktop.ui.icons.filled.CropSquare
-import com.pixelgram.desktop.ui.icons.filled.FilterNone
-import com.pixelgram.desktop.ui.icons.filled.Remove
+import com.pixelgram.desktop.ui.icons.filled.WindowClose
+import com.pixelgram.desktop.ui.icons.filled.WindowRestore
+import com.pixelgram.desktop.ui.icons.filled.WindowMaximize
+import com.pixelgram.desktop.ui.icons.filled.WindowMinimize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.pixelgram.desktop.ui.components.Text
@@ -263,13 +263,13 @@ fun FrameWindowScope.TitleBar(chrome: WindowChrome, onClose: () -> Unit) {
                 )
             }
         }
-        TitleButton(Icons.Filled.Remove, "Minimize", onClick = chrome::minimize)
+        TitleButton(Icons.Filled.WindowMinimize, "Minimize", onClick = chrome::minimize)
         TitleButton(
-            if (chrome.maximized) Icons.Filled.FilterNone else Icons.Filled.CropSquare,
+            if (chrome.maximized) Icons.Filled.WindowRestore else Icons.Filled.WindowMaximize,
             if (chrome.maximized) "Restore" else "Maximize",
             onClick = chrome::toggleMaximized,
         )
-        TitleButton(Icons.Filled.Close, "Close", danger = true, onClick = onClose)
+        TitleButton(Icons.Filled.WindowClose, "Close", danger = true, onClick = onClose)
         Spacer(Modifier.width(6.dp))
     }
 }

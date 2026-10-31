@@ -715,6 +715,7 @@ private fun SettingsStyleChoice(settings: AppSettings) {
         listOf(com.pixelgram.desktop.core.SettingsStyle.Expressive to "Expressive", com.pixelgram.desktop.core.SettingsStyle.MaterialYou to "Material You"),
         settings.settingsStyle.value,
         { settings.settingsStyle.value = it },
+        translate = false,
     )
 }
 
@@ -1134,6 +1135,7 @@ internal fun <T> ConnectedChoice(
     selected: T,
     onSelect: (T) -> Unit,
     enabled: (T) -> Boolean = { true },
+    translate: Boolean = true,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
         options.forEachIndexed { index, (value, label) ->
@@ -1147,7 +1149,7 @@ internal fun <T> ConnectedChoice(
                     else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                 },
             ) {
-                Text(label)
+                if (translate) Text(label) else androidx.compose.material3.Text(label)
             }
         }
     }

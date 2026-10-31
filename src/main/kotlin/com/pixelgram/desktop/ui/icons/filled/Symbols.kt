@@ -235,3 +235,11 @@ val Icons.Filled.Work: ImageVector get() = IconPacks.icon("Filled.Work", workSym
 
 private val workspacePremiumSymbol by lazy { symbol("Filled.WorkspacePremium", "M480 477 411 531Q404 536 397.5 531.0Q391 526 393 518L419 432L348 377Q342 371 344.5 363.5Q347 356 355 356H442L469 271Q471 263 480.0 263.0Q489 263 491 271L518 356H604Q612 356 615.0 363.5Q618 371 612 377L540 432L566 518Q568 526 561.5 531.0Q555 536 548 531ZM480 847 296 907Q274 915 255.0 901.5Q236 888 236 865V617Q196 574 174.0 518.0Q152 462 152 399Q152 261 247.5 165.5Q343 70 480.0 70.0Q617 70 712.5 165.5Q808 261 808 399Q808 462 786.0 518.0Q764 574 724 617V865Q724 888 705.0 901.5Q686 915 664 907ZM480.0 636.0Q579 636 648.0 566.5Q717 497 717.0 398.5Q717 300 648.0 230.5Q579 161 480.0 161.0Q381 161 312.0 230.5Q243 300 243.0 398.5Q243 497 312.0 566.5Q381 636 480.0 636.0Z") }
 val Icons.Filled.WorkspacePremium: ImageVector get() = IconPacks.icon("Filled.WorkspacePremium", workspacePremiumSymbol)
+
+val Icons.Filled.WindowMinimize: ImageVector get() = IconPacks.icon("Filled.WindowMinimize", removeSymbol)
+
+val Icons.Filled.WindowMaximize: ImageVector get() = IconPacks.icon("Filled.WindowMaximize", cropSquareSymbol)
+
+val Icons.Filled.WindowRestore: ImageVector get() = IconPacks.icon("Filled.WindowRestore", filterNoneSymbol)
+
+val Icons.Filled.WindowClose: ImageVector get() = IconPacks.icon("Filled.WindowClose", closeSymbol)
