@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.46.1"
+version = "0.46.2"
 val codename = "Gem"
 
 kotlin {

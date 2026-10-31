@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.46.2 Gem
+
+- Shorter emoji style descriptions.
+
 ## 0.46.1 Gem
 
 - The icon pack descriptions and the About text are translated into Russian and Hebrew.
