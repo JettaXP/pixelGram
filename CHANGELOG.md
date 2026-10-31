@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.46.3 Gem
+
+- Calculator in the message field: the answer fades in, blends into the text when inserted, and the Kitty cursor trails to the end of the number.
+- Window buttons with the Telegram icon pack use the Telegram Desktop title bar icons, all the same size.
+- The Expressive settings style keeps its name in every language.
+
 ## 0.46.2 Gem
 
 - Shorter emoji style descriptions.
