@@ -312,9 +312,9 @@ private fun ChatViewContent(
             if (com.pixelgram.desktop.telegram.demoOpensEditor) editAttachment(file)
         }
     }
-    val placement = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+    val placement = androidx.compose.animation.core.spring<IntOffset>(dampingRatio = 1f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)
     val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-    val slide = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val slide = androidx.compose.animation.core.spring<Float>(dampingRatio = 1f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)
     val slidIn = remember(chat.id) { mutableSetOf<Long>() }
     var editing by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var replyTo by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
@@ -818,7 +818,7 @@ private fun ChatViewContent(
                     }
                     Column(
                         if (PowerSaving.messageAnimations) {
-                            Modifier.animateItem(fadeInSpec = fade, placementSpec = if (listState.isScrollInProgress) null else placement, fadeOutSpec = fade)
+                            Modifier.animateItem(fadeInSpec = if (message.fresh) null else fade, placementSpec = if (listState.isScrollInProgress) null else placement, fadeOutSpec = fade)
                         } else {
                             Modifier
                         },
