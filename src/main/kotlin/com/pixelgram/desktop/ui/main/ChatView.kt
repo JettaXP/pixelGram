@@ -246,6 +246,7 @@ private fun ChatViewContent(
     val groupStarts by remember(chat.id) { derivedStateOf { messageGroupStarts(shown) } }
     val listState = rememberLazyListState()
     var jumping by remember(chat.id) { mutableStateOf(false) }
+    var calendarAt by remember(chat.id) { mutableStateOf<Int?>(null) }
     val nearTop by remember {
         derivedStateOf {
             val info = listState.layoutInfo
@@ -822,7 +823,7 @@ private fun ChatViewContent(
                             Modifier
                         },
                     ) {
-                        if (newDay) DateDivider(message.date)
+                        if (newDay) DateDivider(message.date) { calendarAt = message.date }
                         if (message.service) {
                             val pin = message.content as? TdApi.MessagePinMessage
                             if (pin != null) {
@@ -931,7 +932,9 @@ private fun ChatViewContent(
                 listState = listState,
                 dateAt = { index -> shown.getOrNull(index)?.date },
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
+                onClick = { date -> calendarAt = date },
             )
+            calendarAt?.let { date -> ChatCalendar(chat, telegram, date) { calendarAt = null } }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),

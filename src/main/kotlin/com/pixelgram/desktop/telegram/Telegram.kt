@@ -2430,6 +2430,18 @@ class Telegram(
         })
     }
 
+    fun canDeleteByDate(chat: ChatState): Boolean = chat.privateUserId != 0L && !isSecret(chat) || chat.isGroup && chat.supergroupId == 0L
+
+    fun deleteByDate(chatId: Long, minDate: Int, maxDate: Int, revoke: Boolean) {
+        send(TdApi.DeleteChatMessagesByDate(chatId, minDate, maxDate, revoke)) { result ->
+            if (result is TdApi.Error) AppLog.write("Delete by date ${result.code}: ${result.message}")
+        }
+    }
+
+    fun messageByDate(chatId: Long, date: Int, onResult: (Long?) -> Unit) {
+        send(TdApi.GetChatMessageByDate(chatId, date)) { result -> onResult((result as? TdApi.Message)?.id) }
+    }
+
     fun scheduledMessages(chatId: Long, onResult: (List<UiMessage>) -> Unit) {
         send(TdApi.GetChatScheduledMessages(chatId)) { result ->
             onResult((result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty().map { message ->

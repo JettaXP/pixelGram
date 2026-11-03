@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import com.pixelgram.desktop.ui.components.Text
@@ -30,14 +32,14 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 @Composable
-fun DateDivider(unixSeconds: Int, modifier: Modifier = Modifier) {
+fun DateDivider(unixSeconds: Int, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     Row(
         modifier = modifier.fillMaxWidth().padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Wave(Modifier.weight(1f))
-        DatePill(unixSeconds, elevation = 0.dp)
+        DatePill(unixSeconds, elevation = 0.dp, modifier = if (onClick != null) Modifier.clip(CircleShape).clickable(onClick = onClick) else Modifier)
         Wave(Modifier.weight(1f))
     }
 }
@@ -105,6 +107,7 @@ fun FloatingDate(
     listState: androidx.compose.foundation.lazy.LazyListState,
     dateAt: (Int) -> Int?,
     modifier: Modifier = Modifier,
+    onClick: ((Int) -> Unit)? = null,
 ) {
     var shown by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(listState) {
@@ -131,7 +134,7 @@ fun FloatingDate(
         exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically { -it / 2 },
         modifier = modifier,
     ) {
-        DatePill(label, elevation = 3.dp)
+        DatePill(label, elevation = 3.dp, modifier = if (onClick != null) Modifier.clip(CircleShape).clickable { onClick(label) } else Modifier)
     }
 }
 
