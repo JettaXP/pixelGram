@@ -234,21 +234,42 @@ private fun Section(text: String) {
     Text(text, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
 }
 
+private class SettingSpec(val icon: ImageVector, val tint: Color, val title: String, val subtitle: String, val checked: Boolean, val onChange: (Boolean) -> Unit)
+
+private class SettingRows {
+    val items = mutableListOf<SettingSpec>()
+    fun row(icon: ImageVector, tint: Color, title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+        items += SettingSpec(icon, tint, title, subtitle, checked, onChange)
+    }
+}
+
 @Composable
-private fun SettingRow(icon: ImageVector, tint: Color, title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onChange(!checked) }.padding(vertical = 6.dp),
-    ) {
-        Box(Modifier.size(SettingIcon).clip(RoundedCornerShape(8.dp)).background(tint), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+private fun SettingGroup(build: SettingRows.() -> Unit) {
+    val items = SettingRows().apply(build).items
+    if (items.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        items.forEachIndexed { index, item ->
+            val shape = com.pixelgram.desktop.ui.components.groupShapes(index, items.size).shape
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(shape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .clickable(interactionSource = null, indication = null) { item.onChange(!item.checked) }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            ) {
+                Box(Modifier.size(SettingIcon).clip(RoundedCornerShape(8.dp)).background(item.tint), contentAlignment = Alignment.Center) {
+                    Icon(item.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(item.title, style = MaterialTheme.typography.bodyLarge)
+                    Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                com.pixelgram.desktop.ui.settings.PixelSwitch(checked = item.checked, onCheckedChange = null)
+            }
         }
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        com.pixelgram.desktop.ui.settings.PixelSwitch(checked = checked, onCheckedChange = null)
     }
 }
 
@@ -369,26 +390,30 @@ private fun PollDialog(telegram: Telegram, chat: ChatState, replyToId: Long, onD
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Section("Settings")
-        if (!channel) SettingRow(Icons.Filled.Visibility, Blue, "Show Who Voted", "Display voter name on each option.", showVoters) { showVoters = it }
-        SettingRow(Icons.Filled.Checklist, Orange, "Allow Multiple Answers", "Voters can select more than one option.", multiple) { multiple = it }
-        if (!channel && !quiz) SettingRow(Icons.Filled.AddCircle, Blue, "Allow Adding Options", "Participants can suggest new options.", adding) { adding = it }
-        if (!quiz) SettingRow(Icons.Filled.Sync, Purple, "Allow Revoting", "Voters can change their vote.", revoting) { revoting = it }
-        SettingRow(Icons.Filled.Shuffle, Orange, "Shuffle Options", "Answers appear in random order for each voter.", shuffle) { shuffle = it }
-        SettingRow(Icons.Filled.CheckCircle, Green, "Set Correct Answer", "Mark one or more options as the right answer.", quiz) { quiz = it }
+        SettingGroup {
+            if (!channel) row(Icons.Filled.Visibility, Blue, "Show Who Voted", "Display voter name on each option.", showVoters) { showVoters = it }
+            row(Icons.Filled.Checklist, Orange, "Allow Multiple Answers", "Voters can select more than one option.", multiple) { multiple = it }
+            if (!channel && !quiz) row(Icons.Filled.AddCircle, Blue, "Allow Adding Options", "Participants can suggest new options.", adding) { adding = it }
+            if (!quiz) row(Icons.Filled.Sync, Purple, "Allow Revoting", "Voters can change their vote.", revoting) { revoting = it }
+            row(Icons.Filled.Shuffle, Orange, "Shuffle Options", "Answers appear in random order for each voter.", shuffle) { shuffle = it }
+            row(Icons.Filled.CheckCircle, Green, "Set Correct Answer", "Mark one or more options as the right answer.", quiz) { quiz = it }
+        }
         if (quiz) OutlinedTextField(explanation, { explanation = it }, placeholder = { Text("Explanation (optional)") }, modifier = Modifier.fillMaxWidth())
-        if (channel) {
-            SettingRow(Icons.Filled.Group, Indigo, "Restrict to Subscribers", "Only subscribers who joined 24+ hours ago can vote.", membersOnly) { membersOnly = it }
-            SettingRow(Icons.Filled.Public, Blue, "Limit by Country", "Only users from selected countries can vote.", limitCountry) {
-                limitCountry = it
-                if (it && countries.isEmpty()) pickingCountries = true
-            }
-            if (limitCountry) {
-                TextButton(onClick = { pickingCountries = true }) {
-                    Text(if (countries.isEmpty()) "Choose countries" else countries.joinToString(", ") { code -> countryName(code) })
+        SettingGroup {
+            if (channel) {
+                row(Icons.Filled.Group, Indigo, "Restrict to Subscribers", "Only subscribers who joined 24+ hours ago can vote.", membersOnly) { membersOnly = it }
+                row(Icons.Filled.Public, Blue, "Limit by Country", "Only users from selected countries can vote.", limitCountry) {
+                    limitCountry = it
+                    if (it && countries.isEmpty()) pickingCountries = true
                 }
             }
+            row(Icons.Filled.Timer, Red, "Limit Duration", "Automatically close the poll at a set time.", limitDuration) { limitDuration = it }
         }
-        SettingRow(Icons.Filled.Timer, Red, "Limit Duration", "Automatically close the poll at a set time.", limitDuration) { limitDuration = it }
+        if (channel && limitCountry) {
+            TextButton(onClick = { pickingCountries = true }) {
+                Text(if (countries.isEmpty()) "Choose countries" else countries.joinToString(", ") { code -> countryName(code) })
+            }
+        }
         if (limitDuration) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 DurationChoices.forEach { (seconds, label) ->
