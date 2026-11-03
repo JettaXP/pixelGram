@@ -24,7 +24,8 @@ object IconPacks {
         val id = "${pack.name}:$key"
         built[id]?.let { return it }
         val glyph = table(pack)[key] ?: return fallback
-        return build(key, glyph, fallback.autoMirror).also { built[id] = it }
+        val pad = if (pack == IconPack.Solar && key.substringAfter('.') in MediaKeys) glyph.viewport * MediaPadding else 0f
+        return build(key, glyph, fallback.autoMirror, pad).also { built[id] = it }
     }
 
     private fun table(pack: IconPack): Map<String, Glyph> = tables.getOrPut(pack) {
@@ -37,8 +38,13 @@ object IconPacks {
         }
     }
 
-    private fun build(key: String, glyph: Glyph, mirror: Boolean): ImageVector {
-        val builder = ImageVector.Builder(key, 24.dp, 24.dp, glyph.viewport, glyph.viewport, autoMirror = mirror)
+    private val MediaKeys = setOf("PlayArrow", "Pause", "SkipNext", "SkipPrevious", "Stop", "FastForward", "FastRewind")
+    private const val MediaPadding = 0.14f
+
+    private fun build(key: String, glyph: Glyph, mirror: Boolean, pad: Float = 0f): ImageVector {
+        val size = glyph.viewport + pad * 2
+        val builder = ImageVector.Builder(key, 24.dp, 24.dp, size, size, autoMirror = mirror)
+        if (pad > 0f) builder.addGroup(translationX = pad, translationY = pad)
         glyph.paths.forEach { (data, evenOdd) ->
             builder.addPath(
                 addPathNodes(data),
@@ -46,6 +52,7 @@ object IconPacks {
                 fill = SolidColor(Color.Black),
             )
         }
+        if (pad > 0f) builder.clearGroup()
         return builder.build()
     }
 }

@@ -1086,6 +1086,28 @@ private fun FolderStyleSection(settings: AppSettings) {
         Text("${settings.capsuleHeight.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
         ResetButton(settings.capsuleHeight)
     }
+
+    Header("Chat list")
+    Text("Avatar size", style = MaterialTheme.typography.bodyLarge)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Slider(
+            value = settings.listAvatarSize.value.toFloat(),
+            onValueChange = { settings.listAvatarSize.value = it.toInt() },
+            valueRange = 36f..64f,
+            steps = 13,
+            modifier = Modifier.weight(1f),
+        )
+        Text("${settings.listAvatarSize.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+        ResetButton(settings.listAvatarSize)
+    }
+    SwitchRow(
+        index = 0,
+        count = 1,
+        title = "Unread counters in secondary color",
+        subtitle = "Use the secondary palette color for unread badges instead of the accent.",
+        checked = settings.secondaryBadges.value,
+        onChange = { settings.secondaryBadges.value = it },
+    )
 }
 
 @Composable

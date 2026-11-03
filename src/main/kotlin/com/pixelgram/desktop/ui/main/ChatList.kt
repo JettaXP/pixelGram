@@ -380,7 +380,7 @@ private fun CompactChatList(
                 }
             }
             items(chatsFor(listKey), key = { it.id }) { chat ->
-                Box(itemMotion().size(CompactItemSize), contentAlignment = Alignment.Center) {
+                Box(itemMotion().size(maxOf(CompactItemSize, settings.listAvatarSize.value.dp + 16.dp)), contentAlignment = Alignment.Center) {
                     Box(
                         Modifier
                             .matchParentSize()
@@ -388,12 +388,12 @@ private fun CompactChatList(
                             .background(if (chat.id == selectedChatId) colors.secondaryContainer else Color.Transparent)
                             .clickable { onOpen(chat.id) },
                     )
-                    OnlineAvatar(chat, telegram, settings, 48.dp)
+                    OnlineAvatar(chat, telegram, settings, settings.listAvatarSize.value.dp)
                     if (chat.unreadCount > 0) {
                         Badge(
                             modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 4.dp),
-                            containerColor = colors.primary,
-                            contentColor = colors.onPrimary,
+                            containerColor = if (settings.secondaryBadges.value) colors.secondary else colors.primary,
+                            contentColor = if (settings.secondaryBadges.value) colors.onSecondary else colors.onPrimary,
                         ) {
                             Text(if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString())
                         }
@@ -466,7 +466,7 @@ private fun ChatRow(
             onClick = onClick,
             shapes = groupShapes(index, count),
             leadingContent = {
-                OnlineAvatar(chat, telegram, settings, 48.dp)
+                OnlineAvatar(chat, telegram, settings, settings.listAvatarSize.value.dp)
             },
             supportingContent = {
                 val draft = chat.draft.takeIf { it.isNotBlank() && !selected }
@@ -510,8 +510,8 @@ private fun ChatRow(
                         val muted = telegram.isMuted(chat)
                         Badge(
                             modifier = Modifier.padding(top = 6.dp),
-                            containerColor = if (muted) colors.outline else colors.primary,
-                            contentColor = if (muted) colors.surface else colors.onPrimary,
+                            containerColor = if (muted) colors.outline else if (settings.secondaryBadges.value) colors.secondary else colors.primary,
+                            contentColor = if (muted) colors.surface else if (settings.secondaryBadges.value) colors.onSecondary else colors.onPrimary,
                         ) {
                             Text(if (chat.unreadCount > 999) "999+" else chat.unreadCount.toString())
                         }
