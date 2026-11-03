@@ -330,10 +330,14 @@ fun MainScreen(
                         androidx.compose.runtime.key(chat.id) { ForumSidebar(chat, telegram, Modifier.fillMaxHeight().padding(end = 8.dp), onClose = onCloseChat) }
                     }
                 }
+                var archiveOnTop by remember { mutableStateOf(false) }
+                LaunchedEffect(selectedKey) { archiveOnTop = selectedKey == ChatListKey.Archive }
+                LaunchedEffect(openChatId) { if (openChatId != null) archiveOnTop = false }
                 OnEscape {
                     when {
                         menuOpen -> scope.launch { railState.collapse() }
                         MessageSearch.open -> MessageSearch.open = false
+                        archiveOnTop && selectedKey == ChatListKey.Archive -> selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main
                         onChatBack != null -> onChatBack()
                         openChatId != null -> onCloseChat()
                         selectedKey == ChatListKey.Archive -> selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main
@@ -536,7 +540,7 @@ private fun MainMenu(
         val dark = isDarkTheme(settings)
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.width(AccountsWidth).padding(horizontal = 12.dp).padding(bottom = 12.dp),
+            modifier = Modifier.width(AccountsWidth).padding(start = 12.dp, end = 4.dp).padding(bottom = 12.dp),
         ) {
             QuickTile(if (dark) Icons.Outlined.DarkMode else Icons.Outlined.LightMode, if (dark) "Night" else "Day", dark, Modifier.weight(1f)) {
                 settings.themeMode.value = if (dark) ThemeMode.Light else ThemeMode.Dark
@@ -559,7 +563,7 @@ private fun MainMenu(
         )
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.width(AccountsWidth).padding(horizontal = 12.dp),
+            modifier = Modifier.width(AccountsWidth).padding(start = 12.dp, end = 4.dp),
         ) {
             groups.forEach { group ->
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {

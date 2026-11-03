@@ -25,6 +25,7 @@ import com.pixelgram.desktop.ui.components.expressive.FilledTonalButton
 import com.pixelgram.desktop.telegram.BotCommandItem
 import com.pixelgram.desktop.ui.components.Avatar
 import com.pixelgram.desktop.core.AvatarKind
+import com.pixelgram.desktop.ui.toShape
 import androidx.compose.ui.graphics.luminance
 import com.materialkolor.hct.Hct
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -104,6 +105,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -235,6 +240,7 @@ private fun ChatViewContent(
     val messages = telegram.messages(chat.id)
     val shown by remember(chat.id) { derivedStateOf { groupAlbums(messages.toList()) } }
     val listState = rememberLazyListState()
+    var jumping by remember(chat.id) { mutableStateOf(false) }
     val nearTop by remember {
         derivedStateOf {
             val info = listState.layoutInfo
@@ -242,26 +248,30 @@ private fun ChatViewContent(
             info.totalItemsCount > 0 && last >= info.totalItemsCount - HistoryPrefetchItems
         }
     }
-    LaunchedEffect(nearTop, messages.size) {
-        if (nearTop) telegram.loadMoreMessages(chat.id)
+    LaunchedEffect(nearTop, messages.size, jumping) {
+        if (nearTop && !jumping) telegram.loadMoreMessages(chat.id)
     }
     val nearBottom by remember { derivedStateOf { listState.firstVisibleItemIndex < NewerThreshold } }
     val detached = telegram.detached[chat.id] == true
-    LaunchedEffect(nearBottom, detached, messages.size) {
-        if (nearBottom && detached) telegram.loadNewer(chat.id)
+    LaunchedEffect(nearBottom, detached, messages.size, jumping) {
+        if (nearBottom && detached && !jumping) telegram.loadNewer(chat.id)
     }
     val newest = messages.firstOrNull()?.key
+    val newestId = messages.firstOrNull()?.id ?: 0L
     val scope = rememberCoroutineScope()
     val seenNewest = remember(chat.id) { arrayOf(newest) }
+    val seenNewestId = remember(chat.id) { longArrayOf(newestId) }
     if (newest != seenNewest[0]) {
         seenNewest[0] = newest
-        val own = messages.firstOrNull()?.let { it.isOutgoing && !it.service } == true
+        val newer = newestId >= seenNewestId[0] && !jumping
+        seenNewestId[0] = newestId
+        val own = newer && messages.firstOrNull()?.let { it.isOutgoing && !it.service } == true
         if (own && listState.firstVisibleItemIndex > 0) {
             scope.launch {
                 if (listState.firstVisibleItemIndex > JumpCloserItems) listState.scrollToItem(JumpLandingItem)
                 listState.animateScrollToItem(0)
             }
-        } else if (own || listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < StickToBottomPx) {
+        } else if (own || newer && listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < StickToBottomPx) {
             listState.requestScrollToItem(0)
         }
     }
@@ -403,15 +413,7 @@ private fun ChatViewContent(
                     DoubleClickAction.Nothing -> Unit
                 }
             },
-            onQuoteClick = { id ->
-                val index = shown.indexOfFirst { it.id == id || it.album.any { member -> member.id == id } }
-                if (index >= 0) {
-                    scope.launch { listState.animateScrollToItem(index) }
-                    highlight = id to System.nanoTime()
-                } else {
-                    MessageSearch.jump = chat.id to id
-                }
-            },
+            onQuoteClick = { id -> MessageSearch.jump = chat.id to id },
         )
     }
     LaunchedEffect(chat.id) { MessageSearch.lastChat = chat.id }
@@ -420,16 +422,21 @@ private fun ChatViewContent(
         if (jumpChat != chat.id) return@LaunchedEffect
         MessageSearch.jump = null
         fun indexOf() = shown.indexOfFirst { it.id == jumpId || it.album.any { member -> member.id == jumpId } }
-        if (indexOf() < 0) {
-            suspendCancellableCoroutine { continuation ->
-                telegram.jumpToMessage(chat.id, jumpId) { if (continuation.isActive) continuation.resume(Unit) }
+        try {
+            if (indexOf() < 0) {
+                jumping = true
+                suspendCancellableCoroutine { continuation ->
+                    telegram.jumpToMessage(chat.id, jumpId) { if (continuation.isActive) continuation.resume(Unit) }
+                }
+                withFrameNanos { }
             }
-            withFrameNanos { }
+            val index = indexOf()
+            if (index < 0) return@LaunchedEffect
+            revealMessage(listState, index)
+            highlight = jumpId to System.nanoTime()
+        } finally {
+            jumping = false
         }
-        val index = indexOf()
-        if (index < 0) return@LaunchedEffect
-        if (abs(listState.firstVisibleItemIndex - index) > JumpCloserItems) listState.scrollToItem(index) else listState.animateScrollToItem(index)
-        highlight = jumpId to System.nanoTime()
     }
     forwarding?.let { message ->
         ForwardDialog(telegram, settings, onDismiss = { forwarding = null }) { target ->
@@ -605,10 +612,16 @@ private fun ChatViewContent(
                     onOpenChat = onOpenChat,
                     onSearch = { MessageSearch.start(chat.id) },
                     onToBeginning = {
+                        jumping = true
                         telegram.jumpToStart(chat.id) {
                             scope.launch {
-                                withFrameNanos { }
-                                if (shown.isNotEmpty()) listState.scrollToItem(shown.lastIndex)
+                                try {
+                                    withFrameNanos { }
+                                    if (shown.isNotEmpty()) listState.scrollToItem(shown.lastIndex)
+                                    withFrameNanos { }
+                                } finally {
+                                    jumping = false
+                                }
                             }
                         }
                     },
@@ -1053,6 +1066,7 @@ private fun ChatViewContent(
             },
             onOpenChat = onOpenChat,
             onDeleteEditing = { editing?.let { deleting = it } },
+            onScrollBottom = { telegram.returnToLatest(chat.id) { scope.launch { listState.scrollToItem(0) } } },
             onSend = { text, entities ->
                 val edited = editing
                 val replyId = replyTo?.id ?: 0L
@@ -1142,11 +1156,12 @@ private fun TypingBubble(chat: ChatState, telegram: Telegram) {
             val sender = last
             if (group && sender != null) {
                 Box(Modifier.width(SenderAvatarSlot)) {
+                    val appSettings = com.pixelgram.desktop.ui.theme.LocalAppSettings.current
                     com.pixelgram.desktop.ui.components.AvatarImage(
                         telegram.senderTitle(sender),
                         telegram.senderPhoto(sender),
                         telegram,
-                        CircleShape,
+                        appSettings?.avatarShapeFor(AvatarKind.Private)?.toShape(appSettings.avatarCorner.value) ?: CircleShape,
                         SenderAvatarSize,
                     )
                 }
@@ -1887,8 +1902,40 @@ private const val InlineDelayMs = 400L
 private const val GifTab = 2
 private const val CommandLimit = 30
 private const val JumpCloserItems = 20
+
+private suspend fun revealMessage(listState: LazyListState, index: Int) {
+    fun fit(): Float? {
+        val info = listState.layoutInfo
+        val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return null
+        val start = info.viewportStartOffset + info.beforeContentPadding
+        val end = info.viewportEndOffset - info.afterContentPadding
+        val viewport = end - start
+        val top = item.offset
+        val bottom = item.offset + item.size
+        if (top >= start && bottom <= end) return 0f
+        return if (item.size <= viewport) (top - (start + (viewport - item.size) / 2)).toFloat() else (bottom - end).toFloat()
+    }
+    val visible = fit()
+    if (visible != null) {
+        if (visible != 0f) listState.animateScrollBy(visible, tween(RevealMs, easing = FastOutSlowInEasing))
+        return
+    }
+    listState.scrollToItem(index)
+    withFrameNanos { }
+    fit()?.takeIf { it != 0f }?.let { listState.scrollBy(it) }
+}
+
+private const val RevealMs = 260
 private const val JumpLandingItem = 6
 private const val WelcomeDelayMs = 700L
+
+private fun emDash(before: String, typed: TextFieldValue): TextFieldValue {
+    val end = typed.selection.end
+    if (!typed.selection.collapsed || typed.text.length != before.length + 1 || end < 2) return typed
+    if (typed.text.substring(end - 2, end) != "--") return typed
+    if (typed.text.substring(0, end - 1) + typed.text.substring(end) != before) return typed
+    return TextFieldValue(typed.text.substring(0, end - 2) + "—" + typed.text.substring(end), TextRange(end - 1))
+}
 
 @Composable
 private fun Composer(
@@ -1909,6 +1956,7 @@ private fun Composer(
     onSend: (String, Array<TdApi.TextEntity>) -> Unit,
     onDeleteEditing: () -> Unit,
     onOpenChat: (Long) -> Unit = {},
+    onScrollBottom: () -> Unit = {},
 ) {
     var text by remember(chatId) {
         val draft = telegram.chats[chatId]?.draft.orEmpty()
@@ -1945,7 +1993,7 @@ private fun Composer(
     var linkFor by remember { mutableStateOf<TextRange?>(null) }
     var dateFor by remember { mutableStateOf<TextRange?>(null) }
     val setText = { typed: TextFieldValue ->
-        val value = if (settings.autoCapitalize.value) capitalizeTyped(text.text, typed) else typed
+        val value = emDash(text.text, if (settings.autoCapitalize.value) capitalizeTyped(text.text, typed) else typed)
         val shifted = shiftSpans(spans, text.text, value.text)
         val fenced = if (value.text.contains("```")) autoCodeBlock(value.text, shifted, value.selection.end) else null
         if (fenced != null) {
@@ -2100,6 +2148,10 @@ private fun Composer(
     val send = {
         if (editing != null && editing.photo == null && text.text.isBlank() && !hasAttachments) {
             onDeleteEditing()
+        } else if (!canSend && text.text.isNotEmpty() && editing == null) {
+            text = TextFieldValue("")
+            spans = emptyList()
+            onScrollBottom()
         } else if (canSend) {
             val raw = text.text
             val lead = raw.length - raw.trimStart().length

@@ -75,7 +75,7 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
 
     fun updateCorners() {
         val compose = window as? ComposeWindow ?: return
-        if (shaped || !WindowsCorners.apply(compose.windowHandle, round = !maximized)) shapeCorners(compose)
+        if (shaped || !WindowsCorners.apply(compose.windowHandle, round = !maximized && !fullscreen)) shapeCorners(compose)
     }
 
     private fun shapeCorners(frame: ComposeWindow) {
@@ -83,7 +83,7 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
         val device = frame.graphicsConfiguration?.device ?: return
         if (!device.isWindowTranslucencySupported(java.awt.GraphicsDevice.WindowTranslucency.PERPIXEL_TRANSPARENT)) return
         shaped = true
-        val round = !maximized && frame.extendedState and Frame.MAXIMIZED_BOTH == 0
+        val round = !maximized && !fullscreen && frame.extendedState and Frame.MAXIMIZED_BOTH == 0
         val radius = ShapeRadius
         runCatching {
             frame.shape = if (round) java.awt.geom.RoundRectangle2D.Double(0.0, 0.0, frame.width.toDouble(), frame.height.toDouble(), radius, radius) else null
@@ -149,8 +149,18 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
         }
     }
 
+    private val native: Boolean by lazy { (window as? ComposeWindow)?.isUndecorated == true && com.pixelgram.desktop.core.WindowsFrame.nativeAnimations(handle) }
+
+    fun prepare() {
+        if (AppPaths.isWindows) native
+    }
+
     fun minimize() {
         job?.cancel()
+        if (native) {
+            (window as? Frame)?.extendedState = Frame.ICONIFIED
+            return
+        }
         job = scope.launch {
             fade(1f, 0f)
             (window as? Frame)?.extendedState = Frame.ICONIFIED
@@ -160,9 +170,27 @@ class WindowChrome(private val window: Window, private val scope: CoroutineScope
     fun restored() {
         job?.cancel()
         job = scope.launch {
-            fade(window.opacity, 1f)
+            if (!native) fade(window.opacity, 1f)
             updateCorners()
         }
+    }
+
+    var fullscreen by mutableStateOf(false)
+        private set
+    private var windowedBounds: Rectangle? = null
+
+    fun toggleFullscreen() {
+        val frame = window as? Frame ?: return
+        if (fullscreen) {
+            fullscreen = false
+            windowedBounds?.let { bounds -> swap { window.bounds = bounds } }
+        } else {
+            windowedBounds = frame.bounds
+            fullscreen = true
+            val screen = window.graphicsConfiguration.bounds
+            swap { window.bounds = screen }
+        }
+        updateCorners()
     }
 
     private suspend fun fade(from: Float, to: Float, duration: Int = FadeMs) {
@@ -185,7 +213,10 @@ private const val SwapOpacity = 0.15f
 fun FrameWindowScope.rememberWindowChrome(): WindowChrome {
     val scope = rememberCoroutineScope()
     val chrome = remember { WindowChrome(window, scope) }
-    LaunchedEffect(window) { chrome.updateCorners() }
+    LaunchedEffect(window) {
+        chrome.prepare()
+        chrome.updateCorners()
+    }
     DisposableEffect(window) {
         val listener = object : WindowAdapter() {
             override fun windowDeiconified(e: WindowEvent) = chrome.restored()
@@ -314,7 +345,7 @@ private fun TitleButton(icon: ImageVector, label: String, danger: Boolean = fals
 
 @Composable
 fun FrameWindowScope.ResizeHandles(chrome: WindowChrome) {
-    if (chrome.maximized) return
+    if (chrome.maximized || chrome.fullscreen) return
     Box(Modifier.fillMaxSize()) {
         val window = window
         Handle(window, Alignment.TopCenter, Modifier.fillMaxWidth().height(Edge), Cursor.N_RESIZE_CURSOR, top = true)

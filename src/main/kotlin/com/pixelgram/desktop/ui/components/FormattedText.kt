@@ -203,11 +203,12 @@ fun FormattedText(
                         val change = event.changes.first()
                         val index = current.getOffsetForPosition(change.position)
                         val hit = hidden.firstOrNull { index in it }
-                        val onText = event.type != PointerEventType.Exit && current.getBoundingBox(index.coerceAtMost(annotated.length - 1).coerceAtLeast(0)).let {
+                        val laidOut = current.layoutInput.text.length
+                        val onText = event.type != PointerEventType.Exit && laidOut > 0 && current.getBoundingBox(index.coerceIn(0, laidOut - 1)).let {
                             change.position.y in it.top..it.bottom
                         }
                         HoverTarget.link = if (onText) {
-                            (annotated.getLinkAnnotations(index, index + 1).firstOrNull()?.item as? LinkAnnotation.Url)?.url
+                            (annotated.getLinkAnnotations(index.coerceIn(0, annotated.length), (index + 1).coerceAtMost(annotated.length)).firstOrNull()?.item as? LinkAnnotation.Url)?.url
                         } else {
                             null
                         }

@@ -1443,6 +1443,7 @@ class Telegram(
 
     private fun shouldNotify(message: TdApi.Message): Boolean {
         if (message.isOutgoing || settings.notificationsMuted.value) return false
+        if (isSavedMessages(message.chatId)) return false
         if (!synced || connection != ConnectionStatus.Ready) return false
         if (System.currentTimeMillis() / 1000 - message.date > MissedNotificationSeconds) return false
         if (message.chatId in openChats && windowFocused) return false

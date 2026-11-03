@@ -424,13 +424,29 @@ private fun ApplicationScope.PixelApp() {
                     }
                     .focusable()
                     .onKeyEvent { event ->
-                        event.type == KeyEventType.KeyDown && event.key == Key.Escape && EscapeStack.dispatch()
+                        when {
+                            event.type != KeyEventType.KeyDown -> false
+                            event.key == Key.F11 -> {
+                                if (ownTitleBar && !macNativeWindow) {
+                                    chrome.toggleFullscreen()
+                                } else {
+                                    windowState.placement = if (windowState.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) {
+                                        androidx.compose.ui.window.WindowPlacement.Floating
+                                    } else {
+                                        androidx.compose.ui.window.WindowPlacement.Fullscreen
+                                    }
+                                }
+                                true
+                            }
+                            event.key == Key.Escape -> EscapeStack.dispatch()
+                            else -> false
+                        }
                     },
             ) {
                 Column {
                     when {
                         macNativeWindow -> MacTitleBar()
-                        ownTitleBar -> TitleBar(chrome, onClose = close)
+                        ownTitleBar && !chrome.fullscreen -> TitleBar(chrome, onClose = close)
                     }
                     key(accounts.active) {
                         com.pixelgram.desktop.ui.main.ModalBlurHost { App(accounts, accounts.active, settings) }

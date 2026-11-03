@@ -109,8 +109,8 @@ fun PinnedBar(pins: List<UiMessage>, index: Int, onClick: () -> Unit, modifier: 
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(start = 8.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
         ) {
             val segments = pins.size.coerceAtMost(PinSegmentsShown)
             val start = (index - segments / 2).coerceIn(0, pins.size - segments)
@@ -131,11 +131,20 @@ fun PinnedBar(pins: List<UiMessage>, index: Int, onClick: () -> Unit, modifier: 
             }
             Icon(Icons.Outlined.PushPin, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
             Column(Modifier.weight(1f)) {
-                Text(
-                    if (pins.size > 1) "Pinned message #${pins.size - index}" else "Pinned message",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = colors.primary,
-                )
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        if (pins.size > 1) "${com.pixelgram.desktop.core.tr("Pinned message")} ${pins.size - index}" else "Pinned message",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = colors.primary,
+                    )
+                    if (pins.size > 1) {
+                        Text(
+                            " / ${pins.size}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = colors.onSurfaceVariant.copy(alpha = 0.7f),
+                        )
+                    }
+                }
                 AnimatedContent(current.key, transitionSpec = { fadeIn() togetherWith fadeOut() }) { _ ->
                     EmojiText(
                         (current.text.takeIf { it.isNotBlank() } ?: contentText(current.content)).replace('\n', ' '),

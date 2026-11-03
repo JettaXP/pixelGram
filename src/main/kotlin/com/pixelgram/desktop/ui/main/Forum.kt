@@ -98,7 +98,7 @@ fun ForumSidebar(chat: ChatState, telegram: Telegram, modifier: Modifier = Modif
     }
     val selected = telegram.selectedTopic(chat.id)
     val canCreate = telegram.can(chat) { it.canManageTopics } || chat.permissions?.canCreateTopics == true
-    Column(modifier.width(SidebarWidth).padding(start = 12.dp, top = 12.dp, bottom = 12.dp)) {
+    Column(modifier.width(SidebarWidth).padding(start = 4.dp, top = 12.dp, bottom = 12.dp)) {
         if (onClose != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

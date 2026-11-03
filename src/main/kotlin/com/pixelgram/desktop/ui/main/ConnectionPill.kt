@@ -13,6 +13,7 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
@@ -41,7 +42,7 @@ fun ConnectionPill(status: ConnectionStatus, modifier: Modifier = Modifier) {
         visible = status != ConnectionStatus.Ready,
         enter = scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(),
         exit = scaleOut() + fadeOut(),
-        modifier = modifier,
+        modifier = modifier.wrapContentWidth(Alignment.Start, unbounded = true),
     ) {
         Surface(
             shape = CircleShape,
@@ -61,6 +62,7 @@ fun ConnectionPill(status: ConnectionStatus, modifier: Modifier = Modifier) {
                         label,
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(start = 6.dp, end = 12.dp),
                     )
                 }
