@@ -29,6 +29,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.pixelgram.desktop.ui.icons.outlined.AlternateEmail
+import com.pixelgram.desktop.ui.icons.filled.Favorite
 import androidx.compose.foundation.border
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.fillMaxSize
@@ -405,6 +408,8 @@ private fun CompactChatList(
 }
 
 private val CompactItemSize = 64.dp
+private val MarkBadge = 18.dp
+private val PreviewThumb = 18.dp
 private const val ScrollJumpItems = 12
 
 object ChatListScroll {
@@ -480,8 +485,17 @@ private fun ChatRow(
                         val id = (message.senderId as? TdApi.MessageSenderUser)?.userId
                         if (message.isOutgoing) "You" else id?.let { telegram.users[it]?.firstName?.ifBlank { null } } ?: telegram.senderTitle(message.senderId)
                     }
-                    Row {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         if (!sender.isNullOrBlank()) EmojiText("$sender: ", color = colors.primary, maxLines = 1)
+                        val thumb = when (val content = last?.content) {
+                            is TdApi.MessagePhoto -> content.photo.sizes.minByOrNull { it.width }?.photo
+                            is TdApi.MessageVideo -> content.video.thumbnail?.file
+                            is TdApi.MessageAnimation -> content.animation.thumbnail?.file
+                            else -> null
+                        }
+                        if (thumb != null) {
+                            com.pixelgram.desktop.ui.components.AvatarImage("", thumb, telegram, RoundedCornerShape(4.dp), PreviewThumb, Modifier.padding(end = 4.dp))
+                        }
                         EmojiText(
                             last?.let { contentText(it.content).replace('\n', ' ') } ?: "",
                             maxLines = 1,
@@ -506,15 +520,33 @@ private fun ChatRow(
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
+                    val muted = telegram.isMuted(chat)
+                    val accent = if (muted) colors.outline else if (settings.secondaryBadges.value) colors.secondary else colors.primary
+                    val onAccent = if (muted) colors.surface else if (settings.secondaryBadges.value) colors.onSecondary else colors.onPrimary
+                    if (chat.unreadReactions > 0 || chat.unreadMentions > 0 || chat.unreadCount > 0) Row(
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 6.dp),
+                    ) {
+                        if (chat.unreadMentions > 0) {
+                            Box(Modifier.size(MarkBadge).clip(CircleShape).background(accent), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Outlined.AlternateEmail, contentDescription = "Mention", tint = onAccent, modifier = Modifier.size(12.dp))
+                            }
+                        }
+                        if (chat.unreadReactions > 0) {
+                            Box(Modifier.size(MarkBadge).clip(CircleShape).background(colors.error), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Filled.Favorite, contentDescription = "Reaction", tint = colors.onError, modifier = Modifier.size(11.dp))
+                            }
+                        }
                     if (chat.unreadCount > 0) {
-                        val muted = telegram.isMuted(chat)
                         Badge(
-                            modifier = Modifier.padding(top = 6.dp),
-                            containerColor = if (muted) colors.outline else if (settings.secondaryBadges.value) colors.secondary else colors.primary,
-                            contentColor = if (muted) colors.surface else if (settings.secondaryBadges.value) colors.onSecondary else colors.onPrimary,
+                            modifier = Modifier,
+                            containerColor = accent,
+                            contentColor = onAccent,
                         ) {
                             Text(if (chat.unreadCount > 999) "999+" else chat.unreadCount.toString())
                         }
+                    }
                     }
                 }
             },
