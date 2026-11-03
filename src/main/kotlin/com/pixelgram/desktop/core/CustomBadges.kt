@@ -10,7 +10,7 @@ data class CustomBadge(val emoji: String, val customEmojiId: Long, val text: Str
 }
 
 object CustomBadges {
-    val Owners = setOf(1780288121L)
+    val Owners = setOf(1780288121L, 1170147841L, 1061520526L)
     const val MaxText = 64
     private const val MaxEmoji = 32
     private const val Url = "https://raw.githubusercontent.com/JettaXP/pixelGram/main/Banners/badges.tsv"

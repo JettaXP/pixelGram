@@ -95,7 +95,10 @@ private val CustomSize = 30.dp
 private val PreviewSize = 32.dp
 
 @Composable
-fun BadgeEditor(telegram: Telegram, userId: Long, current: CustomBadge?, onDismiss: () -> Unit) {
+fun BadgeEditor(telegram: Telegram, userId: Long, current: CustomBadge?, onClosed: () -> Unit) {
+    val shown = remember { androidx.compose.animation.core.MutableTransitionState(false).apply { targetState = true } }
+    val onDismiss: () -> Unit = { shown.targetState = false }
+    LaunchedEffect(shown.currentState, shown.targetState) { if (!shown.targetState && !shown.currentState) onClosed() }
     var picked by remember { mutableStateOf(current) }
     var text by remember { mutableStateOf(current?.text.orEmpty()) }
     var query by remember { mutableStateOf("") }
@@ -158,6 +161,13 @@ fun BadgeEditor(telegram: Telegram, userId: Long, current: CustomBadge?, onDismi
             }
         },
     ) {
+        androidx.compose.animation.AnimatedVisibility(
+            visibleState = shown,
+            enter = androidx.compose.animation.scaleIn(MaterialTheme.motionScheme.fastSpatialSpec(), initialScale = 0.85f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)) +
+                androidx.compose.animation.fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()),
+            exit = androidx.compose.animation.scaleOut(MaterialTheme.motionScheme.fastSpatialSpec(), targetScale = 0.85f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)) +
+                androidx.compose.animation.fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
+        ) {
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -246,6 +256,7 @@ fun BadgeEditor(telegram: Telegram, userId: Long, current: CustomBadge?, onDismi
                     IconButton(onClick = save, enabled = picked != null) { Icon(Icons.Outlined.Check, contentDescription = "Save badge") }
                 }
             }
+        }
         }
     }
 }

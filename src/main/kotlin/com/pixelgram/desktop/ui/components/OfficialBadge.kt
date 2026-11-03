@@ -85,6 +85,7 @@ fun OfficialBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
 enum class UserBadge(val userId: Long, val notice: String) {
     MainDeveloper(1780288121L, "Main developer of pixelGram"),
     Developer(1061520526L, "Developer of pixelGram"),
+    SecondDeveloper(1170147841L, "Developer of pixelGram"),
     Sponsor(1602207467L, "Main sponsor of pixelGram"),
     Tester(7820526891L, "pixelGram tester, hunts bugs in the client"),
     SecondTester(1635698970L, "pixelGram tester, hunts bugs in the client"),
@@ -93,7 +94,7 @@ enum class UserBadge(val userId: Long, val notice: String) {
     val icon: ImageVector
         get() = when (this) {
             MainDeveloper -> CodeSlash
-            Developer -> com.pixelgram.desktop.ui.icons.Icons.Filled.Build
+            Developer, SecondDeveloper -> com.pixelgram.desktop.ui.icons.Icons.Filled.Build
             Sponsor -> com.pixelgram.desktop.ui.icons.Icons.Filled.AttachMoney
             Tester, SecondTester -> BugNet
             Menorah -> MenorahIcon
