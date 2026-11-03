@@ -987,30 +987,42 @@ private fun ColorsSection(settings: AppSettings) {
                 }
             },
         )
-        Description(
-            "Add these lines to ~/.config/matugen/config.toml, then run matugen. " +
-                "pixelGram applies new colors automatically."
-        )
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                Matugen.configSnippet,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(12.dp),
-            )
+        val configured by androidx.compose.runtime.produceState(Matugen.configured()) {
+            while (true) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Matugen.configured() }
+                kotlinx.coroutines.delay(ConfigCheckMs)
+            }
         }
-        OutlinedButton(onClick = {
-            Matugen.exportTemplate()
-            Toolkit.getDefaultToolkit().systemClipboard
-                .setContents(StringSelection(Matugen.configSnippet), null)
-        }) {
-            Text("Copy config")
+        Reveal(!configured) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Description(
+                    "Add these lines to ~/.config/matugen/config.toml, then run matugen. " +
+                        "pixelGram applies new colors automatically."
+                )
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        Matugen.configSnippet,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(12.dp),
+                    )
+                }
+                OutlinedButton(onClick = {
+                    Matugen.exportTemplate()
+                    Toolkit.getDefaultToolkit().systemClipboard
+                        .setContents(StringSelection(Matugen.configSnippet), null)
+                }) {
+                    Text("Copy config")
+                }
+            }
         }
     }
 }
+
+private const val ConfigCheckMs = 3000L
 
 @Composable
 private fun NavigationSection(settings: AppSettings) {

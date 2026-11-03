@@ -25,6 +25,14 @@ object Matugen {
             |output_path = '${outputFile.absolutePath}'
             """.trimMargin()
 
+    private val configFile: File
+        get() = File(System.getenv("XDG_CONFIG_HOME")?.takeIf { it.isNotBlank() } ?: (System.getProperty("user.home") + "/.config"), "matugen/config.toml")
+
+    fun configured(): Boolean = runCatching {
+        val text = configFile.readText()
+        text.contains("[templates.pixelgram]") || text.contains(outputFile.absolutePath)
+    }.getOrDefault(false)
+
     fun exportTemplate() {
         val content = javaClass.getResourceAsStream("/matugen/pixelgram.json")
             ?.use { it.readBytes() } ?: return
@@ -49,11 +57,13 @@ object Matugen {
 
     suspend fun poll(onChange: (ColorScheme?) -> Unit) {
         exportTemplate()
-        var lastModified = -1L
+        var lastText: String? = null
+        var first = true
         while (true) {
-            val modified = withContext(Dispatchers.IO) { outputFile.lastModified() }
-            if (modified != lastModified) {
-                lastModified = modified
+            val text = withContext(Dispatchers.IO) { runCatching { outputFile.readText() }.getOrNull() }
+            if (first || text != lastText) {
+                first = false
+                lastText = text
                 onChange(withContext(Dispatchers.IO) { read() })
             }
             delay(PollIntervalMs)
