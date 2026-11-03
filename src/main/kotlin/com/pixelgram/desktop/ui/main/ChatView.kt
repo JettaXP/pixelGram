@@ -140,6 +140,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -748,10 +749,13 @@ private fun ChatViewContent(
                 },
         ) {
             ChatWallpaper(chat, telegram, settings, com.pixelgram.desktop.ui.theme.isDarkTheme(settings))
+            var listWidth by remember { mutableStateOf(0) }
+            val wide = with(androidx.compose.ui.platform.LocalDensity.current) { listWidth.toDp() } >= WideChatWidth
+            androidx.compose.runtime.CompositionLocalProvider(LocalWideChat provides wide) {
             LazyColumn(
                 state = listState,
                 reverseLayout = true,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().onSizeChanged { listWidth = it.width },
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom),
             ) {
@@ -906,6 +910,7 @@ private fun ChatViewContent(
                         if (index == 0) TypingBubble(chat, telegram)
                     }
                 }
+            }
             }
             profileChat?.let { ChatInfoDialog(it, telegram, settings, onOpenChat) { profileChat = null } }
             if (savedHub) SavedMessagesDialog(chat, telegram, settings, onOpenChat) { savedHub = false }
@@ -1318,6 +1323,7 @@ fun MessageBubble(
     }
     val colors = MaterialTheme.colorScheme
     val outgoing = message.isOutgoing
+    val endSide = outgoing && !LocalWideChat.current
     val grouped = message.album.takeIf { it.size > 1 && telegram != null }
     val album = grouped?.takeIf { members -> members.all { it.content is TdApi.MessagePhoto || isMediaContent(it.content) } }
     val files = grouped?.takeIf { album == null }
@@ -1326,13 +1332,13 @@ fun MessageBubble(
     val block = grouped == null && telegram != null && isRich(content) && !media
     Box(
         modifier = modifier.fillMaxWidth(),
-        contentAlignment = if (outgoing) Alignment.CenterEnd else Alignment.CenterStart,
+        contentAlignment = if (endSide) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
         Surface(
             shape = bubbleShape(
                 settings.bubbleRadius.value,
                 settings.bubbleTailRadius.value,
-                outgoing,
+                endSide,
             ),
             color = if (outgoing) colors.primaryContainer else colors.surfaceContainerHigh,
             contentColor = if (outgoing) colors.onPrimaryContainer else colors.onSurface,
@@ -1580,9 +1586,10 @@ private fun BareMessage(
 ) {
     remember(message.chatId, message.id) { ReactionMemory.note(message) }
     if (message.reactions.isEmpty()) ReactionMemory.forget(message.chatId to message.id)
-    Box(modifier.fillMaxWidth(), contentAlignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart) {
+    val endSide = message.isOutgoing && !LocalWideChat.current
+    Box(modifier.fillMaxWidth(), contentAlignment = if (endSide) Alignment.CenterEnd else Alignment.CenterStart) {
         Column(
-            horizontalAlignment = if (message.isOutgoing) Alignment.End else Alignment.Start,
+            horizontalAlignment = if (endSide) Alignment.End else Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             if (quote != null) Box(Modifier.widthIn(min = QuoteMinWidth, max = 280.dp)) { quote() }
@@ -1925,6 +1932,9 @@ private const val InlineDelayMs = 400L
 private const val GifTab = 2
 private const val CommandLimit = 30
 private const val JumpCloserItems = 20
+
+val LocalWideChat = androidx.compose.runtime.staticCompositionLocalOf { false }
+private val WideChatWidth = 900.dp
 
 private suspend fun revealMessage(listState: LazyListState, index: Int) {
     fun fit(): Float? {
