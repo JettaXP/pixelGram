@@ -33,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,7 +48,10 @@ import com.pixelgram.desktop.ui.theme.EmojiText
 @Composable
 fun ForwardDialog(telegram: Telegram, settings: AppSettings, onDismiss: () -> Unit, onPick: (Long) -> Unit) {
     var query by remember { mutableStateOf("") }
-    val chats = telegram.chatList(ChatListKey.Main).filter {
+    val tabs = FolderLayout.tabs(telegram, settings)
+    var folder by remember { mutableStateOf(tabs.firstOrNull()?.key ?: ChatListKey.Main) }
+    LaunchedEffect(folder) { telegram.loadChats(folder) }
+    val chats = telegram.chatList(if (query.isBlank()) folder else ChatListKey.Main).filter {
         query.isBlank() || telegram.chatTitle(it).contains(query.trim(), ignoreCase = true)
     }
     BasicAlertDialog(onDismissRequest = onDismiss) {
@@ -73,6 +78,22 @@ fun ForwardDialog(telegram: Telegram, settings: AppSettings, onDismiss: () -> Un
                     ),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 )
+                if (tabs.size > 1 && query.isBlank()) {
+                    androidx.compose.foundation.lazy.LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(tabs.size, key = { tabs[it].key.toString() }) { i ->
+                            val tab = tabs[i]
+                            androidx.compose.material3.FilterChip(
+                                selected = folder == tab.key,
+                                onClick = { folder = tab.key },
+                                label = { EmojiText(tab.title, maxLines = 1) },
+                                leadingIcon = { Icon(folderIcon(tab.icon, folder == tab.key), contentDescription = null, modifier = Modifier.size(18.dp)) },
+                            )
+                        }
+                    }
+                }
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
