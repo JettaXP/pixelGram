@@ -81,6 +81,9 @@ import com.pixelgram.desktop.ui.icons.outlined.Edit
 import com.pixelgram.desktop.telegram.MessageStatus
 import com.pixelgram.desktop.ui.icons.outlined.ErrorOutline
 import com.pixelgram.desktop.ui.icons.outlined.Schedule
+import com.pixelgram.desktop.ui.icons.outlined.NotificationsOff
+import com.pixelgram.desktop.ui.icons.outlined.Alarm
+import com.pixelgram.desktop.ui.icons.outlined.CalendarMonth
 import com.pixelgram.desktop.ui.icons.filled.DoneAll
 import com.pixelgram.desktop.ui.icons.filled.Done
 import androidx.compose.animation.Crossfade
@@ -1095,6 +1098,10 @@ private fun ChatViewContent(
             onOpenChat = onOpenChat,
             onDeleteEditing = { editing?.let { deleting = it } },
             onScrollBottom = { telegram.returnToLatest(chat.id) { scope.launch { listState.scrollToItem(0) } } },
+            onSendWith = { how ->
+                sendWith = how
+                sendRequested = true
+            },
             onSend = { text, entities ->
                 val edited = editing
                 val replyId = replyTo?.id ?: 0L
@@ -1137,7 +1144,8 @@ private fun ChatViewContent(
                             telegram.sendText(chatId, output, replyId, quotes)
                         }.apply { isDaemon = true }.start()
                     } else {
-                        telegram.sendText(chat.id, text, replyId, entities)
+                        val how = sendWith ?: AttachmentSend()
+                        telegram.sendText(chat.id, text, replyId, entities, how.silent, how.schedule)
                     }
                 }
                 sendWith = null
@@ -2028,6 +2036,7 @@ private fun Composer(
     onDeleteEditing: () -> Unit,
     onOpenChat: (Long) -> Unit = {},
     onScrollBottom: () -> Unit = {},
+    onSendWith: ((AttachmentSend) -> Unit)? = null,
 ) {
     var text by remember(chatId) {
         val draft = telegram.chats[chatId]?.draft.orEmpty()
@@ -2559,6 +2568,17 @@ private fun Composer(
                 Icon(if (keyboardOpen) Icons.Outlined.KeyboardHide else Icons.Outlined.Keyboard, contentDescription = "Bot keyboard")
             }
         }
+        val composerChat = telegram.chats[chatId]
+        if (composerChat?.hasScheduled == true && editing == null) {
+            var scheduledOpen by remember(chatId) { mutableStateOf(false) }
+            IconButton(onClick = { scheduledOpen = true }, modifier = Modifier.focusProperties { canFocus = false }) {
+                Box {
+                    Icon(Icons.Outlined.Schedule, contentDescription = "Scheduled messages")
+                    Box(Modifier.align(Alignment.TopEnd).size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.error))
+                }
+            }
+            if (scheduledOpen) ScheduledDialog(composerChat, telegram) { scheduledOpen = false }
+        }
         Box {
             var dismissedAt by remember { mutableStateOf(0L) }
             IconToggleButton(
@@ -2653,7 +2673,49 @@ private fun Composer(
                         if (mic) {
                             MicButton(voice, onRelease = releaseVoice)
                         } else {
-                            FilledIconButton(onClick = send, enabled = canSend, shape = MaterialShapes.Cookie12Sided.toShape()) {
+                            var sendMenu by remember { mutableStateOf(false) }
+                            var scheduleFor by remember { mutableStateOf(false) }
+                            if (scheduleFor && onSendWith != null) {
+                                ScheduleDialog(onDismiss = { scheduleFor = false }) { date ->
+                                    scheduleFor = false
+                                    onSendWith(AttachmentSend(schedule = TdApi.MessageSchedulingStateSendAtDate(date, 0)))
+                                }
+                            }
+                            if (sendMenu && onSendWith != null) {
+                                val saved = telegram.isSavedMessages(chatId)
+                                val person = composerChat?.let { it.privateUserId != 0L && !saved && !telegram.isBot(it) } == true
+                                androidx.compose.material3.DropdownMenu(expanded = true, onDismissRequest = { sendMenu = false }, shape = RoundedCornerShape(16.dp)) {
+                                    val item = @Composable { label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, action: () -> Unit ->
+                                        androidx.compose.material3.DropdownMenuItem(
+                                            text = { Text(label) },
+                                            leadingIcon = { Icon(icon, contentDescription = null) },
+                                            onClick = {
+                                                sendMenu = false
+                                                action()
+                                            },
+                                        )
+                                    }
+                                    if (!saved) item("Send without sound", Icons.Outlined.NotificationsOff) { onSendWith(AttachmentSend(silent = true)) }
+                                    item(if (saved) "Set a reminder" else "Schedule message", Icons.Outlined.CalendarMonth) { scheduleFor = true }
+                                    if (person) item("Send when online", Icons.Outlined.Alarm) { onSendWith(AttachmentSend(schedule = TdApi.MessageSchedulingStateSendWhenOnline())) }
+                                }
+                            }
+                            FilledIconButton(
+                                onClick = send,
+                                enabled = canSend,
+                                shape = MaterialShapes.Cookie12Sided.toShape(),
+                                modifier = Modifier.pointerInput(canSend) {
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                            if (canSend && editing == null && event.type == androidx.compose.ui.input.pointer.PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                                                event.changes.first().consume()
+                                                sendMenu = true
+                                            }
+                                        }
+                                    }
+                                },
+                            ) {
                                 Crossfade(editing != null) { isEditing ->
                                     if (isEditing) {
                                         Icon(Icons.Filled.Check, contentDescription = "Save")

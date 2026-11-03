@@ -106,6 +106,7 @@ class ChatState(val id: Long) {
     var autoDelete by mutableStateOf(0)
     var secretChatId = 0
     var markedUnread by mutableStateOf(false)
+    var hasScheduled by mutableStateOf(false)
     var lastReadOutbox by mutableStateOf(0L)
     var isGroup by mutableStateOf(false)
     var privateUserId = 0L
@@ -177,6 +178,7 @@ data class UiMessage(
     val albumId: Long = 0,
     val comments: Int = -1,
     val commenters: List<TdApi.MessageSender> = emptyList(),
+    val scheduledAt: Int = 0,
     val senderTag: String = "",
 )
 
@@ -1071,6 +1073,7 @@ class Telegram(
                     if (update.messageId !in list) list.add(update.messageId)
                 }
             }
+            is TdApi.UpdateChatHasScheduledMessages -> chats[update.chatId]?.hasScheduled = update.hasScheduledMessages
             is TdApi.UpdateChatIsMarkedAsUnread -> chats[update.chatId]?.let { chat ->
                 chat.markedUnread = update.isMarkedAsUnread
                 chatListsChanged()
@@ -1352,6 +1355,7 @@ class Telegram(
             protectedContent = chat.hasProtectedContent
             autoDelete = chat.messageAutoDeleteTime
             markedUnread = chat.isMarkedAsUnread
+            hasScheduled = chat.hasScheduledMessages
             lastReadOutbox = chat.lastReadOutboxMessageId
             isGroup = chat.type is TdApi.ChatTypeBasicGroup || chat.type is TdApi.ChatTypeSupergroup
             privateUserId = (chat.type as? TdApi.ChatTypePrivate)?.userId ?: (chat.type as? TdApi.ChatTypeSecret)?.userId ?: 0L
@@ -2426,12 +2430,43 @@ class Telegram(
         })
     }
 
-    fun sendText(chatId: Long, text: String, replyToId: Long = 0, entities: Array<TdApi.TextEntity> = emptyArray()) {
+    fun scheduledMessages(chatId: Long, onResult: (List<UiMessage>) -> Unit) {
+        send(TdApi.GetChatScheduledMessages(chatId)) { result ->
+            onResult((result as? TdApi.Messages)?.messages?.filterNotNull().orEmpty().map { message ->
+                message.toUi().copy(scheduledAt = (message.schedulingState as? TdApi.MessageSchedulingStateSendAtDate)?.sendDate ?: -1)
+            })
+        }
+    }
+
+    fun reschedule(chatId: Long, messageId: Long, state: TdApi.MessageSchedulingState?, done: () -> Unit) {
+        send(TdApi.EditMessageSchedulingState(chatId, messageId, state)) { done() }
+    }
+
+    fun deleteScheduled(chatId: Long, ids: LongArray, done: () -> Unit) {
+        send(TdApi.DeleteMessages(chatId, ids, true)) { done() }
+    }
+
+    fun editScheduledText(chatId: Long, messageId: Long, text: String, done: () -> Unit) {
+        send(TdApi.EditMessageText(chatId, messageId, null, TdApi.InputMessageText().apply { this.text = TdApi.FormattedText(text, emptyArray()) })) { done() }
+    }
+
+    fun sendText(
+        chatId: Long,
+        text: String,
+        replyToId: Long = 0,
+        entities: Array<TdApi.TextEntity> = emptyArray(),
+        silent: Boolean = false,
+        schedule: TdApi.MessageSchedulingState? = null,
+    ) {
         if (text.isBlank()) return
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
             topicId = topicOf(chatId)
             replyTo = replyInput(replyToId)
+            options = TdApi.MessageSendOptions().apply {
+                disableNotification = silent
+                schedulingState = schedule
+            }
             inputMessageContent = TdApi.InputMessageText().apply {
                 this.text = TdApi.FormattedText(text, entities)
             }
