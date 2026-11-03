@@ -1063,7 +1063,13 @@ class Telegram(
             is TdApi.UpdateChatHasProtectedContent -> chats[update.chatId]?.protectedContent = update.hasProtectedContent
             is TdApi.UpdateChatPendingJoinRequests -> chats[update.chatId]?.joinRequests = update.pendingJoinRequests?.totalCount ?: 0
             is TdApi.UpdateChatUnreadReactionCount -> chats[update.chatId]?.unreadReactions = update.unreadReactionCount
-            is TdApi.UpdateMessageUnreadReactions -> chats[update.chatId]?.unreadReactions = update.unreadReactionCount
+            is TdApi.UpdateMessageUnreadReactions -> {
+                chats[update.chatId]?.unreadReactions = update.unreadReactionCount
+                if (update.chatId in openChats && update.unreadReactions?.isNotEmpty() == true) {
+                    val list = liveReactions.getOrPut(update.chatId) { androidx.compose.runtime.mutableStateListOf() }
+                    if (update.messageId !in list) list.add(update.messageId)
+                }
+            }
             is TdApi.UpdateChatIsMarkedAsUnread -> chats[update.chatId]?.let { chat ->
                 chat.markedUnread = update.isMarkedAsUnread
                 chatListsChanged()
@@ -2115,6 +2121,7 @@ class Telegram(
         val left = (openChats[chatId] ?: 1) - 1
         if (left > 0) openChats[chatId] = left else openChats.remove(chatId)
         if (left <= 0 && detached.remove(chatId) == true) resetHistory(chatId)
+        if (left <= 0) liveReactions.remove(chatId)
         send(TdApi.CloseChat().apply { this.chatId = chatId })
     }
 
@@ -2258,7 +2265,12 @@ class Telegram(
         chatListsChanged()
     }
 
+    val liveReactions = androidx.compose.runtime.snapshots.SnapshotStateMap<Long, androidx.compose.runtime.snapshots.SnapshotStateList<Long>>()
+
+    fun takeLiveReaction(chatId: Long): Long? = liveReactions[chatId]?.removeLastOrNull()
+
     fun readAllReactions(chat: ChatState) {
+        liveReactions.remove(chat.id)
         send(TdApi.ReadAllChatReactions(chat.id))
         chat.unreadReactions = 0
     }

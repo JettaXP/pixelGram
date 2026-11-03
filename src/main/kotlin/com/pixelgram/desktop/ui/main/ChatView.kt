@@ -923,11 +923,15 @@ private fun ChatViewContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
             ) {
+                val live = telegram.liveReactions[chat.id]?.size ?: 0
                 UnreadJumpButton(
-                    chat.unreadReactions,
+                    maxOf(chat.unreadReactions, live),
                     com.pixelgram.desktop.ui.icons.Icons.Outlined.FavoriteBorder,
                     "Next unread reaction",
-                    onJump = { telegram.nextUnread(chat.id, mentions = false) { id -> actions.onQuoteClick(id) } },
+                    onJump = {
+                        val local = telegram.takeLiveReaction(chat.id)
+                        if (local != null) actions.onQuoteClick(local) else telegram.nextUnread(chat.id, mentions = false) { id -> actions.onQuoteClick(id) }
+                    },
                     onReadAll = { telegram.readAllReactions(chat) },
                 )
                 UnreadJumpButton(
