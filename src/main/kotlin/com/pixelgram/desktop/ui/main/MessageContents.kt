@@ -905,6 +905,10 @@ private fun PollContent(message: UiMessage, content: TdApi.MessagePoll, telegram
     val results = poll.isClosed || voted
     val multiple = poll.allowsMultipleAnswers && poll.type !is TdApi.PollTypeQuiz
     val picked = remember(poll.id, voted) { androidx.compose.runtime.mutableStateListOf<Int>() }
+    val startedOpen = remember(poll.id) { !results }
+    val freshVote = startedOpen && results
+    var showVoters by remember(poll.id) { mutableStateOf(false) }
+    if (showVoters) PollVotersDialog(message.chatId, message.id, poll, telegram) { showVoters = false }
     Column(Modifier.widthIn(min = 260.dp, max = 360.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         EmojiText(poll.question.text, style = MaterialTheme.typography.titleSmall)
         content.description?.text?.takeIf { it.isNotBlank() }?.let { EmojiText(it, style = MaterialTheme.typography.bodyMedium) }
@@ -934,11 +938,16 @@ private fun PollContent(message: UiMessage, content: TdApi.MessagePoll, telegram
                             Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = scheme.primary, modifier = Modifier.size(18.dp))
                         }
                     }
+                    val target = option.votePercentage / 100f
+                    val fill = remember(poll.id, index) { androidx.compose.animation.core.Animatable(if (freshVote) 0f else target) }
+                    LaunchedEffect(target) {
+                        fill.animateTo(target, androidx.compose.animation.core.tween(VoteWaveMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                    }
                     LinearWavyProgressIndicator(
-                        progress = { option.votePercentage / 100f },
+                        progress = { fill.value },
                         color = scheme.primary,
                         trackColor = scheme.primary.copy(alpha = 0.2f),
-                        waveSpeed = 0.dp,
+                        waveSpeed = if (fill.isRunning) VoteWaveSpeed else 0.dp,
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     )
                 }
@@ -973,6 +982,9 @@ private fun PollContent(message: UiMessage, content: TdApi.MessagePoll, telegram
                 color = LocalContentColorAlpha(),
                 modifier = Modifier.weight(1f),
             )
+            if (results && !poll.isAnonymous && poll.totalVoterCount > 0) {
+                TextButton(onClick = { showVoters = true }) { Text("${com.pixelgram.desktop.core.tr("View votes")} (${poll.totalVoterCount})") }
+            }
             when {
                 !results && multiple -> TextButton(
                     onClick = { telegram.votePoll(message.chatId, message.id, picked.sorted().toIntArray()) },
@@ -985,6 +997,9 @@ private fun PollContent(message: UiMessage, content: TdApi.MessagePoll, telegram
         }
     }
 }
+
+private const val VoteWaveMs = 700
+private val VoteWaveSpeed = 40.dp
 
 val MediaMaxWidth = 420.dp
 private val MediaMaxHeight = 520.dp
