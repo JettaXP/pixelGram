@@ -95,10 +95,10 @@ private fun dayLabel(unixSeconds: Int): String {
     return date.format(DateTimeFormatter.ofPattern(pattern, Locale.forLanguageTag(code)))
 }
 
-private val WaveHeight = 10.dp
-private val WaveAmplitude = 2.dp
-private val WaveLength = 14.dp
-private val WaveStroke = 1.5.dp
+private val WaveHeight = 12.dp
+private val WaveAmplitude = 2.5.dp
+private val WaveLength = 16.dp
+private val WaveStroke = 3.dp
 
 @Composable
 fun FloatingDate(

@@ -1301,12 +1301,18 @@ fun MessageBubble(
     remember(message.chatId, message.id) { ReactionMemory.note(message) }
     if (message.reactions.isEmpty()) ReactionMemory.forget(message.chatId to message.id)
     if (message.service) {
-        ServiceMessage(
-            listOfNotNull(senderName?.takeIf { it.isNotBlank() }, message.text).joinToString(" · "),
-            message.date,
-            seconds,
-            modifier,
-        )
+        val serviceText = listOfNotNull(senderName?.takeIf { it.isNotBlank() }, message.text).joinToString(" · ")
+        val newPhoto = (message.content as? TdApi.MessageChatChangePhoto)?.photo
+        if (newPhoto != null && telegram != null) {
+            Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                ServiceMessage(serviceText, message.date, seconds, Modifier)
+                val small = newPhoto.sizes.minByOrNull { it.width }?.photo
+                val big = newPhoto.sizes.maxByOrNull { it.width }?.photo
+                com.pixelgram.desktop.ui.components.AvatarImage(serviceText, small, telegram, CircleShape, ServicePhotoSize, Modifier.padding(vertical = 4.dp), full = big)
+            }
+        } else {
+            ServiceMessage(serviceText, message.date, seconds, modifier)
+        }
         return
     }
     val content = message.content
@@ -1789,6 +1795,7 @@ private const val PanelScaleFrom = 0.9f
 private const val SwapScaleFrom = 0.6f
 private val SendSlot = 40.dp
 private val SendButtonSlot = 48.dp
+private val ServicePhotoSize = 120.dp
 object VoiceButton {
     var preferred by mutableStateOf(true)
 }

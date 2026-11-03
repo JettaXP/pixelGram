@@ -3352,7 +3352,7 @@ fun isService(content: TdApi.MessageContent?): Boolean = when (content) {
     is TdApi.MessagePinMessage, is TdApi.MessageScreenshotTaken, is TdApi.MessageContactRegistered,
     is TdApi.MessageChatUpgradeTo, is TdApi.MessageChatUpgradeFrom, is TdApi.MessageCustomServiceAction,
     is TdApi.MessageChatSetMessageAutoDeleteTime, is TdApi.MessageForumTopicCreated,
-    is TdApi.MessageVideoChatStarted, is TdApi.MessageVideoChatEnded -> true
+    is TdApi.MessageVideoChatStarted, is TdApi.MessageVideoChatEnded, is TdApi.MessageChatSetTheme -> true
     else -> false
 }
 
@@ -3384,6 +3384,11 @@ fun contentText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageBasicGroupChatCreate -> "Created the group «${content.title}»"
     is TdApi.MessageChatChangeTitle -> "Changed the name to «${content.title}»"
     is TdApi.MessageChatChangePhoto -> "Updated the photo"
+    is TdApi.MessageChatSetTheme -> when (val theme = content.theme) {
+        is TdApi.ChatThemeEmoji -> "Changed the chat theme to ${theme.name}"
+        is TdApi.ChatThemeGift -> "Changed the chat theme"
+        else -> "Disabled the chat theme"
+    }
     is TdApi.MessageChatDeletePhoto -> "Removed the photo"
     is TdApi.MessageChatAddMembers -> "Added new members"
     is TdApi.MessageChatJoinByLink -> "Joined via invite link"
