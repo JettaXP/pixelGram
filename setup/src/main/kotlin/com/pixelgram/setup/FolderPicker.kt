@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +40,9 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import java.io.File
+import kotlinx.coroutines.launch
 
 private const val UpTurn = 180f
 
@@ -62,6 +65,7 @@ private fun folders(dir: File): List<File> = dir.listFiles { file -> file.isDire
 @Composable
 fun FolderPicker(start: File, onPicked: (File) -> Unit, onBack: () -> Unit) {
     var current by remember { mutableStateOf(generateSequence(start) { it.parentFile }.firstOrNull { it.isDirectory } ?: File(System.getProperty("user.home"))) }
+    val scope = rememberCoroutineScope()
     var creating by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -131,7 +135,7 @@ fun FolderPicker(start: File, onPicked: (File) -> Unit, onBack: () -> Unit) {
                 Icon(SetupIcons.CreateNewFolder, contentDescription = null, modifier = Modifier.padding(end = 8.dp).size(18.dp))
                 Text("New folder")
             }
-            TextButton(onClick = { systemFolder(current)?.let { current = it } }) { Text("System dialog") }
+            TextButton(onClick = { scope.launch { systemFolder(current)?.let { current = it } } }) { Text("System dialog") }
             Box(Modifier.weight(1f))
             Button(onClick = {
                 if (writable(current)) onPicked(current) else error = "No write access to this folder. Choose a folder inside your user folder."
@@ -148,10 +152,8 @@ fun writable(dir: File): Boolean {
     }.getOrDefault(false)
 }
 
-private fun systemFolder(start: File): File? {
-    val chooser = javax.swing.JFileChooser(start).apply {
-        fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
-        dialogTitle = "Choose a folder"
-    }
-    return if (chooser.showOpenDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
-}
+private suspend fun systemFolder(start: File): File? = runCatching {
+    io.github.vinceglb.filekit.FileKit.openDirectoryPicker(
+        directory = generateSequence(start) { it.parentFile }.firstOrNull { it.isDirectory }?.let { io.github.vinceglb.filekit.PlatformFile(it) },
+    )?.file
+}.getOrNull()

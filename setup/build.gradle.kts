@@ -22,6 +22,7 @@ dependencies {
     implementation(libs.material3)
     implementation(libs.coroutines.swing)
     implementation(libs.jna)
+    implementation(libs.filekit.dialogs)
 }
 
 val writeSetupVersion by tasks.registering {
