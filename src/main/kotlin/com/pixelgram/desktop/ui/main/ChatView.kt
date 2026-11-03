@@ -691,9 +691,13 @@ private fun ChatViewContent(
                         var moved = false
                         var pointer = down.position
                         var edgeJob: kotlinx.coroutines.Job? = null
+                        val verticalPull = {
+                            val delta = pointer - down.position
+                            kotlin.math.abs(delta.y) >= SelectPullDp.toPx() && kotlin.math.abs(delta.y) > kotlin.math.abs(delta.x) * SelectPullRatio
+                        }
                         val extend = extend@{
                             val current = keyAt(pointer) ?: return@extend
-                            if (current == start && !moved) return@extend
+                            if (current == start && !moved && !verticalPull()) return@extend
                             moved = true
                             val from = shown.indexOfFirst { it.key == start }
                             val to = shown.indexOfFirst { it.key == current }
@@ -714,7 +718,7 @@ private fun ChatViewContent(
                                 if (!moved && (pointer - down.position).getDistance() < viewConfiguration.touchSlop) continue
                                 if (!wasSelecting && !moved) {
                                     val current = keyAt(pointer)
-                                    if (current == null || current == start) continue
+                                    if (current == null || current == start && !verticalPull()) continue
                                 }
                                 change.consume()
                                 extend()
@@ -1852,6 +1856,8 @@ fun MessageStatusIcon(status: MessageStatus, color: Color, size: Dp, modifier: M
 
 private val PhotoInset = 4.dp
 private const val DefaultBubbleRadius = 18
+private val SelectPullDp = 18.dp
+private const val SelectPullRatio = 1.5f
 private const val QuoteGrowth = 0.35f
 private val PhotoMaxWidth = MediaMaxWidth
 
