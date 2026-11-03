@@ -1444,12 +1444,16 @@ fun MessageBubble(
                     }
                 }
                 if (quote != null) {
+                    val radius = settings.bubbleRadius.value
+                    val extra = ((radius - DefaultBubbleRadius).coerceAtLeast(0) * QuoteGrowth).dp
                     Box(
                         Modifier
                             .fillMaxWidth()
                             .widthIn(min = QuoteMinWidth)
-                            .padding(start = 8.dp, end = 8.dp, top = if (named) 0.dp else 8.dp, bottom = if (photo != null || media || album != null) 6.dp else 0.dp),
-                    ) { quote() }
+                            .padding(start = 8.dp + extra, end = 8.dp + extra, top = if (named) 0.dp else 8.dp + extra / 2, bottom = if (photo != null || media || album != null) 6.dp else 0.dp),
+                    ) {
+                        androidx.compose.runtime.CompositionLocalProvider(LocalQuoteCorner provides (radius.dp - 8.dp - extra).coerceAtLeast(10.dp)) { quote() }
+                    }
                 }
                 val mediaBlock = @Composable {
                     if (album != null && telegram != null) {
@@ -1847,6 +1851,8 @@ fun MessageStatusIcon(status: MessageStatus, color: Color, size: Dp, modifier: M
 }
 
 private val PhotoInset = 4.dp
+private const val DefaultBubbleRadius = 18
+private const val QuoteGrowth = 0.35f
 private val PhotoMaxWidth = MediaMaxWidth
 
 @Composable

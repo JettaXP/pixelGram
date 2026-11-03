@@ -461,6 +461,8 @@ fun DeleteMessageDialog(
     )
 }
 
+val LocalQuoteCorner = androidx.compose.runtime.staticCompositionLocalOf { 10.dp }
+
 @Composable
 fun ReplyQuote(
     name: String,
@@ -476,7 +478,7 @@ fun ReplyQuote(
     val tint = accent?.takeUnless { inOutgoing && colors.outgoingAccent != colors.primary } ?: if (inOutgoing) colors.outgoingAccent else colors.primary
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(LocalQuoteCorner.current),
         color = tint.copy(alpha = 0.12f),
         modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min),
     ) {
