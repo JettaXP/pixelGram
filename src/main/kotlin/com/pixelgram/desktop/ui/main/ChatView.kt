@@ -240,6 +240,7 @@ private fun ChatViewContent(
     }
     val messages = telegram.messages(chat.id)
     val shown by remember(chat.id) { derivedStateOf { groupAlbums(messages.toList()) } }
+    val groupStarts by remember(chat.id) { derivedStateOf { messageGroupStarts(shown) } }
     val listState = rememberLazyListState()
     var jumping by remember(chat.id) { mutableStateOf(false) }
     val nearTop by remember {
@@ -757,11 +758,13 @@ private fun ChatViewContent(
                 reverseLayout = true,
                 modifier = Modifier.fillMaxSize().onSizeChanged { listWidth = it.width },
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom),
+                verticalArrangement = Arrangement.spacedBy(GroupInnerGap, Alignment.Bottom),
             ) {
                 if (shown.isEmpty()) item(key = TypingKey) { TypingBubble(chat, telegram) }
                 itemsIndexed(shown, key = { _, message -> message.key }, contentType = { _, message -> messageContentType(message) }) { index, message ->
                     val newDay = index == shown.lastIndex || !sameDay(message.date, shown[index + 1].date)
+                    val firstInRun = groupStarts.getOrElse(index) { true }
+                    val lastInRun = index == 0 || groupStarts.getOrElse(index - 1) { true }
                     val rise = remember { Animatable(if (PowerSaving.messageAnimations && message.fresh && slidIn.add(message.key)) 1f else 0f) }
                     if (rise.value != 0f || rise.isRunning) LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
                     val flash = remember { Animatable(0f) }
@@ -775,6 +778,7 @@ private fun ChatViewContent(
                     }
                     val flashColor = MaterialTheme.colorScheme.primary
                     val itemModifier = Modifier
+                        .padding(top = if (firstInRun && !newDay) GroupOuterGap else 0.dp)
                         .graphicsLayer { translationY = rise.value * size.height }
                         .drawBehind {
                             if (flash.value > 0f) {
@@ -863,8 +867,6 @@ private fun ChatViewContent(
                             val sentAsChat = chat.isGroup && !chat.isChannel && message.isOutgoing &&
                                 message.senderChatId != 0L && message.senderChatId != chat.id ||
                                 chat.isChannel && message.senderUserId != 0L
-                            val firstInRun = !sameSender(shown.getOrNull(index + 1), message)
-                            val lastInRun = !sameSender(shown.getOrNull(index - 1), message)
                             MessageGestures(message, actions, itemModifier) {
                               Row(verticalAlignment = Alignment.Bottom) {
                                 if (groupChat) {
@@ -1900,6 +1902,23 @@ private fun MessagePhoto(
 private const val PhotoPixels = 1024
 internal val SenderAvatarSlot = 42.dp
 private val SenderAvatarSize = 34.dp
+
+private fun messageGroupStarts(list: List<UiMessage>): BooleanArray {
+    val starts = BooleanArray(list.size)
+    var count = 0
+    for (i in list.indices.reversed()) {
+        val older = list.getOrNull(i + 1)
+        val joins = sameSender(older, list[i]) && older != null && list[i].date - older.date <= GroupWindowSeconds && count < GroupLimit
+        starts[i] = !joins
+        count = if (joins) count + 1 else 1
+    }
+    return starts
+}
+
+private const val GroupWindowSeconds = 5 * 60
+private const val GroupLimit = 100
+private val GroupInnerGap = 2.dp
+private val GroupOuterGap = 6.dp
 
 internal fun sameSender(other: UiMessage?, message: UiMessage): Boolean =
     other != null && !other.service && other.isOutgoing == message.isOutgoing &&
