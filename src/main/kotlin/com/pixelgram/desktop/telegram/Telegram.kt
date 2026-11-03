@@ -2731,8 +2731,14 @@ class Telegram(
         }
     }
 
-    fun searchMessages(query: String, chatId: Long?, onResult: (Int, List<TdApi.Message>) -> Unit) {
-        val function: TdApi.Function<*> = if (chatId != null) {
+    fun savedTags(onResult: (List<TdApi.SavedMessagesTag>) -> Unit) {
+        send(TdApi.GetSavedMessagesTags(0)) { result -> onResult((result as? TdApi.SavedMessagesTags)?.tags?.filterNotNull().orEmpty()) }
+    }
+
+    fun searchMessages(query: String, chatId: Long?, tag: TdApi.ReactionType? = null, onResult: (Int, List<TdApi.Message>) -> Unit) {
+        val function: TdApi.Function<*> = if (chatId != null && tag != null) {
+            TdApi.SearchSavedMessages(0, tag, query, 0, 0, SearchLimit)
+        } else if (chatId != null) {
             TdApi.SearchChatMessages().apply {
                 this.chatId = chatId
                 this.query = query

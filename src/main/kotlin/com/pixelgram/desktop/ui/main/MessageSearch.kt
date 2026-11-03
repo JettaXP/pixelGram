@@ -39,6 +39,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.pixelgram.desktop.ui.icons.outlined.Lock
+import com.pixelgram.desktop.ui.icons.outlined.CalendarMonth
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -74,12 +76,17 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
     var total by remember { mutableStateOf(0) }
     var busy by remember { mutableStateOf(false) }
     val scope = MessageSearch.scopeChatId
+    val savedChat = scope != null && telegram.isSavedMessages(scope)
+    var tags by remember(scope) { mutableStateOf<List<TdApi.SavedMessagesTag>>(emptyList()) }
+    var tag by remember(scope) { mutableStateOf<TdApi.ReactionType?>(null) }
+    var calendar by remember(scope) { mutableStateOf(false) }
+    LaunchedEffect(scope) { if (savedChat) telegram.savedTags { tags = it } }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     val generation = remember { intArrayOf(0) }
-    LaunchedEffect(query, scope) {
+    LaunchedEffect(query, scope, tag) {
         val token = ++generation[0]
-        if (query.isBlank()) {
+        if (query.isBlank() && tag == null) {
             results = emptyList()
             foundChats = emptyList()
             total = 0
@@ -90,7 +97,7 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
         delay(ChatSearchDelayMs)
         if (scope == null) telegram.searchChats(query.trim()) { if (token == generation[0]) foundChats = it } else foundChats = emptyList()
         delay(SearchDelayMs)
-        telegram.searchMessages(query.trim(), scope) { count, found ->
+        telegram.searchMessages(query.trim(), scope, tag) { count, found ->
             if (token != generation[0]) return@searchMessages
             total = count
             results = found
@@ -109,10 +116,14 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
                 singleLine = true,
                 placeholder = { Text("Search messages") },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                trailingIcon = if (query.isNotEmpty()) {
-                    { IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, contentDescription = "Clear") } }
-                } else {
-                    null
+                trailingIcon = when {
+                    query.isNotEmpty() -> {
+                        { IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, contentDescription = "Clear") } }
+                    }
+                    scope != null -> {
+                        { IconButton(onClick = { calendar = true }) { Icon(Icons.Outlined.CalendarMonth, contentDescription = "Jump to date") } }
+                    }
+                    else -> null
                 },
                 shape = MaterialTheme.shapes.extraLarge,
                 colors = TextFieldDefaults.colors(
@@ -124,29 +135,48 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
                 modifier = Modifier.weight(1f).focusRequester(focus),
             )
         }
-        Text(
-            "Search messages in",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 20.dp, top = 12.dp),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-            FilterChip(
-                selected = scope == null,
-                onClick = { MessageSearch.scopeChatId = null },
-                label = { Text("All chats") },
-            )
-            val scoped = scope ?: MessageSearch.lastChat
-            scoped?.let { id -> telegram.chats[id] }?.let { chat ->
-                FilterChip(
-                    selected = scope != null,
-                    onClick = { MessageSearch.scopeChatId = chat.id },
-                    label = { EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    leadingIcon = { ChatAvatar(chat, telegram, settings, size = 20.dp) },
-                )
+        if (calendar && scope != null) {
+            telegram.chats[scope]?.let { chat -> ChatCalendar(chat, telegram, (System.currentTimeMillis() / 1000).toInt()) { calendar = false } }
+        }
+        if (savedChat && (tags.isNotEmpty() || !telegram.isPremium)) {
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                if (!telegram.isPremium) {
+                    androidx.compose.material3.AssistChip(
+                        onClick = { Links.open("https://t.me/PremiumBot") },
+                        label = { Text("Unlock") },
+                        leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                    )
+                }
+                tags.forEach { item ->
+                    val emoji = (item.tag as? TdApi.ReactionTypeEmoji)?.emoji
+                    val custom = (item.tag as? TdApi.ReactionTypeCustomEmoji)?.customEmojiId
+                    FilterChip(
+                        selected = tag == item.tag,
+                        enabled = telegram.isPremium,
+                        onClick = { tag = if (tag == item.tag) null else item.tag },
+                        label = {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                when {
+                                    emoji != null -> EmojiText(emoji)
+                                    custom != null -> CustomEmojiView(custom, "", Modifier.size(18.dp))
+                                }
+                                Text(listOfNotNull(item.label.takeIf { it.isNotBlank() }, item.count.toString()).joinToString(" "))
+                            }
+                        },
+                    )
+                }
             }
         }
-        if (query.isNotBlank()) {
+        if (query.isBlank() && tag == null) {
+            Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
+                Text("Search for messages", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (query.isNotBlank() || tag != null) {
             Text(
                 when {
                     busy -> "Searching…"
