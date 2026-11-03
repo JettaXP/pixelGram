@@ -6,8 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.expandVertically
-import androidx.compose.runtime.withFrameNanos
 import com.pixelgram.desktop.ui.components.MenuEntry
 import com.pixelgram.desktop.ui.components.MenuGroups
 import androidx.compose.foundation.Image
@@ -156,10 +154,9 @@ private fun TrayMenuWindow(
         LaunchedEffect(at) {
             if (at == null) return@LaunchedEffect
             while (!window.isShowing) delay(ShowPollMs)
+            shown.targetState = true
             window.toFront()
             window.requestFocus()
-            withFrameNanos { }
-            shown.targetState = true
         }
         PixelTheme(settings) {
             val motion = MaterialTheme.motionScheme
@@ -176,8 +173,7 @@ private fun TrayMenuWindow(
                 AnimatedVisibility(
                     shown,
                     enter = fadeIn(motion.fastEffectsSpec()) +
-                        scaleIn(motion.defaultSpatialSpec(), initialScale = 0.6f, transformOrigin = origin) +
-                        expandVertically(motion.defaultSpatialSpec(), expandFrom = if (above) Alignment.Bottom else Alignment.Top),
+                        scaleIn(motion.fastSpatialSpec(), initialScale = 0.85f, transformOrigin = origin),
                     exit = fadeOut(motion.fastEffectsSpec()) +
                         scaleOut(motion.fastSpatialSpec(), targetScale = 0.8f, transformOrigin = origin),
                 ) {
@@ -255,4 +251,4 @@ private fun trayMenuPlace(click: Point, width: Int, height: Int): TrayPlace {
     return TrayPlace(x, y, above, left)
 }
 
-private const val ShowPollMs = 16L
+private const val ShowPollMs = 4L
