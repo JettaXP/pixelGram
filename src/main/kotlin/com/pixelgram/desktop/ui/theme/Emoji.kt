@@ -150,6 +150,8 @@ private const val Keycap = 0x20E3
 private fun isRegional(cp: Int) = cp in 0x1F1E6..0x1F1FF
 private fun isTag(cp: Int) = cp in 0xE0020..0xE007F
 
+private fun isSymbolEmoji(cp: Int) = cp in 0x2600..0x27BF || cp in 0x2300..0x23FF || cp in 0x2B05..0x2B55
+
 private fun isNewEmoji(cp: Int) = cp in 0x1F000..0x1FAFF && !Character.isDefined(cp)
 
 fun emojiRanges(text: String): List<IntRange> {
@@ -162,7 +164,7 @@ fun emojiRanges(text: String): List<IntRange> {
         val starts = Character.isEmojiPresentation(cp) ||
             isNewEmoji(cp) ||
             isRegional(cp) ||
-            (Character.isExtendedPictographic(cp) && (next == VariationSelector || next == Zwj)) ||
+            (Character.isExtendedPictographic(cp) && (next == VariationSelector || next == Zwj || isSymbolEmoji(cp))) ||
             ((cp in '0'.code..'9'.code || cp == '#'.code || cp == '*'.code) &&
                 (next == VariationSelector || next == Keycap))
         if (!starts) {

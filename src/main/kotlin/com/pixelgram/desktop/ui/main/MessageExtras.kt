@@ -190,7 +190,7 @@ private fun ReactionBurst(owner: Pair<Long, Long>, shot: ReactionEffects.Shot, t
         if (reaction == null) ReactionEffects.done(owner, shot)
     }
     val current = reaction ?: return
-    val center = current.activateAnimation ?: current.centerAnimation
+    val center = if (shot.big) current.activateAnimation ?: current.centerAnimation else null
     val effect = current.effectAnimation ?: current.aroundAnimation
     val parts = listOfNotNull(center, effect)
     val ready = parts.all { telegram.localPath(it.sticker) != null }
@@ -204,14 +204,22 @@ private fun ReactionBurst(owner: Pair<Long, Long>, shot: ReactionEffects.Shot, t
         return
     }
     if (!ready) return
+    val pop = remember(shot) { Animatable(1f) }
+    var popDone by remember(shot) { mutableStateOf(shot.big) }
+    LaunchedEffect(shot) {
+        if (shot.big) return@LaunchedEffect
+        pop.animateTo(PopScale, androidx.compose.animation.core.tween(PopMs / 2, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+        pop.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 500f))
+        popDone = true
+    }
     val effectSize = if (shot.big) BigEffectSize else EffectSize
     val centerSize = effectSize * CenterShare
     var centerDone by remember(shot) { mutableStateOf(center == null) }
     var effectDone by remember(shot) { mutableStateOf(effect == null) }
     var shrunk by remember(shot) { mutableStateOf(center == null) }
     val shrink = remember(shot) { Animatable(1f) }
-    DisposableEffect(shot) {
-        onCover(center != null)
+    DisposableEffect(shot, popDone) {
+        onCover(center != null || !popDone)
         onDispose { onCover(false) }
     }
     LaunchedEffect(centerDone) {
@@ -220,13 +228,23 @@ private fun ReactionBurst(owner: Pair<Long, Long>, shot: ReactionEffects.Shot, t
         shrunk = true
         onCover(false)
     }
-    LaunchedEffect(shrunk, effectDone) {
-        if (shrunk && effectDone) ReactionEffects.done(owner, shot)
+    LaunchedEffect(shrunk, effectDone, popDone) {
+        if (shrunk && effectDone && popDone) ReactionEffects.done(owner, shot)
     }
     androidx.compose.ui.window.Popup(alignment = Alignment.Center) {
         Box(Modifier.size(effectSize), contentAlignment = Alignment.Center) {
             if (effect != null && !effectDone) {
                 StickerView(effect, telegram, effectSize, runs = 1, onEnd = { effectDone = true })
+            }
+            if (!popDone) {
+                EmojiText(
+                    shot.emoji,
+                    fontSize = PopFont,
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = pop.value
+                        scaleY = pop.value
+                    },
+                )
             }
             if (center != null && !shrunk) {
                 StickerView(
@@ -250,6 +268,9 @@ private val BigEffectSize = 220.dp
 private val ChipEmojiSize = 20.dp
 private const val CenterShare = 0.5f
 private const val ShrinkMs = 260
+private const val PopScale = 1.7f
+private const val PopMs = 240
+private val PopFont = 15.sp
 private const val BurstWaitMs = 4000L
 
 private const val MaxReactionAvatars = 3
