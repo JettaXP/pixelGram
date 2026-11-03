@@ -248,7 +248,7 @@ fun MessageGestures(
                                 loadProperties()
                             }
                             swipe.add(delta.x * step * (if (rtl) -1 else 1), delta.y * step)
-                            if (swipe.horizontal) {
+                            if (swipe.horizontal && actionFor(swipe.pull > 0f) != SwipeAction.Off) {
                                 change.consume()
                                 show(swipe.pull)
                             }

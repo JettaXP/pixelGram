@@ -1,5 +1,6 @@
 package com.pixelgram.desktop
 
+import com.pixelgram.desktop.ui.BackSwipeIndicator
 import com.pixelgram.desktop.core.AppLock
 import com.pixelgram.desktop.ui.LockScreen
 import androidx.compose.foundation.layout.padding
@@ -414,9 +415,15 @@ private fun ApplicationScope.PixelApp() {
         val focusScope = rememberCoroutineScope()
         LaunchedEffect(Unit) { rootFocus.requestFocus() }
         PixelTheme(settings) {
+            val backSwipe = com.pixelgram.desktop.ui.rememberBackSwipe()
             Box(
                 Modifier
                     .fillMaxSize()
+                    .then(
+                        with(com.pixelgram.desktop.ui.BackSwipeHolder) {
+                            Modifier.backSwipeOf(backSwipe)
+                        },
+                    )
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
@@ -453,6 +460,7 @@ private fun ApplicationScope.PixelApp() {
                     }
                 }
                 if (ownTitleBar && !macNativeWindow) ResizeHandles(chrome)
+                BackSwipeIndicator(backSwipe)
             }
         }
     }
