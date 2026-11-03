@@ -129,6 +129,8 @@ class AppSettings private constructor(private val props: Properties, private val
     val exactNumbers = bool("exactNumbers", false)
     val listAvatarSize = int("listAvatarSize", 48)
     val fullscreen = bool("fullscreen", false)
+    val defaultScale = bool("defaultScale", true)
+    val interfaceScale = int("interfaceScale", 100)
     val secondaryBadges = bool("secondaryBadges", false)
     val zalgoFilter = bool("zalgoFilter", false)
     val pythonMessages = bool("pythonMessages", false)

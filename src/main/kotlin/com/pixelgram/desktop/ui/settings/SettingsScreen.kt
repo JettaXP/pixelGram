@@ -1453,6 +1453,22 @@ private fun ChatsSection(settings: AppSettings, onOpen: (Section) -> Unit) {
             settings.inlineMath.value,
         ) { settings.inlineMath.value = it }
     }
+    Header("Interface scale")
+    SwitchRow(0, 1, "Default interface scale", "Follow the system scale.", settings.defaultScale.value) { settings.defaultScale.value = it }
+    Reveal(!settings.defaultScale.value) {
+        var draft by remember { mutableStateOf(settings.interfaceScale.value.toFloat()) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Slider(
+                value = draft,
+                onValueChange = { draft = it },
+                onValueChangeFinished = { settings.interfaceScale.value = draft.toInt() },
+                valueRange = com.pixelgram.desktop.ui.theme.MinScale.toFloat()..com.pixelgram.desktop.ui.theme.MaxScale.toFloat(),
+                steps = (com.pixelgram.desktop.ui.theme.MaxScale - com.pixelgram.desktop.ui.theme.MinScale) / 5 - 1,
+                modifier = Modifier.weight(1f),
+            )
+            Text("${draft.toInt()}%", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+        }
+    }
     SubsectionLinks(Section.Chats, onOpen)
 }
 

@@ -1531,3 +1531,6 @@ Full screen	Полноэкранный режим
 Also toggles with F11.	Также переключается клавишей F11.
 View votes	Просмотр голосов
 Poll results	Результаты опроса
+Interface scale	Масштаб интерфейса
+Default interface scale	Масштаб по умолчанию
+Follow the system scale.	Как в системе.

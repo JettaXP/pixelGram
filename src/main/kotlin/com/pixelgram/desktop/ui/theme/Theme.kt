@@ -85,7 +85,11 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
         typography = typography,
         shapes = com.pixelgram.desktop.ui.components.cornerShapes(corners),
     ) {
+        val base = androidx.compose.ui.platform.LocalDensity.current
+        val scale = if (settings.defaultScale.value) 1f else settings.interfaceScale.value.coerceIn(MinScale, MaxScale) / 100f
+        val density = remember(base, scale) { androidx.compose.ui.unit.Density(base.density * scale, base.fontScale) }
         CompositionLocalProvider(
+            androidx.compose.ui.platform.LocalDensity provides density,
             LocalUriHandler provides Links,
             com.pixelgram.desktop.ui.components.LocalCorners provides corners,
             LocalMessageFont provides font,
@@ -99,6 +103,8 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
 }
 
 private val IsraelBlue = Color(0xFF0038B8)
+const val MinScale = 75
+const val MaxScale = 200
 private val IsraelPaper = Color(0xFFF7F9FF)
 
 fun israelScheme(): ColorScheme = schemeFromSeed(IsraelBlue.toArgb(), false).copy(

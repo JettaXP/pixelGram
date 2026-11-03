@@ -1524,3 +1524,6 @@ Full screen	מסך מלא
 Also toggles with F11.	ניתן להחליף גם עם F11.
 View votes	צפייה בהצבעות
 Poll results	תוצאות הסקר
+Interface scale	קנה מידה של הממשק
+Default interface scale	קנה מידה ברירת מחדל
+Follow the system scale.	לפי הגדרות המערכת.
