@@ -1777,6 +1777,7 @@ private const val NewerThreshold = 5
 private const val PanelScaleFrom = 0.9f
 private const val SwapScaleFrom = 0.6f
 private val SendSlot = 40.dp
+private val SendButtonSlot = 48.dp
 object VoiceButton {
     var preferred by mutableStateOf(true)
 }
@@ -2588,7 +2589,7 @@ private fun Composer(
                 val showMic = voice.active || (VoiceButton.preferred && !canSend && editing == null)
                 val swapFade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
                 val swapScale = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
-                Box {
+                Box(Modifier.size(SendButtonSlot), contentAlignment = Alignment.Center) {
                     AnimatedContent(
                         targetState = showMic,
                         transitionSpec = {

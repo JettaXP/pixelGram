@@ -69,17 +69,43 @@ private val SidebarWidth = 260.dp
 
 @Composable
 fun TopicIcon(info: TdApi.ForumTopicInfo, size: Dp) {
-    val color = if (info.isGeneral) MaterialTheme.colorScheme.surfaceContainerHighest else Color(0xFF000000 or (info.icon?.color?.toLong() ?: 0x6FB9F0L))
-    Box(Modifier.size(size).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
+    val emoji = info.icon?.customEmojiId ?: 0L
+    if (!info.isGeneral && emoji != 0L) {
+        Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+            CustomEmojiView(emoji, info.name.trim().take(1), Modifier.size(size * TopicEmojiScale))
+        }
+        return
+    }
+    if (info.isGeneral) {
+        Box(Modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest), contentAlignment = Alignment.Center) {
+            Text("#", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.5f).sp, maxLines = 1)
+        }
+        return
+    }
+    val color = Color(0xFF000000 or (info.icon?.color?.toLong() ?: 0x6FB9F0L))
+    val bubble = androidx.compose.foundation.shape.RoundedCornerShape(topStartPercent = 50, topEndPercent = 50, bottomEndPercent = 50, bottomStartPercent = 14)
+    Box(
+        Modifier
+            .size(size * TopicBubbleScale)
+            .clip(bubble)
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(lerpWhite(color), color))),
+        contentAlignment = Alignment.Center,
+    ) {
         Text(
-            if (info.isGeneral) "#" else info.name.trim().take(1).uppercase(),
-            color = if (info.isGeneral) MaterialTheme.colorScheme.onSurfaceVariant else Color.White,
+            info.name.trim().take(1).uppercase(),
+            color = Color.White,
             fontWeight = FontWeight.Bold,
-            fontSize = (size.value * 0.5f).sp,
+            fontSize = (size.value * 0.42f).sp,
             maxLines = 1,
         )
     }
 }
+
+private fun lerpWhite(color: Color): Color = androidx.compose.ui.graphics.lerp(color, Color.White, TopicHighlight)
+
+private const val TopicEmojiScale = 0.9f
+private const val TopicBubbleScale = 0.86f
+private const val TopicHighlight = 0.3f
 
 @Composable
 fun ForumSidebar(chat: ChatState, telegram: Telegram, modifier: Modifier = Modifier, onClose: (() -> Unit)? = null) {

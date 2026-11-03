@@ -459,22 +459,37 @@ fun RecordingBar(voice: VoiceRecording, modifier: Modifier = Modifier) {
                     val cancelPx = with(density) { CancelDistance.toPx() }
                     val armed = -voice.dragX >= cancelPx
                     val shift = with(density) { ((-voice.dragX).coerceIn(0f, cancelPx) / 2).toDp() }
+                    val swapFade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+                    val swapSlide = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.unit.IntOffset>()
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .padding(end = shift)
                             .graphicsLayer { alpha = chrome },
                     ) {
-                        Icon(
-                            if (armed) Icons.Outlined.Delete else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                            contentDescription = null,
-                            tint = if (armed) scheme.error else scheme.onSurfaceVariant,
-                        )
-                        Text(
-                            if (armed) "Release to cancel" else "Slide to cancel",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (armed) scheme.error else scheme.onSurfaceVariant,
-                        )
+                        androidx.compose.animation.AnimatedContent(
+                            targetState = armed,
+                            transitionSpec = {
+                                val direction = if (targetState) 1 else -1
+                                (androidx.compose.animation.fadeIn(swapFade) +
+                                    androidx.compose.animation.slideInVertically(swapSlide) { it / 2 * direction }) togetherWith
+                                    (androidx.compose.animation.fadeOut(swapFade) +
+                                        androidx.compose.animation.slideOutVertically(swapSlide) { -it / 2 * direction })
+                            },
+                        ) { isArmed ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    if (isArmed) Icons.Outlined.Delete else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                    contentDescription = null,
+                                    tint = if (isArmed) scheme.error else scheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    if (isArmed) "Release to cancel" else "Slide to cancel",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = if (isArmed) scheme.error else scheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                     }
                 }
             }
