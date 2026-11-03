@@ -364,6 +364,13 @@ private fun ChatViewContent(
     }
     LaunchedEffect(chat.id) { telegram.loadPinned(chat.id) }
     var pinIndex by remember(chat.id) { mutableStateOf(0) }
+    LaunchedEffect(chat.id) {
+        androidx.compose.runtime.snapshotFlow {
+            val pins = telegram.pinnedMessages[chat.id].orEmpty()
+            val visible = shown.getOrNull(listState.firstVisibleItemIndex)?.id
+            if (pins.isEmpty() || visible == null) null else pins.indexOfFirst { it.id <= visible }.let { if (it < 0) pins.lastIndex else it }
+        }.collect { index -> if (index != null) pinIndex = index }
+    }
     var translating by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var reporting by remember(chat.id) { mutableStateOf<LongArray?>(null) }
     translating?.let { message -> TranslateDialog(telegram, message, settings.language.value) { translating = null } }
