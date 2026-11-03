@@ -243,6 +243,7 @@ fun ProfileContent(
             numbers = true,
             ranges = listOf(1..31, 1..12, MinBirthYear..java.time.Year.now().value),
             supporting = "Year is optional. Clear the day to remove the birthday.",
+            valid = ::birthdateValid,
             onDismiss = dismiss,
             onSaved = saved,
         ) { values, done ->
@@ -261,9 +262,23 @@ private fun fits(value: String, range: IntRange): Boolean {
 private const val MinBirthYear = 1877
 
 private fun formatBirthdate(date: TdApi.Birthdate): String {
-    val month = Month.of(date.month.coerceIn(1, 12)).getDisplayName(TextStyle.FULL, Locale.ENGLISH)
-    return if (date.year > 0) "${date.day} $month ${date.year}" else "${date.day} $month"
+    val month = Month.of(date.month.coerceIn(1, 12)).getDisplayName(TextStyle.FULL, Locale.forLanguageTag(com.pixelgram.desktop.core.I18n.code))
+    if (date.year <= 0) return "${date.day} $month"
+    val age = runCatching {
+        java.time.Period.between(java.time.LocalDate.of(date.year, date.month, date.day), java.time.LocalDate.now()).years
+    }.getOrNull()
+    return "${date.day} $month ${date.year}" + (age?.takeIf { it >= 0 }?.let { " ($it)" } ?: "")
 }
+
+private fun birthdateValid(values: List<String>): Boolean {
+    val day = values[0].toIntOrNull() ?: return values.all { it.isBlank() } || values[0].isBlank()
+    val month = values[1].toIntOrNull() ?: return false
+    val year = values[2].toIntOrNull()
+    val date = runCatching { java.time.LocalDate.of(year ?: LeapYear, month, day) }.getOrNull() ?: return false
+    return year == null || !date.isAfter(java.time.LocalDate.now())
+}
+
+private const val LeapYear = 2000
 
 @Composable
 private fun EditDialog(
@@ -277,6 +292,7 @@ private fun EditDialog(
     singleLine: Boolean = true,
     numbers: Boolean = false,
     ranges: List<IntRange> = emptyList(),
+    valid: (List<String>) -> Boolean = { true },
     onSave: (List<String>, (String?) -> Unit) -> Unit,
 ) {
     var values by remember { mutableStateOf(initial) }
@@ -315,7 +331,7 @@ private fun EditDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = !busy,
+                enabled = !busy && valid(values),
                 onClick = {
                     busy = true
                     onSave(values) { failure ->

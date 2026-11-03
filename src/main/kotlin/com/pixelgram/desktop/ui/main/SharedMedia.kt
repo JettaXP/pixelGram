@@ -672,11 +672,11 @@ private fun TabContent(selected: Int, modifier: Modifier, content: @Composable (
 
 private val UrlPattern = Regex("""https?://\S+|t\.me/\S+""")
 
-private val monthFormat = DateTimeFormatter.ofPattern("LLLL yyyy", Locale.ENGLISH)
+private val monthFormat get() = DateTimeFormatter.ofPattern("LLLL yyyy", Locale.forLanguageTag(com.pixelgram.desktop.core.I18n.code))
 
 private fun monthOf(unixSeconds: Int): String {
     val date = Instant.ofEpochSecond(unixSeconds.toLong()).atZone(ZoneId.systemDefault())
-    return if (date.year == java.time.Year.now().value) date.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale.ENGLISH) else date.format(monthFormat)
+    return if (date.year == java.time.Year.now().value) date.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale.forLanguageTag(com.pixelgram.desktop.core.I18n.code)) else date.format(monthFormat)
 }
 
 private fun dayOf(unixSeconds: Int): String = formatChatDate(unixSeconds)

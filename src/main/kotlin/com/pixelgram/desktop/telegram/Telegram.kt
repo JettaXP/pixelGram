@@ -125,6 +125,7 @@ class ChatState(val id: Long) {
 }
 
 const val SavedMessagesTitle = "Saved Messages"
+const val DeletedAccountTitle = "Deleted Account"
 
 enum class ConnectionStatus(val label: String?) {
     WaitingForNetwork("Waiting for network…"),
@@ -874,7 +875,9 @@ class Telegram(
     fun userName(userId: Long): String {
         ensureUser(userId)
         com.pixelgram.desktop.core.LocalNames.get(userId)?.let { return it }
-        return com.pixelgram.desktop.core.Tweaks.name(users[userId]?.fullName() ?: "")
+        val user = users[userId]
+        if (user != null && (user.type is TdApi.UserTypeDeleted || user.fullName().isBlank())) return DeletedAccountTitle
+        return com.pixelgram.desktop.core.Tweaks.name(user?.fullName() ?: "")
     }
 
     fun myFullInfo(onResult: (TdApi.UserFullInfo?) -> Unit) {

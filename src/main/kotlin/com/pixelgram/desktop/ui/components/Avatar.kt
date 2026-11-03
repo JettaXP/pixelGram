@@ -3,6 +3,7 @@ package com.pixelgram.desktop.ui.components
 import androidx.compose.material3.toShape
 import androidx.compose.material3.MaterialShapes
 import com.pixelgram.desktop.core.AvatarKind
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Reply
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -122,6 +123,8 @@ fun Avatar(
     AvatarImage(title, photo, telegram, shape, size, modifier, full, onClick)
 }
 
+const val RepliesUserId = 1271266957L
+
 @Composable
 fun chatAvatarShape(chat: ChatState, telegram: Telegram, settings: AppSettings): Shape = when {
     telegram.isOfficial(chat) -> MaterialShapes.Cookie12Sided.toShape()
@@ -142,7 +145,8 @@ fun ChatAvatar(
         AvatarImage(chat.title, chat.photo, telegram, MaterialShapes.Cookie12Sided.toShape(), size, modifier, onClick = onClick)
         return
     }
-    if (!telegram.isSavedMessages(chat.id)) {
+    val replies = chat.privateUserId == RepliesUserId
+    if (!telegram.isSavedMessages(chat.id) && !replies) {
         Avatar(chat.title, chat.photo, telegram, settings, size, modifier, kind = telegram.avatarKind(chat), onClick = onClick)
         return
     }
@@ -156,8 +160,8 @@ fun ChatAvatar(
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            Icons.Filled.Bookmark,
-            contentDescription = SavedMessagesTitle,
+            if (replies) Icons.AutoMirrored.Outlined.Reply else Icons.Filled.Bookmark,
+            contentDescription = if (replies) "Replies" else SavedMessagesTitle,
             tint = colors.onPrimary,
             modifier = Modifier.size(size * 0.5f),
         )
@@ -199,6 +203,8 @@ fun AvatarImage(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.size(size),
             )
+        } else if (title == com.pixelgram.desktop.telegram.DeletedAccountTitle) {
+            androidx.compose.material3.Icon(GhostIcon, contentDescription = title, tint = colors.onPrimaryContainer, modifier = Modifier.size(size * 0.56f))
         } else {
             Text(
                 text = initials(title),
@@ -230,3 +236,17 @@ fun initials(title: String): String = title
     .take(2)
     .joinToString("") { String(Character.toChars(it)).uppercase() }
     .ifEmpty { "?" }
+
+private val GhostIcon: androidx.compose.ui.graphics.vector.ImageVector by lazy {
+    androidx.compose.ui.graphics.vector.ImageVector.Builder("Ghost", androidx.compose.ui.unit.Dp(24f), androidx.compose.ui.unit.Dp(24f), 960f, 960f)
+        .addPath(
+            androidx.compose.ui.graphics.vector.addPathNodes(
+                "M480 80C304 80 160 224 160 400V860L268 780L374 860L480 780L586 860L692 780L800 860V400C800 224 656 80 480 80Z" +
+                    "M370 330A58 70 0 1 0 370 470A58 70 0 1 0 370 330Z" +
+                    "M590 330A58 70 0 1 0 590 470A58 70 0 1 0 590 330Z",
+            ),
+            pathFillType = androidx.compose.ui.graphics.PathFillType.EvenOdd,
+            fill = androidx.compose.ui.graphics.SolidColor(androidx.compose.ui.graphics.Color.Black),
+        )
+        .build()
+}
