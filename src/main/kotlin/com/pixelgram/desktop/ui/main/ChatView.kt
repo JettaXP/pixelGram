@@ -2617,8 +2617,8 @@ private fun Composer(
                             onCancelReply()
                             emojiOpen = false
                         },
-                        onGif = { animation ->
-                            telegram.sendAnimation(chatId, animation, replyTo?.id ?: 0)
+                        onGif = { animation, how, caption ->
+                            telegram.sendAnimation(chatId, animation, replyTo?.id ?: 0, how.silent, how.schedule, caption)
                             onCancelReply()
                             emojiOpen = false
                         },

@@ -59,6 +59,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.pixelgram.desktop.ui.icons.outlined.TextFields
+import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -73,7 +75,6 @@ import kotlinx.coroutines.launch
 private val PanelWidth = 380.dp
 private val PanelHeight = 440.dp
 private val StickerCell = 68.dp
-private val GifCell = 112.dp
 private const val GifPanelSearchDelayMs = 400L
 private const val GifBot = "gif"
 private const val FavoritesId = -1L
@@ -98,7 +99,7 @@ fun MediaPanel(
     onTab: (Int) -> Unit,
     onEmoji: (String) -> Unit,
     onSticker: (TdApi.Sticker, StickerSend) -> Unit,
-    onGif: (TdApi.Animation) -> Unit,
+    onGif: (TdApi.Animation, StickerSend, String) -> Unit,
     onInline: (Long, String) -> Unit,
     search: String? = null,
     onSearch: (String?) -> Unit = {},
@@ -127,7 +128,7 @@ fun MediaPanel(
                 } else {
                     StickersTab(telegram, chatId, whenOnline, onSticker, { onSearch("") }, Modifier.weight(1f))
                 }
-                else -> GifsTab(telegram, chatId, onGif, onInline, Modifier.weight(1f))
+                else -> GifsTab(telegram, chatId, whenOnline, onGif, onInline, Modifier.weight(1f))
             }
         }
     }
@@ -417,7 +418,8 @@ private fun StickerThumb(sticker: TdApi.Sticker, telegram: Telegram) {
 private fun GifsTab(
     telegram: Telegram,
     chatId: Long,
-    onGif: (TdApi.Animation) -> Unit,
+    whenOnline: Boolean,
+    onGif: (TdApi.Animation, StickerSend, String) -> Unit,
     onInline: (Long, String) -> Unit,
     modifier: Modifier,
 ) {
@@ -425,8 +427,12 @@ private fun GifsTab(
     var saved by remember { mutableStateOf<List<TdApi.Animation>?>(null) }
     var found by remember { mutableStateOf<TdApi.InlineQueryResults?>(null) }
     var bot by remember { mutableStateOf<TdApi.User?>(null) }
+    var menuFor by remember { mutableStateOf<TdApi.Animation?>(null) }
+    var scheduling by remember { mutableStateOf<TdApi.Animation?>(null) }
+    var captioning by remember { mutableStateOf<TdApi.Animation?>(null) }
+    val reload = { telegram.savedAnimations { saved = it } }
     LaunchedEffect(Unit) {
-        telegram.savedAnimations { saved = it }
+        reload()
         telegram.inlineBot(GifBot) { bot = it }
     }
     LaunchedEffect(query, bot?.id) {
@@ -435,6 +441,29 @@ private fun GifsTab(
         if (query.isBlank()) return@LaunchedEffect
         delay(GifPanelSearchDelayMs)
         telegram.inlineResults(gifBot.id, chatId, query.trim()) { found = it }
+    }
+    scheduling?.let { animation ->
+        ScheduleDialog(onDismiss = { scheduling = null }) { date ->
+            onGif(animation, StickerSend(schedule = TdApi.MessageSchedulingStateSendAtDate(date, 0)), "")
+            scheduling = null
+        }
+    }
+    captioning?.let { animation ->
+        var caption by remember(animation) { mutableStateOf("") }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { captioning = null },
+            title = { Text("Send GIF with caption") },
+            text = {
+                androidx.compose.material3.OutlinedTextField(caption, { caption = it }, label = { Text("Caption") }, modifier = Modifier.fillMaxWidth())
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    onGif(animation, StickerSend(), caption)
+                    captioning = null
+                }) { Text("Send") }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { captioning = null }) { Text("Cancel") } },
+        )
     }
     Column(modifier) {
         TextField(
@@ -456,19 +485,50 @@ private fun GifsTab(
         when {
             !searching && saved == null -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
             searching && results == null -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
-            else -> LazyVerticalGrid(
-                columns = GridCells.Adaptive(GifCell),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-            ) {
-                if (searching && results != null) {
-                    items(results.results.filterIsInstance<TdApi.InlineQueryResultAnimation>().distinctBy { it.id }, key = { it.id }) { result ->
-                        GifCellView(result.animation, telegram) { onInline(results.inlineQueryId, result.id) }
-                    }
+            else -> androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).padding(horizontal = 8.dp)) {
+                val cells: List<Pair<TdApi.Animation, () -> Unit>> = if (searching && results != null) {
+                    results.results.filterIsInstance<TdApi.InlineQueryResultAnimation>().distinctBy { it.id }
+                        .map { result -> result.animation to { onInline(results.inlineQueryId, result.id) } }
                 } else {
-                    items(saved.orEmpty().distinctBy { it.animation.id }, key = { it.animation.id }) { animation ->
-                        GifCellView(animation, telegram) { onGif(animation) }
+                    saved.orEmpty().distinctBy { it.animation.id }.map { animation -> animation to { onGif(animation, StickerSend(), "") } }
+                }
+                val rows = remember(cells.map { it.first.animation.id }, maxWidth) { justifiedRows(cells.map { it.first }, maxWidth.value, GifRowHeight.value, GifGap.value) }
+                androidx.compose.foundation.lazy.LazyColumn(verticalArrangement = Arrangement.spacedBy(GifGap)) {
+                    items(rows.size) { rowIndex ->
+                        val row = rows[rowIndex]
+                        Row(horizontalArrangement = Arrangement.spacedBy(GifGap)) {
+                            row.items.forEach { (index, width) ->
+                                val (animation, send) = cells[index]
+                                Box {
+                                    GifCellView(animation, telegram, Modifier.size(width.dp, row.height.dp), onClick = send, onMenu = { menuFor = animation })
+                                    if (menuFor === animation) {
+                                        val item = @Composable { label: String, icon: ImageVector, action: () -> Unit ->
+                                            DropdownMenuItem(
+                                                text = { Text(label) },
+                                                leadingIcon = { Icon(icon, contentDescription = null) },
+                                                onClick = {
+                                                    menuFor = null
+                                                    action()
+                                                },
+                                            )
+                                        }
+                                        DropdownMenu(expanded = true, onDismissRequest = { menuFor = null }, shape = RoundedCornerShape(16.dp)) {
+                                            item("Send without sound", Icons.Outlined.NotificationsOff) { onGif(animation, StickerSend(silent = true), "") }
+                                            item("Schedule message", Icons.Outlined.CalendarMonth) { scheduling = animation }
+                                            if (whenOnline) {
+                                                item("Send when online", Icons.Outlined.Alarm) {
+                                                    onGif(animation, StickerSend(schedule = TdApi.MessageSchedulingStateSendWhenOnline()), "")
+                                                }
+                                            }
+                                            item("Send GIF with caption", Icons.Outlined.TextFields) { captioning = animation }
+                                            if (!searching) {
+                                                item("Delete", Icons.Outlined.Delete) { telegram.removeSavedAnimation(animation) { reload() } }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -476,16 +536,51 @@ private fun GifsTab(
     }
 }
 
+private class GifRow(val items: List<Pair<Int, Float>>, val height: Float)
+
+private fun justifiedRows(list: List<TdApi.Animation>, width: Float, target: Float, gap: Float): List<GifRow> {
+    val rows = ArrayList<GifRow>()
+    var start = 0
+    while (start < list.size) {
+        var sum = 0f
+        var end = start
+        while (end < list.size) {
+            val a = list[end]
+            val ratio = if (a.width > 0 && a.height > 0) (a.width.toFloat() / a.height).coerceIn(0.5f, 3f) else 1f
+            sum += ratio
+            end++
+            if (sum * target + gap * (end - start - 1) >= width) break
+        }
+        val count = end - start
+        val free = width - gap * (count - 1)
+        val full = sum * target + gap * (count - 1) >= width
+        val height = if (full) free / sum else target
+        rows += GifRow(
+            (start until end).map { i ->
+                val a = list[i]
+                val ratio = if (a.width > 0 && a.height > 0) (a.width.toFloat() / a.height).coerceIn(0.5f, 3f) else 1f
+                i to ratio * height
+            },
+            height,
+        )
+        start = end
+    }
+    return rows
+}
+
+private val GifRowHeight = 96.dp
+private val GifGap = 4.dp
+
 @Composable
-private fun GifCellView(animation: TdApi.Animation, telegram: Telegram, onClick: () -> Unit) {
+private fun GifCellView(animation: TdApi.Animation, telegram: Telegram, modifier: Modifier, onClick: () -> Unit, onMenu: () -> Unit) {
     ThumbImage(
         animation.thumbnail?.file,
         animation.minithumbnail,
         telegram,
-        Modifier
-            .size(GifCell)
+        modifier
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .onSecondaryPress(onMenu)
             .clickable(onClick = onClick),
     )
 }
@@ -530,3 +625,15 @@ internal fun ScheduleDialog(onDismiss: () -> Unit, onPick: (Int) -> Unit) {
 }
 
 private const val ScheduleLeadMinutes = 10L
+
+private fun Modifier.onSecondaryPress(action: () -> Unit): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                event.changes.first().consume()
+                action()
+            }
+        }
+    }
+}

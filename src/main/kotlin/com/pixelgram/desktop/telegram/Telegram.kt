@@ -2885,12 +2885,28 @@ class Telegram(
         }) { result -> if (result is TdApi.Error) AppLog.write("Video note failed ${result.code}: ${result.message}") }
     }
 
-    fun sendAnimation(chatId: Long, animation: TdApi.Animation, replyToId: Long = 0) {
+    fun removeSavedAnimation(animation: TdApi.Animation, done: () -> Unit) {
+        send(TdApi.RemoveSavedAnimation(TdApi.InputFileId(animation.animation.id))) { done() }
+    }
+
+    fun sendAnimation(
+        chatId: Long,
+        animation: TdApi.Animation,
+        replyToId: Long = 0,
+        silent: Boolean = false,
+        schedule: TdApi.MessageSchedulingState? = null,
+        caption: String = "",
+    ) {
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
             topicId = topicOf(chatId)
             replyTo = replyInput(replyToId)
+            options = TdApi.MessageSendOptions().apply {
+                disableNotification = silent
+                schedulingState = schedule
+            }
             inputMessageContent = TdApi.InputMessageAnimation().apply {
+                if (caption.isNotBlank()) this.caption = TdApi.FormattedText(caption.trim(), emptyArray())
                 this.animation = TdApi.InputAnimation().apply {
                     this.animation = remoteInput(animation.animation)
                     addedStickerFileIds = IntArray(0)
