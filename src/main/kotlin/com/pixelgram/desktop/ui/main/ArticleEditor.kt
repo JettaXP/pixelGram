@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.rememberWindowChrome
+import com.pixelgram.desktop.ui.TitleBar
+import com.pixelgram.desktop.ui.ResizeHandles
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,10 +58,8 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.compose.ui.window.rememberDialogState
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.components.Text
 import com.pixelgram.desktop.ui.components.expressive.IconButton
@@ -154,9 +155,19 @@ fun ArticleEditor(telegram: Telegram, chatId: Long, replyToId: Long, onDismiss: 
             block.value = TextFieldValue(text, TextRange(end + before.length + after.length))
         }
     }
-    val dialogState = rememberDialogState(size = DpSize(EditorWidth, EditorHeight))
-    DialogWindow(onCloseRequest = onDismiss, state = dialogState, title = "New article") {
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxSize()) {
+    val frameSetting = com.pixelgram.desktop.ui.theme.LocalAppSettings.current?.customTitleBar?.value ?: true
+    val customFrame = remember { frameSetting && !com.pixelgram.desktop.core.AppPaths.isMac }
+    androidx.compose.ui.window.Window(
+        onCloseRequest = onDismiss,
+        state = androidx.compose.ui.window.rememberWindowState(size = DpSize(EditorWidth, EditorHeight + if (customFrame) com.pixelgram.desktop.ui.TitleBarHeight else 0.dp)),
+        title = com.pixelgram.desktop.core.tr("New article"),
+        undecorated = customFrame,
+    ) {
+        val chrome = rememberWindowChrome()
+        Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+        if (customFrame) TitleBar(chrome, onClose = onDismiss, title = com.pixelgram.desktop.core.tr("New article"))
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth().weight(1f)) {
             Box(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize()) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp)) {
@@ -310,6 +321,9 @@ fun ArticleEditor(telegram: Telegram, chatId: Long, replyToId: Long, onDismiss: 
                 blocks.addAll(fromRich(result))
                 if (blocks.isEmpty()) blocks.add(ArticleBlock(BlockType.Paragraph))
             }
+        }
+            }
+        if (customFrame) ResizeHandles(chrome)
         }
     }
 }
