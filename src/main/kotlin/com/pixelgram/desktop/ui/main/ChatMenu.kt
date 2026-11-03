@@ -180,10 +180,13 @@ fun ChatActions(
             onDismiss = { autoDeleting = false },
         ) { seconds, done -> telegram.setAutoDelete(chat, seconds, done) }
     }
-    if (at != null) {
-        var page by remember { mutableStateOf(MenuPage.Main) }
-        Box(Modifier.offset(at.x, at.y)) {
-            GroupedMenu(expanded = true, onDismiss = onDismiss) {
+    var lastAt by remember { mutableStateOf(at) }
+    if (at != null) lastAt = at
+    val shownAt = lastAt
+    if (shownAt != null) {
+        var page by remember(shownAt) { mutableStateOf(MenuPage.Main) }
+        Box(Modifier.offset(shownAt.x, shownAt.y)) {
+            GroupedMenu(expanded = at != null, onDismiss = onDismiss) {
                 AnimatedContent(
                     targetState = page,
                     transitionSpec = {

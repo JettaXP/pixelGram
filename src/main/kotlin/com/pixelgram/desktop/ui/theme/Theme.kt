@@ -90,6 +90,7 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
             com.pixelgram.desktop.ui.components.LocalCorners provides corners,
             LocalMessageFont provides font,
             LocalAppSettings provides settings,
+            androidx.compose.foundation.LocalContextMenuRepresentation provides com.pixelgram.desktop.ui.components.PixelContextMenu,
             androidx.compose.ui.platform.LocalLayoutDirection provides
                 if (com.pixelgram.desktop.core.I18n.rtl) androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr,
             content = content,

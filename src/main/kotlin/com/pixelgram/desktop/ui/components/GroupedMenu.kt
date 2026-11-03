@@ -1,6 +1,11 @@
 package com.pixelgram.desktop.ui.components
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
+import com.pixelgram.desktop.ui.icons.outlined.ContentPaste
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -115,3 +120,43 @@ private val MenuShadow = 2.dp
 private val MenuWidth = 240.dp
 
 private const val DisabledAlpha = 0.38f
+
+object PixelContextMenu : androidx.compose.foundation.ContextMenuRepresentation {
+    @Composable
+    override fun Representation(state: androidx.compose.foundation.ContextMenuState, items: () -> List<androidx.compose.foundation.ContextMenuItem>) {
+        val status = state.status
+        var anchor by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+        var shown by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<androidx.compose.foundation.ContextMenuItem>>(emptyList()) }
+        val open = status is androidx.compose.foundation.ContextMenuState.Status.Open
+        if (status is androidx.compose.foundation.ContextMenuState.Status.Open && anchor != status.rect) {
+            anchor = status.rect
+            shown = items()
+        }
+        val rect = anchor ?: return
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val close = { state.status = androidx.compose.foundation.ContextMenuState.Status.Closed }
+        androidx.compose.foundation.layout.Box(
+            Modifier.offset(with(density) { rect.left.toDp() }, with(density) { rect.bottom.toDp() }),
+        ) {
+            GroupedMenu(expanded = open && shown.isNotEmpty(), onDismiss = close) {
+                MenuGroups(listOf(shown.map { item ->
+                    MenuEntry(contextIcon(item.label), item.label) {
+                        close()
+                        item.onClick()
+                    }
+                }), width = ContextMenuWidth)
+            }
+        }
+    }
+
+    private val ContextMenuWidth = 200.dp
+
+    private fun contextIcon(label: String): androidx.compose.ui.graphics.vector.ImageVector? {
+        val key = label.lowercase()
+        return when {
+            key.startsWith("cop") || key.startsWith("копир") || key.startsWith("העתק") -> com.pixelgram.desktop.ui.icons.Icons.Outlined.ContentCopy
+            key.startsWith("paste") || key.startsWith("встав") || key.startsWith("הדבק") -> com.pixelgram.desktop.ui.icons.Icons.Outlined.ContentPaste
+            else -> null
+        }
+    }
+}
