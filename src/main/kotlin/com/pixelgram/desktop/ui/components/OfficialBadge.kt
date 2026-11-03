@@ -70,7 +70,7 @@ fun OfficialBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
             .clip(MaterialShapes.Cookie12Sided.toShape())
             .background(if (EasterEgg.israel) IsraelWhite else scheme.primary)
             .pointerHoverIcon(PointerIcon.Hand)
-            .clickable { tip = OfficialNotice },
+            .clickable(interactionSource = null, indication = null) { tip = OfficialNotice },
     ) {
         BadgeTip(tip) { tip = null }
         Icon(
@@ -119,7 +119,7 @@ fun UserBadgeView(badge: UserBadge, telegram: com.pixelgram.desktop.telegram.Tel
             .then(if (custom == null) Modifier.clip(MaterialShapes.Cookie12Sided.toShape()).background(scheme.primary) else Modifier)
             .then(if (editable) Modifier.onSecondaryPress { editing = true } else Modifier)
             .pointerHoverIcon(PointerIcon.Hand)
-            .clickable { tip = custom?.text?.takeIf { it.isNotBlank() } ?: badge.notice },
+            .clickable(interactionSource = null, indication = null) { tip = custom?.text?.takeIf { it.isNotBlank() } ?: badge.notice },
     ) {
         BadgeTip(tip) { tip = null }
         if (custom != null) {
@@ -264,9 +264,11 @@ private object CenterInWindow : androidx.compose.ui.window.PopupPositionProvider
         popupContentSize: androidx.compose.ui.unit.IntSize,
     ) = androidx.compose.ui.unit.IntOffset(
         (windowSize.width - popupContentSize.width) / 2,
-        (windowSize.height - popupContentSize.height) / 2,
+        windowSize.height - popupContentSize.height - (windowSize.height * TipBottomShare).toInt(),
     )
 }
+
+private const val TipBottomShare = 0.08f
 
 private const val TipScaleFrom = 0.8f
 private const val TipMs = 2500L
