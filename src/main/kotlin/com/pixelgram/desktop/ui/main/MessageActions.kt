@@ -495,12 +495,14 @@ fun ReplyQuote(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                EmojiText(
-                    text.replace('\n', ' '),
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (text.isNotEmpty()) {
+                    EmojiText(
+                        text.replace('\n', ' '),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

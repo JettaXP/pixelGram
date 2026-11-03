@@ -28,7 +28,7 @@ enum class SideMenuStyle { Overlay, Push }
 
 enum class TitleText { App, Username, Custom }
 
-enum class FolderTitle { NamesAndIcons, Names, Icons }
+enum class FolderTitle { NamesAndIcons, Names, Icons, ActiveName }
 
 enum class IconPack { Material, Solar, Telegram }
 

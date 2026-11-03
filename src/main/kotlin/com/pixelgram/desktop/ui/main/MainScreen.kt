@@ -502,7 +502,7 @@ private fun PixelRail(
                             selected = isSelected,
                             onClick = { onSelect(tab.key) },
                             icon = { if (mode == com.pixelgram.desktop.core.FolderTitle.Names) FolderName(tab) else FolderIcon(tab, isSelected) },
-                            label = if (mode == com.pixelgram.desktop.core.FolderTitle.NamesAndIcons) {
+                            label = if (mode == com.pixelgram.desktop.core.FolderTitle.NamesAndIcons || mode == com.pixelgram.desktop.core.FolderTitle.ActiveName && isSelected) {
                                 { EmojiText(tab.title, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                             } else {
                                 null
@@ -801,7 +801,7 @@ private fun TopFolders(
                 selected = isSelected,
                 onClick = { onSelect(tab.key) },
                 icon = { if (mode == com.pixelgram.desktop.core.FolderTitle.Names) FolderName(tab) else FolderIcon(tab, isSelected) },
-                label = if (mode == com.pixelgram.desktop.core.FolderTitle.NamesAndIcons) {
+                label = if (mode == com.pixelgram.desktop.core.FolderTitle.NamesAndIcons || mode == com.pixelgram.desktop.core.FolderTitle.ActiveName && isSelected) {
                     { EmojiText(tab.title, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 } else {
                     null

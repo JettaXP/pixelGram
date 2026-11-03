@@ -1030,6 +1030,7 @@ private fun FolderStyleSection(settings: AppSettings) {
             com.pixelgram.desktop.core.FolderTitle.NamesAndIcons to "Names with icons",
             com.pixelgram.desktop.core.FolderTitle.Names to "Names only",
             com.pixelgram.desktop.core.FolderTitle.Icons to "Icons only",
+            com.pixelgram.desktop.core.FolderTitle.ActiveName to "Name on active",
         ),
         settings.folderTitle.value,
         { settings.folderTitle.value = it },

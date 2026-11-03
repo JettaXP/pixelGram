@@ -783,13 +783,15 @@ private fun ChatViewContent(
                     val quote: (@Composable () -> Unit)? = if (message.replyToId != 0L) {
                         {
                             val replied = telegram.replyPreview(chat.id, message.replyToId)
+                            val gone = replied == null && telegram.replyDeleted(chat.id, message.replyToId)
                             ReplyQuote(
                                 name = when {
+                                    gone -> "Deleted message"
                                     replied == null -> "Message"
                                     replied.isOutgoing -> telegram.senderName(replied).ifBlank { "You" }
                                     else -> telegram.senderName(replied)
                                 },
-                                text = replied?.text?.takeIf { it.isNotEmpty() } ?: if (replied?.photo != null) "Photo" else replied?.let { contentText(it.content) }?.ifBlank { null } ?: "…",
+                                text = if (gone) "" else replied?.text?.takeIf { it.isNotEmpty() } ?: if (replied?.photo != null) "Photo" else replied?.let { contentText(it.content) }?.ifBlank { null } ?: "…",
                                 onClick = { actions.onQuoteClick(message.replyToId) },
                                 replied = replied,
                                 telegram = telegram,
@@ -997,6 +999,7 @@ private fun ChatViewContent(
             telegram.needsStart(chat) -> BarMode.Start
             telegram.isLeft(chat) -> BarMode.Join
             !telegram.canPost(chat) -> BarMode.Mute
+            telegram.writeRestriction(chat) != null -> BarMode.Restricted
             else -> BarMode.Compose
         }
         val barFadeIn = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -1033,6 +1036,16 @@ private fun ChatViewContent(
                 joining = true
                 telegram.joinChat(chat.id) { joining = false }
             }
+        } else if (mode == BarMode.Restricted) {
+            val (personal, until) = telegram.writeRestriction(chat) ?: (false to 0)
+            val text = when {
+                !personal -> com.pixelgram.desktop.core.tr("Writing messages isn't allowed in this group.")
+                until > 0 -> com.pixelgram.desktop.core.tr("The admins of this group have restricted your ability to send messages until") + " " +
+                    java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", java.util.Locale.forLanguageTag(com.pixelgram.desktop.core.I18n.code))
+                        .withZone(java.time.ZoneId.systemDefault()).format(java.time.Instant.ofEpochSecond(until.toLong())) + "."
+                else -> com.pixelgram.desktop.core.tr("The admins of this group have restricted your ability to send messages.")
+            }
+            ComposerBar(text, enabled = false) {}
         } else if (mode == BarMode.Mute) {
             val muted = telegram.isMuted(chat)
             ComposerBar(if (muted) "UNMUTE" else "MUTE") { telegram.setMuted(chat, !muted) }
@@ -1137,7 +1150,7 @@ private fun ChatViewContent(
     }
 }
 
-private enum class BarMode { Select, SecretPending, SecretClosed, Blocked, Start, Join, Mute, Compose }
+private enum class BarMode { Select, SecretPending, SecretClosed, Blocked, Start, Join, Mute, Restricted, Compose }
 
 @Composable
 private fun TypingBubble(chat: ChatState, telegram: Telegram) {
@@ -1216,16 +1229,21 @@ private fun ComposerBar(label: String, accent: Boolean = false, enabled: Boolean
         enabled = enabled,
         color = if (accent) colors.primaryContainer else colors.surfaceContainer,
         contentColor = if (accent) colors.onPrimaryContainer else colors.primary,
-        modifier = Modifier.fillMaxWidth().padding(12.dp).height(SendSlot + 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(12.dp).heightIn(min = SendSlot + 16.dp),
         shape = MaterialTheme.shapes.extraLarge,
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.heightIn(min = SendSlot + 16.dp)) {
             AnimatedContent(
                 targetState = label,
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
             ) { text ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        text,
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                    )
                     if (detail != null) {
                         Text(
                             detail,

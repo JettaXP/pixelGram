@@ -138,7 +138,15 @@ internal fun CapsuleFolders(
                                 .padding(horizontal = IndicatorSidePadding),
                         ) {
                             if (mode != com.pixelgram.desktop.core.FolderTitle.Names) FolderIcon(tab, isSelected, tint = content)
-                            if (mode != com.pixelgram.desktop.core.FolderTitle.Icons) {
+                            if (mode == com.pixelgram.desktop.core.FolderTitle.ActiveName) {
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = isSelected,
+                                    enter = androidx.compose.animation.expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) + androidx.compose.animation.fadeIn(),
+                                    exit = androidx.compose.animation.shrinkHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) + androidx.compose.animation.fadeOut(),
+                                ) {
+                                    EmojiText(tab.title, color = content, style = MaterialTheme.typography.labelLarge, maxLines = 1, modifier = Modifier.padding(start = LabelGap))
+                                }
+                            } else if (mode != com.pixelgram.desktop.core.FolderTitle.Icons) {
                                 Box(Modifier.padding(start = if (mode == com.pixelgram.desktop.core.FolderTitle.Names) 0.dp else LabelGap)) {
                                     if (mode == com.pixelgram.desktop.core.FolderTitle.Names) {
                                         FolderName(tab, tint = content)

@@ -217,6 +217,7 @@ private const val ClockTickMs = 20_000L
 private const val SearchLimit = 100
 private const val ReactionRow = 8
 private const val MentionLimit = 30
+private const val NotFoundCode = 404
 private const val MuteForever = 366 * 24 * 3600
 private const val AlbumSize = 10
 private const val HistoryPageSize = 100
@@ -1216,6 +1217,10 @@ class Telegram(
             }
             is TdApi.UpdateDeleteMessages -> if (update.isPermanent) {
                 messages[update.chatId]?.removeAll { it.id in update.messageIds }
+                update.messageIds.forEach { id ->
+                    replyCache.remove(update.chatId to id)
+                    missingReplies[update.chatId to id] = true
+                }
             }
             else -> Unit
         }
@@ -1593,6 +1598,16 @@ class Telegram(
             else -> false
         }
     }
+    fun writeRestriction(chat: ChatState): Pair<Boolean, Int>? {
+        if (chat.isChannel || chat.privateUserId != 0L) return null
+        return when (val status = myStatus(chat)) {
+            is TdApi.ChatMemberStatusCreator, is TdApi.ChatMemberStatusAdministrator -> null
+            is TdApi.ChatMemberStatusRestricted -> if (status.permissions?.canSendBasicMessages == false) true to status.restrictedUntilDate else null
+            is TdApi.ChatMemberStatusLeft, is TdApi.ChatMemberStatusBanned -> null
+            else -> if (chat.permissions?.canSendBasicMessages == false) false to 0 else null
+        }
+    }
+
     fun isAdmin(chat: ChatState): Boolean = when (myStatus(chat)) {
         is TdApi.ChatMemberStatusCreator, is TdApi.ChatMemberStatusAdministrator -> true
         else -> false
@@ -3060,6 +3075,9 @@ class Telegram(
 
     private val replyCache = KeyedState<Pair<Long, Long>, UiMessage>()
     private val replyRequests = HashSet<Pair<Long, Long>>()
+    private val missingReplies = androidx.compose.runtime.mutableStateMapOf<Pair<Long, Long>, Boolean>()
+
+    fun replyDeleted(chatId: Long, id: Long): Boolean = missingReplies[chatId to id] == true
 
     fun replyPreview(chatId: Long, id: Long): UiMessage? {
         messages[chatId]?.firstOrNull { it.id == id }?.let { return it }
@@ -3068,6 +3086,7 @@ class Telegram(
         if (replyRequests.add(key)) {
             send(TdApi.GetMessage(chatId, id)) { result ->
                 if (result is TdApi.Message) replyCache[key] = result.toUi()
+                else if (result is TdApi.Error && result.code == NotFoundCode) missingReplies[key] = true
             }
         }
         return null
