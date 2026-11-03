@@ -450,7 +450,7 @@ object AudioPlayer {
     }
 
     private const val OpusRate = 48_000
-    private const val StreamBytes = 4L * 1024 * 1024
+    private const val StreamBytes = 512L * 1024
     private const val MicrosPerSecond = 1_000_000f
     private const val MaxOpusFrame = 5_760
 }

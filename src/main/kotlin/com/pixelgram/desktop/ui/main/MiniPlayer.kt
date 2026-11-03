@@ -372,7 +372,7 @@ private fun PlayPauseIcon(playing: Boolean) {
 private const val ControlScale = 0.5f
 private val ControlGap = 4.dp
 
-private const val WaveSettleStiffness = 16.5f
+private const val WaveSettleStiffness = 220f
 private val MiniVolumeWidth = 96.dp
 private const val WaveRestThreshold = 0.01f
 
