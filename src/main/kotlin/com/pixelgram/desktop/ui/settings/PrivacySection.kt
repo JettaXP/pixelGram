@@ -317,6 +317,13 @@ private fun RulesDialog(
     var restrictUsers by remember { mutableStateOf(parsed.restrictUsers) }
     var restrictChats by remember { mutableStateOf(parsed.restrictChats) }
     var picking by remember { mutableStateOf<Boolean?>(null) }
+    val phone = item.setting is TdApi.UserPrivacySettingShowPhoneNumber
+    var findable by remember { mutableStateOf<Audience?>(null) }
+    LaunchedEffect(phone) {
+        if (phone) telegram.privacyRules(TdApi.UserPrivacySettingAllowFindingByPhoneNumber()) { rules ->
+            findable = if (rules?.rules?.any { it is TdApi.UserPrivacySettingRuleAllowAll } == true) Audience.Everybody else Audience.Contacts
+        }
+    }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     AlertDialog(
@@ -345,12 +352,28 @@ private fun RulesDialog(
                         onRemoveChat = { id -> allowChats = allowChats - id },
                         onAdd = { picking = true })
                 }
+                if (phone && findable != null) {
+                    Text("Who can find me by my number", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 12.dp))
+                    listOf(Audience.Everybody, Audience.Contacts).forEach { option ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { findable = option },
+                        ) {
+                            RadioButton(selected = findable == option, onClick = { findable = option })
+                            Text(option.label)
+                        }
+                    }
+                }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         },
         confirmButton = {
             TextButton(enabled = !busy, onClick = {
                 busy = true
+                findable?.takeIf { phone }?.let { option ->
+                    val rule: TdApi.UserPrivacySettingRule = if (option == Audience.Everybody) TdApi.UserPrivacySettingRuleAllowAll() else TdApi.UserPrivacySettingRuleAllowContacts()
+                    telegram.setPrivacyRules(TdApi.UserPrivacySettingAllowFindingByPhoneNumber(), TdApi.UserPrivacySettingRules(arrayOf(rule))) {}
+                }
                 val rules = build(audience, allowUsers, allowChats, restrictUsers, restrictChats, parsed.kept)
                 telegram.setPrivacyRules(item.setting, rules) { failure ->
                     busy = false
@@ -361,23 +384,26 @@ private fun RulesDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
     picking?.let { allow ->
-        ForwardDialog(telegram, settings, onDismiss = { picking = null }) { chatId ->
-            val chat = telegram.chats[chatId]
-            val userId = chat?.privateUserId ?: 0L
+        val initial = if (allow) allowUsers + allowChats else restrictUsers + restrictChats
+        ExceptionPicker(
+            if (allow) "Always share with" else "Never share with",
+            telegram,
+            settings,
+            initial,
+            onDismiss = { picking = null },
+        ) { picked ->
+            val users = picked.mapNotNull { id -> telegram.chats[id]?.privateUserId?.takeIf { it != 0L } }
+            val chats = picked.filter { id -> telegram.chats[id]?.privateUserId == 0L }
             if (allow) {
-                if (userId != 0L) {
-                    allowUsers = (allowUsers + userId).distinct()
-                    restrictUsers = restrictUsers - userId
-                } else {
-                    allowChats = (allowChats + chatId).distinct()
-                }
+                allowUsers = users
+                allowChats = chats
+                restrictUsers = restrictUsers - users.toSet()
+                restrictChats = restrictChats - chats.toSet()
             } else {
-                if (userId != 0L) {
-                    restrictUsers = (restrictUsers + userId).distinct()
-                    allowUsers = allowUsers - userId
-                } else {
-                    restrictChats = (restrictChats + chatId).distinct()
-                }
+                restrictUsers = users
+                restrictChats = chats
+                allowUsers = allowUsers - users.toSet()
+                allowChats = allowChats - chats.toSet()
             }
             picking = null
         }
