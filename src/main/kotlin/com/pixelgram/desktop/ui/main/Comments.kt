@@ -4,6 +4,10 @@ import com.pixelgram.desktop.ui.components.itemMotion
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import it.tdlight.jni.TdApi
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
+import com.pixelgram.desktop.ui.toShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -56,7 +60,9 @@ import com.pixelgram.desktop.ui.OnEscape
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 
 @Composable
-fun CommentsBar(count: Int, onClick: () -> Unit) {
+fun CommentsBar(count: Int, onClick: () -> Unit, commenters: List<TdApi.MessageSender> = emptyList(), telegram: Telegram? = null) {
+    val faces = if (telegram != null) commenters.take(MaxCommenters) else emptyList()
+    val accent = MaterialTheme.colorScheme.primary
     Column {
         HorizontalDivider(Modifier.padding(horizontal = 12.dp))
         Row(
@@ -67,7 +73,25 @@ fun CommentsBar(count: Int, onClick: () -> Unit) {
                 .clickable(onClick = onClick)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
-            Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = null, modifier = Modifier.size(20.dp))
+            if (faces.isEmpty() || telegram == null) {
+                Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = null, modifier = Modifier.size(20.dp))
+            } else {
+                val settings = com.pixelgram.desktop.ui.theme.LocalAppSettings.current
+                val shape = settings?.avatarShapeFor(com.pixelgram.desktop.core.AvatarKind.Private)?.toShape(settings.avatarCorner.value)
+                    ?: androidx.compose.foundation.shape.CircleShape
+                Box(Modifier.width(CommenterSize + (CommenterSize - CommenterOverlap) * (faces.size - 1)).height(CommenterSize)) {
+                    faces.forEachIndexed { index, sender ->
+                        com.pixelgram.desktop.ui.components.AvatarImage(
+                            telegram.senderTitle(sender),
+                            telegram.senderPhoto(sender),
+                            telegram,
+                            shape,
+                            CommenterSize,
+                            Modifier.offset(x = (CommenterSize - CommenterOverlap) * index),
+                        )
+                    }
+                }
+            }
             Text(
                 when (count) {
                     0 -> "Leave a comment"
@@ -75,12 +99,17 @@ fun CommentsBar(count: Int, onClick: () -> Unit) {
                     else -> "$count comments"
                 },
                 style = MaterialTheme.typography.labelLarge,
+                color = if (faces.isNotEmpty()) accent else androidx.compose.ui.graphics.Color.Unspecified,
                 modifier = Modifier.weight(1f),
             )
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(20.dp))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = if (faces.isNotEmpty()) accent else androidx.compose.material3.LocalContentColor.current, modifier = Modifier.size(20.dp))
         }
     }
 }
+
+private const val MaxCommenters = 3
+private val CommenterSize = 26.dp
+private val CommenterOverlap = 8.dp
 
 @Composable
 fun CommentsView(post: UiMessage, telegram: Telegram, settings: AppSettings, onOpenChat: ((Long) -> Unit)? = null, onBack: () -> Unit) {

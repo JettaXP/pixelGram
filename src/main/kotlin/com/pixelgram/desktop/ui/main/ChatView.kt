@@ -1541,7 +1541,7 @@ fun MessageBubble(
                         Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp).widthIn(min = KeyboardMinWidth),
                     )
                 }
-                if (message.comments >= 0 && onComments != null) CommentsBar(message.comments, onComments)
+                if (message.comments >= 0 && onComments != null) CommentsBar(message.comments, onComments, message.commenters, telegram)
             }
         }
     }

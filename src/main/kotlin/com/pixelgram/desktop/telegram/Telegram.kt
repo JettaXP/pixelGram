@@ -176,6 +176,7 @@ data class UiMessage(
     val pinned: Boolean = false,
     val albumId: Long = 0,
     val comments: Int = -1,
+    val commenters: List<TdApi.MessageSender> = emptyList(),
     val senderTag: String = "",
 )
 
@@ -1191,6 +1192,7 @@ class Telegram(
                         reactions = update.interactionInfo?.reactions?.reactions?.toList().orEmpty(),
                         views = update.interactionInfo?.viewCount ?: list[index].views,
                         comments = update.interactionInfo?.replyInfo?.replyCount ?: list[index].comments,
+                        commenters = update.interactionInfo?.replyInfo?.recentReplierIds?.filterNotNull() ?: list[index].commenters,
                     )
                 }
             }
@@ -3286,6 +3288,7 @@ fun TdApi.Message.toUi(): UiMessage {
         viaBot = viaBotUserId,
         views = interactionInfo?.viewCount ?: 0,
         comments = interactionInfo?.replyInfo?.replyCount ?: -1,
+        commenters = interactionInfo?.replyInfo?.recentReplierIds?.filterNotNull().orEmpty(),
         pinned = isPinned,
         albumId = mediaAlbumId,
         signature = authorSignature.orEmpty(),
