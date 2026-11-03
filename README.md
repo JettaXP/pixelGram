@@ -52,7 +52,7 @@ Not sure on Windows? Take the **setup.exe**. Already have pixelGram? You don't n
 ## Install
 
 - **Arch Linux and derivatives:** `sudo pacman -U pixelgram-*.pkg.tar.zst`
-- **Windows:** run the `-setup.exe` (or the `.msi`), or unpack the portable `.zip`
+- **Windows:** run the `-setup.exe`, or unpack the portable `.zip`
 - **Any Linux (AppImage):** `chmod +x pixelGram-x86_64.AppImage && ./pixelGram-x86_64.AppImage`
 - **Any Linux (archive):** unpack `pixelGram-linux-x86_64.tar.gz` and run `pixelGram/bin/pixelGram`
 - **macOS (Apple Silicon):** open `pixelGram-macos-arm64.dmg` and drag pixelGram to Applications

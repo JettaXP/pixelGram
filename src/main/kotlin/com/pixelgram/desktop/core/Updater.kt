@@ -110,6 +110,7 @@ object Updater {
         if (!isNewer(version, BuildConfig.VERSION)) return UpdateState.UpToDate
         val names = listOf(
             "pixelGram-$version-windows-x64-portable.zip",
+            "pixelGram-$version-windows-x64-setup.exe",
             "pixelGram-$version-windows-x64.msi",
             "pixelGram-$version-x86_64.AppImage",
             "pixelgram-$version-1-x86_64.pkg.tar.zst",
@@ -145,7 +146,7 @@ object Updater {
         fun find(predicate: (String) -> Boolean) = assets.firstOrNull { it.name.matches(SafeAssetName) && predicate(it.name.lowercase()) }
         return when {
             AppPaths.isWindows && AppPaths.isPortable -> find { it.endsWith("portable.zip") }
-            AppPaths.isWindows -> find { it.endsWith(".msi") }
+            AppPaths.isWindows -> find { it.endsWith("-setup.exe") } ?: find { it.endsWith(".msi") }
             AppPaths.isMac -> find { it.endsWith(".dmg") }
             System.getenv("APPIMAGE") != null -> find { it.endsWith(".appimage") }
             isPacmanInstall() -> find { it.endsWith(".pkg.tar.zst") }
@@ -205,7 +206,7 @@ object Updater {
     }
 
     private fun manualStep(file: File): String? = when {
-        file.name.endsWith(".msi") || file.name.endsWith(".AppImage", ignoreCase = true) -> null
+        file.name.endsWith(".msi") || file.name.endsWith("-setup.exe") || file.name.endsWith(".AppImage", ignoreCase = true) -> null
         file.name.endsWith(".pkg.tar.zst") -> "sudo pacman -U \"${file.absolutePath}\""
         isArchive(file) && launcher() != null && AppPaths.appDir != null -> null
         else -> "Unpack ${file.name} over the current pixelGram folder."
@@ -333,7 +334,7 @@ object Updater {
         }
         runCatching {
             when {
-                file.name.endsWith(".msi") -> {
+                file.name.endsWith(".msi") || file.name.endsWith("-setup.exe") -> {
                     File(AppPaths.dataDir, "update-error.log").delete()
                     val exe = System.getProperty("jpackage.app-path").orEmpty()
                     val script = File(file.parentFile, "install-update.ps1").apply { writeText(MsiScript) }
@@ -397,15 +398,28 @@ private val MsiScript = """
 param([int]${'$'}ProcessId, [string]${'$'}Msi, [string]${'$'}Exe, [string]${'$'}Marker)
 Wait-Process -Id ${'$'}ProcessId -Timeout 60 -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 500
+${'$'}package = ${'$'}Msi
+${'$'}unpacked = Join-Path (Split-Path ${'$'}Msi) 'setup-extract'
 try {
+    if (${'$'}Msi.EndsWith('.exe')) {
+        Remove-Item -LiteralPath ${'$'}unpacked -Recurse -Force -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Force ${'$'}unpacked | Out-Null
+        Start-Process -FilePath ${'$'}Msi -ArgumentList @('/C', ('/T:"' + ${'$'}unpacked + '"'), '/Q') -Wait
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        ${'$'}payload = Join-Path ${'$'}unpacked 'payload'
+        [System.IO.Compression.ZipFile]::ExtractToDirectory((Join-Path ${'$'}unpacked 'payload.zip'), ${'$'}payload)
+        ${'$'}Msi = (Get-ChildItem -LiteralPath ${'$'}payload -Recurse -Filter 'pixelGram.msi' | Select-Object -First 1).FullName
+    }
     ${'$'}install = Start-Process -FilePath 'msiexec.exe' -ArgumentList @('/i', ('"' + ${'$'}Msi + '"'), '/passive', '/norestart') -Wait -PassThru
     if (${'$'}install.ExitCode -eq 0 -or ${'$'}install.ExitCode -eq 3010) {
         Set-Content -LiteralPath ${'$'}Marker -Value 'updated'
-        Remove-Item -LiteralPath ${'$'}Msi -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath ${'$'}package -Force -ErrorAction SilentlyContinue
     }
     elseif (${'$'}install.ExitCode -ne 1602) { Add-Content -LiteralPath (Join-Path (Split-Path ${'$'}Marker) 'update-error.log') -Value "msiexec exit ${'$'}(${'$'}install.ExitCode)" }
 } catch {
     Add-Content -LiteralPath (Join-Path (Split-Path ${'$'}Marker) 'update-error.log') -Value ${'$'}_.Exception.Message
+} finally {
+    Remove-Item -LiteralPath ${'$'}unpacked -Recurse -Force -ErrorAction SilentlyContinue
 }
 if (${'$'}Exe -ne '-' -and (Test-Path -LiteralPath ${'$'}Exe)) { Start-Process -FilePath ${'$'}Exe }
 """.trimStart()

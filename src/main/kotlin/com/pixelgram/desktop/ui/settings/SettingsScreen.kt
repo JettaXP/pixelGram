@@ -1846,6 +1846,8 @@ private fun WindowSection(settings: AppSettings) {
         { settings.renderApi.value = it },
         enabled = { it != "DirectX" || com.pixelgram.desktop.core.AppPaths.isWindows },
     )
+    Header("Window")
+    SwitchRow(0, 1, "Full screen", "Also toggles with F11.", settings.fullscreen.value) { settings.fullscreen.value = it }
     Header("Window title bar")
     val titleRows = buildList {
         add(Triple("Show chat name", settings.titleChatName.value) { value: Boolean -> settings.titleChatName.value = value })

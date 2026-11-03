@@ -401,6 +401,14 @@ private fun ApplicationScope.PixelApp() {
                 com.pixelgram.desktop.core.WindowBounds.save(settings, window.x, window.y, window.width, window.height)
             }
         }
+        LaunchedEffect(settings.fullscreen.value) {
+            val want = settings.fullscreen.value
+            if (ownTitleBar && !macNativeWindow) {
+                if (chrome.fullscreen != want) chrome.toggleFullscreen()
+            } else {
+                windowState.placement = if (want) androidx.compose.ui.window.WindowPlacement.Fullscreen else androidx.compose.ui.window.WindowPlacement.Floating
+            }
+        }
         val rootFocus = remember { FocusRequester() }
         var focusInside by remember { mutableStateOf(false) }
         val focusScope = rememberCoroutineScope()
@@ -427,15 +435,7 @@ private fun ApplicationScope.PixelApp() {
                         when {
                             event.type != KeyEventType.KeyDown -> false
                             event.key == Key.F11 -> {
-                                if (ownTitleBar && !macNativeWindow) {
-                                    chrome.toggleFullscreen()
-                                } else {
-                                    windowState.placement = if (windowState.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) {
-                                        androidx.compose.ui.window.WindowPlacement.Floating
-                                    } else {
-                                        androidx.compose.ui.window.WindowPlacement.Fullscreen
-                                    }
-                                }
+                                settings.fullscreen.value = !settings.fullscreen.value
                                 true
                             }
                             event.key == Key.Escape -> EscapeStack.dispatch()

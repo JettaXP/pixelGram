@@ -44,7 +44,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           {
-            echo "Latest build from main (${GITHUB_SHA::7}). Arch: \`sudo pacman -U pixelgram-*.pkg.tar.zst\`. Any Linux: chmod +x and run the .AppImage. Windows: run the -setup.exe (or the .msi), or unpack the portable .zip."
+            echo "Latest build from main (${GITHUB_SHA::7}). Arch: \`sudo pacman -U pixelgram-*.pkg.tar.zst\`. Any Linux: chmod +x and run the .AppImage. Windows: run the -setup.exe, or unpack the portable .zip."
             echo
             echo "## What's new in $VERSION"
             cat changes.md
@@ -216,7 +216,6 @@ jobs:
         shell: bash
         run: |
           mkdir dist
-          cp build/compose/binaries/main/msi/*.msi "dist/pixelGram-$APP_VERSION-windows-x64.msi"
           # The pixelgram-data folder turns on portable mode (data next to the app).
           mkdir -p build/compose/binaries/main/app/pixelGram/pixelgram-data
           7z a "dist/pixelGram-$APP_VERSION-windows-x64-portable.zip" ./build/compose/binaries/main/app/pixelGram
