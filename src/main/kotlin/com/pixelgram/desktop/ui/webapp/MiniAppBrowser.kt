@@ -31,6 +31,12 @@ class MiniAppBrowser(private val onEvent: (String, Map<String, Any?>) -> Unit) {
         engine.documentProperty().addListener { _, _, document -> if (document != null) inject(engine) }
         engine.loadWorker.stateProperty().addListener { _, _, state -> if (state == Worker.State.SUCCEEDED) inject(engine) }
         engine.loadWorker.exceptionProperty().addListener { _, _, error -> if (error != null) AppLog.write("Mini app failed to load", error) }
+        engine.locationProperty().addListener { _, old, location ->
+            if (location != null && TelegramLink.containsMatchIn(location)) {
+                SwingUtilities.invokeLater { onEvent("pixelgram_tg_link", mapOf("url" to location)) }
+                Platform.runLater { if (engine.history.currentIndex > 0) engine.history.go(-1) else if (old != null) engine.load(old) }
+            }
+        }
         view.pageFill = Color.rgb(background shr 16 and 0xFF, background shr 8 and 0xFF, background and 0xFF)
         panel.scene = Scene(view)
         engine.load(url)
@@ -59,6 +65,16 @@ class MiniAppBrowser(private val onEvent: (String, Map<String, Any?>) -> Unit) {
     }
 
     private companion object {
-        const val Shim = "window.TelegramWebviewProxy = { postEvent: function (type, data) { window.pixelgramBridge.postEvent(String(type), data === undefined || data === null ? '' : String(data)); } };"
+        val TelegramLink = Regex("^(https?://)?(www\\.)?(t\\.me|telegram\\.me|telegram\\.dog)/|^tg:", RegexOption.IGNORE_CASE)
+        const val Shim = "window.TelegramWebviewProxy = { postEvent: function (type, data) { window.pixelgramBridge.postEvent(String(type), data === undefined || data === null ? '' : String(data)); } };" +
+            "if (!window.__pgLinks) { window.__pgLinks = true;" +
+            "var pgTg = function (u) { return /^(https?:\\/\\/)?(www\\.)?(t\\.me|telegram\\.me|telegram\\.dog)\\//i.test(u) || /^tg:/i.test(u); };" +
+            "document.addEventListener('click', function (e) { var a = e.target && e.target.closest ? e.target.closest('a') : null; if (!a || !a.href) return;" +
+            " if (pgTg(a.href)) { e.preventDefault(); e.stopPropagation(); window.pixelgramBridge.postEvent('pixelgram_tg_link', JSON.stringify({ url: a.href })); }" +
+            " else if (a.target === '_blank') { e.preventDefault(); window.pixelgramBridge.postEvent('web_app_open_link', JSON.stringify({ url: a.href })); } }, true);" +
+            "var pgOpen = window.open; window.open = function (u) { var s = String(u || '');" +
+            " if (pgTg(s)) { window.pixelgramBridge.postEvent('pixelgram_tg_link', JSON.stringify({ url: s })); return null; }" +
+            " if (s) { window.pixelgramBridge.postEvent('web_app_open_link', JSON.stringify({ url: s })); return null; }" +
+            " return pgOpen ? pgOpen.apply(window, arguments) : null; }; }"
     }
 }

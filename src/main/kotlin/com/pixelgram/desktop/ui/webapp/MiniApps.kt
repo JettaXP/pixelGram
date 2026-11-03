@@ -192,6 +192,7 @@ private fun MiniAppWindow(session: MiniAppSession, settings: AppSettings, icon: 
                         "web_app_set_header_color" -> header = parseColor(data["color"])
                         "web_app_open_link" -> (data["url"] as? String)?.let(Links::openBrowser)
                         "web_app_open_tg_link" -> (data["path_full"] as? String)?.let { Links.open("https://t.me$it") }
+                        "pixelgram_tg_link" -> (data["url"] as? String)?.let { url -> Links.open(if (url.startsWith("tg:", ignoreCase = true) || url.startsWith("http", ignoreCase = true)) url else "https://$url") }
                         "web_app_data_send" -> session.buttonText?.let { text ->
                             session.telegram.sendWebAppData(session.botUserId, text, data["data"] as? String ?: "")
                             onClose()
