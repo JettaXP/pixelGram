@@ -63,4 +63,12 @@ object AppPaths {
     val logsDir: File get() = File(dataDir, "logs").apply { mkdirs() }
 
     val tempDir: File get() = File(dataDir, "temp").apply { mkdirs() }
+
+    val translucentWindows: Boolean by lazy {
+        if (isLinux && !System.getenv("WAYLAND_DISPLAY").isNullOrBlank()) return@lazy false
+        runCatching {
+            java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice
+                .isWindowTranslucencySupported(java.awt.GraphicsDevice.WindowTranslucency.PERPIXEL_TRANSLUCENT)
+        }.getOrDefault(true)
+    }
 }

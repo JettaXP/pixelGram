@@ -338,7 +338,8 @@ private fun ApplicationScope.PixelApp() {
     com.pixelgram.desktop.ui.main.VideoChatWindow(settings, icon)
     com.pixelgram.desktop.ui.webapp.MiniAppHost(settings, icon)
 
-    val close = { if (trayOn) visible = false else quit() }
+    val backgroundOnClose = !hasTray && AppPaths.isLinux && settings.trayIcon.value
+    val close = { if (trayOn || backgroundOnClose) visible = false else quit() }
     val ownTitleBar = remember { settings.customTitleBar.value }
     val macNativeWindow = AppPaths.isMac
     val savedBounds = remember { com.pixelgram.desktop.core.WindowBounds.load(settings) }

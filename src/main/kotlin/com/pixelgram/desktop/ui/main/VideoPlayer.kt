@@ -464,7 +464,7 @@ fun VideoPlayerWindow(request: VideoRequest, settings: AppSettings) {
         ),
         title = "pixelGram video",
         undecorated = true,
-        transparent = true,
+        transparent = com.pixelgram.desktop.core.AppPaths.translucentWindows,
         resizable = false,
         alwaysOnTop = true,
         onKeyEvent = { event ->

@@ -145,7 +145,7 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
         ),
         title = "pixelGram photo",
         undecorated = true,
-        transparent = true,
+        transparent = com.pixelgram.desktop.core.AppPaths.translucentWindows,
         resizable = false,
         alwaysOnTop = true,
         onKeyEvent = { event ->

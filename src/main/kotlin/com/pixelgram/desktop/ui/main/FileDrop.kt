@@ -78,10 +78,20 @@ private fun DragAndDropEvent.at(density: Float): Offset? {
 
 @OptIn(ExperimentalComposeUiApi::class)
 private fun DragAndDropEvent.files(): List<File>? = runCatching {
-    (dragData() as? DragData.FilesList)?.readFiles()?.mapNotNull { uri ->
-        runCatching { File(URI(uri)) }.getOrNull()?.takeIf { it.isFile }
+    val uris = when (val data = dragData()) {
+        is DragData.FilesList -> data.readFiles()
+        is DragData.Text -> data.readText().lines().map(String::trim).filter { it.startsWith("file:") }
+        else -> emptyList()
     }
+    uris.mapNotNull { uri -> runCatching { File(URI(uri)) }.getOrNull()?.takeIf { it.isFile } }
 }.getOrNull()
+
+@OptIn(ExperimentalComposeUiApi::class)
+private fun DragAndDropEvent.carriesFiles(): Boolean = when (val data = dragData()) {
+    is DragData.FilesList -> true
+    is DragData.Text -> runCatching { data.readText().lineSequence().any { it.trim().startsWith("file:") } }.getOrDefault(false)
+    else -> false
+}
 
 object DroppedFiles {
     class Drop(val chatId: Long, val files: List<File>)
@@ -127,7 +137,7 @@ fun Modifier.chatDropTarget(chatId: Long, onHover: (Boolean) -> Unit, onOpen: ()
             }
         }
     }
-    return dragAndDropTarget(shouldStartDragAndDrop = { it.dragData() is DragData.FilesList }, target = target)
+    return dragAndDropTarget(shouldStartDragAndDrop = { it.carriesFiles() }, target = target)
 }
 
 private const val DropOpenDelayMs = 900L
@@ -188,7 +198,7 @@ fun FileDropArea(
     Box(
         modifier
             .fillMaxSize()
-            .dragAndDropTarget(shouldStartDragAndDrop = { it.dragData() is DragData.FilesList }, target = target),
+            .dragAndDropTarget(shouldStartDragAndDrop = { it.carriesFiles() }, target = target),
     ) {
         content()
         AnimatedVisibility(

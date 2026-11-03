@@ -141,7 +141,7 @@ private fun TrayMenuWindow(
         state = state,
         title = "pixelGram",
         undecorated = true,
-        transparent = true,
+        transparent = com.pixelgram.desktop.core.AppPaths.translucentWindows,
         resizable = false,
         alwaysOnTop = true,
         focusable = true,

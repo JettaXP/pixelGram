@@ -56,7 +56,7 @@ fun runUpdateWindow(job: ApplyUpdate.Job) {
                 title = "pixelGram",
                 icon = icon,
                 undecorated = true,
-                transparent = true,
+                transparent = com.pixelgram.desktop.core.AppPaths.translucentWindows,
                 resizable = false,
                 state = rememberWindowState(position = WindowPosition(Alignment.Center), size = DpSize(WindowWidth, WindowHeight)),
             ) {

@@ -97,7 +97,7 @@ fun ToastWindow(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) ->
         state = state,
         title = "pixelGram",
         undecorated = true,
-        transparent = true,
+        transparent = com.pixelgram.desktop.core.AppPaths.translucentWindows,
         resizable = false,
         focusable = false,
         alwaysOnTop = true,
