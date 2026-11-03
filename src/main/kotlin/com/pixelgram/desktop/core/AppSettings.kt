@@ -30,7 +30,7 @@ enum class TitleText { App, Username, Custom }
 
 enum class FolderTitle { NamesAndIcons, Names, Icons, ActiveName }
 
-enum class IconPack { Material, Solar, Telegram }
+enum class IconPack { Material, Solar, Telegram, Remix }
 
 enum class AvatarKind(val title: String) {
     Private("Private chats"),

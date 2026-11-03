@@ -888,6 +888,7 @@ private fun AppearanceSection(settings: AppSettings, onOpen: (Section) -> Unit) 
             com.pixelgram.desktop.core.IconPack.Material to "Material",
             com.pixelgram.desktop.core.IconPack.Solar to "Solar",
             com.pixelgram.desktop.core.IconPack.Telegram to "Telegram",
+            com.pixelgram.desktop.core.IconPack.Remix to "Remix",
         ),
         settings.iconPack.value,
         { settings.iconPack.value = it },
@@ -903,6 +904,7 @@ private fun AppearanceSection(settings: AppSettings, onOpen: (Section) -> Unit) 
             com.pixelgram.desktop.core.IconPack.Material -> "Material Symbols by Google."
             com.pixelgram.desktop.core.IconPack.Solar -> "Solar Icon Set by 480 Design."
             com.pixelgram.desktop.core.IconPack.Telegram -> "Icons from Telegram Desktop."
+            com.pixelgram.desktop.core.IconPack.Remix -> "Remix Icon by Remix Design."
         },
     )
     Header("Emoji")
