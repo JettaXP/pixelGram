@@ -73,6 +73,7 @@ import com.pixelgram.desktop.ui.components.Text
 import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -1158,6 +1159,11 @@ fun TransferRing(progress: Float?, color: Color, onCancel: (() -> Unit)?, size: 
 
 private const val RingFlattenFrom = 0.8f
 private const val FileSwapScale = 0.6f
+private const val RoundDecodeWidth = 480
+
+object RoundPlayback {
+    var current by mutableStateOf<Long?>(null)
+}
 
 private enum class FileState { Transfer, Remote, Local }
 private const val MinRingProgress = 0.02f
@@ -1195,19 +1201,57 @@ fun BareContent(message: UiMessage, telegram: Telegram) {
         }
         is TdApi.MessageVideoNote -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val note = content.videoNote
-            val (busy, open) = rememberOpener(note.video, telegram, ::openFile)
+            val path = telegram.localPath(note.video)
+            val progress = telegram.progress(note.video)
+            val active = RoundPlayback.current == message.key
+            val engine = if (active && path != null) {
+                remember(path) { VideoEngine(path, loop = false, sound = true, maxWidth = RoundDecodeWidth).apply { start() } }
+            } else {
+                null
+            }
+            if (engine != null) {
+                DisposableEffect(engine) { onDispose { engine.close() } }
+                LaunchedEffect(engine.ended) { if (engine.ended) RoundPlayback.current = null }
+            }
+            val click = {
+                when {
+                    path == null && progress != null -> telegram.cancelDownload(note.video)
+                    path == null -> telegram.download(note.video)
+                    engine != null -> engine.toggle()
+                    else -> {
+                        AudioPlayer.stop()
+                        RoundPlayback.current = message.key
+                    }
+                }
+            }
             Box(
-                Modifier.size(VideoNoteSize).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest).clickable(onClick = open),
+                Modifier.size(VideoNoteSize).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest).clickable(onClick = click),
                 contentAlignment = Alignment.Center,
             ) {
                 ThumbImage(note.thumbnail?.file, note.minithumbnail, telegram, Modifier.fillMaxSize())
+                if (engine != null) VideoFrame(engine, Modifier.fillMaxSize())
+                if (engine != null && engine.duration > 0) {
+                    val fraction = (engine.position.toFloat() / engine.duration).coerceIn(0f, 1f)
+                    val paused = !engine.playing
+                    CircularWavyProgressIndicator(
+                        progress = { fraction },
+                        modifier = Modifier.fillMaxSize().padding(4.dp),
+                        color = Color.White,
+                        trackColor = if (paused) Color.White.copy(alpha = 0.3f) else Color.Transparent,
+                        amplitude = { if (paused) 1f else 0f },
+                        waveSpeed = 0.dp,
+                    )
+                }
                 Box(Modifier.align(Alignment.BottomEnd).padding(10.dp)) { TranscribeButton(message, note.speechRecognitionResult, telegram) }
-                if (busy) {
-                    Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                        TransferRing(telegram.progress(note.video), Color.White, { telegram.cancelDownload(note.video) }, 44.dp)
+                when {
+                    progress != null -> Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                        TransferRing(progress, Color.White, { telegram.cancelDownload(note.video) }, 44.dp)
                     }
-                } else {
-                    PlayBadge(false)
+                    path == null -> Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.ArrowDownward, contentDescription = "Download", tint = Color.White, modifier = Modifier.size(28.dp))
+                    }
+                    engine == null -> PlayBadge(false)
+                    !engine.playing -> PlayBadge(false)
                 }
             }
             TranscriptText(message, note.speechRecognitionResult)
