@@ -716,8 +716,11 @@ private fun SettingsStyleChoice(settings: AppSettings) {
         settings.settingsStyle.value,
         { settings.settingsStyle.value = it },
         translate = false,
+        separate = true,
     )
 }
+
+private val SeparateGap = 8.dp
 
 @Composable
 fun PixelSwitch(
@@ -1159,16 +1162,18 @@ internal fun <T> ConnectedChoice(
     onSelect: (T) -> Unit,
     enabled: (T) -> Boolean = { true },
     translate: Boolean = true,
+    separate: Boolean = com.pixelgram.desktop.ui.theme.LocalAppSettings.current?.settingsStyle?.value == com.pixelgram.desktop.core.SettingsStyle.MaterialYou,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(if (separate) SeparateGap else ButtonGroupDefaults.ConnectedSpaceBetween)) {
         options.forEachIndexed { index, (value, label) ->
             ToggleButton(
                 checked = selected == value,
                 onCheckedChange = { onSelect(value) },
                 enabled = enabled(value),
-                shapes = when (index) {
-                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                    options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                shapes = when {
+                    separate -> androidx.compose.material3.ToggleButtonDefaults.shapes()
+                    index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    index == options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
                     else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                 },
             ) {
