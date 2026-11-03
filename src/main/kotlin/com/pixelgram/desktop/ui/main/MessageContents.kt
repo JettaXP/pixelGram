@@ -673,21 +673,27 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun PlayButton(key: Long, chatId: Long, title: String, file: TdApi.File?, telegram: Telegram, audio: TdApi.Audio? = null) {
+fun PlayButton(key: Long, chatId: Long, title: String, file: TdApi.File?, telegram: Telegram, audio: TdApi.Audio? = null, cover: TdApi.File? = null) {
     val scheme = MaterialTheme.colorScheme
     val (busy, start) = rememberOpener(file, telegram) { path -> AudioPlayer.toggle(key, path, title, chatId, audio) }
     val active = AudioPlayer.current == key
     val downloaded = telegram.localPath(file) != null
-    Box(Modifier.size(PlayerButton)) {
+    val size = if (cover != null) CoverButton else PlayerButton
+    Box(Modifier.size(size)) {
         Box(
             Modifier.fillMaxSize().clip(CircleShape).background(scheme.primary).clickable(onClick = start),
             contentAlignment = Alignment.Center,
         ) {
+            if (cover != null) {
+                com.pixelgram.desktop.ui.components.AvatarImage(title, cover, telegram, CircleShape, size)
+                Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = CoverScrim)))
+            }
+            val tint = if (cover != null) androidx.compose.ui.graphics.Color.White else scheme.onPrimary
             when {
-                busy -> TransferRing(telegram.progress(file), scheme.onPrimary, { telegram.cancelDownload(file) }, 40.dp)
-                active && AudioPlayer.loading -> LoadingIndicator(Modifier.size(32.dp), color = scheme.onPrimary)
-                active && AudioPlayer.playing -> Icon(Icons.Rounded.Pause, contentDescription = "Pause", tint = scheme.onPrimary, modifier = Modifier.size(30.dp))
-                else -> Icon(Icons.Rounded.PlayArrow, contentDescription = "Play", tint = scheme.onPrimary, modifier = Modifier.size(30.dp))
+                busy -> TransferRing(telegram.progress(file), tint, { telegram.cancelDownload(file) }, 40.dp)
+                active && AudioPlayer.loading -> LoadingIndicator(Modifier.size(32.dp), color = tint)
+                active && AudioPlayer.playing -> Icon(Icons.Rounded.Pause, contentDescription = "Pause", tint = tint, modifier = Modifier.size(30.dp))
+                else -> Icon(Icons.Rounded.PlayArrow, contentDescription = "Play", tint = tint, modifier = Modifier.size(30.dp))
             }
         }
         if (!downloaded && !busy) {
@@ -801,29 +807,26 @@ private fun AudioContent(message: UiMessage, audio: TdApi.Audio, telegram: Teleg
     val key = message.key
     val active = AudioPlayer.current == key
     val title = audioTitle(audio)
-    val color = androidx.compose.material3.LocalContentColor.current
+    val cover = audio.albumCoverThumbnail?.file ?: audio.externalAlbumCovers?.firstOrNull()?.file
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PlayButton(key, message.chatId, title, audio.audio, telegram, audio)
+        PlayButton(key, message.chatId, title, audio.audio, telegram, audio, cover = cover)
         Column(Modifier.width(WaveWidth)) {
-            EmojiText(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (active) {
-                Text(
-                    "%02d:%02d / %02d:%02d".format(
-                        AudioPlayer.position.toInt() / 60, AudioPlayer.position.toInt() % 60,
-                        audio.duration / 60, audio.duration % 60,
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = LocalContentColorAlpha(),
-                )
-            } else {
-                Text(
-                    "%02d:%02d, %s".format(audio.duration / 60, audio.duration % 60, formatSize(audio.audio?.size ?: 0)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = LocalContentColorAlpha(),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            val name = audio.title.ifBlank { audio.fileName.ifBlank { "Audio" } }
+            EmojiText(name, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (audio.performer.isNotBlank()) {
+                EmojiText(audio.performer, style = MaterialTheme.typography.bodyMedium, color = LocalContentColorAlpha(), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            val total = "%d:%02d".format(audio.duration / 60, audio.duration % 60)
+            Text(
+                when {
+                    active -> "%d:%02d / %s".format(AudioPlayer.position.toInt() / 60, AudioPlayer.position.toInt() % 60, total)
+                    audio.performer.isNotBlank() || audio.title.isNotBlank() -> "0:00 / $total"
+                    else -> "$total, ${formatSize(audio.audio?.size ?: 0)}"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = LocalContentColorAlpha(),
+                maxLines = 1,
+            )
         }
     }
 }
@@ -848,6 +851,8 @@ private fun waveform(data: ByteArray?): List<Float> {
 private const val Bars = 36
 private val WaveWidth = 190.dp
 private val PlayerButton = 46.dp
+private val CoverButton = 56.dp
+private const val CoverScrim = 0.3f
 
 @Composable
 private fun CallContent(call: TdApi.MessageCall, outgoing: Boolean, date: Int) {
