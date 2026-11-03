@@ -81,6 +81,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.togetherWith
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
@@ -514,6 +515,7 @@ private fun FileRow(
     progress: Float? = null,
     onCancel: (() -> Unit)? = null,
     dragPath: String? = null,
+    downloaded: Boolean = true,
     onClick: () -> Unit,
 ) {
     val transferring = busy || progress != null
@@ -536,10 +538,35 @@ private fun FileRow(
                 if (transferring) TransferRing(progress, scheme.primary, onCancel, 40.dp)
             }
         } else Box(Modifier.size(46.dp).clip(CircleShape).background(scheme.primary), contentAlignment = Alignment.Center) {
-            if (transferring) {
-                TransferRing(progress, scheme.onPrimary, onCancel, 40.dp)
-            } else {
-                Icon(icon, contentDescription = null, tint = scheme.onPrimary)
+            val state = when {
+                transferring -> FileState.Transfer
+                !downloaded -> FileState.Remote
+                else -> FileState.Local
+            }
+            val swapFade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+            val swapScale = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+            androidx.compose.animation.AnimatedContent(
+                targetState = state,
+                transitionSpec = {
+                    (androidx.compose.animation.fadeIn(swapFade) + androidx.compose.animation.scaleIn(swapScale, initialScale = FileSwapScale)) togetherWith
+                        (androidx.compose.animation.fadeOut(swapFade) + androidx.compose.animation.scaleOut(swapScale, targetScale = FileSwapScale))
+                },
+                contentAlignment = Alignment.Center,
+            ) { current ->
+                when (current) {
+                    FileState.Transfer -> TransferRing(progress, scheme.onPrimary, onCancel, 40.dp)
+                    FileState.Remote -> Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                        CircularWavyProgressIndicator(
+                            progress = { 0f },
+                            modifier = Modifier.size(40.dp),
+                            color = scheme.onPrimary,
+                            trackColor = scheme.onPrimary.copy(alpha = 0.45f),
+                            waveSpeed = 0.dp,
+                        )
+                        Icon(Icons.Filled.ArrowDownward, contentDescription = "Download", tint = scheme.onPrimary, modifier = Modifier.size(20.dp))
+                    }
+                    FileState.Local -> Icon(icon, contentDescription = null, tint = scheme.onPrimary)
+                }
             }
         }
         Column(Modifier.widthIn(max = 280.dp)) {
@@ -621,6 +648,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
                     if (message.sending) telegram.cancelSending(message) else telegram.cancelDownload(document.document)
                 },
                 dragPath = saved ?: downloaded,
+                downloaded = downloaded != null || message.sending,
                 onClick = open,
             )
         }
@@ -1129,6 +1157,9 @@ fun TransferRing(progress: Float?, color: Color, onCancel: (() -> Unit)?, size: 
 }
 
 private const val RingFlattenFrom = 0.8f
+private const val FileSwapScale = 0.6f
+
+private enum class FileState { Transfer, Remote, Local }
 private const val MinRingProgress = 0.02f
 
 @Composable
