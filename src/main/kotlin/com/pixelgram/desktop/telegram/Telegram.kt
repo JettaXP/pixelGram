@@ -565,7 +565,7 @@ class Telegram(
     fun chatTitle(chat: ChatState): String = when {
         isSavedMessages(chat.id) -> SavedMessagesTitle
         chat.privateUserId != 0L -> com.pixelgram.desktop.core.LocalNames.get(chat.privateUserId) ?: com.pixelgram.desktop.core.Tweaks.name(chat.title)
-        else -> com.pixelgram.desktop.core.Tweaks.name(chat.title)
+        else -> com.pixelgram.desktop.core.LocalNames.get(chat.id) ?: com.pixelgram.desktop.core.Tweaks.name(chat.title)
     }
 
     fun openSavedMessages(onChat: (Long) -> Unit) {
@@ -1533,7 +1533,22 @@ class Telegram(
         return muteFor != 0
     }
 
-    fun setMuted(chat: ChatState, muted: Boolean) {
+    fun setMuted(chat: ChatState, muted: Boolean) = setMuteFor(chat, if (muted) MuteForever else 0)
+
+    fun setMutedFor(chat: ChatState, seconds: Int) = setMuteFor(chat, if (seconds <= 0) MuteForever else seconds)
+
+    fun markChatUnread(chat: ChatState) {
+        send(TdApi.ToggleChatIsMarkedAsUnread(chat.id, true))
+    }
+
+    fun setProtectedContent(chat: ChatState, enabled: Boolean) {
+        send(TdApi.ToggleChatHasProtectedContent(chat.id, enabled)) { result ->
+            if (result is TdApi.Error) AppLog.write("Protected content ${result.code}: ${result.message}")
+        }
+    }
+
+    private fun setMuteFor(chat: ChatState, muteSeconds: Int) {
+        val muted = muteSeconds != 0
         val settings = (chat.notifications ?: TdApi.ChatNotificationSettings().apply {
             useDefaultSound = true
             useDefaultShowPreview = true
@@ -1544,7 +1559,7 @@ class Telegram(
             useDefaultDisableMentionNotifications = true
         }).apply {
             useDefaultMuteFor = false
-            muteFor = if (muted) MuteForever else 0
+            muteFor = muteSeconds
         }
         muteOverrides[chat.id] = muted
         send(TdApi.SetChatNotificationSettings(chat.id, settings)) { result ->

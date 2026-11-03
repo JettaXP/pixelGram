@@ -1,6 +1,13 @@
 package com.pixelgram.desktop.ui.main
 
 import com.pixelgram.desktop.ui.components.ConfirmOnEnter
+import com.pixelgram.desktop.ui.icons.outlined.Share
+import com.pixelgram.desktop.ui.icons.outlined.LinkOff
+import com.pixelgram.desktop.ui.icons.outlined.Upload
+import com.pixelgram.desktop.ui.icons.outlined.ChatBubbleOutline
+import com.pixelgram.desktop.ui.icons.outlined.MarkChatUnread
+import com.pixelgram.desktop.ui.icons.outlined.Image
+import com.pixelgram.desktop.ui.icons.outlined.CardGiftcard
 import com.pixelgram.desktop.ui.icons.outlined.Edit
 import com.pixelgram.desktop.ui.icons.outlined.DriveFileRenameOutline
 import com.pixelgram.desktop.ui.icons.outlined.PersonAdd
@@ -124,6 +131,16 @@ object ChatWindows {
 
 private enum class Confirm { Clear, Delete, Block }
 
+private enum class MenuPage { Main, Folders, Mute }
+
+private val MuteChoices = listOf(
+    "For 1 hour" to 3600,
+    "For 8 hours" to 8 * 3600,
+    "For 1 day" to 24 * 3600,
+    "For 7 days" to 7 * 24 * 3600,
+    "Forever" to 0,
+)
+
 @Composable
 fun ChatActions(
     chat: ChatState,
@@ -149,6 +166,8 @@ fun ChatActions(
     var reportingChat by remember(chat.id) { mutableStateOf(false) }
     var startingVideoChat by remember(chat.id) { mutableStateOf(false) }
     var secretError by remember(chat.id) { mutableStateOf<String?>(null) }
+    var exporting by remember(chat.id) { mutableStateOf(false) }
+    var gifting by remember(chat.id) { mutableStateOf(false) }
     LaunchedEffect(chat.id, at != null) {
         if (at != null && chat.privateUserId != 0L) telegram.userFullInfo(chat.privateUserId) {}
     }
@@ -162,107 +181,147 @@ fun ChatActions(
         ) { seconds, done -> telegram.setAutoDelete(chat, seconds, done) }
     }
     if (at != null) {
-        var folders by remember { mutableStateOf(false) }
+        var page by remember { mutableStateOf(MenuPage.Main) }
         Box(Modifier.offset(at.x, at.y)) {
             GroupedMenu(expanded = true, onDismiss = onDismiss) {
                 AnimatedContent(
-                    targetState = folders,
+                    targetState = page,
                     transitionSpec = {
-                        val direction = if (targetState) 1 else -1
+                        val direction = if (targetState != MenuPage.Main) 1 else -1
                         (slideInHorizontally { it / 3 * direction } + fadeIn()) togetherWith
                             (slideOutHorizontally { -it / 3 * direction } + fadeOut())
                     },
-                ) { inFolders ->
+                ) { current ->
                     Column {
                         val act = { action: () -> Unit -> { onDismiss(); action() } }
-                        if (inFolders) {
+                        if (current == MenuPage.Folders) {
                             MenuGroups(listOf(
-                                listOf(MenuEntry(Icons.AutoMirrored.Filled.ArrowBack, "Add to folder") { folders = false }),
+                                listOf(MenuEntry(Icons.AutoMirrored.Filled.ArrowBack, "Add to folder") { page = MenuPage.Main }),
                                 telegram.folders.map { folder -> MenuEntry(Icons.Outlined.Folder, folder.title, onClick = act { telegram.addToFolder(chat, folder.id) }) },
+                            ))
+                            return@Column
+                        }
+                        if (current == MenuPage.Mute) {
+                            MenuGroups(listOf(
+                                listOf(MenuEntry(Icons.AutoMirrored.Filled.ArrowBack, "Mute notifications") { page = MenuPage.Main }),
+                                MuteChoices.map { (label, seconds) -> MenuEntry(Icons.Outlined.NotificationsOff, label, onClick = act { telegram.setMutedFor(chat, seconds) }) },
                             ))
                             return@Column
                         }
                         val inChat = onSearch != null
                         val inList = !inChat && showProfile
+                        val inProfile = !inChat && !showProfile
                         val muted = telegram.isMuted(chat)
                         val pinned = chat.pinned[listKey] == true
                         val archived = ChatListKey.Archive in chat.positions
-                        val window = if (onSearch == null) listOf(
-                            MenuEntry(Icons.AutoMirrored.Outlined.OpenInNew, "Open in new window", onClick = act {
-                                if (ChatWindows.open.none { it.second == chat.id }) ChatWindows.open.add(telegram to chat.id)
-                            }),
-                        ) else emptyList()
-                        val main = buildList {
-                            add(MenuEntry(if (muted) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff, if (muted) "Unmute" else "Mute",
-                                onClick = act { telegram.setMuted(chat, !muted) }))
-                            if (showProfile) add(MenuEntry(Icons.Outlined.AccountCircle, "View profile", onClick = act { profile = true }))
-                            if (chat.privateUserId == 0L && telegram.canManage(chat)) {
-                                add(MenuEntry(Icons.Outlined.Tune, if (chat.isChannel) "Manage channel" else "Manage group", onClick = act { managing = true }))
-                            }
-                            if (telegram.canManageVideoChats(chat) && telegram.activeVideoChat(chat) == null) {
-                                add(MenuEntry(if (chat.isChannel) Icons.Outlined.Sensors else Icons.Outlined.Videocam, if (chat.isChannel) "Start live stream" else "Start video chat",
-                                    onClick = act { startingVideoChat = true }))
-                            }
-                            if (telegram.canSetAutoDelete(chat)) {
-                                add(MenuEntry(Icons.Outlined.Timer, "Auto-delete", onClick = act { autoDeleting = true }))
-                            }
-                            if (telegram.canSetChatTheme(chat)) {
-                                add(MenuEntry(Icons.Outlined.Palette, "Chat theme", onClick = act { theming = true }))
-                            }
-                            if (chat.supergroupId != 0L) add(MenuEntry(Icons.Outlined.Upgrade, if (chat.isChannel) "Boost channel" else "Boost group", onClick = act { boosting = true }))
-                            if (chat.unreadMentions > 0) add(MenuEntry(Icons.Outlined.AlternateEmail, "Read all mentions", onClick = act { telegram.readAllMentions(chat) }))
-                            if (chat.unreadReactions > 0) add(MenuEntry(Icons.Outlined.FavoriteBorder, "Read all reactions", onClick = act { telegram.readAllReactions(chat) }))
-                            onToBeginning?.let { add(MenuEntry(Icons.Outlined.KeyboardDoubleArrowUp, "To beginning", onClick = act(it))) }
-                        }
-                        val organize = buildList {
-                            if (onSearch == null) add(MenuEntry(Icons.Outlined.PushPin, if (pinned) "Unpin" else "Pin", onClick = act { telegram.setPinned(chat, listKey, !pinned) }))
-                            if (inList) add(MenuEntry(if (archived) Icons.Outlined.Unarchive else Icons.Outlined.Archive, if (archived) "Unarchive" else "Archive",
-                                onClick = act { telegram.setArchived(chat, !archived) }))
-                            if (inList && telegram.folders.isNotEmpty()) {
-                                add(MenuEntry(Icons.Outlined.CreateNewFolder, "Add to folder", trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight) { folders = true })
-                            }
-                        }
-                        val people = buildList {
-                            if (chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id) && !telegram.isBot(chat)) {
-                                if (!inChat) {
-                                    if (telegram.isContact(chat)) {
-                                        add(MenuEntry(Icons.Outlined.Edit, "Edit contact", onClick = act { contactEdit = true }))
-                                    } else {
-                                        add(MenuEntry(Icons.Outlined.PersonAdd, "Add to contacts", onClick = act { contactEdit = true }))
+                        val saved = telegram.isSavedMessages(chat.id)
+                        val person = chat.privateUserId != 0L && !saved
+                        val bot = telegram.isBot(chat)
+                        val leaveLabel = if (chat.privateUserId != 0L) "Delete chat" else if (chat.isChannel) "Leave channel" else "Leave group"
+                        val muteEntry = MenuEntry(
+                            if (muted) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
+                            if (muted) "Unmute" else "Mute notifications",
+                            trailing = if (muted) null else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        ) { if (muted) act { telegram.setMuted(chat, false) }() else page = MenuPage.Mute }
+                        val clearEntry = MenuEntry(Icons.Outlined.CleaningServices, "Clear history", onClick = act { confirm = Confirm.Clear })
+                        val deleteEntry = MenuEntry(Icons.Outlined.Delete, leaveLabel, color = MaterialTheme.colorScheme.error, onClick = act { confirm = Confirm.Delete })
+                        val sharing = if (!saved && !chat.isChannel && (person || telegram.canManage(chat))) {
+                            MenuEntry(if (chat.protectedContent) Icons.Outlined.Share else Icons.Outlined.LinkOff, if (chat.protectedContent) "Enable Sharing" else "Disable Sharing",
+                                onClick = act { telegram.setProtectedContent(chat, !chat.protectedContent) })
+                        } else null
+                        val export = MenuEntry(Icons.Outlined.Upload, "Export chat history", onClick = act { exporting = true })
+                        val groups: List<List<MenuEntry>> = when {
+                            inList -> listOf(
+                                listOf(MenuEntry(Icons.AutoMirrored.Outlined.OpenInNew, "Open in new window", onClick = act {
+                                    if (ChatWindows.open.none { it.second == chat.id }) ChatWindows.open.add(telegram to chat.id)
+                                })),
+                                buildList {
+                                    add(MenuEntry(if (archived) Icons.Outlined.Unarchive else Icons.Outlined.Archive, if (archived) "Unarchive" else "Archive",
+                                        onClick = act { telegram.setArchived(chat, !archived) }))
+                                    add(MenuEntry(Icons.Outlined.PushPin, if (pinned) "Unpin" else "Pin", onClick = act { telegram.setPinned(chat, listKey, !pinned) }))
+                                    add(muteEntry)
+                                    val unread = chat.unreadCount > 0 || chat.markedUnread
+                                    add(MenuEntry(if (unread) Icons.Outlined.ChatBubbleOutline else Icons.Outlined.MarkChatUnread, if (unread) "Mark as read" else "Mark as unread",
+                                        onClick = act { if (unread) telegram.markChatRead(chat) else telegram.markChatUnread(chat) }))
+                                    if (telegram.folders.isNotEmpty()) {
+                                        add(MenuEntry(Icons.Outlined.CreateNewFolder, "Add to folder", trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight) { page = MenuPage.Folders })
                                     }
-                                }
-                                if (!showProfile) add(MenuEntry(Icons.Outlined.DriveFileRenameOutline, "Rename", onClick = act { renaming = true }))
-                                if (telegram.isSecret(chat)) {
-                                    add(MenuEntry(Icons.Outlined.Key, "Encryption key", onClick = act { keyShown = true }))
-                                } else if (onOpenChat != null) {
-                                    add(MenuEntry(Icons.Outlined.Lock, "Start secret chat", onClick = act {
-                                        val existing = telegram.secretChatWith(chat.privateUserId)
-                                        if (existing != null) onOpenChat(existing.id)
-                                        else telegram.startSecretChat(chat.privateUserId) { chatId, error ->
-                                            if (chatId != null) onOpenChat(chatId) else secretError = error
+                                    add(clearEntry)
+                                    add(deleteEntry)
+                                },
+                            )
+                            inChat -> listOf(
+                                listOf(muteEntry),
+                                buildList {
+                                    add(MenuEntry(Icons.Outlined.AccountCircle, "View profile", onClick = act { profile = true }))
+                                    if (chat.privateUserId == 0L && telegram.canManage(chat)) {
+                                        add(MenuEntry(Icons.Outlined.Tune, if (chat.isChannel) "Manage channel" else "Manage group", onClick = act { managing = true }))
+                                    }
+                                    if (telegram.canManageVideoChats(chat) && telegram.activeVideoChat(chat) == null) {
+                                        add(MenuEntry(if (chat.isChannel) Icons.Outlined.Sensors else Icons.Outlined.Videocam, if (chat.isChannel) "Start live stream" else "Start video chat",
+                                            onClick = act { startingVideoChat = true }))
+                                    }
+                                    if (telegram.canSetChatTheme(chat)) add(MenuEntry(Icons.Outlined.Image, "Set Wallpaper", onClick = act { theming = true }))
+                                    sharing?.let(::add)
+                                    if (chat.supergroupId != 0L) add(MenuEntry(Icons.Outlined.Upgrade, if (chat.isChannel) "Boost channel" else "Boost group", onClick = act { boosting = true }))
+                                    if (chat.unreadMentions > 0) add(MenuEntry(Icons.Outlined.AlternateEmail, "Read all mentions", onClick = act { telegram.readAllMentions(chat) }))
+                                    if (chat.unreadReactions > 0) add(MenuEntry(Icons.Outlined.FavoriteBorder, "Read all reactions", onClick = act { telegram.readAllReactions(chat) }))
+                                    onToBeginning?.let { add(MenuEntry(Icons.Outlined.KeyboardDoubleArrowUp, "Go to beginning", onClick = act(it))) }
+                                    add(export)
+                                    if (!saved && !telegram.isOfficial(chat) && chat.privateUserId == 0L) add(MenuEntry(Icons.Outlined.Flag, "Report", onClick = act { reportingChat = true }))
+                                    add(clearEntry)
+                                    add(deleteEntry)
+                                },
+                            )
+                            else -> listOf(
+                                buildList { if (telegram.canSetAutoDelete(chat)) add(MenuEntry(Icons.Outlined.Timer, "Auto-Delete", onClick = act { autoDeleting = true })) },
+                                buildList {
+                                    if (person && !bot) {
+                                        if (telegram.isContact(chat)) {
+                                            add(MenuEntry(Icons.Outlined.Edit, "Edit contact", onClick = act { contactEdit = true }))
+                                        } else {
+                                            add(MenuEntry(Icons.Outlined.PersonAdd, "Add to contacts", onClick = act { contactEdit = true }))
                                         }
-                                    }))
-                                }
-                            }
+                                    }
+                                    if (!saved && !(person && !bot && telegram.isContact(chat))) {
+                                        add(MenuEntry(Icons.Outlined.DriveFileRenameOutline, "Rename", onClick = act { renaming = true }))
+                                    }
+                                    if (person && !bot) add(MenuEntry(Icons.Outlined.CardGiftcard, "Send a Gift", onClick = act { gifting = true }))
+                                    add(export)
+                                    sharing?.let(::add)
+                                    if (telegram.folders.isNotEmpty()) {
+                                        add(MenuEntry(Icons.Outlined.CreateNewFolder, "Add to folder", trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight) { page = MenuPage.Folders })
+                                    }
+                                    if (person && !bot) {
+                                        if (telegram.isSecret(chat)) {
+                                            add(MenuEntry(Icons.Outlined.Key, "Encryption key", onClick = act { keyShown = true }))
+                                        } else if (onOpenChat != null) {
+                                            add(MenuEntry(Icons.Outlined.Lock, "Start secret chat", onClick = act {
+                                                val existing = telegram.secretChatWith(chat.privateUserId)
+                                                if (existing != null) onOpenChat(existing.id)
+                                                else telegram.startSecretChat(chat.privateUserId) { chatId, error ->
+                                                    if (chatId != null) onOpenChat(chatId) else secretError = error
+                                                }
+                                            }))
+                                        }
+                                    }
+                                    if (person) {
+                                        if (telegram.isBlocked(chat)) {
+                                            add(MenuEntry(Icons.Outlined.LockOpen, if (bot) "Unblock bot" else "Unblock user", onClick = act { telegram.unblock(chat) }))
+                                        } else {
+                                            add(MenuEntry(Icons.Outlined.Block, if (bot) "Stop and block bot" else "Block user", onClick = act { confirm = Confirm.Block }))
+                                        }
+                                    }
+                                    if (!saved && !telegram.isOfficial(chat)) add(MenuEntry(Icons.Outlined.Flag, "Report", onClick = act { reportingChat = true }))
+                                    if (person && !bot && telegram.isContact(chat)) {
+                                        add(MenuEntry(Icons.Outlined.Delete, "Delete contact", color = MaterialTheme.colorScheme.error, onClick = act { telegram.removeContact(chat.privateUserId) }))
+                                    } else if (chat.privateUserId == 0L) {
+                                        add(deleteEntry)
+                                    }
+                                },
+                            )
                         }
-                        val danger = buildList {
-                            if (chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id)) {
-                                if (telegram.isBlocked(chat)) {
-                                    add(MenuEntry(Icons.Outlined.LockOpen, if (telegram.isBot(chat)) "Unblock bot" else "Unblock user", onClick = act { telegram.unblock(chat) }))
-                                } else {
-                                    add(MenuEntry(Icons.Outlined.Block, if (telegram.isBot(chat)) "Stop and block bot" else "Block user", onClick = act { confirm = Confirm.Block }))
-                                }
-                            }
-                            if (!telegram.isSavedMessages(chat.id) && !telegram.isOfficial(chat)) add(MenuEntry(Icons.Outlined.Flag, "Report", onClick = act { reportingChat = true }))
-                            add(MenuEntry(Icons.Outlined.CleaningServices, "Clear history", onClick = act { confirm = Confirm.Clear }))
-                            add(MenuEntry(
-                                Icons.Outlined.Delete,
-                                if (chat.privateUserId != 0L) "Delete chat" else if (chat.isChannel) "Leave channel" else "Leave group",
-                                color = MaterialTheme.colorScheme.error,
-                                onClick = act { confirm = Confirm.Delete },
-                            ))
-                        }
-                        MenuGroups(listOf(window, main, people, organize, danger))
+                        MenuGroups(groups)
                     }
                 }
             }
@@ -315,6 +374,8 @@ fun ChatActions(
     if (boosting) BoostDialog(chat, telegram) { boosting = false }
     if (reportingChat) ReportDialog(telegram, chat.id, LongArray(0)) { reportingChat = false }
     if (startingVideoChat) StartVideoChatDialog(chat, telegram) { startingVideoChat = false }
+    if (exporting) ExportChatDialog(chat, telegram) { exporting = false }
+    if (gifting) SendGiftDialog(chat, telegram, settings) { gifting = false }
     secretError?.let { error ->
         AlertDialog(
             onDismissRequest = { secretError = null },
@@ -358,29 +419,38 @@ private fun ContactDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> 
 
 @Composable
 private fun RenameDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> Unit) {
-    val current = com.pixelgram.desktop.core.LocalNames.get(chat.privateUserId)
+    val person = chat.privateUserId != 0L && !telegram.isBot(chat)
+    val key = if (chat.privateUserId != 0L) chat.privateUserId else chat.id
+    val current = com.pixelgram.desktop.core.LocalNames.get(key)
     val user = telegram.users[chat.privateUserId]
-    var first by remember { mutableStateOf(current?.substringBefore(' ') ?: user?.firstName.orEmpty()) }
-    var last by remember { mutableStateOf(current?.substringAfter(' ', "") ?: user?.lastName.orEmpty()) }
+    val originalFirst = if (person) user?.firstName.orEmpty() else if (chat.privateUserId != 0L) user?.firstName.orEmpty() else chat.title
+    val originalLast = if (person) user?.lastName.orEmpty() else ""
+    var first by remember { mutableStateOf(if (person) current?.substringBefore(' ') ?: originalFirst else current ?: originalFirst) }
+    var last by remember { mutableStateOf(if (person) current?.substringAfter(' ', "") ?: originalLast else "") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Rename") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Only you will see this name. They stay out of your contacts.", style = MaterialTheme.typography.bodyMedium)
-                androidx.compose.material3.OutlinedTextField(first, { first = it }, label = { Text("First name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                androidx.compose.material3.OutlinedTextField(last, { last = it }, label = { Text("Last name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                if (current != null) {
-                    TextButton(onClick = {
-                        com.pixelgram.desktop.core.LocalNames.set(chat.privateUserId, null)
-                        onDismiss()
-                    }) { Text("Restore original name") }
+                Text("Only you will see this name.", style = MaterialTheme.typography.bodyMedium)
+                androidx.compose.material3.OutlinedTextField(first, { first = it }, label = { Text(if (person) "First name" else "Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                if (person) {
+                    androidx.compose.material3.OutlinedTextField(last, { last = it }, label = { Text("Last name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
+                TextButton(
+                    enabled = first != originalFirst || last != originalLast,
+                    onClick = {
+                        first = originalFirst
+                        last = originalLast
+                    },
+                ) { Text("Use original name") }
             }
         },
         confirmButton = {
             TextButton(enabled = first.isNotBlank(), onClick = {
-                com.pixelgram.desktop.core.LocalNames.set(chat.privateUserId, listOf(first.trim(), last.trim()).filter(String::isNotBlank).joinToString(" "))
+                val name = listOf(first.trim(), last.trim()).filter(String::isNotBlank).joinToString(" ")
+                val original = listOf(originalFirst.trim(), originalLast.trim()).filter(String::isNotBlank).joinToString(" ")
+                com.pixelgram.desktop.core.LocalNames.set(key, name.takeIf { it != original })
                 onDismiss()
             }) { Text("Save") }
         },

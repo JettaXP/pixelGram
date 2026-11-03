@@ -1494,3 +1494,25 @@ TB	ТБ
 Output	Вывод
 (no output)	(нет вывода)
 Send .py "code" and pixelGram runs it on this computer, then sends the output in a quote and the code as a code block. Only messages you send are run.	Отправьте .py "код", и pixelGram выполнит его на этом компьютере, а затем отправит вывод в цитате, а код — блоком кода. Выполняются только ваши сообщения.
+Mute notifications	Без звука
+For 1 hour	На 1 час
+For 8 hours	На 8 часов
+For 1 day	На 1 день
+For 7 days	На 7 дней
+Forever	Навсегда
+Mark as unread	Пометить как непрочитанное
+Set Wallpaper	Установить обои
+Disable Sharing	Запретить пересылку
+Enable Sharing	Разрешить пересылку
+Go to beginning	Перейти в начало
+Export chat history	Экспорт истории чата
+Send a Gift	Отправить подарок
+Auto-Delete	Автоудаление
+Only you will see this name.	Это имя увидите только вы.
+Use original name	Оригинальное имя
+Text messages are exported without media files.	Текстовые сообщения экспортируются без медиафайлов.
+Export failed	Не удалось экспортировать
+Export	Экспортировать
+Open folder	Открыть папку
+Hide my name and message	Скрыть моё имя и сообщение
+Send for	Отправить за
