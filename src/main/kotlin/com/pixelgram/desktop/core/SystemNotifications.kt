@@ -9,7 +9,26 @@ object SystemNotifications {
     private val notifySend: Boolean by lazy { onPath("notify-send") }
     private val linuxAvailable: Boolean by lazy { AppPaths.isLinux && (notifySend || onPath("gdbus")) }
     val available: Boolean
-        get() = if (AppPaths.isMac) MacNotifications.available else linuxAvailable
+        get() = when {
+            AppPaths.isMac -> MacNotifications.available
+            AppPaths.isWindows -> trayIcon != null
+            else -> linuxAvailable
+        }
+
+    fun enabled(settings: AppSettings): Boolean =
+        available && settings.notificationStyle.value == NotificationStyle.System && (!AppPaths.isWindows || settings.windowsToasts.value)
+
+    @Volatile
+    var trayIcon: java.awt.TrayIcon? = null
+        set(value) {
+            field?.removeActionListener(clickListener)
+            field = value
+            value?.addActionListener(clickListener)
+        }
+
+    @Volatile
+    private var lastClick: (() -> Unit)? = null
+    private val clickListener = java.awt.event.ActionListener { lastClick?.let { EventQueue.invokeLater(it) } }
 
     private fun onPath(name: String) = System.getenv("PATH").orEmpty().split(File.pathSeparator)
         .any { File(it, name).canExecute() }
@@ -31,6 +50,13 @@ object SystemNotifications {
     fun show(title: String, body: String, icon: String?, onClick: () -> Unit) {
         if (AppPaths.isMac) {
             MacNotifications.show(title, body, onClick)
+            return
+        }
+        if (AppPaths.isWindows) {
+            val icon = trayIcon ?: return
+            lastClick = onClick
+            runCatching { icon.displayMessage(title, body, java.awt.TrayIcon.MessageType.NONE) }
+                .onFailure { AppLog.write("Windows notification failed", it) }
             return
         }
         Thread {

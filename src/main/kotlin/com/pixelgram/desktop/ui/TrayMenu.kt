@@ -90,7 +90,11 @@ fun PixelTray(images: List<BufferedImage>, settings: AppSettings, onOpen: () -> 
     }
     DisposableEffect(Unit) {
         runCatching { SystemTray.getSystemTray().add(trayIcon) }
-        onDispose { runCatching { SystemTray.getSystemTray().remove(trayIcon) } }
+        com.pixelgram.desktop.core.SystemNotifications.trayIcon = trayIcon
+        onDispose {
+            if (com.pixelgram.desktop.core.SystemNotifications.trayIcon === trayIcon) com.pixelgram.desktop.core.SystemNotifications.trayIcon = null
+            runCatching { SystemTray.getSystemTray().remove(trayIcon) }
+        }
     }
     TrayMenuWindow(menuAt, settings, onDismiss = { menuAt = null }, onOpen = onOpen, onQuit = onQuit)
 }

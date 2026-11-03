@@ -147,8 +147,11 @@ internal fun NotificationsSection(telegram: Telegram, settings: AppSettings) {
                     systemRows.size,
                     "Use system notifications",
                     "Shown by your desktop's notification daemon instead of pixelGram's own Material 3 cards.",
-                    settings.notificationStyle.value == NotificationStyle.System,
-                ) { settings.notificationStyle.value = if (it) NotificationStyle.System else NotificationStyle.PixelGram }
+                    SystemNotifications.enabled(settings),
+                ) {
+                    settings.notificationStyle.value = if (it) NotificationStyle.System else NotificationStyle.PixelGram
+                    if (com.pixelgram.desktop.core.AppPaths.isWindows) settings.windowsToasts.value = it
+                }
                 else -> SwitchRow(
                     index,
                     systemRows.size,
@@ -160,7 +163,7 @@ internal fun NotificationsSection(telegram: Telegram, settings: AppSettings) {
         }
     }
 
-    val ownCards = !(SystemNotifications.available && settings.notificationStyle.value == NotificationStyle.System)
+    val ownCards = !SystemNotifications.enabled(settings)
     Reveal(ownCards) {
         Column {
             val screens = remember { notificationScreens() }

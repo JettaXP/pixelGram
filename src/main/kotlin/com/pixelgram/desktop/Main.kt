@@ -281,7 +281,7 @@ private fun ApplicationScope.PixelApp() {
                 ?.let { if (settings.notifyShowName.value) it else it.copy(title = "pixelGram", sender = null, appIcon = true) }
             when {
                 card == null -> Unit
-                settings.notificationStyle.value == NotificationStyle.System && SystemNotifications.available ->
+                SystemNotifications.enabled(settings) ->
                     SystemNotifications.show(
                         title = card.sender?.let { "$it · ${card.title}" } ?: card.title,
                         body = card.text.ifEmpty { LockedBody },
