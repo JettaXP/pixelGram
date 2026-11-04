@@ -238,6 +238,7 @@ private fun ChatListBody(
             }
             LazyColumn(
                 state = listState,
+                modifier = with(com.pixelgram.desktop.ui.components.SmoothWheelScope) { Modifier.glide(listState) },
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {

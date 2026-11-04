@@ -30,6 +30,8 @@ enum class TitleText { App, Username, Custom }
 
 enum class FolderTitle { NamesAndIcons, Names, Icons, ActiveName }
 
+enum class MessageSides { Auto, OneSide, BothSides }
+
 enum class IconPack { Material, Solar, Telegram, Remix }
 
 enum class AvatarKind(val title: String) {
@@ -139,6 +141,7 @@ class AppSettings private constructor(private val props: Properties, private val
     val titleText = enum("titleText", TitleText.App)
     val titleCustom = string("titleCustom", "")
     val folderTitle = enum("folderTitle", FolderTitle.NamesAndIcons)
+    val messageSides = enum("messageSides", MessageSides.Auto)
     val iconPack = enum("iconPack", IconPack.Material)
     val checkUpdates = bool("checkUpdates", true)
     val doubleClickOwn = enum("doubleClickOwn", DoubleClickAction.Reaction)

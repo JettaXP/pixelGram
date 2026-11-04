@@ -78,9 +78,11 @@ fun PhoneText(
         } else {
             val full = with(LocalDensity.current) { (style.fontSize.takeIf { it.value > 0 } ?: LocalTextStyle.current.fontSize).toDp() }
             val digits = text.count(Char::isDigit).coerceAtLeast(1)
+            val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+            val textWidth = with(LocalDensity.current) { measurer.measure(text, style).size.width.toDp() }
             BoxWithConstraints {
-                val fit = if (maxWidth.value.isFinite()) maxWidth / ((digits + 1) * (1f + ShapeGap)) else full
-                val size = minOf(full, fit)
+                val room = if (maxWidth.value.isFinite()) minOf(maxWidth, textWidth) else textWidth
+                val size = minOf(full, room / ((digits + 1) * (1f + ShapeGap)))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(size * ShapeGap),
                     verticalAlignment = Alignment.CenterVertically,

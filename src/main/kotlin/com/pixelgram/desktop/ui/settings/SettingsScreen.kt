@@ -1422,6 +1422,17 @@ private fun FontsSection(settings: AppSettings) {
 
 @Composable
 private fun ChatsSection(settings: AppSettings, onOpen: (Section) -> Unit) {
+    Header("Messages")
+    ConnectedChoice(
+        listOf(
+            com.pixelgram.desktop.core.MessageSides.Auto to "By window size",
+            com.pixelgram.desktop.core.MessageSides.OneSide to "One side",
+            com.pixelgram.desktop.core.MessageSides.BothSides to "Both sides",
+        ),
+        settings.messageSides.value,
+        { settings.messageSides.value = it },
+    )
+    Description("One side puts every message on the left with avatars, like Telegram Desktop in a wide window.")
     Header("Reactions")
     SwitchRow(
         0,

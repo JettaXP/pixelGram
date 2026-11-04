@@ -772,12 +772,16 @@ private fun ChatViewContent(
         ) {
             ChatWallpaper(chat, telegram, settings, com.pixelgram.desktop.ui.theme.isDarkTheme(settings))
             var listWidth by remember { mutableStateOf(0) }
-            val wide = with(androidx.compose.ui.platform.LocalDensity.current) { listWidth.toDp() } >= WideChatWidth
+            val wide = when (settings.messageSides.value) {
+                com.pixelgram.desktop.core.MessageSides.OneSide -> true
+                com.pixelgram.desktop.core.MessageSides.BothSides -> false
+                com.pixelgram.desktop.core.MessageSides.Auto -> with(androidx.compose.ui.platform.LocalDensity.current) { listWidth.toDp() } >= WideChatWidth
+            }
             androidx.compose.runtime.CompositionLocalProvider(LocalWideChat provides wide) {
             LazyColumn(
                 state = listState,
                 reverseLayout = true,
-                modifier = Modifier.fillMaxSize().onSizeChanged { listWidth = it.width },
+                modifier = Modifier.fillMaxSize().onSizeChanged { listWidth = it.width }.then(with(com.pixelgram.desktop.ui.components.SmoothWheelScope) { Modifier.glide(listState, reverse = true) }),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(GroupInnerGap, Alignment.Bottom),
             ) {
@@ -884,7 +888,7 @@ private fun ChatViewContent(
                                 chat.isChannel && message.senderUserId != 0L
                             MessageGestures(message, actions, itemModifier) {
                               Row(verticalAlignment = Alignment.Bottom) {
-                                if (groupChat || (wide && message.isOutgoing && chat.isGroup && !chat.isChannel)) {
+                                if (groupChat || (wide && !chat.isChannel)) {
                                     Box(Modifier.width(SenderAvatarSlot)) {
                                         if (lastInRun) {
                                             SenderAvatar(message, telegram, settings) {

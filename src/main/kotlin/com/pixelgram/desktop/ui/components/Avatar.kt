@@ -190,7 +190,7 @@ fun AvatarImage(
     Box(
         modifier = modifier
             .size(size)
-            .clip(shape)
+            .smoothClip(shape)
             .avatarClick(onClick)
             .background(colors.primaryContainer),
         contentAlignment = Alignment.Center,
