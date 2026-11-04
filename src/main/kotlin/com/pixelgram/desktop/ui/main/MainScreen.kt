@@ -106,6 +106,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
@@ -191,6 +193,14 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     val menuOpen = railState.targetValue == WideNavigationRailValue.Expanded
     val toggleMenu: () -> Unit = { scope.launch { railState.toggle() } }
+    com.pixelgram.desktop.ui.BackZones.onList = {
+        val index = tabs.indexOfFirst { it.key == selectedKey }
+        when {
+            selectedKey == ChatListKey.Archive -> selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main
+            index > 0 -> selectedKey = tabs[index - 1].key
+            else -> scope.launch { railState.expand() }
+        }
+    }
     val closeMenuAnd: (() -> Unit) -> Unit = { action ->
         scope.launch { railState.collapse() }
         action()
@@ -253,7 +263,7 @@ fun MainScreen(
                                 MessageSearchPanel(telegram, settings, onOpen = onOpenChat)
                             }
                         } else {
-                            Box(Modifier.fillMaxSize()) {
+                            Box(Modifier.fillMaxSize().onGloballyPositioned { com.pixelgram.desktop.ui.BackZones.list = it.boundsInWindow() }) {
                                 ChatList(
                                     listKey = selectedKey,
                                     title = when {

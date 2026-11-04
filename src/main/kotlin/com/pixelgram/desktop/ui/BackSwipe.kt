@@ -11,6 +11,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,8 +34,15 @@ import kotlin.math.roundToInt
 class BackSwipeState {
     val pull = Animatable(0f)
     var job: Job? = null
+    var follow: Job? = null
     var total = 0f
     var vertical = 0f
+    var at by androidx.compose.runtime.mutableStateOf(androidx.compose.ui.geometry.Offset.Zero)
+}
+
+object BackZones {
+    var list: androidx.compose.ui.geometry.Rect? = null
+    var onList: (() -> Unit)? = null
 }
 
 @Composable
@@ -51,19 +60,27 @@ fun Modifier.backSwipe(state: BackSwipeState, enabled: () -> Boolean, onBack: ()
                 if (event.type != PointerEventType.Scroll) continue
                 val change = event.changes.firstOrNull() ?: continue
                 if (change.isConsumed || event.buttons.areAnyPressed) continue
+                if (state.total == 0f && state.vertical == 0f) state.at = change.position
                 state.total += -change.scrollDelta.x * step
                 state.vertical += kotlin.math.abs(change.scrollDelta.y) * step
                 if (state.total > 0f && state.total > state.vertical && enabled()) {
-                    scope.launch { state.pull.snapTo((state.total / threshold).coerceIn(0f, MaxPull)) }
+                    val target = (state.total / threshold).coerceIn(0f, MaxPull)
+                    state.follow?.cancel()
+                    state.follow = scope.launch { state.pull.animateTo(target, androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = 900f)) }
                 }
                 state.job?.cancel()
                 state.job = scope.launch {
                     delay(SettleMs)
-                    val reached = state.pull.value >= 1f
+                    val reached = state.total / threshold >= 1f && state.total > state.vertical
+                    val where = state.at
                     state.total = 0f
                     state.vertical = 0f
-                    if (reached) onBack()
-                    state.pull.animateTo(0f)
+                    state.follow?.cancel()
+                    if (reached) {
+                        val list = BackZones.list
+                        if (list != null && list.contains(where)) BackZones.onList?.invoke() else onBack()
+                    }
+                    state.pull.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = 0.85f, stiffness = 500f))
                 }
             }
         }
@@ -77,10 +94,14 @@ fun BoxScope.BackSwipeIndicator(state: BackSwipeState) {
     val colors = MaterialTheme.colorScheme
     val reached = value >= 1f
     val shift = with(LocalDensity.current) { (IndicatorTravel * value.coerceAtMost(1f)).roundToPx() }
+    val list = BackZones.list
+    val inList = list != null && list.contains(state.at)
+    val left = if (inList) list!!.left else list?.right ?: 0f
+    val half = with(LocalDensity.current) { (IndicatorSize / 2).roundToPx() }
     Box(
         Modifier
-            .align(Alignment.CenterStart)
-            .offset { IntOffset(shift - IndicatorTravel.roundToPx(), 0) }
+            .align(Alignment.TopStart)
+            .offset { IntOffset(left.toInt() + shift - IndicatorTravel.roundToPx(), state.at.y.toInt() - half) }
             .size(IndicatorSize)
             .graphicsLayer {
                 val scale = 0.6f + value.coerceAtMost(1f) * 0.4f
