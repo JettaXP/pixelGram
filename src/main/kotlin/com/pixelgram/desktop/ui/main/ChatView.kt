@@ -1314,7 +1314,11 @@ fun bubbleShape(radius: Int, tailRadius: Int, outgoing: Boolean, group: BubbleGr
     val r = radius.dp
     val joined = minOf(JoinedCorner, r)
     val sideTop = if (group.top) r else joined
-    val sideBottom = if (group.bottom) tailRadius.dp else joined
+    val sideBottom = when {
+        !group.bottom -> joined
+        group.top -> tailRadius.dp
+        else -> r
+    }
     return if (outgoing) {
         RoundedCornerShape(topStart = r, topEnd = sideTop, bottomEnd = sideBottom, bottomStart = r)
     } else {
