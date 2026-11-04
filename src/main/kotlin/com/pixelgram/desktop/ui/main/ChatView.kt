@@ -2031,7 +2031,7 @@ private const val CommandLimit = 30
 private const val JumpCloserItems = 20
 
 val LocalWideChat = androidx.compose.runtime.staticCompositionLocalOf { false }
-private val WideChatWidth = 900.dp
+private val WideChatWidth = 700.dp
 
 private suspend fun revealMessage(listState: LazyListState, index: Int) {
     fun fit(): Float? {

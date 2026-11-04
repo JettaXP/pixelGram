@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.layout.wrapContentHeight
+
 import com.pixelgram.desktop.ui.components.ConfirmOnEnter
 import com.pixelgram.desktop.ui.theme.outgoingAccent
 
@@ -267,9 +269,11 @@ fun MessageGestures(
             },
     ) {
         val progress = (abs(shift.value) / threshold).coerceIn(0f, 1f)
+        Box(Modifier.matchParentSize()) {
         Box(
             Modifier
                 .align(if (shift.value <= 0f) AbsoluteAlignment.CenterRight else AbsoluteAlignment.CenterLeft)
+                .wrapContentHeight(unbounded = true)
                 .padding(horizontal = 8.dp)
                 .size(40.dp)
                 .graphicsLayer {
@@ -290,6 +294,7 @@ fun MessageGestures(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp),
             )
+        }
         }
         Box(Modifier.absoluteOffset { IntOffset(shift.value.roundToInt(), 0) }) {
             content()
