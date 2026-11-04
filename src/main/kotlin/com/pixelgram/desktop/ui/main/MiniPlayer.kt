@@ -347,9 +347,37 @@ internal fun MorphControls(
     gap: androidx.compose.ui.unit.Dp = ControlGap,
     iconSize: androidx.compose.ui.unit.Dp = 22.dp,
     playIcon: androidx.compose.ui.unit.Dp = 26.dp,
+    wide: Boolean = false,
+    onHold: ((Int) -> Unit)? = null,
 ) {
     val sources = remember { Control.entries.associateWith { MutableInteractionSource() } }
     val pressed = Control.entries.firstOrNull { sources.getValue(it).collectIsPressedAsState().value }
+    var held by remember { mutableStateOf(0) }
+    val holding = when (pressed) {
+        Control.Previous -> -1
+        Control.Next -> 1
+        else -> 0
+    }
+    LaunchedEffect(holding) {
+        if (onHold == null) return@LaunchedEffect
+        if (holding != 0) {
+            kotlinx.coroutines.delay(HoldDelayMs)
+            held = holding
+            onHold(holding)
+        } else if (held != 0) {
+            onHold(0)
+        }
+    }
+    val release: (() -> Unit) -> () -> Unit = { action ->
+        {
+            if (held != 0) {
+                held = 0
+                onHold?.invoke(0)
+            } else {
+                action()
+            }
+        }
+    }
     val sideWidth = { me: Control ->
         when (pressed) {
             me -> 76f
@@ -361,7 +389,7 @@ internal fun MorphControls(
         Control.Play -> 100f
         Control.Previous, Control.Next -> 80f
         else -> 88f
-    }
+    } + if (wide) 44f else 0f
     val scheme = MaterialTheme.colorScheme
     Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
         MorphButton(
@@ -370,7 +398,7 @@ internal fun MorphControls(
             radius = if (pressed == Control.Previous) 18f else 32f,
             colors = scheme.secondaryContainer to scheme.onSecondaryContainer,
             source = sources.getValue(Control.Previous),
-            onClick = onPrevious,
+            onClick = release(onPrevious),
             scale = scale,
         ) { Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous", modifier = Modifier.size(iconSize)) }
         MorphButton(
@@ -392,7 +420,7 @@ internal fun MorphControls(
             radius = if (pressed == Control.Next) 18f else 32f,
             colors = scheme.secondaryContainer to scheme.onSecondaryContainer,
             source = sources.getValue(Control.Next),
-            onClick = onNext,
+            onClick = release(onNext),
             scale = scale,
         ) { Icon(Icons.Rounded.SkipNext, contentDescription = "Next", modifier = Modifier.size(iconSize)) }
     }
@@ -458,6 +486,7 @@ fun PlayPauseMorph(playing: Boolean, size: androidx.compose.ui.unit.Dp, tint: Co
 private const val MorphTurn = 45f
 
 private const val ControlScale = 0.5f
+private const val HoldDelayMs = 400L
 private val ControlGap = 4.dp
 
 private const val WaveSettleMs = 260

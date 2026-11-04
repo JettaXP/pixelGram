@@ -61,6 +61,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
@@ -106,7 +109,7 @@ object FullPlayer {
 private val Speeds = listOf(1f, 1.5f, 2f)
 private val QueueRow = 64.dp
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, androidx.compose.animation.ExperimentalSharedTransitionApi::class)
 @Composable
 fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
     val audio = AudioPlayer.audio
@@ -128,6 +131,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
     Surface(shape = MaterialTheme.shapes.extraLarge, color = colors.surfaceContainerLow, modifier = modifier) {
         Box(Modifier.fillMaxSize()) {
         AmbientBackdrop(palette, Modifier.matchParentSize())
+        androidx.compose.animation.SharedTransitionLayout(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { FullPlayer.open = false }) {
@@ -163,13 +167,24 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                 contentAlignment = Alignment.Center,
             ) { view ->
                 when (view) {
-                    PlayerView.Cover -> BigCover(audio, telegram)
+                    PlayerView.Cover -> BigCover(
+                        audio,
+                        telegram,
+                        Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedContent, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.RemeasureToBounds),
+                    )
                     PlayerView.Lyrics -> LyricsView(audio)
                     PlayerView.Queue -> QueueView(telegram, tracks, index)
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                if (FullPlayer.view != PlayerView.Cover) SmallCover(audio, telegram, 56.dp)
+                androidx.compose.animation.AnimatedVisibility(FullPlayer.view != PlayerView.Cover, enter = fadeIn(), exit = fadeOut()) {
+                    SmallCover(
+                        audio,
+                        telegram,
+                        56.dp,
+                        Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedVisibility, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.RemeasureToBounds),
+                    )
+                }
                 Column(Modifier.weight(1f)) {
                     Text(
                         audio?.title?.ifBlank { null } ?: AudioPlayer.title,
@@ -225,6 +240,8 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                     gap = 8.dp,
                     iconSize = 28.dp,
                     playIcon = 34.dp,
+                    wide = true,
+                    onHold = AudioPlayer::scrub,
                 )
                 IconToggleButton(checked = AudioQueue.repeatMode != RepeatMode.Off, onCheckedChange = { AudioQueue.cycleRepeat() }) {
                     AnimatedContent(AudioQueue.repeatMode, transitionSpec = { scaleIn() + fadeIn() togetherWith scaleOut() + fadeOut() }) { mode ->
@@ -273,6 +290,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                     }
                 }
             }
+        }
         }
         }
     }
@@ -345,10 +363,10 @@ private fun coverFile(audio: TdApi.Audio?): Pair<TdApi.File?, TdApi.Minithumbnai
     (audio?.albumCoverThumbnail?.file ?: audio?.externalAlbumCovers?.maxByOrNull { it.width }?.file) to audio?.albumCoverMinithumbnail
 
 @Composable
-private fun SmallCover(audio: TdApi.Audio?, telegram: Telegram, size: androidx.compose.ui.unit.Dp) {
+private fun SmallCover(audio: TdApi.Audio?, telegram: Telegram, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
     val (file, mini) = coverFile(audio)
     Box(
-        Modifier.size(size).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primaryContainer),
+        modifier.size(size).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
         if (file != null || mini != null) {
@@ -360,12 +378,12 @@ private fun SmallCover(audio: TdApi.Audio?, telegram: Telegram, size: androidx.c
 }
 
 @Composable
-private fun BigCover(audio: TdApi.Audio?, telegram: Telegram) {
+private fun BigCover(audio: TdApi.Audio?, telegram: Telegram, modifier: Modifier = Modifier) {
     val (file, mini) = coverFile(audio)
     val breathe by animateFloatAsState(if (AudioPlayer.playing) 1f else 0.9f, spring(dampingRatio = 0.6f, stiffness = 220f))
     val spin = rememberInfiniteTransition()
     val angle by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(24_000, easing = LinearEasing), AnimationRepeat.Restart))
-    Box(Modifier.aspectRatio(1f), contentAlignment = Alignment.Center) {
+    Box(Modifier.aspectRatio(1f).then(modifier), contentAlignment = Alignment.Center) {
         if (file != null || mini != null) {
             Box(
                 Modifier
@@ -405,24 +423,14 @@ private fun LyricsView(audio: TdApi.Audio?) {
         LyricsResult.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator() }
         LyricsResult.NotFound -> LyricsState(Icons.Rounded.FormatQuote, "No lyrics found", "There are no lyrics for this track on LRCLIB.")
         LyricsResult.Instrumental -> LyricsState(Icons.Filled.MusicNote, "Instrumental", "This track is marked as having no lyrics.")
-        is LyricsResult.Plain -> Column(Modifier.fillMaxSize()) {
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                lyrics.lines.forEach { line -> Text(line, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)) }
-            }
-            LyricsSource(false)
+        is LyricsResult.Plain -> Column(
+            Modifier.fillMaxSize().edgeFade().verticalScroll(rememberScrollState()).padding(vertical = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            lyrics.lines.forEach { line -> Text(line, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)) }
         }
         is LyricsResult.Synced -> SyncedLyrics(lyrics.lines)
     }
-}
-
-@Composable
-private fun LyricsSource(synced: Boolean) {
-    Text(
-        (if (synced) com.pixelgram.desktop.core.tr("Synced lyrics") else com.pixelgram.desktop.core.tr("Lyrics")) + " · LRCLIB",
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 8.dp),
-    )
 }
 
 @Composable
@@ -442,30 +450,111 @@ private fun LyricsState(icon: androidx.compose.ui.graphics.vector.ImageVector, t
 @Composable
 private fun SyncedLyrics(lines: List<LyricLine>) {
     val now = AudioPlayer.position
-    val current = lines.indexOfLast { it.time <= now + 0.2f }.coerceAtLeast(0)
+    val current = lines.indexOfLast { it.time <= now + 0.15f }
     val state = rememberLazyListState()
-    LaunchedEffect(current) { state.animateScrollToItem((current - 1).coerceAtLeast(0)) }
-    Column(Modifier.fillMaxSize()) {
-        LazyColumn(state = state, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            itemsIndexed(lines) { position, line ->
-                val distance = abs(position - current)
-                val alpha by animateFloatAsState(if (distance == 0) 1f else (0.55f - distance * 0.06f).coerceAtLeast(0.2f))
-                val blur by animateFloatAsState(if (distance == 0) 0f else (distance * 1.6f).coerceAtMost(6f))
-                Text(
-                    line.text.ifBlank { "♪" },
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .graphicsLayer { this.alpha = alpha }
-                        .blur(blur.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { if (AudioPlayer.duration > 0f) AudioPlayer.seekCurrent(line.time / AudioPlayer.duration) },
-                )
+    var pausedUntil by remember { mutableStateOf(0L) }
+    val follow = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                if (source == androidx.compose.ui.input.nestedscroll.NestedScrollSource.UserInput) pausedUntil = System.currentTimeMillis() + FollowPauseMs
+                return androidx.compose.ui.geometry.Offset.Zero
             }
         }
-        LyricsSource(true)
+    }
+    val viewport = state.layoutInfo.viewportSize.height
+    LaunchedEffect(current, pausedUntil) {
+        val wait = pausedUntil - System.currentTimeMillis()
+        if (wait > 0) kotlinx.coroutines.delay(wait)
+        if (current >= 0) state.animateScrollToItem(current, -viewport / 3)
+    }
+    LazyColumn(
+        state = state,
+        contentPadding = PaddingValues(vertical = 120.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(follow)
+            .edgeFade(),
+    ) {
+        itemsIndexed(lines) { position, line ->
+            val distance = if (current < 0) position + 1 else abs(position - current)
+            val upcoming = position > current
+            val alpha by animateFloatAsState(if (distance == 0) 1f else if (upcoming) 0.5f else 0.38f, tween(400))
+            val blur by animateFloatAsState(if (distance == 0 || !upcoming) 0f else (distance * 1.4f).coerceAtMost(5f), tween(500))
+            val scale by animateFloatAsState(if (distance == 0) 1f else 0.94f, spring(dampingRatio = 0.8f, stiffness = 300f))
+            val style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+            val color = MaterialTheme.colorScheme.onSurface
+            val text = if (distance == 0) {
+                val end = lines.getOrNull(position + 1)?.time ?: (line.time + 5f)
+                karaoke(line, now, end, color)
+            } else {
+                androidx.compose.ui.text.AnnotatedString(line.text.ifBlank { "♪" })
+            }
+            Text(
+                text,
+                style = style,
+                color = color,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        this.alpha = alpha
+                        scaleX = scale
+                        scaleY = scale
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                    }
+                    .blur(blur.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable {
+                        pausedUntil = 0L
+                        if (AudioPlayer.duration > 0f) AudioPlayer.seekCurrent(line.time / AudioPlayer.duration)
+                    },
+            )
+        }
     }
 }
+
+private fun karaoke(line: LyricLine, now: Float, end: Float, color: androidx.compose.ui.graphics.Color): androidx.compose.ui.text.AnnotatedString {
+    val text = line.text.ifBlank { "♪" }
+    val sung = if (line.words.isNotEmpty()) {
+        var chars = 0f
+        var offset = 0
+        line.words.forEachIndexed { i, word ->
+            val wordEnd = line.words.getOrNull(i + 1)?.time ?: end
+            val length = word.text.length
+            val part = ((now - word.time) / (wordEnd - word.time).coerceAtLeast(0.05f)).coerceIn(0f, 1f)
+            if (now >= word.time) chars = offset + part * length
+            offset += length
+        }
+        chars / offset.coerceAtLeast(1) * text.length
+    } else {
+        val span = (end - line.time).coerceIn(0.4f, text.length * 0.09f + 0.6f)
+        ((now - line.time) / span).coerceIn(0f, 1f) * text.length
+    }
+    return androidx.compose.ui.text.buildAnnotatedString {
+        text.forEachIndexed { i, ch ->
+            val lit = (sung - i).coerceIn(0f, 1f)
+            withStyle(androidx.compose.ui.text.SpanStyle(color = color.copy(alpha = 0.35f + 0.65f * lit))) { append(ch) }
+        }
+    }
+}
+
+private fun Modifier.edgeFade(): Modifier = this
+    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        drawRect(
+            androidx.compose.ui.graphics.Brush.verticalGradient(
+                0f to androidx.compose.ui.graphics.Color.Transparent,
+                0.12f to androidx.compose.ui.graphics.Color.Black,
+                0.78f to androidx.compose.ui.graphics.Color.Black,
+                1f to androidx.compose.ui.graphics.Color.Transparent,
+            ),
+            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+        )
+    }
+
+private const val FollowPauseMs = 3_000L
+private const val CoverKey = "player-cover"
 
 @Composable
 private fun QueueView(telegram: Telegram, tracks: List<QueueTrack>, current: Int) {

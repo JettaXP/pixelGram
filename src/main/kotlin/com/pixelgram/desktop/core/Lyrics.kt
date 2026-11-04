@@ -7,7 +7,9 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 
-class LyricLine(val time: Float, val text: String)
+class LyricWord(val time: Float, val text: String)
+
+class LyricLine(val time: Float, val text: String, val words: List<LyricWord> = emptyList())
 
 sealed interface LyricsResult {
     data object Loading : LyricsResult
@@ -67,8 +69,17 @@ object Lyrics {
         return text.lines().flatMap { line ->
             val stamps = tag.findAll(line).toList()
             if (stamps.isEmpty()) return@flatMap emptyList()
-            val words = line.substring(stamps.last().range.last + 1).trim()
-            stamps.map { stamp -> LyricLine(stamp.groupValues[1].toInt() * 60 + stamp.groupValues[2].toFloat(), words) }
+            val body = line.substring(stamps.last().range.last + 1).trim()
+            val wordTag = Regex("""<(\d+):(\d+(?:\.\d+)?)>""")
+            val words = mutableListOf<LyricWord>()
+            val marks = wordTag.findAll(body).toList()
+            marks.forEachIndexed { i, mark ->
+                val end = marks.getOrNull(i + 1)?.range?.first ?: body.length
+                val piece = body.substring(mark.range.last + 1, end)
+                if (piece.isNotEmpty()) words += LyricWord(mark.groupValues[1].toInt() * 60 + mark.groupValues[2].toFloat(), piece)
+            }
+            val text = body.replace(wordTag, "").replace(Regex("\\s+"), " ").trim()
+            stamps.map { stamp -> LyricLine(stamp.groupValues[1].toInt() * 60 + stamp.groupValues[2].toFloat(), text, words) }
         }.sortedBy { it.time }
     }
 

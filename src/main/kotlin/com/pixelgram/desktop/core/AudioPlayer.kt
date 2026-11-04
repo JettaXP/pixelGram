@@ -40,6 +40,18 @@ object AudioPlayer {
     var muted by mutableStateOf(false)
     var volume by mutableFloatStateOf(1f)
     var speed by mutableFloatStateOf(1f)
+    var scrubbing by mutableStateOf(0)
+        private set
+    @Volatile private var scrub = 0f
+
+    fun scrub(direction: Int) {
+        scrubbing = direction
+        scrub = when {
+            direction < 0 -> -RewindSpeed
+            direction > 0 -> ForwardSpeed
+            else -> 0f
+        }
+    }
     var onFinished: ((Long) -> Unit)? = null
     private var path: String? = null
 
@@ -175,9 +187,27 @@ object AudioPlayer {
                     }
                     break
                 }
-                val step = speed
+                val back = scrub < 0f
+                val step = if (scrub > 0f) scrub else speed
                 val gain = if (muted) 0f else volume
-                if (step == 1f) {
+                if (back) {
+                    stretch.reset()
+                    val count = minOf(chunk, index)
+                    if (count <= 0) {
+                        Thread.sleep(25)
+                        continue
+                    }
+                    var o = 0
+                    for (frame in index - 1 downTo index - count) {
+                        for (c in 0 until pcm.channels) {
+                            val sample = (pcm.samples[frame * pcm.channels + c] * gain).toInt()
+                            bytes[o++] = sample.toByte()
+                            bytes[o++] = (sample shr 8).toByte()
+                        }
+                    }
+                    sink.write(bytes, o)
+                    index = (index - (count * -scrub).toInt()).coerceAtLeast(0)
+                } else if (step == 1f) {
                     stretch.reset()
                     val count = minOf(chunk, frames - index)
                     var o = 0
@@ -196,7 +226,7 @@ object AudioPlayer {
                     index += need
                 }
                 val queued = sink.queued() / frameBytes
-                val now = (index - queued * step).coerceAtLeast(0f) / pcm.rate
+                val now = (if (back) index.toFloat() else (index - queued * step)).coerceAtLeast(0f) / pcm.rate
                 ui(run) { position = now }
             }
         } finally {
@@ -241,6 +271,23 @@ object AudioPlayer {
                     Thread.sleep(25)
                     continue
                 }
+                if (scrub < 0f) {
+                    val at = (position - RewindStep * -scrub).coerceAtLeast(0f)
+                    grabber.setTimestamp((at * MicrosPerSecond).toLong())
+                    stretch.reset()
+                    val piece = grabber.grabSamples()?.let { interleaved(it) }
+                    if (piece != null) {
+                        val count = minOf(piece.size / channels, (rate * RewindStep).toInt())
+                        val reversed = ShortArray(count * channels)
+                        for (f in 0 until count) for (c in 0 until channels) reversed[f * channels + c] = piece[(count - 1 - f) * channels + c]
+                        bytes = pack(reversed, if (muted) 0f else volume, bytes)
+                        sink.write(bytes, reversed.size * 2)
+                    } else {
+                        Thread.sleep(25)
+                    }
+                    ui(run) { position = at }
+                    continue
+                }
                 val frame = grabber.grabSamples()
                 if (frame == null) {
                     if (repeat) {
@@ -259,7 +306,7 @@ object AudioPlayer {
                 }
                 val samples = interleaved(frame) ?: continue
                 val count = samples.size / channels
-                val step = speed
+                val step = if (scrub > 0f) scrub else speed
                 val gain = if (muted) 0f else volume
                 val out = if (step == 1f) {
                     stretch.reset()
@@ -454,3 +501,7 @@ object AudioPlayer {
     private const val MicrosPerSecond = 1_000_000f
     private const val MaxOpusFrame = 5_760
 }
+
+private const val RewindSpeed = 3f
+private const val ForwardSpeed = 4f
+private const val RewindStep = 0.08f
