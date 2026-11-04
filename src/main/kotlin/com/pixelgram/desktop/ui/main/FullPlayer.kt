@@ -292,10 +292,69 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
             }
         }
         }
+        ScrubPill(Modifier.align(Alignment.TopCenter).padding(top = 64.dp))
         }
     }
     }
 }
+
+@Composable
+private fun ScrubPill(modifier: Modifier) {
+    val direction = AudioPlayer.scrubbing
+    var shown by remember { mutableIntStateOf(1) }
+    if (direction != 0) shown = direction
+    androidx.compose.animation.AnimatedVisibility(
+        visible = direction != 0,
+        enter = scaleIn(spring(dampingRatio = 0.6f, stiffness = 500f), initialScale = 0.6f) + fadeIn(),
+        exit = scaleOut(targetScale = 0.8f) + fadeOut(),
+        modifier = modifier,
+    ) {
+        val colors = MaterialTheme.colorScheme
+        Surface(shape = CircleShape, color = colors.primary, contentColor = colors.onPrimary, shadowElevation = 6.dp) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                val backward = shown < 0
+                if (backward) Chevrons(backward = true, color = colors.onPrimary)
+                Text(if (backward) "3x" else "4x", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                if (!backward) Chevrons(backward = false, color = colors.onPrimary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun Chevrons(backward: Boolean, color: androidx.compose.ui.graphics.Color) {
+    val flow = rememberInfiniteTransition()
+    val phase by flow.animateFloat(0f, 1f, infiniteRepeatable(tween(ChevronMs, easing = LinearEasing), AnimationRepeat.Restart))
+    androidx.compose.foundation.Canvas(Modifier.size(width = 26.dp, height = 18.dp)) {
+        val stroke = 2.6.dp.toPx()
+        val h = size.height
+        val step = size.width / 2.6f
+        for (k in 0..1) {
+            val order = if (backward) 1 - k else k
+            val wave = ((phase - order * 0.35f) % 1f + 1f) % 1f
+            val alpha = 0.3f + 0.7f * (1f - kotlin.math.abs(wave * 2f - 1f))
+            val x = step * 0.4f + k * step
+            val tip = if (backward) x else x + step * 0.8f
+            val tail = if (backward) x + step * 0.8f else x
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(tail, h * 0.15f)
+                lineTo(tip, h / 2f)
+                lineTo(tail, h * 0.85f)
+            }
+            drawPath(
+                path,
+                color.copy(alpha = alpha),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round),
+            )
+        }
+    }
+}
+
+private const val ChevronMs = 700
 
 @Composable
 private fun AmbientBackdrop(cover: List<androidx.compose.ui.graphics.Color>?, modifier: Modifier) {
