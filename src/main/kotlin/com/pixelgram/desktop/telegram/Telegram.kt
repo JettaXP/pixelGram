@@ -3545,7 +3545,7 @@ fun isRich(content: TdApi.MessageContent?): Boolean = when (content) {
     is TdApi.MessageSticker, is TdApi.MessageGift, is TdApi.MessageUpgradedGift, is TdApi.MessageGiftedStars,
     is TdApi.MessageGiftedPremium, is TdApi.MessageAnimation, is TdApi.MessageVideo, is TdApi.MessageVideoNote,
     is TdApi.MessagePoll, is TdApi.MessageContact, is TdApi.MessageLocation, is TdApi.MessageAnimatedEmoji,
-    is TdApi.MessageDice, is TdApi.MessageRichMessage, is TdApi.MessageChecklist -> true
+    is TdApi.MessageDice, is TdApi.MessageRichMessage, is TdApi.MessageChecklist, is TdApi.MessagePaidMedia -> true
     else -> false
 }
 
@@ -3556,6 +3556,7 @@ fun messageEntities(content: TdApi.MessageContent?): List<TdApi.TextEntity> {
     val formatted = when (content) {
         is TdApi.MessageText -> content.text
         is TdApi.MessagePhoto -> content.caption
+        is TdApi.MessagePaidMedia -> content.caption
         is TdApi.MessageDocument -> content.caption
         is TdApi.MessageAudio -> content.caption
         is TdApi.MessageVoiceNote -> content.caption
@@ -3568,6 +3569,7 @@ fun messageEntities(content: TdApi.MessageContent?): List<TdApi.TextEntity> {
 
 fun messageText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessagePhoto -> content.caption?.text.orEmpty()
+    is TdApi.MessagePaidMedia -> content.caption?.text.orEmpty()
     is TdApi.MessageDocument -> content.caption?.text.orEmpty()
     is TdApi.MessageAudio -> content.caption?.text.orEmpty()
     is TdApi.MessageVoiceNote -> content.caption?.text.orEmpty()
@@ -3603,6 +3605,7 @@ private fun mediaPreview(emoji: String, label: String, caption: String?): String
 fun contentText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageText -> content.text?.text ?: ""
     is TdApi.MessagePhoto -> mediaPreview("🖼", "Photo", content.caption?.text)
+    is TdApi.MessagePaidMedia -> mediaPreview("⭐", "Paid media", content.caption?.text)
     is TdApi.MessageVideo -> mediaPreview("🎬", "Video", content.caption?.text)
     is TdApi.MessageDocument -> listOf("📄 ${content.document?.fileName ?: "File"}", content.caption?.text).filterNotBlank()
     is TdApi.MessageAudio -> "🎵 ${content.audio?.title ?: "Audio"}"

@@ -36,6 +36,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -681,6 +682,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
         is TdApi.MessageCall -> CallContent(content, message.isOutgoing, message.date)
         is TdApi.MessagePoll -> PollContent(message, content, telegram)
         is TdApi.MessageChecklist -> ChecklistContent(message, content.list, telegram)
+        is TdApi.MessagePaidMedia -> PaidMediaContent(content, telegram)
         is TdApi.MessageRichMessage -> RichMessageContent(message, content.message, telegram)
         is TdApi.MessageContact -> {
             val contact = content.contact
@@ -1359,3 +1361,69 @@ fun giftServiceText(message: UiMessage, telegram: Telegram): String? = when (val
 val StickerSize = 180.dp
 private val VideoNoteSize = 220.dp
 private val GiftWidth = 240.dp
+
+@Composable
+private fun PaidMediaContent(content: TdApi.MessagePaidMedia, telegram: Telegram) {
+    val media = content.media.firstOrNull()
+    val (width, height) = when (media) {
+        is TdApi.PaidMediaPreview -> media.width to media.height
+        is TdApi.PaidMediaPhoto -> (media.photo.sizes.lastOrNull()?.width ?: 1) to (media.photo.sizes.lastOrNull()?.height ?: 1)
+        is TdApi.PaidMediaVideo -> media.video.width to media.video.height
+        else -> 1 to 1
+    }
+    val ratio = if (width > 0 && height > 0) (width.toFloat() / height).coerceIn(0.5f, 2f) else 1f
+    val locked = media is TdApi.PaidMediaPreview || media == null
+    Box(
+        Modifier.widthIn(max = PaidMediaWidth).fillMaxWidth().aspectRatio(ratio).clip(MaterialTheme.shapes.large),
+        contentAlignment = Alignment.Center,
+    ) {
+        when (media) {
+            is TdApi.PaidMediaPhoto -> ThumbImage(media.photo.sizes.lastOrNull()?.photo, media.photo.minithumbnail, telegram, Modifier.fillMaxSize())
+            is TdApi.PaidMediaVideo -> ThumbImage(media.video.thumbnail?.file, media.video.minithumbnail, telegram, Modifier.fillMaxSize())
+            is TdApi.PaidMediaPreview -> {
+                val mini = remember(media.minithumbnail) {
+                    media.minithumbnail?.data?.let { runCatching { SkiaImage.makeFromEncoded(it).use { image -> image.toComposeImageBitmap() } }.getOrNull() }
+                }
+                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHighest))
+                if (mini != null) {
+                    Image(
+                        mini,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().blur(PaidBlur, androidx.compose.ui.draw.BlurredEdgeTreatment.Rectangle),
+                    )
+                }
+                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.scrim.copy(alpha = PaidScrimAlpha)))
+            }
+            else -> Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHighest))
+        }
+        if (locked) {
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = PaidPillAlpha),
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            ) {
+                Text(
+                    com.pixelgram.desktop.core.tr("Unlock for ⭐ {n}").replace("{n}", content.starCount.toString()),
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+        }
+        if (content.media.size > 1) {
+            Text(
+                "1/${content.media.size}",
+                style = MaterialTheme.typography.labelMedium,
+                color = androidx.compose.ui.graphics.Color.White,
+                modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f), androidx.compose.foundation.shape.CircleShape)
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+            )
+        }
+    }
+}
+
+private val PaidMediaWidth = 360.dp
+private val PaidBlur = 24.dp
+private const val PaidScrimAlpha = 0.18f
+private const val PaidPillAlpha = 0.9f
