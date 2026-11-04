@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.49.2 Soft Burst
+
+- Hidden phone number: the shapes are full size again, and there are only as many as fit the width of the number.
+
 ## 0.49.1 Soft Burst
 
 - The updater no longer offers an older version after updating.
