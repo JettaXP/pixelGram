@@ -44,7 +44,6 @@ import com.pixelgram.desktop.ui.icons.outlined.FavoriteBorder
 import com.pixelgram.desktop.ui.components.InfoRow
 import com.pixelgram.desktop.ui.components.UsernameQrButton
 import com.pixelgram.desktop.ui.components.InfoGroup
-import com.pixelgram.desktop.ui.profile.ProfilePhotosDialog
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -519,19 +518,21 @@ fun ChatInfoDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.verticalScroll(scroll).padding(24.dp),
             ) {
-                var photos by remember(chat.id) { mutableStateOf(false) }
                 ChatAvatar(
                     chat,
                     telegram,
                     settings,
                     size = 96.dp,
-                    onClick = if (chat.privateUserId != 0L && chat.photo != null) {
-                        { photos = true }
-                    } else {
-                        null
+                    onClick = when {
+                        chat.privateUserId != 0L && chat.photo != null -> {
+                            { com.pixelgram.desktop.ui.profile.openProfilePhotos(telegram, chat.privateUserId, telegram.chatTitle(chat)) }
+                        }
+                        chat.bigPhoto != null -> {
+                            { chat.bigPhoto?.let { big -> PhotoViewer.current = ViewedPhoto(telegram, chat.photo ?: big, big, "", subtitle = telegram.chatTitle(chat)) } }
+                        }
+                        else -> null
                     },
                 )
-                if (photos) ProfilePhotosDialog(telegram, chat.privateUserId, onDismiss = { photos = false })
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
                     com.pixelgram.desktop.ui.components.ChatBadges(chat, telegram, 30.dp)

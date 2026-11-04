@@ -109,7 +109,13 @@ fun ProfilePhotosDialog(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.width(GallerySize)) {
                     Text(
-                        list?.takeIf { it.isNotEmpty() }?.let { "${index + 1} of ${it.size}" }.orEmpty(),
+                        list?.takeIf { it.isNotEmpty() }?.let { all ->
+                            val added = all.getOrNull(index)?.addedDate?.takeIf { it > 0 }?.let { date ->
+                                java.time.Instant.ofEpochSecond(date.toLong()).atZone(java.time.ZoneId.systemDefault())
+                                    .format(java.time.format.DateTimeFormatter.ofLocalizedDateTime(java.time.format.FormatStyle.MEDIUM, java.time.format.FormatStyle.SHORT))
+                            }
+                            "${index + 1} / ${all.size}" + (added?.let { " • ${com.pixelgram.desktop.core.tr("set")} $it" } ?: "")
+                        }.orEmpty(),
                         style = MaterialTheme.typography.labelLarge,
                         modifier = Modifier.weight(1f),
                     )
@@ -146,5 +152,23 @@ fun ProfilePhotosDialog(
             },
             dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Cancel") } },
         )
+    }
+}
+
+fun openProfilePhotos(telegram: Telegram, userId: Long, name: String) {
+    telegram.profilePhotos(userId) { photos ->
+        val formatter = java.time.format.DateTimeFormatter.ofLocalizedDateTime(java.time.format.FormatStyle.MEDIUM, java.time.format.FormatStyle.SHORT)
+        val items = photos.mapNotNull { photo ->
+            val small = photo.sizes.minByOrNull { it.width }?.photo ?: return@mapNotNull null
+            val big = photo.sizes.maxByOrNull { it.width }?.photo ?: small
+            val date = java.time.Instant.ofEpochSecond(photo.addedDate.toLong()).atZone(java.time.ZoneId.systemDefault()).format(formatter)
+            com.pixelgram.desktop.ui.main.ViewedPhoto(telegram, small, big, "", subtitle = "$name • ${com.pixelgram.desktop.core.tr("set")} $date")
+        }
+        val first = items.firstOrNull() ?: return@profilePhotos
+        javax.swing.SwingUtilities.invokeLater {
+            com.pixelgram.desktop.ui.main.PhotoViewer.current = com.pixelgram.desktop.ui.main.ViewedPhoto(
+                telegram, first.preview, first.full, "", gallery = items, start = 0, subtitle = first.subtitle,
+            )
+        }
     }
 }

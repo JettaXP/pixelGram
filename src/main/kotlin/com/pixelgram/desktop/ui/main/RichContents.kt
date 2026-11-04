@@ -169,6 +169,23 @@ private fun PageBlockView(block: TdApi.PageBlock, telegram: Telegram) {
             ThumbImage(size?.photo, block.photo?.minithumbnail, telegram, Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).size(width = PhotoWidth, height = PhotoHeight))
             block.caption?.let { caption -> RichLine(caption.text, type.bodySmall, LocalContentColorAlpha()) }
         }
+        is TdApi.PageBlockVideo -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            ThumbImage(block.video?.thumbnail?.file, block.video?.minithumbnail, telegram, Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).size(width = PhotoWidth, height = PhotoHeight))
+            block.caption?.let { caption -> RichLine(caption.text, type.bodySmall, LocalContentColorAlpha()) }
+        }
+        is TdApi.PageBlockAnimation -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            ThumbImage(block.animation?.thumbnail?.file, block.animation?.minithumbnail, telegram, Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).size(width = PhotoWidth, height = PhotoHeight))
+            block.caption?.let { caption -> RichLine(caption.text, type.bodySmall, LocalContentColorAlpha()) }
+        }
+        is TdApi.PageBlockCollage -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            block.blocks.forEach { PageBlockView(it, telegram) }
+            block.caption?.let { caption -> RichLine(caption.text, type.bodySmall, LocalContentColorAlpha()) }
+        }
+        is TdApi.PageBlockSlideshow -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            block.blocks.forEach { PageBlockView(it, telegram) }
+            block.caption?.let { caption -> RichLine(caption.text, type.bodySmall, LocalContentColorAlpha()) }
+        }
+        is TdApi.PageBlockCover -> PageBlockView(block.cover, telegram)
         else -> Unit
     }
 }

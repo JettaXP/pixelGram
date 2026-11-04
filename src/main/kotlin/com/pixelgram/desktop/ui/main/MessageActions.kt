@@ -3,6 +3,8 @@ package com.pixelgram.desktop.ui.main
 import com.pixelgram.desktop.ui.components.ConfirmOnEnter
 import com.pixelgram.desktop.ui.theme.outgoingAccent
 
+import com.pixelgram.desktop.ui.icons.outlined.Refresh
+import com.pixelgram.desktop.ui.icons.outlined.Close
 import com.pixelgram.desktop.ui.icons.outlined.Gif
 import com.pixelgram.desktop.ui.icons.outlined.FolderOpen
 import androidx.compose.foundation.layout.ColumnScope
@@ -122,6 +124,8 @@ class MessageActions(
     val protectedContent: Boolean = false,
     val onTranslate: ((UiMessage) -> Unit)? = null,
     val onReport: ((UiMessage) -> Unit)? = null,
+    val onResend: ((UiMessage) -> Unit)? = null,
+    val onCancelSending: ((UiMessage) -> Unit)? = null,
 )
 
 private class MenuTarget(val at: DpOffset, val link: String?, val button: TdApi.InlineKeyboardButton?)
@@ -370,7 +374,14 @@ private fun MessageMenu(
     val canForward = known?.canBeForwarded ?: !actions.protectedContent
     val canPin = if (checked) known?.canBePinned == true else true
     val canDelete = if (checked) known != null && (known.canBeDeletedOnlyForSelf || known.canBeDeletedForAllUsers) else true
-    val reply = buildList {
+    val pending = message.failed || message.sending
+    val retry = buildList {
+        if (message.failed) actions.onResend?.let { resend -> add(MenuEntry(Icons.Outlined.Refresh, "Retry sending", onClick = act { resend(message) })) }
+        if (pending) actions.onCancelSending?.let { cancel ->
+            add(MenuEntry(Icons.Outlined.Close, "Cancel sending", color = MaterialTheme.colorScheme.error, onClick = act { cancel(message) }))
+        }
+    }
+    val reply = if (pending) emptyList() else buildList {
         add(MenuEntry(Icons.AutoMirrored.Outlined.Reply, "Reply", onClick = act { actions.onReply(message) }))
         add(MenuEntry(Icons.AutoMirrored.Outlined.Forward, "Forward", enabled = canForward, onClick = act { actions.onForward(message) }))
         if (canEdit) add(MenuEntry(Icons.Outlined.Edit, "Edit", onClick = act { actions.onEdit(message) }))
@@ -407,7 +418,7 @@ private fun MessageMenu(
         actions.onReport?.takeIf { !message.isOutgoing && !message.service }?.let { report ->
             add(MenuEntry(Icons.Outlined.Flag, "Report", onClick = act { report(message) }))
         }
-        if (canDelete) add(MenuEntry(Icons.Outlined.Delete, "Delete", color = MaterialTheme.colorScheme.error, onClick = act { actions.onDelete(message) }))
+        if (canDelete && !pending) add(MenuEntry(Icons.Outlined.Delete, "Delete", color = MaterialTheme.colorScheme.error, onClick = act { actions.onDelete(message) }))
     }
     GroupedMenu(expanded = expanded, onDismiss = onDismiss) {
         val reactions: (@Composable ColumnScope.() -> Unit)? = if (!message.service && actions.canReact) {
@@ -423,7 +434,7 @@ private fun MessageMenu(
                 }
             }
         } else null
-        MenuGroups(listOf(reply, copies, manage), leading = reactions)
+        MenuGroups(listOf(retry, reply, copies, manage).filter { it.isNotEmpty() }, leading = reactions.takeIf { !pending })
     }
 }
 

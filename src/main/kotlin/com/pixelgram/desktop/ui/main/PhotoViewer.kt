@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.outlined.Download
 import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
 import com.pixelgram.desktop.ui.components.Text
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.animation.AnimatedVisibility
@@ -98,6 +99,9 @@ class ViewedPhoto(
     val caption: String,
     val chatId: Long = 0,
     val messageId: Long = 0,
+    val gallery: List<ViewedPhoto> = emptyList(),
+    val start: Int = 0,
+    val subtitle: String? = null,
 )
 
 private fun UiMessage.toViewed(telegram: Telegram): ViewedPhoto? =
@@ -116,12 +120,29 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
     }
     val screen = remember { viewerBounds() }
     val telegram = photo.telegram
-    val photos = remember(photo) {
-        if (photo.chatId == 0L) emptyList() else telegram.messages(photo.chatId).filter { it.photo != null }.reversed()
+    var photos by remember(photo) {
+        mutableStateOf(
+            if (photo.chatId == 0L) emptyList()
+            else telegram.messages(photo.chatId).flatMap { it.album.ifEmpty { listOf(it) } }.filter { it.photo != null }.distinctBy { it.id }.sortedBy { it.id }
+        )
     }
-    var index by remember(photo) { mutableIntStateOf(photos.indexOfFirst { it.id == photo.messageId && it.chatId == photo.chatId }) }
+    var index by remember(photo) {
+        mutableIntStateOf(if (photo.gallery.isNotEmpty()) photo.start else photos.indexOfFirst { it.id == photo.messageId && it.chatId == photo.chatId })
+    }
+    val items = if (photo.gallery.isNotEmpty()) photo.gallery else photos.mapNotNull { it.toViewed(telegram) }
+    LaunchedEffect(photo) {
+        if (photo.gallery.isNotEmpty() || photo.chatId == 0L || photo.messageId == 0L) return@LaunchedEffect
+        telegram.chatPhotosAround(photo.chatId, photo.messageId) { found ->
+            javax.swing.SwingUtilities.invokeLater {
+                val viewing = photos.getOrNull(index)?.id ?: photo.messageId
+                val merged = (photos + found).distinctBy { it.id }.sortedBy { it.id }
+                photos = merged
+                index = merged.indexOfFirst { it.id == viewing }
+            }
+        }
+    }
     var direction by remember { mutableIntStateOf(1) }
-    val current = photos.getOrNull(index)?.toViewed(telegram) ?: photo
+    val current = items.getOrNull(index) ?: photo
     var controls by remember { mutableStateOf(true) }
     var moves by remember { mutableIntStateOf(0) }
     var lastWheel by remember { mutableLongStateOf(0L) }
@@ -132,7 +153,7 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
     }
     val go: (Int) -> Unit = { step ->
         val target = index + step
-        if (index >= 0 && target in photos.indices) {
+        if (index >= 0 && target in items.indices) {
             direction = step
             index = target
         }
@@ -230,7 +251,21 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
                         tween(if (controls) ShowMs else HideFadeMs),
                     )
                     NavArrow(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous photo", index > 0, chrome, Modifier.align(Alignment.CenterStart)) { go(-1) }
-                    NavArrow(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next photo", index in 0 until photos.lastIndex, chrome, Modifier.align(Alignment.CenterEnd)) { go(1) }
+                    NavArrow(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next photo", index in 0 until items.lastIndex, chrome, Modifier.align(Alignment.CenterEnd)) { go(1) }
+                    if (items.size > 1 || current.subtitle != null) {
+                        Column(Modifier.align(Alignment.BottomStart).padding(24.dp).graphicsLayer { alpha = chrome }) {
+                            if (items.size > 1 && index >= 0) {
+                                Text(
+                                    "${com.pixelgram.desktop.core.tr("Photo")} ${index + 1} ${com.pixelgram.desktop.core.tr("of")} ${items.size}",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                            }
+                            current.subtitle?.let { line ->
+                                EmojiText(line, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
                     AnimatedContent(
                         targetState = current.caption,
                         transitionSpec = { fadeIn(fade) togetherWith fadeOut(fade) },

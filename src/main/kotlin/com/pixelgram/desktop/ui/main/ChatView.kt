@@ -403,6 +403,8 @@ private fun ChatViewContent(
             properties = { message, done -> telegram.messageProperties(message, done) },
             protectedContent = chat.protectedContent,
             onTranslate = { translating = it },
+            onResend = { message -> telegram.resend(message) },
+            onCancelSending = { message -> telegram.cancelSending(message) },
             onReport = { message -> reporting = message.album.takeIf { it.isNotEmpty() }?.map { it.id }?.toLongArray() ?: longArrayOf(message.id) },
             onReact = { message, emoji -> telegram.toggleReaction(message, emoji) },
             loadReactions = { message, done -> telegram.availableReactions(message, done) },
@@ -819,7 +821,7 @@ private fun ChatViewContent(
                     } else {
                         null
                     }
-                    androidx.compose.runtime.CompositionLocalProvider(LocalBubblePulse provides { flash.value }) {
+                    androidx.compose.runtime.CompositionLocalProvider(LocalBubblePulse provides { flash.value }, LocalBubbleGroup provides BubbleGroup(top = firstInRun || newDay, bottom = lastInRun || !sameDay(message.date, shown[index - 1].date))) {
                     Column(
                         if (PowerSaving.messageAnimations) {
                             Modifier.animateItem(fadeInSpec = if (message.fresh) null else fade, placementSpec = if (listState.isScrollInProgress) null else placement, fadeOutSpec = fade)
@@ -1304,15 +1306,24 @@ private fun ComposerBar(label: String, accent: Boolean = false, enabled: Boolean
 
 private const val DetailAlpha = 0.7f
 
-fun bubbleShape(radius: Int, tailRadius: Int, outgoing: Boolean): Shape {
+class BubbleGroup(val top: Boolean, val bottom: Boolean)
+
+val LocalBubbleGroup = androidx.compose.runtime.staticCompositionLocalOf { BubbleGroup(top = true, bottom = true) }
+
+fun bubbleShape(radius: Int, tailRadius: Int, outgoing: Boolean, group: BubbleGroup = BubbleGroup(top = true, bottom = true)): Shape {
     val r = radius.dp
-    val tail = tailRadius.dp
+    val joined = (r * JoinedCornerRatio).coerceIn(JoinedCornerMin, r)
+    val sideTop = if (group.top) r else joined
+    val sideBottom = if (group.bottom) tailRadius.dp else joined
     return if (outgoing) {
-        RoundedCornerShape(topStart = r, topEnd = r, bottomEnd = tail, bottomStart = r)
+        RoundedCornerShape(topStart = r, topEnd = sideTop, bottomEnd = sideBottom, bottomStart = r)
     } else {
-        RoundedCornerShape(topStart = r, topEnd = r, bottomEnd = r, bottomStart = tail)
+        RoundedCornerShape(topStart = sideTop, topEnd = r, bottomEnd = r, bottomStart = sideBottom)
     }
 }
+
+private const val JoinedCornerRatio = 0.3f
+private val JoinedCornerMin = 4.dp
 
 @Composable
 fun MessageBubble(
@@ -1378,11 +1389,12 @@ fun MessageBubble(
                 settings.bubbleRadius.value,
                 settings.bubbleTailRadius.value,
                 endSide,
+                LocalBubbleGroup.current,
             ),
             color = if (outgoing) colors.primaryContainer else colors.surfaceContainerHigh,
             contentColor = if (outgoing) colors.onPrimaryContainer else colors.onSurface,
             modifier = Modifier.widthIn(max = 520.dp).pulseRing(
-                bubbleShape(settings.bubbleRadius.value, settings.bubbleTailRadius.value, endSide),
+                bubbleShape(settings.bubbleRadius.value, settings.bubbleTailRadius.value, endSide, LocalBubbleGroup.current),
                 colors.primary,
                 LocalBubblePulse.current,
             ),
@@ -2392,6 +2404,40 @@ private fun Composer(
     }
     val voice = remember(chatId) { VoiceRecording() }
     voice.camera = settings.cameraDevice.value
+    var typingNow by remember(chatId) { mutableStateOf(false) }
+    val typedSeen = remember(chatId) { arrayOf<String?>(null) }
+    LaunchedEffect(chatId, text.text) {
+        val before = typedSeen[0]
+        typedSeen[0] = text.text
+        if (before == null || text.text.isBlank() || editing != null) {
+            typingNow = false
+            return@LaunchedEffect
+        }
+        typingNow = true
+        delay(TypingIdleMs)
+        typingNow = false
+    }
+    val ownAction: TdApi.ChatAction? = when {
+        voice.video != null -> TdApi.ChatActionRecordingVideoNote()
+        voice.recorder != null -> TdApi.ChatActionRecordingVoiceNote()
+        emojiOpen && mediaTab >= 1 -> TdApi.ChatActionChoosingSticker()
+        typingNow -> TdApi.ChatActionTyping()
+        else -> null
+    }
+    val sentAction = remember(chatId) { arrayOf(false) }
+    LaunchedEffect(chatId, ownAction?.javaClass) {
+        val action = ownAction
+        if (action == null) {
+            if (sentAction[0]) telegram.sendAction(chatId, TdApi.ChatActionCancel())
+            sentAction[0] = false
+            return@LaunchedEffect
+        }
+        while (true) {
+            telegram.sendAction(chatId, action)
+            sentAction[0] = true
+            delay(ActionRepeatMs)
+        }
+    }
     val voiceScope = rememberCoroutineScope()
     val releaseVoice: (Boolean) -> Unit = { cancel ->
         if (cancel) {
@@ -2857,3 +2903,6 @@ private const val HistoryPrefetchItems = 30
 
 private const val GhostFadeMs = 220
 private const val GhostAlpha = 0.6f
+
+private const val TypingIdleMs = 5_000L
+private const val ActionRepeatMs = 4_500L

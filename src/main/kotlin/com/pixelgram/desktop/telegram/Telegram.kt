@@ -97,6 +97,7 @@ sealed interface ChatListKey {
 class ChatState(val id: Long) {
     var title by mutableStateOf("")
     var photo by mutableStateOf<TdApi.File?>(null)
+    var bigPhoto: TdApi.File? = null
     var lastMessage by mutableStateOf<TdApi.Message?>(null)
     var unreadCount by mutableStateOf(0)
     var unreadMentions by mutableStateOf(0)
@@ -300,6 +301,13 @@ class Telegram(
         send(TdApi.CancelDownloadFile(file.id, false))
         transfers.remove(file.id)
         requestedFiles.remove(file.id)
+    }
+
+    fun resend(message: UiMessage) {
+        val ids = message.album.takeIf { it.isNotEmpty() }?.map { it.id }?.toLongArray() ?: longArrayOf(message.id)
+        send(TdApi.ResendMessages(message.chatId, ids, null, 0)) { result ->
+            if (result is TdApi.Error) AppLog.write("Resend failed ${result.code}: ${result.message}")
+        }
     }
 
     fun cancelSending(message: UiMessage) = deleteMessages(message.chatId, longArrayOf(message.id), true)
@@ -1065,7 +1073,10 @@ class Telegram(
             is TdApi.UpdateAuthorizationState -> handleAuthState(update.authorizationState)
             is TdApi.UpdateNewChat -> addChat(update.chat)
             is TdApi.UpdateChatTitle -> chats[update.chatId]?.title = update.title
-            is TdApi.UpdateChatPhoto -> chats[update.chatId]?.photo = update.photo?.small
+            is TdApi.UpdateChatPhoto -> chats[update.chatId]?.let { state ->
+                state.photo = update.photo?.small
+                state.bigPhoto = update.photo?.big
+            }
             is TdApi.UpdateChatLastMessage -> chats[update.chatId]?.let { chat ->
                 chat.lastMessage = update.lastMessage
                 update.positions?.forEach { applyPosition(chat, it) }
@@ -1393,6 +1404,7 @@ class Telegram(
         val state = ChatState(chat.id).apply {
             title = chat.title
             photo = chat.photo?.small
+            bigPhoto = chat.photo?.big
             lastMessage = chat.lastMessage
             unreadCount = chat.unreadCount
             unreadMentions = chat.unreadMentionCount
@@ -1755,6 +1767,11 @@ class Telegram(
             return
         }
         loadMoreMessages(chatId)
+    }
+
+    fun sendAction(chatId: Long, action: TdApi.ChatAction) {
+        if (System.getProperty("pixelgram.demo") == "true" || isSavedMessages(chatId)) return
+        send(TdApi.SendChatAction(chatId, topicOf(chatId), null, action)) {}
     }
 
     private fun topicOf(chatId: Long): TdApi.MessageTopic? = chatTopics[chatId]?.let { TdApi.MessageTopicForum(it) }
@@ -2707,6 +2724,20 @@ class Telegram(
         return null
     }
 
+    fun chatPhotosAround(chatId: Long, messageId: Long, done: (List<UiMessage>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return
+        send(TdApi.SearchChatMessages().apply {
+            this.chatId = chatId
+            query = ""
+            fromMessageId = messageId
+            offset = -PhotoWindow / 2
+            limit = PhotoWindow
+            filter = TdApi.SearchMessagesFilterPhoto()
+        }) { result ->
+            if (result is TdApi.FoundChatMessages) done(result.messages.map { it.toUi() }.filter { it.photo != null }.sortedBy { it.id })
+        }
+    }
+
     fun loadPinned(chatId: Long) {
         if (System.getProperty("pixelgram.demo") == "true") {
             pinnedMessages[chatId] = messages(chatId).filter { it.pinned }
@@ -3426,7 +3457,7 @@ fun isRich(content: TdApi.MessageContent?): Boolean = when (content) {
     is TdApi.MessageSticker, is TdApi.MessageGift, is TdApi.MessageUpgradedGift, is TdApi.MessageGiftedStars,
     is TdApi.MessageGiftedPremium, is TdApi.MessageAnimation, is TdApi.MessageVideo, is TdApi.MessageVideoNote,
     is TdApi.MessagePoll, is TdApi.MessageContact, is TdApi.MessageLocation, is TdApi.MessageAnimatedEmoji,
-    is TdApi.MessageDice -> true
+    is TdApi.MessageDice, is TdApi.MessageRichMessage, is TdApi.MessageChecklist -> true
     else -> false
 }
 
@@ -3572,3 +3603,5 @@ fun imageSize(file: File): Pair<Int, Int> = runCatching {
         }
     }
 }.getOrDefault(0 to 0)
+
+private const val PhotoWindow = 100
