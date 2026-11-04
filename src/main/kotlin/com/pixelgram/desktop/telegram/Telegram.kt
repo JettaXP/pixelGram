@@ -758,6 +758,31 @@ class Telegram(
     private val basicGroupMembers = KeyedState<Long, Int>()
     private val memberRequests = mutableSetOf<Long>()
 
+    val communities = mutableStateMapOf<Long, TdApi.Community>()
+    private val supergroupCommunity = mutableStateMapOf<Long, Long>()
+    private val communityRequests = HashSet<Long>()
+
+    fun communityOf(chat: ChatState): TdApi.Community? {
+        if (chat.supergroupId == 0L) return null
+        val id = supergroupCommunity[chat.supergroupId] ?: run {
+            if (communityRequests.add(chat.supergroupId)) {
+                val supergroup = chat.supergroupId
+                send(TdApi.GetSupergroupFullInfo(supergroup)) { result ->
+                    if (result is TdApi.SupergroupFullInfo) supergroupCommunity[supergroup] = result.communityId
+                }
+            }
+            return null
+        }
+        if (id == 0L) return null
+        return communities[id]
+    }
+
+    fun communityChats(id: Long, onResult: (List<Long>) -> Unit) {
+        send(TdApi.GetCommunityFullInfo(id)) { result ->
+            onResult((result as? TdApi.CommunityFullInfo)?.chats?.filterNotNull()?.filter { !it.isHidden }?.map { it.chatId }.orEmpty())
+        }
+    }
+
     private fun memberCount(chat: ChatState): Int? = when {
         chat.basicGroupId != 0L -> basicGroupMembers[chat.basicGroupId]
         chat.supergroupId != 0L -> supergroupMembers[chat.supergroupId] ?: run {
@@ -766,6 +791,7 @@ class Telegram(
                 send(TdApi.GetSupergroupFullInfo(id)) { result ->
                     if (result is TdApi.SupergroupFullInfo) {
                         if (result.memberCount > 0) supergroupMembers[id] = result.memberCount
+                        supergroupCommunity[id] = result.communityId
                     } else {
                         retryLater { memberRequests.remove(id) }
                     }
@@ -1210,8 +1236,11 @@ class Telegram(
                 basicGroupMembers[update.basicGroup.id] = update.basicGroup.memberCount
                 basicGroupInfo[update.basicGroup.id] = update.basicGroup
             }
-            is TdApi.UpdateSupergroupFullInfo ->
+            is TdApi.UpdateSupergroupFullInfo -> {
                 if (update.supergroupFullInfo.memberCount > 0) supergroupMembers[update.supergroupId] = update.supergroupFullInfo.memberCount
+                supergroupCommunity[update.supergroupId] = update.supergroupFullInfo.communityId
+            }
+            is TdApi.UpdateCommunity -> communities[update.community.id] = update.community
             is TdApi.UpdateMessageIsPinned -> {
                 messages[update.chatId]?.let { list ->
                     val index = list.indexOfFirst { it.id == update.messageId }

@@ -85,6 +85,7 @@ import com.pixelgram.desktop.ui.components.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.pixelgram.desktop.ui.icons.outlined.ExpandMore
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -322,9 +323,27 @@ private fun OnlineAvatar(chat: ChatState, telegram: Telegram, settings: AppSetti
                     .background(MaterialTheme.colorScheme.primary, CircleShape),
             )
         }
+        val community = telegram.communityOf(chat)
+        if (community != null) {
+            var open by remember(chat.id) { mutableStateOf(false) }
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(CommunityBadge)
+                    .border(OnlineRing, MaterialTheme.colorScheme.surfaceContainerLow, CircleShape)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                    .clickable { open = true },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.ExpandMore, contentDescription = community.name, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(14.dp))
+            }
+            if (open) CommunityDialog(community, telegram, settings, onOpen = { id -> open = false; com.pixelgram.desktop.ui.main.Links.navigate?.invoke(telegram, id) }) { open = false }
+        }
     }
 }
 
+private val CommunityBadge = 20.dp
 private val OnlineDot = 15.dp
 private val OnlineRing = 2.5.dp
 
