@@ -39,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
@@ -247,7 +248,7 @@ private class SettingRows {
 private fun SettingGroup(build: SettingRows.() -> Unit) {
     val items = SettingRows().apply(build).items
     if (items.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())) {
         items.forEachIndexed { index, item ->
             val shape = com.pixelgram.desktop.ui.components.groupShapes(index, items.size).shape
             Row(
@@ -398,7 +399,9 @@ private fun PollDialog(telegram: Telegram, chat: ChatState, replyToId: Long, onD
             row(Icons.Filled.Shuffle, Orange, "Shuffle Options", "Answers appear in random order for each voter.", shuffle) { shuffle = it }
             row(Icons.Filled.CheckCircle, Green, "Set Correct Answer", "Mark one or more options as the right answer.", quiz) { quiz = it }
         }
-        if (quiz) OutlinedTextField(explanation, { explanation = it }, placeholder = { Text("Explanation (optional)") }, modifier = Modifier.fillMaxWidth())
+        androidx.compose.animation.AnimatedVisibility(quiz) {
+            OutlinedTextField(explanation, { explanation = it }, placeholder = { Text("Explanation (optional)") }, modifier = Modifier.fillMaxWidth())
+        }
         SettingGroup {
             if (channel) {
                 row(Icons.Filled.Group, Indigo, "Restrict to Subscribers", "Only subscribers who joined 24+ hours ago can vote.", membersOnly) { membersOnly = it }
@@ -414,7 +417,7 @@ private fun PollDialog(telegram: Telegram, chat: ChatState, replyToId: Long, onD
                 Text(if (countries.isEmpty()) "Choose countries" else countries.joinToString(", ") { code -> countryName(code) })
             }
         }
-        if (limitDuration) {
+        androidx.compose.animation.AnimatedVisibility(limitDuration) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 DurationChoices.forEach { (seconds, label) ->
                     androidx.compose.material3.FilterChip(selected = duration == seconds, onClick = { duration = seconds }, label = { Text(label) })

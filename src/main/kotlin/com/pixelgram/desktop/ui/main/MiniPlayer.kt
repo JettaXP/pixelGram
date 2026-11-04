@@ -345,42 +345,50 @@ private fun MorphButton(
 }
 
 @Composable
-private fun PlayPauseIcon(playing: Boolean) {
-    val alt by animateFloatAsState(if (playing) 1f else 0f, spring(dampingRatio = 0.6f, stiffness = 520f))
+private fun PlayPauseIcon(playing: Boolean) = PlayPauseMorph(playing, 26.dp)
+
+@Composable
+fun PlayPauseMorph(playing: Boolean, size: androidx.compose.ui.unit.Dp, tint: Color = LocalContentColor.current) {
+    val alt by animateFloatAsState(if (playing) 1f else 0f, spring(dampingRatio = 0.7f, stiffness = 480f))
     Box(contentAlignment = Alignment.Center) {
         Icon(
             Icons.Rounded.PlayArrow,
             contentDescription = if (playing) null else "Play",
-            modifier = Modifier.size(26.dp).graphicsLayer {
-                alpha = (1f - alt).coerceIn(0f, 1f)
-                scaleX = 1f - 0.4f * alt
-                scaleY = 1f - 0.4f * alt
+            tint = tint,
+            modifier = Modifier.size(size).graphicsLayer {
+                alpha = (1f - alt * 1.6f).coerceIn(0f, 1f)
+                rotationZ = MorphTurn * alt
+                scaleX = 1f - 0.3f * alt
+                scaleY = 1f - 0.3f * alt
             },
         )
         Icon(
             Icons.Rounded.Pause,
             contentDescription = if (playing) "Pause" else null,
-            modifier = Modifier.size(26.dp).graphicsLayer {
-                alpha = alt.coerceIn(0f, 1f)
-                scaleX = 0.6f + 0.4f * alt
-                scaleY = 0.6f + 0.4f * alt
+            tint = tint,
+            modifier = Modifier.size(size).graphicsLayer {
+                alpha = ((alt - 0.35f) * 1.6f).coerceIn(0f, 1f)
+                rotationZ = -MorphTurn * (1f - alt)
+                scaleX = 0.7f + 0.3f * alt
+                scaleY = 0.7f + 0.3f * alt
             },
         )
     }
 }
 
+private const val MorphTurn = 45f
+
 private const val ControlScale = 0.5f
 private val ControlGap = 4.dp
 
-private const val WaveSettleStiffness = 220f
+private const val WaveSettleMs = 260
 private val MiniVolumeWidth = 96.dp
-private const val WaveRestThreshold = 0.01f
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = Modifier, playing: Boolean = true) {
     var dragging by remember { mutableStateOf<Float?>(null) }
-    val wave by animateFloatAsState(if (playing) 1f else 0f, spring(dampingRatio = 1f, stiffness = WaveSettleStiffness))
+    val wave by animateFloatAsState(if (playing) 1f else 0f, androidx.compose.animation.core.tween(WaveSettleMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
     val interaction = remember { MutableInteractionSource() }
     androidx.compose.material3.Slider(
         value = dragging ?: fraction.coerceIn(0f, 1f),
@@ -396,7 +404,7 @@ fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = M
                 progress = { state.value },
                 modifier = Modifier.fillMaxWidth(),
                 amplitude = { progress -> WavyProgressIndicatorDefaults.indicatorAmplitude(progress) * wave },
-                waveSpeed = if (wave > WaveRestThreshold) WavyProgressIndicatorDefaults.LinearDeterminateWavelength else 0.dp,
+                waveSpeed = if (playing) WavyProgressIndicatorDefaults.LinearDeterminateWavelength else 0.dp,
             )
         },
         modifier = modifier.height(28.dp),

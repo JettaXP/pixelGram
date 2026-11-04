@@ -72,7 +72,6 @@ private val SelectionBarHeight = 56.dp
 private val ShotPreviewWidth = 560.dp
 private val ShotPreviewMaxHeight = 400.dp
 private const val PinPreviewChars = 20
-private const val PinSegmentsShown = 4
 
 fun pinPreview(message: UiMessage?): String {
     val text = message?.text?.takeIf { it.isNotBlank() } ?: message?.let { contentText(it.content) }.orEmpty()
@@ -110,25 +109,8 @@ fun PinnedBar(pins: List<UiMessage>, index: Int, onClick: () -> Unit, modifier: 
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(start = 8.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
+            modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
         ) {
-            val segments = pins.size.coerceAtMost(PinSegmentsShown)
-            val start = (index - segments / 2).coerceIn(0, pins.size - segments)
-            Column(
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = Modifier.width(3.dp).fillMaxHeight(),
-            ) {
-                repeat(segments) { slot ->
-                    val active = start + (segments - 1 - slot) == index
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(if (active) colors.primary else colors.primary.copy(alpha = 0.3f)),
-                    )
-                }
-            }
             Icon(Icons.Outlined.PushPin, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.Bottom) {

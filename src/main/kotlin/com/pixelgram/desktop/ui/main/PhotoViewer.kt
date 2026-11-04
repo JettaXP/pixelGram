@@ -343,7 +343,7 @@ private fun ZoomablePhoto(photo: ViewedPhoto, modifier: Modifier) {
                     .pointerInput(Unit) {
                         detectDragGestures { change, drag ->
                             change.consume()
-                            if (zoom > 1f) offset += drag
+                            if (zoom > 1f) offset += drag * shownZoom
                         }
                     }
                     .pointerInput(Unit) {

@@ -82,6 +82,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.togetherWith
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -721,8 +722,7 @@ fun PlayButton(key: Long, chatId: Long, title: String, file: TdApi.File?, telegr
             when {
                 busy -> TransferRing(telegram.progress(file), tint, { telegram.cancelDownload(file) }, 40.dp)
                 active && AudioPlayer.loading -> LoadingIndicator(Modifier.size(32.dp), color = tint)
-                active && AudioPlayer.playing -> Icon(Icons.Rounded.Pause, contentDescription = "Pause", tint = tint, modifier = Modifier.size(30.dp))
-                else -> Icon(Icons.Rounded.PlayArrow, contentDescription = "Play", tint = tint, modifier = Modifier.size(30.dp))
+                else -> PlayPauseMorph(active && AudioPlayer.playing, 30.dp, tint)
             }
         }
         if (!downloaded && !busy) {
@@ -938,7 +938,7 @@ private fun PollContent(message: UiMessage, content: TdApi.MessagePoll, telegram
     val freshVote = startedOpen && results
     var showVoters by remember(poll.id) { mutableStateOf(false) }
     if (showVoters) PollVotersDialog(message.chatId, message.id, poll, telegram) { showVoters = false }
-    Column(Modifier.widthIn(min = 260.dp, max = 360.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(Modifier.widthIn(min = 260.dp, max = 360.dp).animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         EmojiText(poll.question.text, style = MaterialTheme.typography.titleSmall)
         content.description?.text?.takeIf { it.isNotBlank() }?.let { EmojiText(it, style = MaterialTheme.typography.bodyMedium) }
         Text(
@@ -976,7 +976,7 @@ private fun PollContent(message: UiMessage, content: TdApi.MessagePoll, telegram
                         progress = { fill.value },
                         color = scheme.primary,
                         trackColor = scheme.primary.copy(alpha = 0.2f),
-                        waveSpeed = if (fill.isRunning) VoteWaveSpeed else 0.dp,
+                        waveSpeed = 0.dp,
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     )
                 }
@@ -1027,8 +1027,7 @@ private fun PollContent(message: UiMessage, content: TdApi.MessagePoll, telegram
     }
 }
 
-private const val VoteWaveMs = 700
-private val VoteWaveSpeed = 40.dp
+private const val VoteWaveMs = 600
 
 val MediaMaxWidth = 420.dp
 private val MediaMaxHeight = 520.dp
