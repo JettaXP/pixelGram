@@ -118,9 +118,10 @@ fun Avatar(
     full: TdApi.File? = null,
     kind: AvatarKind? = null,
     onClick: (() -> Unit)? = null,
+    localPath: String? = null,
 ) {
     val shape = settings.avatarShapeFor(kind).toShape(settings.avatarCorner.value)
-    AvatarImage(title, photo, telegram, shape, size, modifier, full, onClick)
+    AvatarImage(title, photo, telegram, shape, size, modifier, full, onClick, localPath)
 }
 
 const val RepliesUserId = 1271266957L
@@ -147,7 +148,8 @@ fun ChatAvatar(
     }
     val replies = chat.privateUserId == RepliesUserId
     if (!telegram.isSavedMessages(chat.id) && !replies) {
-        Avatar(chat.title, chat.photo, telegram, settings, size, modifier, kind = telegram.avatarKind(chat), onClick = onClick)
+        val local = chat.privateUserId.takeIf { it != 0L }?.let { com.pixelgram.desktop.core.LocalPhotos.get(it) }?.takeIf { java.io.File(it).isFile }
+        Avatar(chat.title, chat.photo, telegram, settings, size, modifier, kind = telegram.avatarKind(chat), onClick = onClick, localPath = local)
         return
     }
     val colors = MaterialTheme.colorScheme
@@ -178,10 +180,11 @@ fun AvatarImage(
     modifier: Modifier = Modifier,
     full: TdApi.File? = null,
     onClick: (() -> Unit)? = null,
+    localPath: String? = null,
 ) {
     LaunchedEffect(photo?.id) { telegram.download(photo) }
     LaunchedEffect(full?.id) { telegram.download(full) }
-    val path = telegram.localPath(full) ?: telegram.localPath(photo)
+    val path = localPath ?: telegram.localPath(full) ?: telegram.localPath(photo)
     val image by produceState(cachedImage(path), path) {
         value = cachedImage(path)
         if (value == null) value = path?.let { loadImage(it) }

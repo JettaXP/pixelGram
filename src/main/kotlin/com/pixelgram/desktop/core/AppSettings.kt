@@ -185,6 +185,8 @@ class AppSettings private constructor(private val props: Properties, private val
     val language = string("language", "en")
     val bigReactions = bool("bigReactions", false)
     val localNames = string("localNames", "")
+    val localPhotos = string("localPhotos", "")
+    val originalNames = string("originalNames", "")
     val liquidCursor = bool("liquidCursor", true)
     val cursorStyle = enum("cursorStyle", CursorStyle.Liquid)
     val trailFast = int("trailFast", 100)
@@ -252,7 +254,7 @@ class AppSettings private constructor(private val props: Properties, private val
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,
         deviceName, israelLogo, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
-        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, restoreWindow, windowBounds, emptyShapes, autostart, launchMinimized, language, localNames, bigReactions, liquidCursor, cursorStyle, trailFast, trailSlow, trailThreshold, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
+        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, restoreWindow, windowBounds, emptyShapes, autostart, launchMinimized, language, localNames, localPhotos, originalNames, bigReactions, liquidCursor, cursorStyle, trailFast, trailSlow, trailThreshold, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
         miniAppsAndroid, proxies, proxySelected, proxyOn, renderApi,
         apiId, apiHash,
         accounts, activeAccount,
@@ -265,7 +267,7 @@ class AppSettings private constructor(private val props: Properties, private val
         all.filter { it !in keep }.forEach { it.reset() }
     }
 
-    private val personal get() = localOnly + setOf(passcodeHash, passcodeSalt, autoLockMinutes, localNames, deviceName)
+    private val personal get() = localOnly + setOf(passcodeHash, passcodeSalt, autoLockMinutes, localNames, localPhotos, originalNames, deviceName)
 
     private val paths get() = setOf(wallpaper, messageFont)
 

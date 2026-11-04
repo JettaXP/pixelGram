@@ -24,3 +24,32 @@ object LocalNames {
     private const val Record = "\u001E"
     private const val Field = "\u001F"
 }
+
+open class LocalMap(private val field: () -> Setting<String>?) {
+    private fun all(): Map<Long, String> = field()?.value.orEmpty()
+        .split(Record)
+        .mapNotNull { entry ->
+            val parts = entry.split(Field, limit = 2)
+            val id = parts.getOrNull(0)?.toLongOrNull() ?: return@mapNotNull null
+            val value = parts.getOrNull(1)?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            id to value
+        }
+        .toMap()
+
+    fun get(id: Long): String? = all()[id]
+
+    fun set(id: Long, value: String?) {
+        val next = all().toMutableMap()
+        if (value.isNullOrBlank()) next.remove(id) else next[id] = value.trim()
+        field()?.value = next.entries.joinToString(Record) { "${it.key}$Field${it.value}" }
+    }
+
+    private companion object {
+        const val Record = "\u001E"
+        const val Field = "\u001F"
+    }
+}
+
+object LocalPhotos : LocalMap({ LocalNames.settings?.localPhotos })
+
+object OriginalNames : LocalMap({ LocalNames.settings?.originalNames })

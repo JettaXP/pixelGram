@@ -1011,6 +1011,12 @@ class Telegram(
     fun setProfilePhoto(path: String, done: (String?) -> Unit) =
         send(TdApi.SetProfilePhoto(TdApi.InputChatPhotoStatic(TdApi.InputFileLocal(path)), false), okOrError(done))
 
+    fun setPersonalPhoto(userId: Long, path: String?, done: (String?) -> Unit) =
+        send(TdApi.SetUserPersonalProfilePhoto(userId, path?.let { TdApi.InputChatPhotoStatic(TdApi.InputFileLocal(it)) }), okOrError(done))
+
+    fun suggestPhoto(userId: Long, path: String, done: (String?) -> Unit) =
+        send(TdApi.SuggestUserProfilePhoto(userId, TdApi.InputChatPhotoStatic(TdApi.InputFileLocal(path))), okOrError(done))
+
     fun moveProfileAudio(fileId: Int, afterFileId: Int) {
         send(TdApi.SetProfileAudioPosition(fileId, afterFileId)) { loadMyProfileAudios() }
     }
