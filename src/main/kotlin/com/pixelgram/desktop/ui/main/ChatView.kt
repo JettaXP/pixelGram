@@ -839,7 +839,7 @@ private fun ChatViewContent(
                     } else {
                         null
                     }
-                    androidx.compose.runtime.CompositionLocalProvider(LocalBubblePulse provides { flash.value }, LocalBubbleGroup provides BubbleGroup(top = firstInRun || newDay, bottom = lastInRun || !sameDay(message.date, shown[index - 1].date))) {
+                    androidx.compose.runtime.CompositionLocalProvider(LocalBubblePulse provides { flash.value }, LocalBubbleGroup provides BubbleGroup(top = firstInRun || newDay, bottom = lastInRun || (index > 0 && !sameDay(message.date, shown[index - 1].date)))) {
                     Column(
                         if (PowerSaving.messageAnimations) {
                             Modifier.animateItem(fadeInSpec = if (message.fresh || jumping) null else fade, placementSpec = if (listState.isScrollInProgress || jumping) null else placement, fadeOutSpec = if (jumping) null else fade)

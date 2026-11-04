@@ -24,7 +24,7 @@ fun BackupImportDialog(file: File, settings: AppSettings, onDone: (Boolean?) -> 
         onDismissRequest = { onDone(null) },
         icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
         title = { Text("Import settings?") },
-        text = { Text("pixelGram Preferences from ${file.name} will replace your current ones. Accounts stay as they are.") },
+        text = { Text(com.pixelgram.desktop.core.tr("pixelGram Preferences from {file} will replace your current ones. Accounts stay as they are.").replace("{file}", file.name)) },
         confirmButton = { TextButton(onClick = { onDone(Backup.import(settings, file)) }) { Text("Import") } },
         dismissButton = { TextButton(onClick = { onDone(null) }) { Text("Cancel") } },
     )
