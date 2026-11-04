@@ -143,6 +143,7 @@ class AppSettings private constructor(private val props: Properties, private val
     val folderTitle = enum("folderTitle", FolderTitle.NamesAndIcons)
     val messageSides = enum("messageSides", MessageSides.Auto)
     val iconPack = enum("iconPack", IconPack.Material)
+    val roundedIcons = bool("roundedIcons", false)
     val checkUpdates = bool("checkUpdates", true)
     val doubleClickOwn = enum("doubleClickOwn", DoubleClickAction.Reaction)
     val settingsStyle = enum("settingsStyle", SettingsStyle.Expressive)
@@ -248,7 +249,7 @@ class AppSettings private constructor(private val props: Properties, private val
         notifyAllAccounts, flashTaskbar, notifyShowName, notifyShowText, badgeIncludeMuted, folderIncludeMuted, badgeCountMessages, respectFocus,
         materialFolders, hideAllChats, folderOrder, folderIcons,
         unreadFolder, unreadFolderName, unreadFolderIcon, mentionsFolder, mentionsFolderName, mentionsFolderIcon,
-        capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, exactNumbers, zalgoFilter, pythonMessages, inlineMath, titleText, titleCustom, folderTitle, iconPack, checkUpdates,
+        capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, exactNumbers, zalgoFilter, pythonMessages, inlineMath, titleText, titleCustom, folderTitle, iconPack, roundedIcons, checkUpdates,
         doubleClickOwn, doubleClickOther, doubleClickEmoji, swipeLeft, swipeRight, typingBubble, autoCapitalize, settingsStyle, sideMenuStyle,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,

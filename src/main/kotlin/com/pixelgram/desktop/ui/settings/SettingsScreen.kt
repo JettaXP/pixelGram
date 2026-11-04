@@ -194,7 +194,7 @@ import it.tdlight.jni.TdApi
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 
-private enum class Section(val title: String, val icon: ImageVector, val pixel: Boolean = false, val parent: Section? = null) {
+private enum class Section(val title: String, val icon: ImageVector, val pixel: Boolean = false, val parent: Section? = null, val inline: Boolean = false) {
     Profile("My Profile", Icons.Outlined.Person),
     Notifications("Notifications and Sounds", Icons.Outlined.Notifications),
     Privacy("Privacy and Security", Icons.Outlined.Lock),
@@ -208,21 +208,23 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
     General("General", Icons.Outlined.Settings, pixel = true),
     Appearance("Appearance", Icons.Outlined.Palette, pixel = true),
     Chats("Chats", Icons.AutoMirrored.Outlined.Chat, pixel = true),
+    Actions("Message actions", Icons.Outlined.SwipeRight, pixel = true),
     Window("Window and system", Icons.Outlined.Computer, pixel = true),
     Experimental("Experimental", Icons.Outlined.DataObject, pixel = true),
     Other("Other", Icons.Outlined.MoreHoriz, pixel = true),
     Fonts("Fonts", Icons.Outlined.TextFields, pixel = true, parent = Appearance),
     Avatars("Avatars", Icons.Outlined.Face, pixel = true, parent = Appearance),
-    Bubbles("Message bubbles", Icons.Outlined.ChatBubbleOutline, pixel = true, parent = Appearance),
-    Corners("Corners", Icons.Outlined.RoundedCorner, pixel = true, parent = Appearance),
-    FolderStyle("Chat folders", Icons.Outlined.Folder, pixel = true, parent = Appearance),
-    Navigation("Side menu and settings", Icons.Outlined.FormatListBulleted, pixel = true, parent = Appearance),
-    Actions("Message actions", Icons.Outlined.SwipeRight, pixel = true, parent = Chats),
+    Bubbles("Message bubbles", Icons.Outlined.ChatBubbleOutline, pixel = true, parent = Appearance, inline = true),
+    Corners("Corners", Icons.Outlined.RoundedCorner, pixel = true, parent = Appearance, inline = true),
+    FolderStyle("Chat folders", Icons.Outlined.Folder, pixel = true, parent = Appearance, inline = true),
+    Navigation("Side menu and settings", Icons.Outlined.FormatListBulleted, pixel = true, parent = Appearance, inline = true),
     Cursor("Cursor", Icons.Outlined.Keyboard, pixel = true, parent = Chats),
-    About("About", Icons.Outlined.Info, pixel = true, parent = Other),
+    About("About", Icons.Outlined.Info, pixel = true, parent = Other, inline = true),
 }
 
-private val Section.subsections: List<Section> get() = Section.entries.filter { it.parent == this }
+private val Section.subsections: List<Section> get() = Section.entries.filter { it.parent == this && !it.inline }
+
+private val Section.shownAs: Section get() = if (inline) parent ?: this else this
 
 private val QrAvatarSize = 80.dp
 private const val DisabledAlpha = 0.38f
@@ -493,7 +495,7 @@ fun SettingsScreen(
                 val sectionIn = effects<Float>()
                 val sectionOut = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
                 AnimatedContent(
-                    targetState = section,
+                    targetState = section.shownAs,
                     transitionSpec = {
                         val direction = if (targetState.ordinal >= initialState.ordinal) 1 else -1
                         (slideInVertically(sectionSpatial) { it / 12 * direction } + fadeIn(sectionIn)) togetherWith
@@ -528,20 +530,15 @@ fun SettingsScreen(
                     androidx.compose.runtime.CompositionLocalProvider(com.pixelgram.desktop.ui.components.LocalHighlightText provides highlight) {
                     when (shown) {
                         Section.General -> GeneralSection(settings)
-                        Section.Appearance -> AppearanceSection(settings) { section = it }
+                        Section.Appearance, Section.Bubbles, Section.Corners, Section.FolderStyle, Section.Navigation -> AppearanceSection(settings) { section = it }
                         Section.Chats -> ChatsSection(settings) { section = it }
                         Section.Window -> WindowSection(settings)
                         Section.Experimental -> ExperimentalSection(settings)
-                        Section.Other -> OtherSection(telegram, settings) { section = it }
+                        Section.Other, Section.About -> OtherSection(telegram, settings, onOpenChat) { section = it }
                         Section.Fonts -> FontsSection(settings)
-                        Section.FolderStyle -> FolderStyleSection(settings)
-                        Section.Navigation -> NavigationSection(settings)
                         Section.Actions -> ActionsSection(settings)
                         Section.Avatars -> AvatarsSection(settings)
-                        Section.Bubbles -> BubblesSection(settings)
-                        Section.Corners -> CornersSection(settings)
                         Section.Cursor -> CursorSection(settings)
-                        Section.About -> AboutSection(telegram, onOpenChat)
                         Section.Privacy -> PrivacySection(telegram, settings)
                         Section.ChatSettings -> ChatSettingsSection(settings)
                         Section.Folders -> FoldersSection(telegram, settings)
@@ -894,6 +891,11 @@ private fun AppearanceSection(settings: AppSettings, onOpen: (Section) -> Unit) 
         settings.iconPack.value,
         { settings.iconPack.value = it },
     )
+    androidx.compose.animation.AnimatedVisibility(settings.iconPack.value == com.pixelgram.desktop.core.IconPack.Material) {
+        SegmentedGroup {
+            SwitchRow(0, 1, "Rounded icons", "Material Symbols Rounded instead of the sharp outlined style", settings.roundedIcons.value) { settings.roundedIcons.value = it }
+        }
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(vertical = 4.dp)) {
         listOf(
             Icons.Outlined.Search, Icons.Outlined.Settings, Icons.AutoMirrored.Outlined.Reply, Icons.Outlined.ContentCopy,
@@ -932,6 +934,17 @@ private fun AppearanceSection(settings: AppSettings, onOpen: (Section) -> Unit) 
         )
     }
     SubsectionLinks(Section.Appearance, onOpen)
+    InlineSection(Section.Bubbles) { BubblesSection(settings) }
+    InlineSection(Section.Corners) { CornersSection(settings) }
+    InlineSection(Section.FolderStyle) { FolderStyleSection(settings) }
+    InlineSection(Section.Navigation) { NavigationSection(settings) }
+}
+
+@Composable
+private fun InlineSection(section: Section, content: @Composable () -> Unit) {
+    Spacer(Modifier.height(12.dp))
+    Text(section.title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp))
+    content()
 }
 
 @Composable
@@ -2031,7 +2044,7 @@ private fun AboutSection(telegram: Telegram, onOpenChat: (Long) -> Unit) {
 }
 
 @Composable
-private fun OtherSection(telegram: Telegram, settings: AppSettings, onOpen: (Section) -> Unit) {
+private fun OtherSection(telegram: Telegram, settings: AppSettings, onOpenChat: (Long) -> Unit, onOpen: (Section) -> Unit) {
     val scope = rememberCoroutineScope()
     var exporting by remember { mutableStateOf<File?>(null) }
     var importing by remember { mutableStateOf<File?>(null) }
@@ -2107,7 +2120,8 @@ private fun OtherSection(telegram: Telegram, settings: AppSettings, onOpen: (Sec
             if (done != null) status = if (done) "Settings imported." else "Couldn't read ${file.name}."
         }
     }
-    SubsectionLinks(Section.Other, onOpen)
+    if (Section.Other.subsections.isNotEmpty()) SubsectionLinks(Section.Other, onOpen)
+    InlineSection(Section.About) { AboutSection(telegram, onOpenChat) }
 }
 
 @Composable
