@@ -60,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.drawWithContent
@@ -580,10 +581,19 @@ private fun SyncedLyrics(lines: List<LyricLine>) {
     }
     LazyColumn(
         state = state,
-        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 120.dp),
+        contentPadding = PaddingValues(horizontal = 6.dp + LyricsBleed, vertical = 120.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
         modifier = Modifier
             .fillMaxSize()
+            .layout { measurable, constraints ->
+                val extra = LyricsBleed.roundToPx()
+                val wide = constraints.copy(
+                    minWidth = constraints.minWidth + extra * 2,
+                    maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + extra * 2 else constraints.maxWidth,
+                )
+                val placeable = measurable.measure(wide)
+                layout((placeable.width - extra * 2).coerceIn(constraints.minWidth, constraints.maxWidth), placeable.height) { placeable.place(-extra, 0) }
+            }
             .nestedScroll(follow)
             .edgeFade(),
     ) {
@@ -674,6 +684,7 @@ private fun Modifier.edgeFade(): Modifier = this
         )
     }
 
+private val LyricsBleed = 20.dp
 private const val FollowPauseMs = 3_000L
 private const val LineScrollMs = 650
 private const val LineFadeMs = 700
@@ -850,7 +861,9 @@ private fun PlayerMenu(telegram: Telegram) {
                         ),
                     )
                 } else {
-                    TrackDetails(audio, path, name) { details = false }
+                    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                        TrackDetails(audio, path, name) { details = false }
+                    }
                 }
             }
         }
