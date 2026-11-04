@@ -59,6 +59,8 @@ dependencies {
     implementation(libs.material.color.utilities)
     implementation(libs.qrcodegen)
     implementation(libs.jna)
+    implementation(libs.dbus.java.core)
+    implementation(libs.dbus.java.unixsocket)
     implementation(libs.filekit.dialogs)
     implementation(libs.markdown)
     implementation(libs.concentus)

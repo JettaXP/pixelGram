@@ -1,6 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
 import androidx.compose.foundation.clickable
+import com.pixelgram.desktop.ui.icons.outlined.Schedule
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -87,16 +89,65 @@ internal fun groupIcon(name: String): ImageVector = when (name) {
     else -> Icons.Outlined.EmojiFlags
 }
 
+private sealed interface PanelEmoji {
+    val emoji: String
+    class Plain(override val emoji: String) : PanelEmoji
+    class Custom(override val emoji: String, val id: Long) : PanelEmoji
+}
+
+private object RecentEmoji {
+    fun all(): List<PanelEmoji> = com.pixelgram.desktop.ui.theme.EmojiFonts.settings?.recentEmoji?.value.orEmpty()
+        .split(Record).filter { it.isNotBlank() }.map { entry ->
+            val parts = entry.split(Field, limit = 2)
+            val id = parts.getOrNull(0)?.toLongOrNull()
+            if (parts.size == 2 && id != null) PanelEmoji.Custom(parts[1], id) else PanelEmoji.Plain(entry)
+        }
+
+    fun add(item: PanelEmoji) {
+        val settings = com.pixelgram.desktop.ui.theme.EmojiFonts.settings ?: return
+        fun key(it: PanelEmoji) = if (it is PanelEmoji.Custom) "${it.id}$Field${it.emoji}" else it.emoji
+        val next = (listOf(item) + all()).distinctBy(::key).take(RecentLimit)
+        settings.recentEmoji.value = next.joinToString(Record, transform = ::key)
+    }
+
+    private const val Record = "\u001E"
+    private const val Field = "\u001F"
+    private const val RecentLimit = 32
+}
+
 @Composable
-fun EmojiPanel(onPick: (String) -> Unit, onSearch: () -> Unit, modifier: Modifier = Modifier) {
+fun EmojiPanel(
+    onPick: (String) -> Unit,
+    onSearch: () -> Unit,
+    modifier: Modifier = Modifier,
+    telegram: com.pixelgram.desktop.telegram.Telegram? = null,
+    onCustom: ((String, Long) -> Unit)? = null,
+) {
     val groups = EmojiGroups
     val grid = rememberLazyGridState()
     val scope = rememberCoroutineScope()
-    val starts = remember(groups) {
-        groups.runningFold(0) { index, group -> index + 1 + group.emoji.size }.dropLast(1)
+    if (telegram != null && onCustom != null) LaunchedEffect(telegram) { telegram.loadEmojiPacks() }
+    val packs = if (telegram != null && onCustom != null) telegram.emojiPacks.toList() else emptyList()
+    val recent = RecentEmoji.all().filter { it is PanelEmoji.Plain || onCustom != null }
+    val recentCount = if (recent.isEmpty()) 0 else 1 + recent.size
+    val starts = remember(groups, recentCount) {
+        groups.runningFold(recentCount) { index, group -> index + 1 + group.emoji.size }.dropLast(1)
     }
-    val current by remember {
+    val packStarts = remember(starts, packs) {
+        packs.runningFold(starts.last() + 1 + groups.last().emoji.size) { index, pack -> index + 1 + pack.emoji.size }.dropLast(1)
+    }
+    val current by remember(starts) {
         derivedStateOf { starts.indexOfLast { it <= grid.firstVisibleItemIndex }.coerceAtLeast(0) }
+    }
+    val currentPack by remember(packStarts) {
+        derivedStateOf { packStarts.indexOfLast { it <= grid.firstVisibleItemIndex } }
+    }
+    val pick: (PanelEmoji) -> Unit = { item ->
+        RecentEmoji.add(item)
+        when (item) {
+            is PanelEmoji.Custom -> onCustom?.invoke(item.emoji, item.id)
+            is PanelEmoji.Plain -> onPick(item.emoji)
+        }
     }
     Box(modifier) {
         Column {
@@ -104,14 +155,23 @@ fun EmojiPanel(onPick: (String) -> Unit, onSearch: () -> Unit, modifier: Modifie
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                IconButton(onClick = onSearch, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onSearch, modifier = Modifier.size(TabButton)) {
                     Icon(Icons.Outlined.Search, contentDescription = "Search emoji", modifier = Modifier.size(20.dp))
+                }
+                if (recentCount > 0) {
+                    IconToggleButton(
+                        checked = grid.firstVisibleItemIndex < recentCount,
+                        onCheckedChange = { scope.launch { grid.animateScrollToItem(0) } },
+                        modifier = Modifier.size(TabButton),
+                    ) {
+                        Icon(Icons.Outlined.Schedule, contentDescription = "Recent", modifier = Modifier.size(20.dp))
+                    }
                 }
                 groups.forEachIndexed { index, group ->
                     IconToggleButton(
-                        checked = index == current,
+                        checked = index == current && grid.firstVisibleItemIndex >= recentCount && currentPack < 0,
                         onCheckedChange = { scope.launch { grid.animateScrollToItem(starts[index]) } },
-                        modifier = Modifier.size(36.dp),
+                        modifier = Modifier.size(TabButton),
                     ) {
                         Icon(groupIcon(group.name), contentDescription = group.name, modifier = Modifier.size(20.dp))
                     }
@@ -120,30 +180,69 @@ fun EmojiPanel(onPick: (String) -> Unit, onSearch: () -> Unit, modifier: Modifie
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(EmojiCell),
                 state = grid,
-                modifier = Modifier.padding(horizontal = 8.dp),
+                modifier = Modifier.padding(horizontal = 8.dp).weight(1f),
             ) {
+                if (recent.isNotEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) { PanelHeader("Recent") }
+                    items(recent) { item -> EmojiCellView(item, pick) }
+                }
                 groups.forEach { group ->
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Text(
-                            group.name,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp),
-                        )
-                    }
-                    items(group.emoji) { emoji ->
+                    item(span = { GridItemSpan(maxLineSpan) }) { PanelHeader(group.name) }
+                    items(group.emoji) { emoji -> EmojiCellView(PanelEmoji.Plain(emoji), pick) }
+                }
+                packs.forEach { pack ->
+                    item(span = { GridItemSpan(maxLineSpan) }) { PanelHeader(pack.title, translate = false) }
+                    items(pack.emoji) { (emoji, id) -> EmojiCellView(PanelEmoji.Custom(emoji, id), pick) }
+                }
+            }
+            if (packs.isNotEmpty()) {
+                androidx.compose.foundation.lazy.LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(packs.size) { index ->
+                        val pack = packs[index]
+                        val (emoji, id) = pack.emoji.first()
                         Box(
                             Modifier
-                                .size(EmojiCell)
+                                .size(36.dp)
                                 .clip(CircleShape)
-                                .clickable { onPick(emoji) },
+                                .background(if (index == currentPack) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                                .clickable { scope.launch { grid.animateScrollToItem(packStarts[index]) } }
+                                .padding(6.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            EmojiText(emoji, fontSize = 26.sp)
+                            CustomEmojiView(id, emoji)
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PanelHeader(title: String, translate: Boolean = true) {
+    Text(
+        if (translate) title else title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp),
+    )
+}
+
+@Composable
+private fun EmojiCellView(item: PanelEmoji, onPick: (PanelEmoji) -> Unit) {
+    Box(
+        Modifier
+            .size(EmojiCell)
+            .clip(CircleShape)
+            .clickable { onPick(item) },
+        contentAlignment = Alignment.Center,
+    ) {
+        when (item) {
+            is PanelEmoji.Custom -> CustomEmojiView(item.id, item.emoji, Modifier.size(30.dp))
+            is PanelEmoji.Plain -> EmojiText(item.emoji, fontSize = 26.sp)
         }
     }
 }
@@ -228,3 +327,4 @@ fun PanelSearchField(query: String, placeholder: String, onQuery: (String?) -> U
 internal const val PanelSearchDelayMs = 250L
 
 private val EmojiCell = 40.dp
+private val TabButton = 32.dp

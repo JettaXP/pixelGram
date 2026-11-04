@@ -128,6 +128,8 @@ The previous C++ version (AyuGram Desktop fork) is kept in the `legacy-cpp` bran
 - [exteraGram](https://github.com/exteraSquad/exteraGram): ideas for the pixelGram Preferences layout, the calculator in the message field, the Zalgo filter, number rounding, folder titles and the chat list title.
 - [Metrolist](https://github.com/MetrolistGroup/Metrolist) (GPLv3): the lyrics waiting indicator for intros and instrumental breaks, and the active line effects (soft fill edge, glow and letter nudge) are ported from its lyrics code.
 - [LineageOS](https://github.com/LineageOS/android_frameworks_base) (Apache 2.0): the back gesture arrow follows the SystemUI `BackPanel` and `EdgePanelParams` shapes and sizes.
+- [AyuGram Desktop](https://github.com/AyuGram/AyuGramDesktop) (GPLv3): premium emoji without Premium follow its `tg://emoji?id=` scheme, so AyuGram and exteraGram users see them too.
+- [dbus-java](https://github.com/hypfvieh/dbus-java) by David M. (MIT): the MPRIS media controls on Linux.
 - [Material Symbols](https://fonts.google.com/icons) by Google (Apache License 2.0): the default icons, and the Rounded style taken from [@material-symbols/svg-400](https://www.npmjs.com/package/@material-symbols/svg-400).
 - [Solar Icon Set](https://www.figma.com/community/file/1166831539721848736) by 480 Design (CC BY 4.0): the Solar icon pack, taken from [@iconify-json/solar](https://www.npmjs.com/package/@iconify-json/solar).
 - [Remix Icon](https://github.com/Remix-Design/RemixIcon) by Remix Design (Apache 2.0): the Remix icon pack, taken from [@iconify-json/ri](https://www.npmjs.com/package/@iconify-json/ri).

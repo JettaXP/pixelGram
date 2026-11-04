@@ -2625,13 +2625,16 @@ class Telegram(
                 schedulingState = schedule
             }
             inputMessageContent = TdApi.InputMessageText().apply {
-                this.text = TdApi.FormattedText(text, entities)
+                this.text = TdApi.FormattedText(text, outgoingEntities(chatId, entities))
             }
         })
     }
 
+    fun outgoingEntities(chatId: Long, entities: Array<TdApi.TextEntity>): Array<TdApi.TextEntity> =
+        com.pixelgram.desktop.core.LocalPremiumEmoji.outgoing(entities, isPremium || isSavedMessages(chatId))
+
     fun editMessageMedia(message: UiMessage, file: File, caption: String, asPhoto: Boolean, entities: Array<TdApi.TextEntity> = emptyArray()) {
-        val text = TdApi.FormattedText(caption, entities)
+        val text = TdApi.FormattedText(caption, outgoingEntities(message.chatId, entities))
         val input = TdApi.InputFileLocal(file.absolutePath)
         val content = if (asPhoto && com.pixelgram.desktop.ui.main.Attachments.isAnimation(file)) {
             val info = com.pixelgram.desktop.ui.main.Attachments.videoInfo(file)
@@ -2780,6 +2783,40 @@ class Telegram(
     private val customEmojiStickers = KeyedState<Long, TdApi.Sticker>()
     private val customEmojiQueue = LinkedHashSet<Long>()
     private val customEmojiRequested = HashSet<Long>()
+
+    class EmojiPack(val id: Long, val title: String, val emoji: List<Pair<String, Long>>)
+
+    val emojiPacks = androidx.compose.runtime.mutableStateListOf<EmojiPack>()
+    private var emojiPacksLoaded = false
+
+    fun loadEmojiPacks() {
+        if (emojiPacksLoaded) return
+        emojiPacksLoaded = true
+        send(TdApi.GetInstalledStickerSets(TdApi.StickerTypeCustomEmoji())) { result ->
+            val sets = (result as? TdApi.StickerSets)?.sets ?: run {
+                emojiPacksLoaded = false
+                return@send
+            }
+            val loaded = arrayOfNulls<EmojiPack>(sets.size)
+            var left = sets.size
+            sets.forEachIndexed { index, info ->
+                send(TdApi.GetStickerSet(info.id)) { set ->
+                    (set as? TdApi.StickerSet)?.let { full ->
+                        loaded[index] = EmojiPack(full.id, full.title, full.stickers.mapNotNull { sticker ->
+                            val custom = sticker.fullType as? TdApi.StickerFullTypeCustomEmoji ?: return@mapNotNull null
+                            customEmojiStickers[custom.customEmojiId] = sticker
+                            sticker.emoji to custom.customEmojiId
+                        })
+                    }
+                    left--
+                    if (left == 0) scope.launch(Dispatchers.Main) {
+                        emojiPacks.clear()
+                        emojiPacks.addAll(loaded.filterNotNull().filter { it.emoji.isNotEmpty() })
+                    }
+                }
+            }
+        }
+    }
 
     fun customEmoji(id: Long): TdApi.Sticker? {
         customEmojiStickers[id]?.let { return it }
@@ -3285,7 +3322,7 @@ class Telegram(
     }
 
     fun editMessage(message: UiMessage, text: String, entities: Array<TdApi.TextEntity> = emptyArray()) {
-        val formatted = TdApi.FormattedText(text, entities)
+        val formatted = TdApi.FormattedText(text, outgoingEntities(message.chatId, entities))
         val report: (TdApi.Object) -> Unit = { result ->
             if (result is TdApi.Error) {
                 AppLog.write("Edit failed ${result.code}: ${result.message}")
@@ -3358,7 +3395,7 @@ class Telegram(
             }
             val contents = files.mapIndexed { index, file ->
                 val first = index == 0
-                val text = TdApi.FormattedText(if (first) caption else "", if (first) entities else arrayOf())
+                val text = TdApi.FormattedText(if (first) caption else "", if (first) outgoingEntities(chatId, entities) else arrayOf())
                 val input = TdApi.InputFileLocal(file.absolutePath)
                 if (asPhotos && com.pixelgram.desktop.ui.main.Attachments.isAnimation(file)) {
                     val info = com.pixelgram.desktop.ui.main.Attachments.videoInfo(file)

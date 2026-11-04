@@ -2397,6 +2397,13 @@ private fun Composer(
         setText(TextFieldValue(updated, TextRange(start + emoji.length)))
         focus.requestFocus()
     }
+    val insertCustom: (String, Long) -> Unit = { emoji, id ->
+        val start = text.selection.min
+        val updated = text.text.replaceRange(start, text.selection.max, emoji)
+        setText(TextFieldValue(updated, TextRange(start + emoji.length)))
+        spans = spans + FormatSpan(start, start + emoji.length, FormatType.CustomEmoji, url = id.toString())
+        focus.requestFocus()
+    }
     AnimatedVisibility(
         visible = showSuggestions,
         enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
@@ -2761,6 +2768,7 @@ private fun Composer(
                             if (query == null) focus.requestFocus()
                         },
                         onEmoji = insert,
+                        onCustomEmoji = insertCustom,
                         whenOnline = telegram.chats[chatId]?.let { it.privateUserId != 0L && !telegram.isSavedMessages(chatId) && !telegram.isBot(it) } == true,
                         onSticker = { sticker, how ->
                             telegram.sendSticker(chatId, sticker, replyTo?.id ?: 0, how.silent, how.schedule)

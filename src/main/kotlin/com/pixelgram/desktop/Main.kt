@@ -266,6 +266,26 @@ private fun ApplicationScope.PixelApp() {
         }
     }
 
+    if (com.pixelgram.desktop.core.Mpris.supported) {
+        val reopenPlayer by androidx.compose.runtime.rememberUpdatedState({ visible = true })
+        val leavePlayer by androidx.compose.runtime.rememberUpdatedState(quit)
+        LaunchedEffect(Unit) {
+            val mpris = com.pixelgram.desktop.core.Mpris
+            mpris.onRaise = { reopenPlayer() }
+            mpris.onQuit = { leavePlayer() }
+            mpris.onMove = { direction ->
+                val client = com.pixelgram.desktop.ui.main.Links.active?.invoke()
+                val key = com.pixelgram.desktop.core.AudioPlayer.current
+                if (client != null && key != null) com.pixelgram.desktop.ui.main.AudioQueue.move(client, key, direction)
+            }
+            mpris.coverPath = {
+                val audio = com.pixelgram.desktop.core.AudioPlayer.audio
+                com.pixelgram.desktop.ui.main.Links.active?.invoke()?.localPath(audio?.albumCoverThumbnail?.file ?: audio?.externalAlbumCovers?.maxByOrNull { it.width }?.file)
+            }
+            withContext(Dispatchers.IO) { mpris.start() }
+        }
+    }
+
     val toasts = remember { ToastStack() }
     var raise by remember { mutableIntStateOf(0) }
     DisposableEffect(Unit) {

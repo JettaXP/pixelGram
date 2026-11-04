@@ -205,7 +205,8 @@ fun FormattedText(
     quoteBackground: Boolean = true,
 ) {
     var opened by remember(rawText, rawEntities) { mutableStateOf(emptySet<Int>()) }
-    val folded = remember(rawText, rawEntities, opened) { foldQuotes(rawText, rawEntities, opened) }
+    val decoded = remember(rawText, rawEntities) { com.pixelgram.desktop.core.LocalPremiumEmoji.incoming(rawText, rawEntities.toTypedArray()).toList() }
+    val folded = remember(rawText, decoded, opened) { foldQuotes(rawText, decoded, opened) }
     val text = folded.text
     val entities = folded.entities
     val scheme = MaterialTheme.colorScheme

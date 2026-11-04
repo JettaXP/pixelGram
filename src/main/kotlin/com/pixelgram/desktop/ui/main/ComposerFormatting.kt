@@ -27,6 +27,7 @@ enum class FormatType(val label: String, val shortcut: String) {
     Link("Create link", "Ctrl+K"),
     Date("Date", "Ctrl+Shift+D"),
     Mention("Mention", ""),
+    CustomEmoji("Custom emoji", ""),
 }
 
 data class FormatSpan(
@@ -97,6 +98,7 @@ fun spansFrom(entities: List<TdApi.TextEntity>): List<FormatSpan> = entities.map
         is TdApi.TextEntityTypeTextUrl -> FormatSpan(entity.offset, end, FormatType.Link, url = type.url)
         is TdApi.TextEntityTypeDateTime -> FormatSpan(entity.offset, end, FormatType.Date, time = type.unixTime)
         is TdApi.TextEntityTypeMentionName -> FormatSpan(entity.offset, end, FormatType.Mention, userId = type.userId)
+        is TdApi.TextEntityTypeCustomEmoji -> FormatSpan(entity.offset, end, FormatType.CustomEmoji, url = type.customEmojiId.toString())
         else -> null
     }
 }
@@ -116,6 +118,7 @@ fun toEntities(spans: List<FormatSpan>, shift: Int, length: Int): Array<TdApi.Te
         FormatType.Spoiler -> TdApi.TextEntityTypeSpoiler()
         FormatType.Link -> TdApi.TextEntityTypeTextUrl(span.url)
         FormatType.Mention -> TdApi.TextEntityTypeMentionName(span.userId)
+        FormatType.CustomEmoji -> TdApi.TextEntityTypeCustomEmoji(span.url.toLongOrNull() ?: return@mapNotNull null)
         FormatType.Date -> TdApi.TextEntityTypeDateTime(
             span.time,
             TdApi.DateTimeFormattingTypeAbsolute(TdApi.DateTimePartPrecisionShort(), TdApi.DateTimePartPrecisionLong(), false),
@@ -169,6 +172,7 @@ class FormatTransformation(
                 FormatType.Spoiler -> SpanStyle(background = accent.copy(alpha = 0.3f))
                 FormatType.Link -> SpanStyle(color = accent, textDecoration = TextDecoration.Underline)
                 FormatType.Date, FormatType.Mention -> SpanStyle(color = accent)
+                FormatType.CustomEmoji -> SpanStyle()
             }
             builder.addStyle(style, start, end)
             if (span.type == FormatType.Code && code != null) {

@@ -187,6 +187,7 @@ class AppSettings private constructor(private val props: Properties, private val
     val bigReactions = bool("bigReactions", false)
     val localNames = string("localNames", "")
     val localPhotos = string("localPhotos", "")
+    val recentEmoji = string("recentEmoji", "")
     val originalNames = string("originalNames", "")
     val liquidCursor = bool("liquidCursor", true)
     val cursorStyle = enum("cursorStyle", CursorStyle.Liquid)
@@ -255,7 +256,7 @@ class AppSettings private constructor(private val props: Properties, private val
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,
         wallpaper, wallpaperDim, wallpaperColors, messageFont, messageFontSize, fontEverywhere,
         deviceName, israelLogo, outputDevice, inputDevice, cameraDevice, callsSameDevices, acceptCalls, passcodeHash, passcodeSalt, autoLockMinutes,
-        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, restoreWindow, windowBounds, emptyShapes, autostart, launchMinimized, language, localNames, localPhotos, originalNames, bigReactions, liquidCursor, cursorStyle, trailFast, trailSlow, trailThreshold, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
+        stickersInPanel, stickersInChat, emojiInMessages, spoilerEffect, messageAnimations, interfaceAnimations, autoplayGifs, autoplayVideos, titleChatName, titleAccount, titleUnread, trayIcon, trayMonochrome, restoreWindow, windowBounds, emptyShapes, autostart, launchMinimized, language, localNames, localPhotos, originalNames, recentEmoji, bigReactions, liquidCursor, cursorStyle, trailFast, trailSlow, trailThreshold, cursorStretch, handleStretch, sidePull, smoothCursor, cursorSpeed, cursorWidth, cursorBlink, blinkCycle, blinkSmoothness,
         miniAppsAndroid, proxies, proxySelected, proxyOn, renderApi,
         apiId, apiHash,
         accounts, activeAccount,

@@ -98,6 +98,7 @@ fun MediaPanel(
     tab: Int,
     onTab: (Int) -> Unit,
     onEmoji: (String) -> Unit,
+    onCustomEmoji: ((String, Long) -> Unit)? = null,
     onSticker: (TdApi.Sticker, StickerSend) -> Unit,
     onGif: (TdApi.Animation, StickerSend, String) -> Unit,
     onInline: (Long, String) -> Unit,
@@ -121,7 +122,7 @@ fun MediaPanel(
                 0 -> if (search != null) {
                     EmojiSearch(telegram, search, onSearch, onEmoji, Modifier.weight(1f))
                 } else {
-                    EmojiPanel(onPick = onEmoji, onSearch = { onSearch("") }, modifier = Modifier.weight(1f))
+                    EmojiPanel(onPick = onEmoji, onSearch = { onSearch("") }, modifier = Modifier.weight(1f), telegram = telegram, onCustom = onCustomEmoji)
                 }
                 1 -> if (search != null) {
                     StickerSearch(telegram, chatId, search, onSearch, onSticker, Modifier.weight(1f))
