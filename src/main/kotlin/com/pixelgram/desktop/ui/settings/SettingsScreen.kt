@@ -1229,13 +1229,9 @@ private fun AvatarsSection(settings: AppSettings) {
         Column {
             Text(current.title, style = MaterialTheme.typography.titleMedium)
             val override = kind?.let(settings::kindShape)
-            Description(
-                when {
-                    kind == null -> "Official Material 3 Expressive shapes."
-                    override == null -> "Same as all chats."
-                    else -> "Only for ${kind?.title?.lowercase()}."
-                }
-            )
+            if (kind != null) {
+                Description(if (override == null) "Same as all chats." else "Only for ${kind.title.lowercase()}.")
+            }
             Reveal(override != null) {
                 TextButton(onClick = { kind?.let { settings.avatarKindShapes.getValue(it).value = "" } }) {
                     Text("Use the shape for all chats")
@@ -1877,7 +1873,7 @@ private fun WindowSection(settings: AppSettings) {
         enabled = { it != "DirectX" || com.pixelgram.desktop.core.AppPaths.isWindows },
     )
     Header("Window")
-    SwitchRow(0, 1, "Full screen", "Also toggles with F11.", settings.fullscreen.value) { settings.fullscreen.value = it }
+    SwitchRow(0, 1, "Full screen with F11", "Press F11 to switch the window to full screen and back.", settings.fullscreen.value) { settings.fullscreen.value = it }
     Header("Window title bar")
     val titleRows = buildList {
         add(Triple("Show chat name", settings.titleChatName.value) { value: Boolean -> settings.titleChatName.value = value })

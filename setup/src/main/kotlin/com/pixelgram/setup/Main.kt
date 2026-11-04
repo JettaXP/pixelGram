@@ -221,20 +221,13 @@ private fun SetupContent(msi: File?, version: String, dark: Boolean, onExit: () 
 }
 
 @Composable
-private fun Logo(logo: androidx.compose.ui.graphics.ImageBitmap?, pulsing: Boolean) {
-    val transition = rememberInfiniteTransition()
-    val pulse by transition.animateFloat(1f, PulseScale, infiniteRepeatable(tween(PulseMs, easing = FastOutSlowInEasing), RepeatMode.Reverse))
-    val active by animateFloatAsState(if (pulsing) 1f else 0f, tween(PulseMs))
+private fun Logo(logo: androidx.compose.ui.graphics.ImageBitmap?, @Suppress("UNUSED_PARAMETER") pulsing: Boolean) {
     logo?.let {
         Image(
             it,
             contentDescription = "pixelGram",
             filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
-            modifier = Modifier.size(LogoBox).graphicsLayer {
-                val scale = 1f + (pulse - 1f) * active
-                scaleX = scale
-                scaleY = scale
-            },
+            modifier = Modifier.size(LogoBox),
         )
     }
 }

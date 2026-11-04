@@ -112,7 +112,7 @@ fun ProfilePhotosDialog(
                         list?.takeIf { it.isNotEmpty() }?.let { all ->
                             val added = all.getOrNull(index)?.addedDate?.takeIf { it > 0 }?.let { date ->
                                 java.time.Instant.ofEpochSecond(date.toLong()).atZone(java.time.ZoneId.systemDefault())
-                                    .format(java.time.format.DateTimeFormatter.ofLocalizedDateTime(java.time.format.FormatStyle.MEDIUM, java.time.format.FormatStyle.SHORT))
+                                    .format(photoDateFormat())
                             }
                             "${index + 1} / ${all.size}" + (added?.let { " • ${com.pixelgram.desktop.core.tr("set")} $it" } ?: "")
                         }.orEmpty(),
@@ -157,7 +157,7 @@ fun ProfilePhotosDialog(
 
 fun openProfilePhotos(telegram: Telegram, userId: Long, name: String) {
     telegram.profilePhotos(userId) { photos ->
-        val formatter = java.time.format.DateTimeFormatter.ofLocalizedDateTime(java.time.format.FormatStyle.MEDIUM, java.time.format.FormatStyle.SHORT)
+        val formatter = photoDateFormat()
         val items = photos.mapNotNull { photo ->
             val small = photo.sizes.minByOrNull { it.width }?.photo ?: return@mapNotNull null
             val big = photo.sizes.maxByOrNull { it.width }?.photo ?: small
@@ -172,3 +172,6 @@ fun openProfilePhotos(telegram: Telegram, userId: Long, name: String) {
         }
     }
 }
+
+private fun photoDateFormat(): java.time.format.DateTimeFormatter =
+    java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", java.util.Locale.forLanguageTag(com.pixelgram.desktop.core.I18n.code))

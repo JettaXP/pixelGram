@@ -424,8 +424,11 @@ private fun ApplicationScope.PixelApp() {
                 com.pixelgram.desktop.core.WindowBounds.save(settings, window.x, window.y, window.width, window.height)
             }
         }
-        LaunchedEffect(settings.fullscreen.value) {
-            val want = settings.fullscreen.value
+        var fullscreenNow by remember { mutableStateOf(false) }
+        LaunchedEffect(settings.fullscreen.value) { if (!settings.fullscreen.value) fullscreenNow = false }
+        LaunchedEffect(fullscreenNow) {
+            val want = fullscreenNow
+            if (!want && !chrome.fullscreen && windowState.placement != androidx.compose.ui.window.WindowPlacement.Fullscreen) return@LaunchedEffect
             if (ownTitleBar && !macNativeWindow) {
                 if (chrome.fullscreen != want) chrome.toggleFullscreen()
             } else {
@@ -463,8 +466,8 @@ private fun ApplicationScope.PixelApp() {
                     .onKeyEvent { event ->
                         when {
                             event.type != KeyEventType.KeyDown -> false
-                            event.key == Key.F11 -> {
-                                settings.fullscreen.value = !settings.fullscreen.value
+                            event.key == Key.F11 && settings.fullscreen.value -> {
+                                fullscreenNow = !fullscreenNow
                                 true
                             }
                             event.key == Key.Escape -> EscapeStack.dispatch()

@@ -82,7 +82,12 @@ fun ProfileMusic(telegram: Telegram, settings: AppSettings, userId: Long, own: B
     val changes = if (mine) telegram.myProfileAudios.toList() else emptyList()
     LaunchedEffect(userId, changes) { telegram.profileAudios(userId) { tracks = it } }
     LaunchedEffect(telegram) { telegram.loadMyProfileAudios() }
-    SideEffect { if (tracks.isNotEmpty()) AudioQueue.playlist = tracks }
+    SideEffect {
+        if (tracks.isNotEmpty()) {
+            AudioQueue.playlist = tracks
+            AudioQueue.playlistOwner = userId
+        }
+    }
     if (tracks.isEmpty()) return
     Surface(
         shape = RoundedCornerShape(24.dp),

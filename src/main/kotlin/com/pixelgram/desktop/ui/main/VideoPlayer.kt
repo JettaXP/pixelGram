@@ -558,6 +558,7 @@ private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth(0.7f).clickable(
             interactionSource = remember { MutableInteractionSource() },
             indication = null,
@@ -567,6 +568,7 @@ private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
             if (request.caption.isNotBlank()) {
                 EmojiText(
                     request.caption,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                     modifier = Modifier.padding(start = 8.dp, bottom = 4.dp),
@@ -594,6 +596,7 @@ private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
                     onSeek = { engine.seek((it * total).toLong()) },
                     modifier = Modifier.weight(1f),
                     playing = engine.playing,
+                    duration = total / 1000f,
                 )
                 Text(formatDuration((total / 1000).toInt()), style = MaterialTheme.typography.labelLarge)
                 if (!request.loop) {

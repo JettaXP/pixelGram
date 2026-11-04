@@ -93,6 +93,7 @@ object AudioQueue {
     var pendingTrack by mutableStateOf<TdApi.Audio?>(null)
     var playlist by mutableStateOf<List<TdApi.Audio>>(emptyList())
     var custom by mutableStateOf<List<UiMessage>?>(null)
+    var playlistOwner by mutableStateOf(0L)
     var shuffle by mutableStateOf(false)
     var repeatMode by mutableStateOf(RepeatMode.Off)
         private set
@@ -548,14 +549,14 @@ fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = M
             val gap = 5.dp.toPx()
             val x = size.width * shown
             val amp = 3.dp.toPx() * amplitude.value
-            val wavelength = 26.dp.toPx()
+            val wavelength = 30.dp.toPx()
             val end = (x - gap).coerceAtLeast(0f)
             if (end > stroke / 2) {
                 val path = androidx.compose.ui.graphics.Path()
                 var px = stroke / 2
                 path.moveTo(px, mid + amp * kotlin.math.sin((px / wavelength - phase) * 2f * kotlin.math.PI.toFloat()))
                 while (px < end) {
-                    px = (px + 2f).coerceAtMost(end)
+                    px = (px + 1f).coerceAtMost(end)
                     path.lineTo(px, mid + amp * kotlin.math.sin((px / wavelength - phase) * 2f * kotlin.math.PI.toFloat()))
                 }
                 drawPath(path, colors.primary, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = StrokeCap.Round))
@@ -594,4 +595,4 @@ fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = M
 }
 
 private val FilletRadius = 24.dp
-private const val WaveCyclesPerSecond = 0.9f
+private const val WaveCyclesPerSecond = 0.45f

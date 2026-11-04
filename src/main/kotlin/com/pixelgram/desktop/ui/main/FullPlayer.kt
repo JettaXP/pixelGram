@@ -17,6 +17,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,11 +79,19 @@ import com.pixelgram.desktop.core.LyricLine
 import com.pixelgram.desktop.core.Lyrics
 import com.pixelgram.desktop.core.LyricsResult
 import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.telegram.fullName
 import com.pixelgram.desktop.ui.components.Text
 import com.pixelgram.desktop.ui.components.expressive.IconButton
 import com.pixelgram.desktop.ui.components.expressive.IconToggleButton
 import com.pixelgram.desktop.ui.icons.FormatQuote
 import com.pixelgram.desktop.ui.icons.Icons
+import kotlinx.coroutines.launch
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Forward
+import com.pixelgram.desktop.ui.icons.outlined.Info
+import com.pixelgram.desktop.ui.icons.outlined.Delete
+import com.pixelgram.desktop.ui.icons.outlined.Download
+import com.pixelgram.desktop.ui.icons.outlined.Share
+import com.pixelgram.desktop.ui.icons.filled.MoreVert
 import com.pixelgram.desktop.ui.icons.QueueMusic
 import com.pixelgram.desktop.ui.icons.RepeatOne
 import com.pixelgram.desktop.ui.icons.filled.Favorite
@@ -124,7 +133,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
     val style = com.pixelgram.desktop.ui.theme.LocalAppSettings.current?.colorStyle?.value ?: com.pixelgram.desktop.ui.theme.ColorStyle.TonalSpot
     val seed = palette?.getOrNull(1)
     val themed = remember(seed, dark, style) { seed?.let { com.pixelgram.desktop.ui.theme.schemeFromSeed(it.toArgb(), dark, style) } } ?: base
-    MaterialTheme(colorScheme = themed) {
+    MaterialTheme(colorScheme = animatedScheme(themed)) {
     val tracks = AudioQueue.tracks(telegram)
     val index = tracks.indexOfFirst { it.key == AudioPlayer.current }
     val colors = MaterialTheme.colorScheme
@@ -139,8 +148,13 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                 }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        if (AudioQueue.playlist.any { it.audio.id.toLong() == AudioPlayer.current }) "Profile music"
-                        else telegram.chats[AudioPlayer.chatId]?.let(telegram::chatTitle) ?: "Music",
+                        when {
+                            AudioQueue.playlist.any { it.audio.id.toLong() == AudioPlayer.current } ->
+                                telegram.chats[AudioQueue.playlistOwner]?.let(telegram::chatTitle)
+                                    ?: telegram.users[AudioQueue.playlistOwner]?.fullName()
+                                    ?: com.pixelgram.desktop.core.tr("Profile music")
+                            else -> telegram.chats[AudioPlayer.chatId]?.let(telegram::chatTitle) ?: com.pixelgram.desktop.core.tr("Music")
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -153,7 +167,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                         )
                     }
                 }
-                Spacer(Modifier.width(48.dp))
+                PlayerMenu(telegram)
             }
             val enterFade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
             val enterScale = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
@@ -233,7 +247,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
             ) {
-                IconToggleButton(checked = AudioQueue.shuffle, onCheckedChange = { AudioQueue.shuffle = it }) {
+                IconButton(onClick = { AudioQueue.shuffle = !AudioQueue.shuffle }) {
                     Icon(Icons.Filled.Shuffle, contentDescription = "Shuffle", tint = if (AudioQueue.shuffle) colors.primary else colors.onSurfaceVariant)
                 }
                 MorphControls(
@@ -248,7 +262,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                     wide = true,
                     onHold = AudioPlayer::scrub,
                 )
-                IconToggleButton(checked = AudioQueue.repeatMode != RepeatMode.Off, onCheckedChange = { AudioQueue.cycleRepeat() }) {
+                IconButton(onClick = { AudioQueue.cycleRepeat() }) {
                     AnimatedContent(AudioQueue.repeatMode, transitionSpec = { scaleIn() + fadeIn() togetherWith scaleOut() + fadeOut() }) { mode ->
                         Icon(
                             when (mode) {
@@ -366,8 +380,17 @@ private fun AmbientBackdrop(cover: List<androidx.compose.ui.graphics.Color>?, mo
     val scheme = MaterialTheme.colorScheme
     val palette = cover ?: listOf(scheme.primary, scheme.tertiary, scheme.secondary)
     val blobs = palette.map { androidx.compose.animation.animateColorAsState(it, tween(1200)).value }
-    val drift = rememberInfiniteTransition()
-    val phase by drift.animateFloat(0f, (2 * kotlin.math.PI).toFloat(), infiniteRepeatable(tween(DriftMs, easing = LinearEasing), AnimationRepeat.Restart))
+    var phase by remember { mutableFloatStateOf(0f) }
+    val playing = AudioPlayer.playing
+    LaunchedEffect(playing) {
+        var last = 0L
+        while (playing) {
+            androidx.compose.runtime.withFrameNanos { now ->
+                if (last != 0L) phase = (phase + (now - last) / 1_000_000_000f / (DriftMs / 1000f) * 2f * kotlin.math.PI.toFloat()) % (2f * kotlin.math.PI.toFloat())
+                last = now
+            }
+        }
+    }
     val dark = scheme.surface.luminance() < 0.5f
     Box(modifier) {
         androidx.compose.foundation.Canvas(Modifier.matchParentSize().blur(80.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)) {
@@ -547,7 +570,13 @@ private fun SyncedLyrics(lines: List<LyricLine>) {
     LaunchedEffect(current, pausedUntil) {
         val wait = pausedUntil - System.currentTimeMillis()
         if (wait > 0) kotlinx.coroutines.delay(wait)
-        if (current >= 0) state.animateScrollToItem(current, -viewport / 3)
+        if (current < 0) return@LaunchedEffect
+        val item = state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == current }
+        if (item != null) {
+            state.animateScrollBy((item.offset - viewport / 3).toFloat(), tween(LineScrollMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+        } else {
+            state.animateScrollToItem(current, -viewport / 3)
+        }
     }
     LazyColumn(
         state = state,
@@ -561,9 +590,19 @@ private fun SyncedLyrics(lines: List<LyricLine>) {
         itemsIndexed(lines) { position, line ->
             val distance = if (current < 0) position + 1 else abs(position - current)
             val upcoming = position > current
-            val alpha by animateFloatAsState(if (distance == 0) 1f else if (upcoming) 0.5f else 0.38f, tween(400))
-            val blur by animateFloatAsState(if (distance == 0 || !upcoming) 0f else (distance * 1.4f).coerceAtMost(5f), tween(500))
-            val scale by animateFloatAsState(if (distance == 0) 1f else 0.94f, spring(dampingRatio = 0.8f, stiffness = 300f))
+            val lineEnd = lines.getOrNull(position + 1)?.time ?: (line.time + 5f)
+            val done = distance == 0 && now >= lineEnd - LineSettle
+            val ease = androidx.compose.animation.core.FastOutSlowInEasing
+            val alpha by animateFloatAsState(if (distance == 0) 1f else if (upcoming) 0.5f else 0.4f, tween(LineFadeMs, easing = ease))
+            val blur by animateFloatAsState(if (distance == 0) 0f else (distance * 1.3f).coerceAtMost(5f), tween(LineFadeMs, easing = ease))
+            val scale by animateFloatAsState(
+                when {
+                    done -> 0.97f
+                    distance == 0 -> 1.02f
+                    else -> 0.94f
+                },
+                spring(dampingRatio = 0.9f, stiffness = 120f),
+            )
             val style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
             val color = MaterialTheme.colorScheme.onSurface
             val text = if (distance == 0) {
@@ -636,6 +675,9 @@ private fun Modifier.edgeFade(): Modifier = this
     }
 
 private const val FollowPauseMs = 3_000L
+private const val LineScrollMs = 650
+private const val LineFadeMs = 700
+private const val LineSettle = 0.35f
 private const val SpinMs = 24_000
 private const val CookieStep = 30f
 private const val CoverKey = "player-cover"
@@ -644,27 +686,32 @@ private const val CoverKey = "player-cover"
 private fun QueueView(telegram: Telegram, tracks: List<QueueTrack>, current: Int) {
     val state = rememberLazyListState()
     LaunchedEffect(Unit) { if (current > 0) state.scrollToItem((current - 2).coerceAtLeast(0)) }
-    var dragging by remember { mutableIntStateOf(-1) }
+    var draggingKey by remember { mutableStateOf<Long?>(null) }
     var offset by remember { mutableFloatStateOf(0f) }
+    val latest by androidx.compose.runtime.rememberUpdatedState(tracks)
     val rowPx = with(androidx.compose.ui.platform.LocalDensity.current) { QueueRow.toPx() }
+    val placement = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.unit.IntOffset>()
     LazyColumn(state = state, modifier = Modifier.fillMaxSize()) {
         itemsIndexed(tracks, key = { _, track -> track.key }) { position, track ->
-            val lifted = position == dragging
+            val lifted = track.key == draggingKey
             val playing = position == current
             val elevation by animateFloatAsState(if (lifted) 1f else 0f)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
+                    .then(if (lifted) Modifier else Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = placement))
                     .zIndex(if (lifted) 1f else 0f)
                     .graphicsLayer {
                         translationY = if (lifted) offset else 0f
                         scaleX = 1f + elevation * 0.03f
                         scaleY = 1f + elevation * 0.03f
+                        shadowElevation = elevation * 12f
+                        shape = RoundedCornerShape(18.dp)
+                        clip = true
                     }
                     .fillMaxWidth()
                     .height(QueueRow)
-                    .clip(RoundedCornerShape(18.dp))
                     .background(
                         when {
                             lifted -> MaterialTheme.colorScheme.surfaceContainerHighest
@@ -672,7 +719,7 @@ private fun QueueView(telegram: Telegram, tracks: List<QueueTrack>, current: Int
                             else -> androidx.compose.ui.graphics.Color.Transparent
                         },
                     )
-                    .clickable { AudioQueue.playAt(telegram, track) }
+                    .clickable(enabled = draggingKey == null) { AudioQueue.playAt(telegram, track) }
                     .padding(horizontal = 8.dp),
             ) {
                 SmallCover(track.audio, telegram, 48.dp)
@@ -689,24 +736,26 @@ private fun QueueView(telegram: Telegram, tracks: List<QueueTrack>, current: Int
                     modifier = Modifier
                         .size(40.dp)
                         .padding(8.dp)
-                        .pointerInput(tracks.size) {
+                        .pointerInput(track.key) {
                             detectDragGestures(
                                 onDragStart = {
-                                    dragging = tracks.indexOfFirst { it.key == track.key }
+                                    draggingKey = track.key
                                     offset = 0f
                                 },
-                                onDragEnd = { dragging = -1; offset = 0f },
-                                onDragCancel = { dragging = -1; offset = 0f },
+                                onDragEnd = { draggingKey = null; offset = 0f },
+                                onDragCancel = { draggingKey = null; offset = 0f },
                             ) { change, amount ->
                                 change.consume()
                                 offset += amount.y
+                                val list = latest
+                                val from = list.indexOfFirst { it.key == track.key }
+                                if (from < 0) return@detectDragGestures
                                 val steps = (offset / rowPx).roundToInt()
-                                if (steps != 0 && dragging >= 0) {
-                                    val target = (dragging + steps).coerceIn(0, tracks.lastIndex)
-                                    if (target != dragging) {
-                                        AudioQueue.reorder(telegram, dragging, target)
-                                        offset -= (target - dragging) * rowPx
-                                        dragging = target
+                                if (steps != 0) {
+                                    val target = (from + steps).coerceIn(0, list.lastIndex)
+                                    if (target != from) {
+                                        AudioQueue.reorder(telegram, from, target)
+                                        offset -= (target - from) * rowPx
                                     }
                                 }
                             }
@@ -715,4 +764,149 @@ private fun QueueView(telegram: Telegram, tracks: List<QueueTrack>, current: Int
             }
         }
     }
+}
+
+@Composable
+private fun animatedScheme(target: androidx.compose.material3.ColorScheme): androidx.compose.material3.ColorScheme {
+    val spec = tween<androidx.compose.ui.graphics.Color>(SchemeFadeMs)
+    @Composable
+    fun c(color: androidx.compose.ui.graphics.Color) = androidx.compose.animation.animateColorAsState(color, spec).value
+    return target.copy(
+        primary = c(target.primary),
+        onPrimary = c(target.onPrimary),
+        primaryContainer = c(target.primaryContainer),
+        onPrimaryContainer = c(target.onPrimaryContainer),
+        secondary = c(target.secondary),
+        secondaryContainer = c(target.secondaryContainer),
+        onSecondaryContainer = c(target.onSecondaryContainer),
+        tertiary = c(target.tertiary),
+        surface = c(target.surface),
+        onSurface = c(target.onSurface),
+        onSurfaceVariant = c(target.onSurfaceVariant),
+        surfaceContainerLow = c(target.surfaceContainerLow),
+        surfaceContainer = c(target.surfaceContainer),
+        surfaceContainerHigh = c(target.surfaceContainerHigh),
+        surfaceContainerHighest = c(target.surfaceContainerHighest),
+        inverseSurface = c(target.inverseSurface),
+        inverseOnSurface = c(target.inverseOnSurface),
+    )
+}
+
+private const val SchemeFadeMs = 900
+
+@Composable
+private fun PlayerMenu(telegram: Telegram) {
+    val audio = AudioPlayer.audio
+    if (audio == null) {
+        Spacer(Modifier.width(48.dp))
+        return
+    }
+    val settings = com.pixelgram.desktop.ui.theme.LocalAppSettings.current
+    var open by remember { mutableStateOf(false) }
+    var details by remember { mutableStateOf(false) }
+    var forwarding by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val path = telegram.localPath(audio.audio)
+    val name = audio.fileName.ifBlank { "${audio.performer} - ${audio.title}.mp3" }
+    val saved = telegram.isInProfile(audio)
+    Box {
+        IconButton(onClick = {
+            details = false
+            open = true
+        }) { Icon(Icons.Filled.MoreVert, contentDescription = "More") }
+        com.pixelgram.desktop.ui.components.GroupedMenu(expanded = open, onDismiss = { open = false }) {
+            AnimatedContent(details, transitionSpec = { fadeIn() togetherWith fadeOut() }) { showDetails ->
+                if (!showDetails) {
+                    com.pixelgram.desktop.ui.components.MenuGroups(
+                        listOf(
+                            listOf(
+                                com.pixelgram.desktop.ui.components.MenuEntry(Icons.AutoMirrored.Outlined.Forward, "Forward") {
+                                    open = false
+                                    forwarding = true
+                                },
+                                com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Share, "Share", enabled = path != null) {
+                                    open = false
+                                    path?.let { copyFile(java.io.File(it)) }
+                                },
+                                com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Download, "Save to Music", enabled = path != null) {
+                                    open = false
+                                    path?.let { source -> scope.launch(Dispatchers.IO) { saveToMusic(java.io.File(source), name) } }
+                                },
+                            ),
+                            listOf(
+                                if (saved) {
+                                    com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Delete, "Remove from profile", color = MaterialTheme.colorScheme.error) {
+                                        open = false
+                                        telegram.toggleProfileAudio(audio)
+                                    }
+                                } else {
+                                    com.pixelgram.desktop.ui.components.MenuEntry(Icons.Filled.Favorite, "Add to profile") {
+                                        open = false
+                                        telegram.toggleProfileAudio(audio)
+                                    }
+                                },
+                            ),
+                            listOf(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Info, "Details") { details = true }),
+                        ),
+                    )
+                } else {
+                    TrackDetails(audio, path, name) { details = false }
+                }
+            }
+        }
+    }
+    if (forwarding && settings != null) {
+        ForwardDialog(telegram, settings, onDismiss = { forwarding = false }) { chatId ->
+            forwarding = false
+            telegram.sendAudio(chatId, audio)
+        }
+    }
+}
+
+@Composable
+private fun TrackDetails(audio: TdApi.Audio, path: String?, name: String, onBack: () -> Unit) {
+    val size = maxOf(audio.audio.size, audio.audio.expectedSize)
+    val seconds = audio.duration.takeIf { it > 0 } ?: AudioPlayer.duration.toInt()
+    val rows = listOfNotNull(
+        "Format" to (name.substringAfterLast('.', "").ifBlank { audio.mimeType.substringAfter('/') }).uppercase(),
+        if (size > 0 && seconds > 0) "Bitrate" to "${size * 8 / seconds / 1000} kbps" else null,
+        AudioPlayer.sampleRate.takeIf { it > 0 }?.let { "Sample rate" to "%.1f kHz".format(it / 1000f) },
+        if (size > 0) "File size" to formatSize(size) else null,
+        "Duration" to formatDuration(seconds),
+        "File name" to name,
+        path?.let { "File path" to it },
+    )
+    Column(Modifier.widthIn(min = 240.dp, max = 320.dp).padding(vertical = 6.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onBack).padding(horizontal = 12.dp, vertical = 10.dp),
+        ) {
+            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, modifier = Modifier.rotate(90f))
+            Text("Back", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 12.dp))
+        }
+        rows.forEach { (label, value) ->
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                Text(label, style = MaterialTheme.typography.titleSmall)
+                Text(value, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+private fun copyFile(file: java.io.File) {
+    val transfer = object : java.awt.datatransfer.Transferable {
+        override fun getTransferDataFlavors() = arrayOf(java.awt.datatransfer.DataFlavor.javaFileListFlavor)
+        override fun isDataFlavorSupported(flavor: java.awt.datatransfer.DataFlavor) = flavor == java.awt.datatransfer.DataFlavor.javaFileListFlavor
+        override fun getTransferData(flavor: java.awt.datatransfer.DataFlavor): Any = listOf(file)
+    }
+    runCatching { java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(transfer, null) }
+}
+
+private fun saveToMusic(source: java.io.File, name: String) {
+    runCatching {
+        val home = java.io.File(System.getProperty("user.home"))
+        val music = listOf("Music", "Музыка").map { java.io.File(home, it) }.firstOrNull { it.isDirectory } ?: java.io.File(home, "Music")
+        val target = java.io.File(java.io.File(music, "pixelGram").apply { mkdirs() }, com.pixelgram.desktop.core.FileSafety.clean(name))
+        source.copyTo(target, overwrite = true)
+    }.onFailure { com.pixelgram.desktop.core.AppLog.write("Save to music failed", it) }
 }

@@ -40,6 +40,8 @@ object AudioPlayer {
     var muted by mutableStateOf(false)
     var volume by mutableFloatStateOf(1f)
     var speed by mutableFloatStateOf(1f)
+    var sampleRate by mutableStateOf(0)
+        private set
     var scrubbing by mutableStateOf(0)
         private set
     @Volatile private var scrub = 0f
@@ -148,6 +150,7 @@ object AudioPlayer {
         ui(run) {
             duration = total
             loading = false
+            sampleRate = pcm.rate
         }
         val format = AudioFormat(pcm.rate.toFloat(), 16, pcm.channels, true, false)
         val frameBytes = 2 * pcm.channels
@@ -250,6 +253,7 @@ object AudioPlayer {
         ui(run) {
             duration = total
             loading = false
+            sampleRate = rate
         }
         if (fraction > 0f) grabber.setTimestamp((fraction * total * MicrosPerSecond).toLong())
         val format = AudioFormat(rate.toFloat(), 16, channels, true, false)

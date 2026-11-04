@@ -128,7 +128,7 @@ class AppSettings private constructor(private val props: Properties, private val
     val hidePhone = bool("hidePhone", false)
     val exactNumbers = bool("exactNumbers", false)
     val listAvatarSize = int("listAvatarSize", 48)
-    val fullscreen = bool("fullscreen", false)
+    val fullscreen = bool("fullscreenKey", true)
     val windowsToasts = bool("windowsToasts", false)
     val defaultScale = bool("defaultScale", true)
     val interfaceScale = int("interfaceScale", 100)
