@@ -592,7 +592,13 @@ private fun ChatViewContent(
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     SecretLock(chat, telegram, 18.dp)
-                    EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium)
+                    EmojiText(
+                        telegram.chatTitle(chat),
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
                     com.pixelgram.desktop.ui.components.ChatBadges(chat, telegram, 22.dp)
                 }
                 val topicName = if (telegram.isForum(chat)) telegram.selectedTopicName(chat.id) else null
@@ -603,6 +609,8 @@ private fun ChatViewContent(
                     if (text != null) {
                         EmojiText(
                             text.label,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.bodySmall,
                             color = if (text.online) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -793,7 +801,8 @@ private fun ChatViewContent(
                 itemsIndexed(shown, key = { _, message -> message.key }, contentType = { _, message -> messageContentType(message) }) { index, message ->
                     val newDay = index == shown.lastIndex || !sameDay(message.date, shown[index + 1].date)
                     val firstInRun = groupStarts.getOrElse(index) { true }
-                    val lastInRun = index == 0 || groupStarts.getOrElse(index - 1) { true }
+                    val typingJoins = index == 0 && typingSameSender(chat, telegram, message, settings)
+                    val lastInRun = !typingJoins && (index == 0 || groupStarts.getOrElse(index - 1) { true })
                     val rise = remember { Animatable(if (PowerSaving.messageAnimations && message.fresh && slidIn.add(message.key)) 1f else 0f) }
                     if (rise.value != 0f || rise.isRunning) LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
                     val flash = remember { Animatable(0f) }
@@ -1219,6 +1228,15 @@ private fun ChatViewContent(
 }
 
 private enum class BarMode { Select, SecretPending, SecretClosed, Blocked, Start, Join, Mute, Restricted, Compose }
+
+private fun typingSameSender(chat: ChatState, telegram: Telegram, message: UiMessage, settings: AppSettings): Boolean {
+    if (settings.typingBubble.value == false || !chat.isGroup || chat.isChannel || message.isOutgoing) return false
+    return when (val typer = telegram.typing(chat.id).firstOrNull()) {
+        is TdApi.MessageSenderUser -> typer.userId == message.senderUserId
+        is TdApi.MessageSenderChat -> typer.chatId == message.senderChatId
+        else -> false
+    }
+}
 
 @Composable
 private fun TypingBubble(chat: ChatState, telegram: Telegram) {

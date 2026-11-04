@@ -798,6 +798,7 @@ private fun Modifier.edgeFade(): Modifier = this
     }
 
 private val LyricsBleed = 20.dp
+private val MenuWidth = 280.dp
 private val LinePad = 10.dp
 private val LineSpacing = 10.dp
 private val GapHeight = 56.dp
@@ -952,7 +953,7 @@ private fun PlayerMenu(telegram: Telegram) {
             open = true
         }) { Icon(Icons.Filled.MoreVert, contentDescription = "More") }
         com.pixelgram.desktop.ui.components.GroupedMenu(expanded = open, onDismiss = { open = false }) {
-            AnimatedContent(details, transitionSpec = { fadeIn() togetherWith fadeOut() }) { showDetails ->
+            AnimatedContent(details, transitionSpec = { (fadeIn() togetherWith fadeOut()).using(null) }, modifier = Modifier.width(MenuWidth), contentAlignment = Alignment.TopEnd) { showDetails ->
                 if (!showDetails) {
                     com.pixelgram.desktop.ui.components.MenuGroups(
                         listOf(
@@ -985,9 +986,10 @@ private fun PlayerMenu(telegram: Telegram) {
                             ),
                             listOf(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Info, "Details") { details = true }),
                         ),
+                        width = MenuWidth - 4.dp,
                     )
                 } else {
-                    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.padding(2.dp)) {
                         TrackDetails(audio, path, name) { details = false }
                     }
                 }
@@ -1015,7 +1017,7 @@ private fun TrackDetails(audio: TdApi.Audio, path: String?, name: String, onBack
         "File name" to name,
         path?.let { "File path" to it },
     )
-    Column(Modifier.widthIn(min = 240.dp, max = 320.dp).padding(vertical = 6.dp)) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onBack).padding(horizontal = 12.dp, vertical = 10.dp),

@@ -218,9 +218,12 @@ fun MainScreen(
 
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            val maxListWidth = minOf((maxWidth - MinChatWidth - RailWidth).value, maxWidth.value * MaxListShare).coerceAtLeast(CompactWidth.value)
+            val playerSpace = if (FullPlayer.open && com.pixelgram.desktop.core.AudioPlayer.current != null) FullPlayerWidth else 0.dp
+            val pushedRail = if (settings.sideMenuStyle.value == com.pixelgram.desktop.core.SideMenuStyle.Push) with(density) { railWidthPx.toDp() } else 0.dp
+            val room = (maxWidth - MinChatWidth - RailWidth - playerSpace - pushedRail).value
+            val maxListWidth = minOf(room, maxWidth.value * MaxListShare).coerceAtLeast(CompactWidth.value)
             val forum = openChatId?.let { telegram.chats[it] }?.takeIf { telegram.isForum(it) }
-            val compact = forum != null || dragWidth < CompactThreshold.value
+            val compact = forum != null || dragWidth < CompactThreshold.value || room < CompactThreshold.value
             val listWidth by androidx.compose.animation.core.animateDpAsState(
                 if (compact) CompactWidth else dragWidth.coerceAtMost(maxListWidth).dp,
                 MaterialTheme.motionScheme.defaultSpatialSpec(),
@@ -229,7 +232,7 @@ fun MainScreen(
             val push = settings.sideMenuStyle.value == com.pixelgram.desktop.core.SideMenuStyle.Push
             Row(Modifier.fillMaxSize()) {
                 when {
-                    push -> Spacer(Modifier.width(with(density) { railWidthPx.toDp() }.coerceAtLeast(if (foldersLeft) RailWidth else 0.dp)))
+                    push -> Spacer(Modifier.width((with(density) { railWidthPx.toDp() } - if (menuOpen) RailEndTrim else 0.dp).coerceAtLeast(if (foldersLeft) RailWidth else 0.dp)))
                     foldersLeft -> Spacer(Modifier.width(RailWidth))
                 }
                 Column(
@@ -844,6 +847,7 @@ private const val EmptyFadeMs = 180
 private const val RailFadeInMs = 180
 private const val RailResizeMs = 280
 private val MinChatWidth = 380.dp
+private val RailEndTrim = 16.dp
 private val RailWidth = 96.dp
 private const val RailScrimAlpha = 0.32f
 private val CompactWidth = 88.dp
