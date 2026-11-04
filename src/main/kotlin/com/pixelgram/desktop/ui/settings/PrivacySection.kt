@@ -67,6 +67,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -330,7 +331,8 @@ private fun RulesDialog(
         onDismissRequest = onDismiss,
         title = { Text(item.title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())) {
+                if (phone) Text("Who can see my phone number", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                 Audience.entries.forEach { option ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -340,17 +342,13 @@ private fun RulesDialog(
                         Text(option.label)
                     }
                 }
-                if (audience != Audience.Nobody) {
-                    ExceptionList("Never share with", restrictUsers, restrictChats, telegram,
-                        onRemoveUser = { id -> restrictUsers = restrictUsers - id },
-                        onRemoveChat = { id -> restrictChats = restrictChats - id },
-                        onAdd = { picking = false })
-                }
-                if (audience != Audience.Everybody) {
-                    ExceptionList("Always share with", allowUsers, allowChats, telegram,
-                        onRemoveUser = { id -> allowUsers = allowUsers - id },
-                        onRemoveChat = { id -> allowChats = allowChats - id },
-                        onAdd = { picking = true })
+                val count = { users: List<Long>, chats: List<Long> ->
+                    val total = users.size + chats.size
+                    when (total) {
+                        0 -> com.pixelgram.desktop.core.tr("Add")
+                        1 -> com.pixelgram.desktop.core.tr("1 user")
+                        else -> "$total ${com.pixelgram.desktop.core.tr("users")}"
+                    }
                 }
                 if (phone && findable != null) {
                     Text("Who can find me by my number", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 12.dp))
@@ -364,6 +362,18 @@ private fun RulesDialog(
                         }
                     }
                 }
+                Text("Add exceptions", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 12.dp))
+                androidx.compose.animation.AnimatedVisibility(audience != Audience.Everybody) {
+                    ExceptionRowLink("Always share with", count(allowUsers, allowChats)) { picking = true }
+                }
+                androidx.compose.animation.AnimatedVisibility(audience != Audience.Nobody) {
+                    ExceptionRowLink("Never share with", count(restrictUsers, restrictChats)) { picking = false }
+                }
+                Text(
+                    "Add users or groups to override the settings above.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         },
@@ -411,29 +421,13 @@ private fun RulesDialog(
 }
 
 @Composable
-private fun ExceptionList(
-    title: String,
-    users: List<Long>,
-    chats: List<Long>,
-    telegram: Telegram,
-    onRemoveUser: (Long) -> Unit,
-    onRemoveChat: (Long) -> Unit,
-    onAdd: () -> Unit,
-) {
-    Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 12.dp))
-    users.forEach { id -> ExceptionRow(telegram.userName(id), onRemove = { onRemoveUser(id) }) }
-    chats.forEach { id -> ExceptionRow(telegram.chats[id]?.let(telegram::chatTitle) ?: "Group", onRemove = { onRemoveChat(id) }) }
-    TextButton(onClick = onAdd) {
-        Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-        Text("Add users or groups", modifier = Modifier.padding(start = 6.dp))
-    }
-}
-
-@Composable
-private fun ExceptionRow(name: String, onRemove: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        EmojiText(name, modifier = Modifier.weight(1f).padding(start = 12.dp), maxLines = 1)
-        IconButton(onClick = onRemove) { Icon(Icons.Outlined.Close, contentDescription = "Remove") }
+private fun ExceptionRowLink(title: String, value: String, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 12.dp),
+    ) {
+        Text(title, modifier = Modifier.weight(1f))
+        Text(value, color = MaterialTheme.colorScheme.primary)
     }
 }
 
