@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.51.3 Bun
+
+- Hold a premium emoji in the panel to preview it big, like stickers.
+- Right click an emoji: send it, copy it, copy its ID or open its set.
+- Music that is still downloading no longer gets stuck at 0:00, and a finished track no longer stays "playing" instead of moving to the next one.
+- Repeat all lights up only the arrows, without a filled background.
+
 ## 0.51.2 Bun
 
 - Messages made only of premium emoji show them big and without a bubble, like in Telegram: one emoji is the biggest, up to seven get smaller step by step.
