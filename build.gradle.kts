@@ -7,8 +7,8 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.48.0"
-val codename = "Clover"
+version = "0.49.0"
+val codename = "Soft Burst"
 
 kotlin {
     jvmToolchain(21)

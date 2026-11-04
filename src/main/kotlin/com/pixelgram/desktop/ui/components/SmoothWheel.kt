@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.addOutline
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -69,9 +69,10 @@ fun Modifier.smoothClip(shape: androidx.compose.ui.graphics.Shape): Modifier = t
     .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
     .drawWithContent {
         drawContent()
-        drawOutline(
-            shape.createOutline(size, layoutDirection, this),
-            androidx.compose.ui.graphics.Color.Black,
-            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
-        )
+        val outside = androidx.compose.ui.graphics.Path().apply {
+            addRect(androidx.compose.ui.geometry.Rect(-1f, -1f, size.width + 1f, size.height + 1f))
+            addOutline(shape.createOutline(size, layoutDirection, this@drawWithContent))
+            fillType = androidx.compose.ui.graphics.PathFillType.EvenOdd
+        }
+        drawPath(outside, androidx.compose.ui.graphics.Color.Black, blendMode = androidx.compose.ui.graphics.BlendMode.DstOut)
     }

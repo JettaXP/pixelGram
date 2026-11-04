@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.49.0 Soft Burst
+
+### Music player
+- Tracks start while they are still downloading.
+- New wavy seek bar: it stops and flattens on pause, shows the time under the pointer while you drag, and seeking keeps the track paused.
+- Three dots menu: forward, share, save to Music, add to or remove from profile, and track details (format, bitrate, sample rate, size, duration, file name and path).
+- Shuffle and repeat light up instead of filling; the header shows the chat or profile the music comes from.
+- The queue reorders with animations and picks the right track.
+- Colors fade smoothly between tracks, the background blobs rest while paused and loop without a jump.
+- Lyrics: smoother line changes with a settle at the end of a line, blur above and below, no clipping; sturdier LRCLIB search that skips broken entries.
+- The cookie shape settles when paused, the title slides with the cover, music icons no longer disappear.
+
+### Chats
+- Messages: by window size, always on one side or always on both sides; one side shows avatars, also in private chats.
+- Smooth mouse wheel scrolling.
+- Collapsible quotes.
+- Jumping to a pinned or quoted message highlights it with a soft tonal band; the down button first returns to where you were.
+- The reaction button clears once you have seen the reactions.
+- Communities open from the whole avatar, list joined, viewable and hidden chats, and have a card in profiles.
+- Forward dialog with folder tabs and rounded chats.
+- Wallpapers from Telegram chat themes are shown.
+- Steady send and voice button swap.
+
+### Interface
+- Back swipe over the chat list goes to the previous folder or opens the side menu; over a chat it leaves the chat.
+- Smoother avatars with antialiased edges; phone number shapes are as wide as the number.
+- The F11 switch now only allows or blocks full screen.
+- Profile photo dates use the 24 hour clock.
+- The video player caption is readable and its wave is calmer.
+- The pixelGram service bot chat is hidden, muted and archived.
+- The setup logo stays still.
+
 ## 0.48.0 Clover
 
 ### Music player
