@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.49.3 Soft Burst
+
+- Music player: the lyrics blur is no longer cut at the left edge.
+- Music player: track details have their own background instead of showing the lyrics through.
+
 ## 0.49.2 Soft Burst
 
 - Hidden phone number: the shapes are full size again, and there are only as many as fit the width of the number.
