@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.48.0 Clover
+
+### Music player
+- A full player opens from the mini player and slides in on the right. The mini player hides while it is open.
+- Big cover that shrinks into the thumbnail when you open lyrics or the queue.
+- Synced lyrics from LRCLIB: the current line fills letter by letter (or word by word when the lyrics have word timing), upcoming lines are blurred, the edges fade softly, click a line to jump to it and scroll freely. Instrumental tracks and tracks without lyrics get their own screens.
+- Queue with covers; drag the handle to reorder.
+- Speed 1x / 1.5x / 2x, shuffle, repeat off / all / one, heart to add the track to your profile.
+- Hold previous to rewind at 3x and next to fast forward at 4x, with a speed pill and running arrows.
+- Wide morphing play button.
+- The player takes its colors from the cover, with large blurred blobs slowly drifting behind it.
+
+### Chats
+- Rich messages and checklists are shown in chats.
+- Failed messages have Retry sending and Cancel sending in the right click menu.
+- pixelGram now sends typing, recording voice or video messages and choosing a sticker.
+- Messages in a group are joined with small 6dp corners like Telegram for Android; the last one is fully rounded.
+- Wide chat: all messages on one side from 700dp, with your own avatar in groups.
+- Short messages no longer get extra space from the swipe reply icon.
+- The photo viewer pages through all photos of the chat, not just the album.
+- Profile photos open full screen with the date they were set.
+
+### Fixes
+- Linux: tray icon with a menu on Wayland through AppIndicator.
+- Gifts can't be converted to Stars after the sell period ends.
+- Release builds retry GitHub API errors.
+
 ## 0.47.0 Ghostish
 
 ### Chats

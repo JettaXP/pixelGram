@@ -43,14 +43,15 @@ jobs:
       - name: Nightly pre-release.
         if: github.ref == 'refs/heads/main'
         run: |
+          retry() { for attempt in 1 2 3 4 5; do "$@" && return 0; sleep $((attempt * 15)); done; return 1; }
           {
             echo "Latest build from main (${GITHUB_SHA::7}). Arch: \`sudo pacman -U pixelgram-*.pkg.tar.zst\`. Any Linux: chmod +x and run the .AppImage. Windows: run the -setup.exe, or unpack the portable .zip."
             echo
             echo "## What's new in $VERSION"
             cat changes.md
           } > notes.md
-          gh release delete nightly --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
-          gh release create nightly \
+          retry sh -c '! gh release view nightly --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1 || gh release delete nightly --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag'
+          retry gh release create nightly \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --prerelease \
@@ -61,14 +62,15 @@ jobs:
         id: versioned
         if: github.ref == 'refs/heads/main'
         run: |
+          retry() { for attempt in 1 2 3 4 5; do "$@" && return 0; sleep $((attempt * 15)); done; return 1; }
           if [ -s changes.md ]; then
             if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-              gh release edit "v$VERSION" \
+              retry gh release edit "v$VERSION" \
                 --repo "$GITHUB_REPOSITORY" \
                 --title "pixelGram v$VERSION${CODENAME:+ $CODENAME}" \
                 --notes-file changes.md
             else
-              gh release create "v$VERSION" \
+              retry gh release create "v$VERSION" \
                 --repo "$GITHUB_REPOSITORY" \
                 --target "$GITHUB_SHA" \
                 --title "pixelGram v$VERSION${CODENAME:+ $CODENAME}" \
@@ -80,7 +82,8 @@ jobs:
       - name: Tagged release.
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          gh release create "$GITHUB_REF_NAME" \
+          retry() { for attempt in 1 2 3 4 5; do "$@" && return 0; sleep $((attempt * 15)); done; return 1; }
+          retry gh release create "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \
             --title "pixelGram $GITHUB_REF_NAME" \
             --notes-file changes.md
@@ -170,11 +173,12 @@ jobs:
         env:
           VERSIONED: ${{ needs.prepare.outputs.versioned }}
         run: |
+          retry() { for attempt in 1 2 3 4 5; do "$@" && return 0; sleep $((attempt * 15)); done; return 1; }
           sha256sum *.pkg.tar.zst pixelGram-*-linux-x86_64.tar.gz pixelGram-*.AppImage > SHA256SUMS-linux.txt
-          gh release upload "$RELEASE_TAG" *.pkg.tar.zst pixelGram-*-linux-x86_64.tar.gz pixelGram-*.AppImage SHA256SUMS-linux.txt \
+          retry gh release upload "$RELEASE_TAG" *.pkg.tar.zst pixelGram-*-linux-x86_64.tar.gz pixelGram-*.AppImage SHA256SUMS-linux.txt \
             --repo "$GITHUB_REPOSITORY" --clobber
           if [ -n "$VERSIONED" ]; then
-            gh release upload "$VERSIONED" *.pkg.tar.zst pixelGram-*-linux-x86_64.tar.gz pixelGram-*.AppImage SHA256SUMS-linux.txt \
+            retry gh release upload "$VERSIONED" *.pkg.tar.zst pixelGram-*-linux-x86_64.tar.gz pixelGram-*.AppImage SHA256SUMS-linux.txt \
               --repo "$GITHUB_REPOSITORY" --clobber
           fi
 
@@ -256,10 +260,11 @@ jobs:
           VERSIONED: ${{ needs.prepare.outputs.versioned }}
         shell: bash
         run: |
+          retry() { for attempt in 1 2 3 4 5; do "$@" && return 0; sleep $((attempt * 15)); done; return 1; }
           cd dist
           sha256sum * > SHA256SUMS-windows.txt
-          gh release upload "$RELEASE_TAG" * --repo "$GITHUB_REPOSITORY" --clobber
-          if [ -n "$VERSIONED" ]; then gh release upload "$VERSIONED" * --repo "$GITHUB_REPOSITORY" --clobber; fi
+          retry gh release upload "$RELEASE_TAG" * --repo "$GITHUB_REPOSITORY" --clobber
+          if [ -n "$VERSIONED" ]; then retry gh release upload "$VERSIONED" * --repo "$GITHUB_REPOSITORY" --clobber; fi
 
   macos:
     name: macOS (Apple Silicon)
@@ -301,7 +306,8 @@ jobs:
         env:
           VERSIONED: ${{ needs.prepare.outputs.versioned }}
         run: |
+          retry() { for attempt in 1 2 3 4 5; do "$@" && return 0; sleep $((attempt * 15)); done; return 1; }
           cd dist
           shasum -a 256 * > SHA256SUMS-macos.txt
-          gh release upload "$RELEASE_TAG" * --repo "$GITHUB_REPOSITORY" --clobber
-          if [ -n "$VERSIONED" ]; then gh release upload "$VERSIONED" * --repo "$GITHUB_REPOSITORY" --clobber; fi
+          retry gh release upload "$RELEASE_TAG" * --repo "$GITHUB_REPOSITORY" --clobber
+          if [ -n "$VERSIONED" ]; then retry gh release upload "$VERSIONED" * --repo "$GITHUB_REPOSITORY" --clobber; fi
