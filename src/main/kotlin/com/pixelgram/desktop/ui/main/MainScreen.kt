@@ -201,6 +201,12 @@ fun MainScreen(
             else -> scope.launch { railState.expand() }
         }
     }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            com.pixelgram.desktop.ui.BackZones.list = null
+            com.pixelgram.desktop.ui.BackZones.onList = null
+        }
+    }
     val closeMenuAnd: (() -> Unit) -> Unit = { action ->
         scope.launch { railState.collapse() }
         action()

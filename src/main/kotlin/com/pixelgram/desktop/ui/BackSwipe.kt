@@ -65,16 +65,27 @@ fun Modifier.backSwipe(state: BackSwipeState, enabled: () -> Boolean, onBack: ()
     return pointerInput(Unit) {
         awaitPointerEventScope {
             while (true) {
-                val event = awaitPointerEvent(PointerEventPass.Main)
+                val event = awaitPointerEvent(PointerEventPass.Initial)
                 if (event.type != PointerEventType.Scroll) continue
                 val change = event.changes.firstOrNull() ?: continue
                 if (change.isConsumed || event.buttons.areAnyPressed) continue
+                if (state.locked == false) {
+                    state.job?.cancel()
+                    state.job = scope.launch {
+                        delay(SettleMs)
+                        state.dx = 0f
+                        state.dy = 0f
+                        state.locked = null
+                    }
+                    continue
+                }
                 if (state.locked == null && state.dx == 0f && state.dy == 0f) state.at = change.position
                 state.dx += -change.scrollDelta.x * step
                 state.dy += change.scrollDelta.y * step
                 if (state.locked == null && abs(state.dx) + abs(state.dy) >= lock) {
                     state.locked = abs(state.dx) > abs(state.dy) * LockRatio && state.dx > 0f && enabled()
                 }
+                if (state.locked == null && abs(change.scrollDelta.x) > abs(change.scrollDelta.y)) change.consume()
                 if (state.locked == true) {
                     change.consume()
                     val raw = (state.dx / threshold).coerceAtLeast(0f)
@@ -125,13 +136,16 @@ private class Springs(
 
 private val PreSprings = Springs(650f to 1f, 1500f to 0.45f, 250f to 0.5f, 300f to 1f, 100f to 0.6f, 6000f to 1f, 120f to 0.8f)
 private val ActiveSprings = Springs(850f to 0.75f, 10000f to 1f, 2600f to 0.855f, 1200f to 0.30f, 1500f to 0.29f, 1000f to 0.8f, 325f to 0.55f)
-private val EndSprings = Springs(10000f to 1f, 10000f to 1f, 10000f to 1f, 10000f to 1f, 1500f to 0.29f, 1000f to 0.8f, 325f to 0.55f)
-private val CancelSprings = Springs(450f to 0.65f, 1500f to 0.45f, 150f to 0.5f, 300f to 0.5f, 600f to 0.4f, 800f to 0.76f, 120f to 0.8f)
+private val EndSprings = Springs(10000f to 1f, 10000f to 1f, 10000f to 1f, 10000f to 1f, 1500f to 0.29f, 1000f to 0.8f, 5700f to 1f)
+private val CancelSprings = Springs(450f to 1f, 1500f to 0.45f, 150f to 0.5f, 300f to 0.5f, 600f to 0.4f, 800f to 0.76f, 120f to 0.8f)
 
 @Composable
-private fun springy(target: Float, spec: Pair<Float, Float>): Float {
+private fun springy(target: Float, spec: Pair<Float, Float>, velocity: Float = 0f, delayMs: Long = 0L): Float {
     val anim = remember { Animatable(target) }
-    androidx.compose.runtime.LaunchedEffect(target, spec) { anim.animateTo(target, spring(dampingRatio = spec.second, stiffness = spec.first)) }
+    androidx.compose.runtime.LaunchedEffect(target, spec, velocity) {
+        if (delayMs > 0) delay(delayMs)
+        anim.animateTo(target, spring(dampingRatio = spec.second, stiffness = spec.first), initialVelocity = if (velocity != 0f) velocity else anim.velocity)
+    }
     return anim.value
 }
 
@@ -145,7 +159,7 @@ fun BoxScope.BackSwipeIndicator(state: BackSwipeState, followList: Boolean = tru
     val (target, springs) = when {
         phase == BackPhase.Idle -> Dims(0f, 48f, 6f, 6f, 8.6f, 5f, 0f, 4f, 0.98f, 0f) to CancelSprings
         phase == BackPhase.Committed -> Dims(lerp(48f, 60f, over), 48f, 24f, 24f, lerp(6.4f, 5.6f, over), lerp(7.2f, 8f, over), 0f, lerp(14f, 18f, over), CommitScale, 0f) to EndSprings
-        phase == BackPhase.Cancelled -> Dims(0f, 48f, 6f, 6f, 12f, 0f, 0f, 4f, 0.98f, 1f) to CancelSprings
+        phase == BackPhase.Cancelled -> Dims(0f, 48f, 6f, 6f, 8.6f, 5f, 0f, 4f, 0.98f, 0f) to CancelSprings
         state.reached -> Dims(lerp(48f, 60f, over), 48f, 24f, 24f, lerp(6.4f, 5.6f, over), lerp(7.2f, 8f, over), 1f, lerp(14f, 18f, over), 1f, 1f) to ActiveSprings
         else -> Dims(lerp(0f, 51f, pre), lerp(48f, 46f, pre), lerp(6f, 16f, pre), lerp(6f, 20f, pre), lerp(8.6f, 8f, pre), lerp(5f, 5.6f, pre), (pre * 4f).coerceAtMost(1f), 4f, 0.98f, 1f) to PreSprings
     }
@@ -155,10 +169,14 @@ fun BoxScope.BackSwipeIndicator(state: BackSwipeState, followList: Boolean = tru
     val far = springy(target.far, springs.far)
     val length = springy(target.length, springs.arrow)
     val arrowHeight = springy(target.arrowHeight, springs.arrow)
-    val arrowAlpha = springy(target.arrowAlpha, if (state.reached) 180f to 0.9f else 2000f to 0.6f)
+    val arrowAlpha = springy(target.arrowAlpha, if (state.reached) 180f to 0.9f else 2000f to 0.6f, delayMs = if (phase == BackPhase.Committed) CommitArrowDelayMs else 0L)
     val margin = springy(target.margin, springs.margin)
-    val scale = springy(target.scale, springs.scale)
-    val alpha = springy(target.alpha, 10000f to 1f)
+    val scale = springy(target.scale, if (phase == BackPhase.Committed) 5700f to 1f else springs.scale, velocity = if (phase == BackPhase.Committed) CommitPopVelocity else 0f)
+    val alpha = springy(target.alpha, when (phase) {
+        BackPhase.Committed -> 1400f to 1f
+        BackPhase.Cancelled -> 450f to 1f
+        else -> 10000f to 1f
+    })
     if (phase == BackPhase.Idle && width < 0.5f) return
     val colors = MaterialTheme.colorScheme
     val background = colors.secondaryContainer
@@ -171,7 +189,7 @@ fun BoxScope.BackSwipeIndicator(state: BackSwipeState, followList: Boolean = tru
         val left = if (inList) list!!.left else list?.right ?: 0f
         val centerY = if (inList) list!!.center.y else size.height / 2f
         translate(left + margin * dp, centerY) {
-            scale(scale, scale, pivot = Offset(w, 0f)) {
+            scale(scale, scale, pivot = Offset(if (phase == BackPhase.Committed) w / 2f else w, 0f)) {
                 val path = Path().apply {
                     addRoundRect(
                         RoundRect(
@@ -215,7 +233,9 @@ private const val Deactivate = 0.8f
 private const val StretchRange = 1.5f
 private const val SettleMs = 140L
 private const val FinishMs = 450L
-private const val CommitScale = 0.85f
+private const val CommitScale = 0.86f
+private const val CommitPopVelocity = 3f
+private const val CommitArrowDelayMs = 80L
 private val ArrowThickness = 4.dp
 
 object BackSwipeHolder {

@@ -109,6 +109,7 @@ import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.graphics.drawscope.translate
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -456,13 +457,14 @@ private fun coverFile(audio: TdApi.Audio?): Pair<TdApi.File?, TdApi.Minithumbnai
 @Composable
 private fun SmallCover(audio: TdApi.Audio?, telegram: Telegram, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
     val (file, mini) = coverFile(audio)
-    val shape = if (file != null || mini != null) RoundedCornerShape(16.dp) else MaterialShapes.Cookie12Sided.toShape()
+    val hasImage = mini != null || (file != null && telegram.localPath(file) != null)
+    val shape = if (hasImage) RoundedCornerShape(16.dp) else MaterialShapes.Cookie12Sided.toShape()
     Box(
         modifier.size(size).clip(shape).background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
         Icon(Icons.Rounded.TrackNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(size / 2.4f))
-        if (file != null || mini != null) ThumbImage(file, mini, telegram, Modifier.fillMaxSize())
+        if (hasImage) ThumbImage(file, mini, telegram, Modifier.fillMaxSize())
     }
 }
 
@@ -734,45 +736,53 @@ private fun KaraokeLine(
         val layout = remember(text, style, width) {
             measurer.measure(text, style, constraints = androidx.compose.ui.unit.Constraints(maxWidth = width))
         }
+        val letters = remember(text, style) {
+            var i = 0
+            buildList {
+                while (i < text.length) {
+                    val size = Character.charCount(text.codePointAt(i))
+                    val piece = text.substring(i, i + size)
+                    if (!piece.isBlank()) add(i to measurer.measure(piece, style, softWrap = false))
+                    i += size
+                }
+            }
+        }
         val height = with(androidx.compose.ui.platform.LocalDensity.current) { layout.size.height.toDp() }
         androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(height)) {
             val glowRadius = GlowRadius.toPx()
-            for (i in text.indices) {
-                if (text[i].isWhitespace() || text[i].isLowSurrogate()) continue
-                val box = layout.getBoundingBox(i)
-                if (box.width <= 0f) continue
-                val lit = (sung - i).coerceIn(0f, 1f)
+            letters.forEach { (index, letter) ->
+                val box = layout.getBoundingBox(index)
+                val line = layout.getLineForOffset(index)
+                val top = layout.getLineTop(line)
+                val lit = (sung - index).coerceIn(0f, 1f)
                 val nudge = if (lit > 0f && lit < 1f) NudgeStrength * kotlin.math.sin(lit * kotlin.math.PI.toFloat()) * kotlin.math.exp(-3f * lit) else 0f
-                val top = box.top - box.height * 0.3f
-                val bottom = box.bottom + box.height * 0.3f
-                withTransform({
-                    scale(1f + nudge * 0.3f, 1f + nudge, pivot = androidx.compose.ui.geometry.Offset(box.center.x, box.bottom))
-                }) {
-                    if (lit >= 1f) {
-                        clipRect(box.left, top, box.right, bottom) { drawText(layout, color = color) }
-                    } else {
-                        clipRect(box.left, top, box.right, bottom) { drawText(layout, color = color.copy(alpha = DimAlpha)) }
-                        if (lit > 0f) {
-                            val fade = (lit * 5f).coerceIn(0f, 1f) * ((1f - lit) * 8f).coerceIn(0f, 1f)
-                            if (fade > 0.01f) {
-                                clipRect(box.left - glowRadius, top - glowRadius, box.right + glowRadius, bottom + glowRadius) {
-                                    drawText(
-                                        layout,
-                                        color = androidx.compose.ui.graphics.Color.Transparent,
-                                        shadow = androidx.compose.ui.graphics.Shadow(glow.copy(alpha = GlowAlpha * fade), blurRadius = glowRadius * fade),
-                                    )
-                                }
-                            }
-                            val filled = box.width * lit
-                            val edge = (box.width * EdgeShare).coerceAtLeast(1f)
-                            val solid = (filled - edge).coerceAtLeast(0f)
-                            if (solid > 0f) clipRect(box.left, top, box.left + solid, bottom) { drawText(layout, color = color) }
-                            for (j in 0 until EdgeSlices) {
-                                val from = box.left + solid + j * edge / EdgeSlices
-                                val to = (box.left + solid + (j + 1) * edge / EdgeSlices + 0.5f).coerceAtMost(box.left + filled)
-                                if (to > from) {
-                                    val a = DimAlpha + (1f - DimAlpha) * (1f - (j + 0.5f) / EdgeSlices)
-                                    clipRect(from, top, to, bottom) { drawText(layout, color = color.copy(alpha = a)) }
+                val w = letter.size.width.toFloat()
+                val h = letter.size.height.toFloat()
+                translate(box.left, top) {
+                    withTransform({
+                        scale(1f + nudge * 0.3f, 1f + nudge, pivot = androidx.compose.ui.geometry.Offset(w / 2f, h))
+                    }) {
+                        when {
+                            lit >= 1f -> drawText(letter, color = color)
+                            lit <= 0f -> drawText(letter, color = color.copy(alpha = DimAlpha))
+                            else -> {
+                                val fade = (lit * 5f).coerceIn(0f, 1f) * ((1f - lit) * 8f).coerceIn(0f, 1f)
+                                drawText(
+                                    letter,
+                                    color = color.copy(alpha = DimAlpha),
+                                    shadow = if (fade > 0.01f) androidx.compose.ui.graphics.Shadow(glow.copy(alpha = GlowAlpha * fade), blurRadius = glowRadius * fade) else null,
+                                )
+                                val filled = w * lit
+                                val edge = (w * EdgeShare).coerceAtLeast(1f)
+                                val solid = (filled - edge).coerceAtLeast(0f)
+                                if (solid > 0f) clipRect(-glowRadius, -h, solid, h * 2f) { drawText(letter, color = color) }
+                                for (j in 0 until EdgeSlices) {
+                                    val from = solid + j * edge / EdgeSlices
+                                    val to = (solid + (j + 1) * edge / EdgeSlices + 0.5f).coerceAtMost(filled)
+                                    if (to > from) {
+                                        val a = DimAlpha + (1f - DimAlpha) * (1f - (j + 0.5f) / EdgeSlices)
+                                        clipRect(from, -h, to, h * 2f) { drawText(letter, color = color.copy(alpha = a)) }
+                                    }
                                 }
                             }
                         }
