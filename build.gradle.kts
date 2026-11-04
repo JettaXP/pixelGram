@@ -7,8 +7,8 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.49.3"
-val codename = "Soft Burst"
+version = "0.50.0"
+val codename = "Clamshell"
 
 kotlin {
     jvmToolchain(21)

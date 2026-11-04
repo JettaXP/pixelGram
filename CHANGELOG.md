@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.50.0 Clamshell
+
+### Music player
+- Lyrics: a wavy progress circle waits through intros and long instrumental breaks, and the active line fills letter by letter with a soft edge, a glow and a small nudge (ported from Metrolist). Only about one sung line stays above, the click frames are bigger and the blur is no longer cut.
+- The cover grows into the big cover with a spring, without the square flash.
+- The three dots menu keeps its width when you open Details.
+
+### Chats
+- The touchpad scrolls chats directly, without the lag and the jump on release.
+- The back swipe arrow is the LineageOS edge arrow, always in the middle of the window or of the profile, locks the direction like Telegram Desktop and fires reliably on release.
+- The typing bubble takes the avatar from the same person's last message.
+- Paid media show a blurred preview with an Unlock for stars pill.
+- The chat keeps a minimum width next to the player and the side menu, the title shrinks before the badges.
+- A smaller gap between the side menu and the chat list.
+
+### Contacts
+- Edit contact: original name, a local photo only on this device, a personal photo for contacts that only you see, and suggest photo, from a file or the clipboard. The profile says who set the photo.
+
+### Settings
+- Message bubbles, corners, chat folders and the side menu are now inside Appearance; Fonts and Avatars stay as pages, Message actions has its own section and About sits at the bottom of Other.
+- Rounded Material icons switch.
+
 ## 0.49.3 Soft Burst
 
 - Music player: the lyrics blur is no longer cut at the left edge.
