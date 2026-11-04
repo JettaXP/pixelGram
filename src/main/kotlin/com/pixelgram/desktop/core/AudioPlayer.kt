@@ -262,7 +262,16 @@ object AudioPlayer {
             sampleMode = FrameGrabber.SampleMode.SHORT
             sampleFormat = avutil.AV_SAMPLE_FMT_S16
         }
-        grabber.start()
+        var waited = 0L
+        while (true) {
+            val opened = runCatching { grabber.start() }
+            if (opened.isSuccess && grabber.audioChannels > 0) break
+            runCatching { grabber.stop() }
+            val growingNow = done != null && !done()
+            if ((!growingNow && waited > 0) || waited >= OpenWaitMs || run != generation) opened.getOrThrow()
+            Thread.sleep(GrowWaitMs)
+            waited += GrowWaitMs
+        }
         val channels = grabber.audioChannels.coerceAtLeast(1)
         val rate = grabber.sampleRate.coerceAtLeast(1)
         val known = audio?.duration?.toFloat()?.takeIf { it > 0f }
@@ -284,6 +293,9 @@ object AudioPlayer {
         val sink = line?.let { Sink.Device(it) } ?: Sink.Silent(rate * frameBytes)
         var bytes = ByteArray(0)
         val stretch = TimeStretch(channels, rate)
+        var stalled = 0
+        var heard = false
+        var reopens = 0
         try {
             while (run == generation) {
                 seekTo?.let {
@@ -314,11 +326,26 @@ object AudioPlayer {
                     continue
                 }
                 val frame = grabber.grabSamples()
-                if (frame == null && done != null && !done()) {
-                    Thread.sleep(GrowWaitMs)
+                if (frame != null) {
+                    stalled = 0
+                    heard = true
+                }
+                val expected = known ?: total
+                if (frame == null && (done == null || done()) && reopens < MaxReopens && (!heard || (expected > 0f && position < expected - EndSlackSeconds))) {
+                    reopens++
                     grabber.restart()
                     grabber.setTimestamp((position * MicrosPerSecond).toLong())
                     continue
+                }
+                if (frame == null && done != null && !done()) {
+                    val nearEnd = known != null && position >= known - EndSlackSeconds
+                    stalled++
+                    if (!nearEnd && stalled * GrowWaitMs < StallLimitMs) {
+                        Thread.sleep(GrowWaitMs)
+                        grabber.restart()
+                        grabber.setTimestamp((position * MicrosPerSecond).toLong())
+                        continue
+                    }
                 }
                 if (frame == null) {
                     if (repeat) {
@@ -543,3 +570,7 @@ private fun toward(value: Float, target: Float, step: Float): Float =
 
 private const val FadeOutMs = 180
 private const val FadeInMs = 120
+private const val EndSlackSeconds = 1.5f
+private const val StallLimitMs = 8_000L
+private const val OpenWaitMs = 20_000L
+private const val MaxReopens = 3

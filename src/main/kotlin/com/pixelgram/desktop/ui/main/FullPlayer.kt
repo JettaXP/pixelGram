@@ -99,7 +99,6 @@ import com.pixelgram.desktop.ui.icons.filled.Favorite
 import com.pixelgram.desktop.ui.icons.filled.KeyboardArrowDown
 import com.pixelgram.desktop.ui.icons.TrackNote
 import com.pixelgram.desktop.ui.icons.filled.Repeat
-import com.pixelgram.desktop.ui.icons.filled.RepeatOn
 import com.pixelgram.desktop.ui.icons.filled.Shuffle
 import com.pixelgram.desktop.ui.icons.outlined.DragHandle
 import com.pixelgram.desktop.ui.icons.outlined.FavoriteBorder
@@ -272,7 +271,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                         Icon(
                             when (mode) {
                                 RepeatMode.Off -> Icons.Filled.Repeat
-                                RepeatMode.All -> Icons.Filled.RepeatOn
+                                RepeatMode.All -> Icons.Filled.Repeat
                                 RepeatMode.One -> Icons.Rounded.RepeatOne
                             },
                             contentDescription = "Repeat",

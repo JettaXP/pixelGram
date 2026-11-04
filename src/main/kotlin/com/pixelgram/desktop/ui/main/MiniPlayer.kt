@@ -56,7 +56,6 @@ import com.pixelgram.desktop.ui.icons.filled.Close
 import com.pixelgram.desktop.ui.icons.rounded.Pause
 import com.pixelgram.desktop.ui.icons.rounded.PlayArrow
 import com.pixelgram.desktop.ui.icons.filled.Repeat
-import com.pixelgram.desktop.ui.icons.filled.RepeatOn
 import com.pixelgram.desktop.ui.icons.rounded.SkipNext
 import com.pixelgram.desktop.ui.icons.rounded.SkipPrevious
 import androidx.compose.material3.Icon
@@ -280,7 +279,7 @@ fun MiniPlayer(telegram: Telegram) {
                                 Icon(
                                     when (AudioQueue.repeatMode) {
                                         RepeatMode.Off -> Icons.Filled.Repeat
-                                        RepeatMode.All -> Icons.Filled.RepeatOn
+                                        RepeatMode.All -> Icons.Filled.Repeat
                                         RepeatMode.One -> Icons.Rounded.RepeatOne
                                     },
                                     contentDescription = "Repeat",

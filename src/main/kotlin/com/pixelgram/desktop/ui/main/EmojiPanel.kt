@@ -1,6 +1,13 @@
 package com.pixelgram.desktop.ui.main
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
+import com.pixelgram.desktop.ui.icons.outlined.Collections
+import com.pixelgram.desktop.ui.icons.outlined.Numbers
+import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
+import com.pixelgram.desktop.ui.icons.outlined.Send
 import com.pixelgram.desktop.ui.icons.outlined.Schedule
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -122,7 +129,19 @@ fun EmojiPanel(
     modifier: Modifier = Modifier,
     telegram: com.pixelgram.desktop.telegram.Telegram? = null,
     onCustom: ((String, Long) -> Unit)? = null,
+    onSend: ((String, Long?) -> Unit)? = null,
 ) {
+    var preview by remember { mutableStateOf<it.tdlight.jni.TdApi.Sticker?>(null) }
+    var menuFor by remember { mutableStateOf<PanelEmoji?>(null) }
+    val actions = EmojiActions(
+        hold = { item -> if (item is PanelEmoji.Custom) preview = telegram?.customEmoji(item.id) },
+        release = { preview = null },
+        menu = { item -> menuFor = item },
+        menuFor = { menuFor },
+        closeMenu = { menuFor = null },
+        send = onSend,
+        telegram = telegram,
+    )
     val groups = EmojiGroups
     val grid = rememberLazyGridState()
     val scope = rememberCoroutineScope()
@@ -184,15 +203,15 @@ fun EmojiPanel(
             ) {
                 if (recent.isNotEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) { PanelHeader("Recent") }
-                    items(recent) { item -> EmojiCellView(item, pick) }
+                    items(recent) { item -> EmojiCellView(item, pick, actions) }
                 }
                 groups.forEach { group ->
                     item(span = { GridItemSpan(maxLineSpan) }) { PanelHeader(group.name) }
-                    items(group.emoji) { emoji -> EmojiCellView(PanelEmoji.Plain(emoji), pick) }
+                    items(group.emoji) { emoji -> EmojiCellView(PanelEmoji.Plain(emoji), pick, actions) }
                 }
                 packs.forEach { pack ->
                     item(span = { GridItemSpan(maxLineSpan) }) { PanelHeader(pack.title, translate = false) }
-                    items(pack.emoji) { (emoji, id) -> EmojiCellView(PanelEmoji.Custom(emoji, id), pick) }
+                    items(pack.emoji) { (emoji, id) -> EmojiCellView(PanelEmoji.Custom(emoji, id), pick, actions) }
                 }
             }
             if (packs.isNotEmpty()) {
@@ -218,8 +237,19 @@ fun EmojiPanel(
                 }
             }
         }
+        if (telegram != null) StickerHoldPreview(preview, telegram) { preview = null }
     }
 }
+
+private class EmojiActions(
+    val hold: (PanelEmoji) -> Unit,
+    val release: () -> Unit,
+    val menu: (PanelEmoji) -> Unit,
+    val menuFor: () -> PanelEmoji?,
+    val closeMenu: () -> Unit,
+    val send: ((String, Long?) -> Unit)?,
+    val telegram: com.pixelgram.desktop.telegram.Telegram?,
+)
 
 @Composable
 private fun PanelHeader(title: String, translate: Boolean = true) {
@@ -232,18 +262,64 @@ private fun PanelHeader(title: String, translate: Boolean = true) {
 }
 
 @Composable
-private fun EmojiCellView(item: PanelEmoji, onPick: (PanelEmoji) -> Unit) {
+private fun EmojiCellView(item: PanelEmoji, onPick: (PanelEmoji) -> Unit, actions: EmojiActions) {
+    val key = if (item is PanelEmoji.Custom) "c${item.id}" else item.emoji
     Box(
         Modifier
             .size(EmojiCell)
             .clip(CircleShape)
-            .clickable { onPick(item) },
+            .pointerInput(key) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                            event.changes.first().consume()
+                            actions.menu(item)
+                        }
+                    }
+                }
+            }
+            .pointerInput(key) {
+                detectTapGestures(
+                    onTap = { onPick(item) },
+                    onLongPress = { actions.hold(item) },
+                    onPress = {
+                        tryAwaitRelease()
+                        actions.release()
+                    },
+                )
+            },
         contentAlignment = Alignment.Center,
     ) {
         when (item) {
             is PanelEmoji.Custom -> CustomEmojiView(item.id, item.emoji, Modifier.size(30.dp))
             is PanelEmoji.Plain -> EmojiText(item.emoji, fontSize = 26.sp)
         }
+        if (actions.menuFor() === item) EmojiMenu(item, actions)
+    }
+}
+
+@Composable
+private fun EmojiMenu(item: PanelEmoji, actions: EmojiActions) {
+    val copy = { value: String -> java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(java.awt.datatransfer.StringSelection(value), null) }
+    val custom = item as? PanelEmoji.Custom
+    val telegram = actions.telegram
+    val entries = buildList {
+        actions.send?.let { send -> add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Send, "Send emoji") { actions.closeMenu(); send(item.emoji, custom?.id) }) }
+        add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.ContentCopy, "Copy emoji") { actions.closeMenu(); copy(item.emoji) })
+        if (custom != null) {
+            add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Numbers, "Copy emoji ID") { actions.closeMenu(); copy(custom.id.toString()) })
+            val setId = telegram?.customEmoji(custom.id)?.setId?.takeIf { it != 0L }
+            if (setId != null && telegram != null) {
+                add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Collections, "View emoji set") {
+                    actions.closeMenu()
+                    StickerPack.current = StickerPackRequest(telegram, ActiveChat.id, setId)
+                })
+            }
+        }
+    }
+    com.pixelgram.desktop.ui.components.GroupedMenu(expanded = true, onDismiss = actions.closeMenu) {
+        com.pixelgram.desktop.ui.components.MenuGroups(listOf(entries))
     }
 }
 

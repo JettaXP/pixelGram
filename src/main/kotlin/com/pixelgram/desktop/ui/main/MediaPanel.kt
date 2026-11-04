@@ -99,6 +99,7 @@ fun MediaPanel(
     onTab: (Int) -> Unit,
     onEmoji: (String) -> Unit,
     onCustomEmoji: ((String, Long) -> Unit)? = null,
+    onSendEmoji: ((String, Long?) -> Unit)? = null,
     onSticker: (TdApi.Sticker, StickerSend) -> Unit,
     onGif: (TdApi.Animation, StickerSend, String) -> Unit,
     onInline: (Long, String) -> Unit,
@@ -122,7 +123,7 @@ fun MediaPanel(
                 0 -> if (search != null) {
                     EmojiSearch(telegram, search, onSearch, onEmoji, Modifier.weight(1f))
                 } else {
-                    EmojiPanel(onPick = onEmoji, onSearch = { onSearch("") }, modifier = Modifier.weight(1f), telegram = telegram, onCustom = onCustomEmoji)
+                    EmojiPanel(onPick = onEmoji, onSearch = { onSearch("") }, modifier = Modifier.weight(1f), telegram = telegram, onCustom = onCustomEmoji, onSend = onSendEmoji)
                 }
                 1 -> if (search != null) {
                     StickerSearch(telegram, chatId, search, onSearch, onSticker, Modifier.weight(1f))
@@ -296,6 +297,19 @@ private fun StickersTab(
             }
         }
     }
+    StickerHoldPreview(preview, telegram) { preview = null }
+    }
+    scheduling?.let { sticker ->
+        ScheduleDialog(onDismiss = { scheduling = null }) { date ->
+            scheduling = null
+            onSticker(sticker, StickerSend(schedule = TdApi.MessageSchedulingStateSendAtDate(date, 0)))
+        }
+    }
+}
+
+
+@Composable
+internal fun StickerHoldPreview(preview: TdApi.Sticker?, telegram: Telegram, onDismiss: () -> Unit) {
     val previewState = remember { androidx.compose.animation.core.MutableTransitionState(false) }
     previewState.targetState = preview != null
     if (previewState.currentState || previewState.targetState) {
@@ -322,7 +336,7 @@ private fun StickersTab(
                             awaitPointerEventScope {
                                 while (true) {
                                     val event = awaitPointerEvent()
-                                    if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Release) preview = null
+                                    if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Release) onDismiss()
                                 }
                             }
                         },
@@ -342,13 +356,6 @@ private fun StickersTab(
                     }
                 }
             }
-        }
-    }
-    }
-    scheduling?.let { sticker ->
-        ScheduleDialog(onDismiss = { scheduling = null }) { date ->
-            scheduling = null
-            onSticker(sticker, StickerSend(schedule = TdApi.MessageSchedulingStateSendAtDate(date, 0)))
         }
     }
 }

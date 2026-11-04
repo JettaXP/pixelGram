@@ -2801,6 +2801,11 @@ private fun Composer(
                         },
                         onEmoji = insert,
                         onCustomEmoji = insertCustom,
+                        onSendEmoji = { emoji, id ->
+                            telegram.sendText(chatId, emoji, replyTo?.id ?: 0, id?.let { arrayOf(TdApi.TextEntity(0, emoji.length, TdApi.TextEntityTypeCustomEmoji(it))) } ?: emptyArray())
+                            onCancelReply()
+                            emojiOpen = false
+                        },
                         whenOnline = telegram.chats[chatId]?.let { it.privateUserId != 0L && !telegram.isSavedMessages(chatId) && !telegram.isBot(it) } == true,
                         onSticker = { sticker, how ->
                             telegram.sendSticker(chatId, sticker, replyTo?.id ?: 0, how.silent, how.schedule)
