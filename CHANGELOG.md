@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.47.0 Ghostish
+
+### Chats
+- Jumping to a message no longer scrolls when it is already visible, and the message is highlighted with a pulsing ring around the bubble.
+- The pinned bar follows the scroll position and shows "Pinned message N / M" without the side bar.
+- Calendar from the date pill: jump to a date, or select days and clear history for them.
+- In-chat search like Telegram Desktop: calendar button, Saved Messages tags, Unlock without Premium.
+- Scheduled messages: right click the send button to send silently, schedule, set a reminder or send when online. Scheduled messages have their own list with edit, copy, send now, reschedule and delete.
+- Message groups within 5 minutes, at most 100, with tight spacing inside a group. New messages slide in without a bounce.
+- A wide window puts all messages on one side, like Telegram Desktop.
+- Select a message with a short vertical drag.
+- Reply quotes follow the bubble radius. Replies to deleted messages say "Deleted message".
+- Empty private chats show a greeting with a sticker you can send in one click, or the person's own start page.
+- Theme links and .tdesktop-theme / .attheme files open a preview, and Apply turns the theme into Material You colors.
+- Communities: a badge on community chats and a window with the community's chats.
+- Comments button shows recent commenters in the chosen avatar shape.
+- Forum topics use their emoji icons. Chat theme changes and new group photos appear as service pills.
+- Typing "--" gives an em dash. Spaces only + Enter clears the field and scrolls to the bottom.
+- Chat menus like Telegram Desktop: mute durations, mark as unread, add to folder, export history to HTML or JSON, send a gift, disable sharing, local names for groups, channels and bots.
+
+### Media
+- Video notes play inline with sound, with a wavy progress ring and a download button.
+- Music messages show the album cover, title and performer. Music starts faster.
+- Play/pause morphs with a 45° turn, and the player wave flattens on pause.
+- GIF panel with natural aspect ratios and a right click menu.
+- Files have a wavy download ring with an animated swap.
+- Polls: view votes, quick wave when you vote, animated poll settings.
+- Zoomed photos follow the cursor while panning.
+
+### Profile and privacy
+- Start page in My profile: title, message and sticker people see before they start a chat. Choosing a sticker needs Telegram Premium.
+- Privacy dialogs like Telegram Desktop with exception counts, and an exception picker with avatar pills, search and Backspace to remove.
+- "Who can find me by my number".
+- Birthday shows the localized month and age. Deleted accounts show "Deleted Account" with a ghost avatar.
+
+### Interface
+- F11 and a switch in Window settings for full screen.
+- Interface scale in Chats settings.
+- Touchpad swipe right goes back, with an MD3 indicator.
+- Remix Icon pack.
+- Chat list: media thumbnails, mention and reaction marks, avatar size, counters in the secondary color, folder name on the active folder only.
+- Reactions and symbols like ❤ in the chosen emoji style, with a short pop animation.
+- Close animation for menus and an MD3 text context menu.
+- Faster tray menu.
+
+### Windows
+- Native minimize and restore animation from the taskbar.
+- Optional system notifications; clicking one opens the chat.
+- Releases ship setup.exe instead of a separate .msi, and updates install through it. Versions up to 0.46.4 need to install 0.47.0 manually once.
+- Setup uses the native folder picker, pulses the logo smoothly and shows Update when pixelGram is already installed.
+
+### Linux
+- Drag and drop from file managers that send uri-lists.
+- Keeps running in the background on Wayland without a tray, with opaque popups.
+- matugen hides its setup steps once config.toml has the template.
+
+### Fixes
+- Fixed a crash in formatted text selection.
+- The crash dialog shows the cause and where to find the log.
+- The test notification button no longer scrolls the settings page.
+
 ## 0.46.4 Gem
 
 ### Mini apps
