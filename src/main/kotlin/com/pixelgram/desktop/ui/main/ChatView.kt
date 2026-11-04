@@ -1312,7 +1312,7 @@ val LocalBubbleGroup = androidx.compose.runtime.staticCompositionLocalOf { Bubbl
 
 fun bubbleShape(radius: Int, tailRadius: Int, outgoing: Boolean, group: BubbleGroup = BubbleGroup(top = true, bottom = true)): Shape {
     val r = radius.dp
-    val joined = (r * JoinedCornerRatio).coerceIn(JoinedCornerMin, r)
+    val joined = minOf(JoinedCorner, r)
     val sideTop = if (group.top) r else joined
     val sideBottom = if (group.bottom) tailRadius.dp else joined
     return if (outgoing) {
@@ -1322,8 +1322,7 @@ fun bubbleShape(radius: Int, tailRadius: Int, outgoing: Boolean, group: BubbleGr
     }
 }
 
-private const val JoinedCornerRatio = 0.3f
-private val JoinedCornerMin = 4.dp
+private val JoinedCorner = 6.dp
 
 @Composable
 fun MessageBubble(
