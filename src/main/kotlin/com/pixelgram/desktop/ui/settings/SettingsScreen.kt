@@ -1230,7 +1230,7 @@ private fun AvatarsSection(settings: AppSettings) {
             Text(current.title, style = MaterialTheme.typography.titleMedium)
             val override = kind?.let(settings::kindShape)
             if (kind != null) {
-                Description(if (override == null) "Same as all chats." else "Only for ${kind.title.lowercase()}.")
+                Description(if (override == null) "Same as all chats." else "Only for ${kind?.title?.lowercase()}.")
             }
             Reveal(override != null) {
                 TextButton(onClick = { kind?.let { settings.avatarKindShapes.getValue(it).value = "" } }) {
