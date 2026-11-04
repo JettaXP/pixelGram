@@ -7,8 +7,8 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.50.1"
-val codename = "Clamshell"
+version = "0.51.0"
+val codename = "Bun"
 
 kotlin {
     jvmToolchain(21)

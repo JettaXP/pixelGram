@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.51.0 Bun
+
+- Premium emoji in the emoji panel: recent emoji on top, regular emoji, then your emoji packs with a pack switcher at the bottom.
+- Premium emoji work without Premium the same way as in AyuGram and exteraGram: pixelGram, AyuGram and exteraGram users see them, everyone else sees the regular emoji. With Premium, or in Saved Messages, they are sent as real premium emoji.
+- Linux: MPRIS media controls. Media keys, the player widget in GNOME and KDE and tools like playerctl can see and control the music.
+
 ## 0.50.1 Clamshell
 
 - The back arrow now behaves like the Android edge arrow from LineageOS: a thin bar while you pull, a bouncy circle once it will go back, it stretches if you keep pulling, and shrinks away when it fires or flattens when you let go early.
