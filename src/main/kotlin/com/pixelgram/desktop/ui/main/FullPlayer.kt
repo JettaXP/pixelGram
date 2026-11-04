@@ -63,6 +63,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -109,12 +110,24 @@ private val QueueRow = 64.dp
 @Composable
 fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
     val audio = AudioPlayer.audio
+    val (cover, _) = coverFile(audio)
+    LaunchedEffect(cover?.id) { telegram.download(cover) }
+    val coverPath = telegram.localPath(cover)
+    val base = MaterialTheme.colorScheme
+    val palette by produceState<List<androidx.compose.ui.graphics.Color>?>(null, coverPath) {
+        value = coverPath?.let { withContext(Dispatchers.IO) { coverPalette(it) } }
+    }
+    val dark = base.surface.luminance() < 0.5f
+    val style = com.pixelgram.desktop.ui.theme.LocalAppSettings.current?.colorStyle?.value ?: com.pixelgram.desktop.ui.theme.ColorStyle.TonalSpot
+    val seed = palette?.getOrNull(1)
+    val themed = remember(seed, dark, style) { seed?.let { com.pixelgram.desktop.ui.theme.schemeFromSeed(it.toArgb(), dark, style) } } ?: base
+    MaterialTheme(colorScheme = themed) {
     val tracks = AudioQueue.tracks(telegram)
     val index = tracks.indexOfFirst { it.key == AudioPlayer.current }
     val colors = MaterialTheme.colorScheme
     Surface(shape = MaterialTheme.shapes.extraLarge, color = colors.surfaceContainerLow, modifier = modifier) {
         Box(Modifier.fillMaxSize()) {
-        AmbientBackdrop(audio, telegram, Modifier.matchParentSize())
+        AmbientBackdrop(palette, Modifier.matchParentSize())
         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { FullPlayer.open = false }) {
@@ -263,18 +276,13 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
         }
         }
     }
+    }
 }
 
 @Composable
-private fun AmbientBackdrop(audio: TdApi.Audio?, telegram: Telegram, modifier: Modifier) {
-    val (file, _) = coverFile(audio)
-    LaunchedEffect(file?.id) { telegram.download(file) }
-    val path = telegram.localPath(file)
+private fun AmbientBackdrop(cover: List<androidx.compose.ui.graphics.Color>?, modifier: Modifier) {
     val scheme = MaterialTheme.colorScheme
-    val fallback = listOf(scheme.primary, scheme.tertiary, scheme.secondary)
-    val palette by produceState(fallback, path, scheme.primary) {
-        value = path?.let { withContext(Dispatchers.IO) { coverPalette(it) } } ?: fallback
-    }
+    val palette = cover ?: listOf(scheme.primary, scheme.tertiary, scheme.secondary)
     val blobs = palette.map { androidx.compose.animation.animateColorAsState(it, tween(1200)).value }
     val drift = rememberInfiniteTransition()
     val phase by drift.animateFloat(0f, (2 * kotlin.math.PI).toFloat(), infiniteRepeatable(tween(DriftMs, easing = LinearEasing), AnimationRepeat.Restart))
