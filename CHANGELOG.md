@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.51.1 Bun
+
+- While a back swipe is in progress, the chat no longer scrolls up or down until you let go.
+- The back arrow disappears like on Android: a quick pop, then the background and the arrow fade out.
+- In Settings the back arrow shows at the window edge instead of the middle of the page.
+- Lyrics: each letter fills on its own like in Metrolist, the glow no longer paints the neighbouring letters or gets cut off.
+- The player cover no longer flashes a square when its image is not downloaded yet.
+
 ## 0.51.0 Bun
 
 - Premium emoji in the emoji panel: recent emoji on top, regular emoji, then your emoji packs with a pack switcher at the bottom.
