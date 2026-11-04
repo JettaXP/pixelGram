@@ -32,6 +32,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppSettings
@@ -202,7 +203,7 @@ internal fun NotificationsSection(telegram: Telegram, settings: AppSettings) {
                 Notifications.showTest?.invoke()
             }
         },
-        modifier = Modifier.padding(top = 12.dp),
+        modifier = Modifier.padding(top = 12.dp).focusProperties { canFocus = false },
     ) {
         Text("Show test notification")
     }
