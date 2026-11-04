@@ -414,7 +414,8 @@ fun SettingsScreen(
                   Column {
                 if (preferencesPane) {
                     PreferencesHeader(telegram)
-                    Header("Categories")
+                    val flatNav = settings.settingsStyle.value == com.pixelgram.desktop.core.SettingsStyle.MaterialYou
+                    Box(Modifier.padding(start = if (flatNav) 16.dp else 0.dp)) { Header("Categories") }
                     val items = Section.entries.filter { it.pixel && it.parent == null }
                     SegmentedGroup {
                         items.forEachIndexed { index, item ->

@@ -17,8 +17,15 @@ fun Telegram.themeName(chat: ChatState): String? = when (val theme = chat.theme)
     else -> null
 }
 
-fun Telegram.chatBackground(chat: ChatState, dark: Boolean): TdApi.ChatBackground? =
-    chat.background ?: themeSettings(chat, dark)?.background?.let { TdApi.ChatBackground(it, 0) }
+fun Telegram.chatBackground(chat: ChatState, dark: Boolean): TdApi.ChatBackground? {
+    val own = chat.background
+    val named = (own?.background?.type as? TdApi.BackgroundTypeChatTheme)?.themeName
+    if (named != null) {
+        val settings = emojiThemes.firstOrNull { it.name == named }?.let { if (dark) it.darkSettings else it.lightSettings }
+        return settings?.background?.let { TdApi.ChatBackground(it, own.darkThemeDimming) } ?: themeSettings(chat, dark)?.background?.let { TdApi.ChatBackground(it, 0) }
+    }
+    return own ?: themeSettings(chat, dark)?.background?.let { TdApi.ChatBackground(it, 0) }
+}
 
 fun Telegram.canSetChatTheme(chat: ChatState): Boolean =
     chat.privateUserId != 0L && !isSavedMessages(chat.id) && !isBot(chat)

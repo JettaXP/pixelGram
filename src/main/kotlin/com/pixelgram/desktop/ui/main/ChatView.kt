@@ -797,10 +797,9 @@ private fun ChatViewContent(
                     if (flashed != null) {
                         LaunchedEffect(flashed) {
                             flash.snapTo(0f)
-                            repeat(PulseCount) {
-                                flash.animateTo(1f, tween(PulseInMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
-                                flash.animateTo(0f, tween(PulseOutMs, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
-                            }
+                            flash.animateTo(1f, tween(PulseInMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                            kotlinx.coroutines.delay(PulseHoldMs)
+                            flash.animateTo(0f, tween(PulseOutMs, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
                         }
                     }
                     val itemModifier = Modifier
@@ -855,13 +854,18 @@ private fun ChatViewContent(
                         } else {
                             val isSelected = message.key in selected
                             val selectTint = MaterialTheme.colorScheme.primary
+                            val flashTint = MaterialTheme.colorScheme.secondaryContainer
                             val highlight by animateFloatAsState(if (isSelected) SelectedAlpha else 0f, MaterialTheme.motionScheme.defaultEffectsSpec())
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .onGloballyPositioned { itemBounds[message.key] = it.boundsInWindow() }
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .drawBehind { if (highlight > 0f) drawRect(selectTint.copy(alpha = highlight)) },
+                                    .clip(RoundedCornerShape(24.dp))
+                                    .drawBehind {
+                                        if (highlight > 0f) drawRect(selectTint.copy(alpha = highlight))
+                                        val glow = flash.value
+                                        if (glow > 0f) drawRect(flashTint.copy(alpha = HighlightAlpha * glow))
+                                    },
                             ) {
                             AnimatedVisibility(
                                 visible = selecting,
@@ -1399,6 +1403,7 @@ fun MessageBubble(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = if (endSide) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
+        val pulseNow = LocalBubblePulse.current
         Surface(
             shape = bubbleShape(
                 settings.bubbleRadius.value,
@@ -1408,11 +1413,11 @@ fun MessageBubble(
             ),
             color = if (outgoing) colors.primaryContainer else colors.surfaceContainerHigh,
             contentColor = if (outgoing) colors.onPrimaryContainer else colors.onSurface,
-            modifier = Modifier.widthIn(max = 520.dp).pulseRing(
-                bubbleShape(settings.bubbleRadius.value, settings.bubbleTailRadius.value, endSide, LocalBubbleGroup.current),
-                colors.primary,
-                LocalBubblePulse.current,
-            ),
+            modifier = Modifier.widthIn(max = 520.dp).graphicsLayer {
+                val pop = pulseNow()
+                scaleX = 1f + pop * HighlightPop
+                scaleY = 1f + pop * HighlightPop
+            },
         ) {
             val metaColor = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant).copy(alpha = 0.7f)
             val readColor = if (outgoing) colors.outgoingAccent else metaColor
@@ -1889,9 +1894,11 @@ object PluginViewer {
     var path by mutableStateOf<String?>(null)
 }
 private const val StickToBottomPx = 48
-private const val PulseCount = 2
-private const val PulseInMs = 260
-private const val PulseOutMs = 420
+private const val PulseInMs = 320
+private const val PulseHoldMs = 700L
+private const val PulseOutMs = 900
+private const val HighlightAlpha = 0.85f
+private const val HighlightPop = 0.035f
 private val PulseOutset = 8.dp
 private const val PulseAlpha = 0.75f
 

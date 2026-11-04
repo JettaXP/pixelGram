@@ -33,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
@@ -79,33 +81,48 @@ fun ForwardDialog(telegram: Telegram, settings: AppSettings, onDismiss: () -> Un
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 )
                 if (tabs.size > 1 && query.isBlank()) {
-                    androidx.compose.foundation.lazy.LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    val selected = tabs.indexOfFirst { it.key == folder }.coerceAtLeast(0)
+                    androidx.compose.material3.PrimaryScrollableTabRow(
+                        selectedTabIndex = selected,
+                        containerColor = Color.Transparent,
+                        edgePadding = 16.dp,
+                        divider = {},
                     ) {
-                        items(tabs.size, key = { tabs[it].key.toString() }) { i ->
-                            val tab = tabs[i]
-                            androidx.compose.material3.FilterChip(
-                                selected = folder == tab.key,
+                        tabs.forEachIndexed { i, tab ->
+                            androidx.compose.material3.Tab(
+                                selected = i == selected,
                                 onClick = { folder = tab.key },
-                                label = { EmojiText(tab.title, maxLines = 1) },
-                                leadingIcon = { Icon(folderIcon(tab.icon, folder == tab.key), contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                text = { EmojiText(tab.title, maxLines = 1) },
+                                icon = { Icon(folderIcon(tab.icon, i == selected), contentDescription = null, modifier = Modifier.size(20.dp)) },
                             )
                         }
                     }
                 }
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
-                    modifier = Modifier.heightIn(max = 420.dp),
-                ) {
-                    itemsIndexed(chats, key = { _, chat -> chat.id }) { index, chat ->
-                        SegmentedListItem(
-                            onClick = { onPick(chat.id) },
-                            shapes = groupShapes(index, chats.size),
-                            leadingContent = { ChatAvatar(chat, telegram, settings, size = 40.dp) },
-                        ) {
-                            EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val order = tabs.indexOfFirst { it.key == folder }
+                androidx.compose.animation.AnimatedContent(
+                    targetState = order to chats,
+                    contentKey = { it.first to query.isBlank() },
+                    transitionSpec = {
+                        val forward = targetState.first >= initialState.first
+                        (androidx.compose.animation.slideInHorizontally { if (forward) it / 4 else -it / 4 } + androidx.compose.animation.fadeIn()) togetherWith
+                            (androidx.compose.animation.slideOutHorizontally { if (forward) -it / 4 else it / 4 } + androidx.compose.animation.fadeOut())
+                    },
+                ) { (_, list) ->
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+                        modifier = Modifier.heightIn(max = 420.dp),
+                    ) {
+                        itemsIndexed(list, key = { _, chat -> chat.id }) { index, chat ->
+                            val shape = groupShapes(index, list.size)
+                            SegmentedListItem(
+                                onClick = { onPick(chat.id) },
+                                shapes = shape,
+                                leadingContent = { ChatAvatar(chat, telegram, settings, size = 40.dp) },
+                                modifier = Modifier.clip(shape.shape),
+                            ) {
+                                EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
                         }
                     }
                 }
