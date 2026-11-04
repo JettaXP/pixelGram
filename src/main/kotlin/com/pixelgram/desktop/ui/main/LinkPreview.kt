@@ -113,7 +113,11 @@ fun LinkPreviewCard(preview: TdApi.LinkPreview, telegram: Telegram, outgoing: Bo
     val media = type?.media()
     val large = media != null && type.large(preview)
     val description = preview.description?.text.orEmpty()
-    val open = { openUrl(preview.url) }
+    val themeDoc = (type as? TdApi.LinkPreviewTypeTheme)?.let { ThemeImport.pick(it.documents) }
+    val open = {
+        if (themeDoc != null) ThemeImport.request = ThemeRequest(telegram, themeDoc.document, preview.title.ifBlank { themeDoc.fileName })
+        else openUrl(preview.url)
+    }
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = if (outgoing) colors.primary.copy(alpha = 0.16f) else colors.surfaceContainerHighest,

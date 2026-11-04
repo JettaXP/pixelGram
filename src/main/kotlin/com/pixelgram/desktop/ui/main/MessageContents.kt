@@ -18,6 +18,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import com.pixelgram.desktop.ui.icons.rounded.Close
 import androidx.compose.material3.CircularWavyProgressIndicator
 import com.pixelgram.desktop.ui.icons.filled.Settings
+import com.pixelgram.desktop.ui.icons.filled.Palette
 import com.pixelgram.desktop.core.Backup
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.foundation.border
@@ -610,6 +611,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
             val name = com.pixelgram.desktop.core.FileSafety.clean(document.fileName).ifBlank { "File" }
             val plugin = name.endsWith(".plugin", ignoreCase = true)
             val backup = Backup.isBackup(name)
+            val theme = ThemeImport.isTheme(name)
             val scope = rememberCoroutineScope()
             val downloaded = telegram.localPath(document.document)
             var saved by remember(downloaded) { mutableStateOf(downloaded?.let { Downloads.exported(it, name) }) }
@@ -620,6 +622,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
                 when {
                     plugin -> onPlugin(path)
                     backup -> BackupViewer.path = path
+                    theme -> ThemeImport.request = ThemeRequest(telegram, document.document, name)
                     else -> scope.launch { openDocument(Downloads.export(path, name)) }
                 }
             }
@@ -639,6 +642,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
                 when {
                     plugin -> Icons.Filled.Extension
                     backup -> Icons.Filled.Settings
+                    theme -> Icons.Filled.Palette
                     else -> Icons.Filled.InsertDriveFile
                 },
                 name,

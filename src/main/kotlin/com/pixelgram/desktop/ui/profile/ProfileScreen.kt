@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.outlined.AddAPhoto
+import com.pixelgram.desktop.ui.icons.outlined.Sticker
 import com.pixelgram.desktop.ui.icons.outlined.AlternateEmail
 import com.pixelgram.desktop.ui.icons.outlined.Cake
 import com.pixelgram.desktop.ui.icons.outlined.Info
@@ -60,7 +61,7 @@ import java.time.Month
 import java.time.format.TextStyle
 import java.util.Locale
 
-private enum class ProfileField { Name, Username, Bio, Birthday }
+private enum class ProfileField { Name, Username, Bio, Birthday, StartPage }
 
 private const val BioLimit = 70
 private val BannerHeight = 200.dp
@@ -171,6 +172,14 @@ fun ProfileContent(
                     onEdit = { editing = ProfileField.Birthday },
                 )
             )
+            add(
+                InfoRow(
+                    Icons.Outlined.Sticker,
+                    "Start page",
+                    fullInfo?.businessInfo?.startPage?.title?.takeIf { it.isNotBlank() } ?: "Not set",
+                    onEdit = { editing = ProfileField.StartPage },
+                )
+            )
             add(InfoRow(Icons.Outlined.Numbers, "ID", me.id.toString()))
         }
         ProfileMusic(telegram, settings, me.id, own = true)
@@ -232,6 +241,7 @@ fun ProfileContent(
             onDismiss = dismiss,
             onSaved = saved,
         ) { values, done -> telegram.setBio(values[0], done) }
+        ProfileField.StartPage -> com.pixelgram.desktop.ui.main.StartPageDialog(telegram, fullInfo?.businessInfo?.startPage, onDismiss = dismiss, onSaved = saved)
         ProfileField.Birthday -> EditDialog(
             title = "Birthday",
             initial = listOf(

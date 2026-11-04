@@ -74,6 +74,7 @@ fun Telegram.loadDemo() {
     statuses[2] = TdApi.UserStatusOnline(0)
     chats[102L]?.privateUserId = 3
     statuses[3] = TdApi.UserStatusOffline(now - 300)
+    if (System.getProperty("pixelgram.demo.startpage") == "true") messages(102L).clear()
     if (System.getProperty("pixelgram.demo.offline") == "true") connection = ConnectionStatus.Connecting
     if (System.getProperty("pixelgram.demo.protected") == "true") chats[106L]?.protectedContent = true
     if (System.getProperty("pixelgram.demo.secret") == "true") loadSecretDemo(now)
@@ -303,7 +304,7 @@ private fun Telegram.loadTypesDemo(pluginPath: String, now: Int) {
             type = TdApi.LinkPreviewTypeTheme(arrayOf(TdApi.Document().apply {
                 fileName = "theme.tdesktop-theme"
                 thumbnail = TdApi.Thumbnail(TdApi.ThumbnailFormatPng(), 1180, 760, demoFile(900_010, shot, 120_000))
-                document = demoFile(900_011, null, 1000)
+                document = demoFile(900_011, demoTheme(), 1000)
             }), null)
         })),
         msg(32, true, 30, link("github.com/JettaXP/pixelGram", TdApi.LinkPreview().apply {
@@ -729,3 +730,8 @@ private val DemoStickerFormats = setOf("tgs", "webp", "webm")
 private const val DemoStickerId = 970_000L
 private const val DemoStickerFile = 970_000
 private const val DemoStickerSide = 512
+
+private fun demoTheme(): String = java.io.File.createTempFile("demo", ".tdesktop-theme").apply {
+    deleteOnExit()
+    writeText("windowBg: #1e1f2b;\nwindowFg: #e8e6f0;\nwindowBgActive: #c792ea;\nmsgInBg: #2a2c3d;\nmsgOutBg: #4b3a66;\ndialogsBgActive: windowBgActive;\n")
+}.absolutePath

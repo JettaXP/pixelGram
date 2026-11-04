@@ -521,6 +521,7 @@ private fun ChatViewContent(
     }
     PluginViewer.path?.let { path -> PluginDialog(path, telegram) { PluginViewer.path = null } }
     BackupViewer.path?.let { path -> BackupImportDialog(java.io.File(path), settings) { BackupViewer.path = null } }
+    ThemeImport.request?.let { request -> ThemeImportDialog(request, settings) { ThemeImport.request = null } }
     MarkdownViewer.path?.let { path -> MarkdownDialog(path) { MarkdownViewer.path = null } }
     deleting?.let { message ->
         val private = chat.privateUserId != 0L && !telegram.isSavedMessages(chat.id)
@@ -971,6 +972,17 @@ private fun ChatViewContent(
                         null
                     },
                 )
+            }
+            if (chat.privateUserId != 0L && !telegram.isBot(chat) && !telegram.isSavedMessages(chat.id)) {
+                var greet by remember(chat.id) { mutableStateOf(false) }
+                val noMessages = shown.isEmpty()
+                LaunchedEffect(chat.id, noMessages) {
+                    greet = false
+                    if (!noMessages) return@LaunchedEffect
+                    delay(WelcomeDelayMs)
+                    greet = true
+                }
+                if (greet) EmptyChatGreeting(chat, telegram, Modifier.align(Alignment.Center).padding(16.dp))
             }
             if (chat.privateUserId != 0L && telegram.isBot(chat)) {
                 var welcome by remember(chat.id) { mutableStateOf(false) }

@@ -932,6 +932,20 @@ class Telegram(
         send(TdApi.SetBirthdate(date), okOrError(done))
     }
 
+    fun greetingStickers(onResult: (List<TdApi.Sticker>) -> Unit) {
+        if (System.getProperty("pixelgram.demo") == "true") return onResult(demoStickers())
+        send(TdApi.GetGreetingStickers()) { result -> onResult((result as? TdApi.Stickers)?.stickers?.toList().orEmpty()) }
+    }
+
+    fun setStartPage(title: String, message: String, sticker: TdApi.Sticker?, done: (String?) -> Unit) {
+        val page = if (title.isBlank() && message.isBlank() && sticker == null) null else TdApi.InputBusinessStartPage(
+            title.trim(),
+            message.trim(),
+            sticker?.sticker?.let { file -> file.remote?.id?.takeIf { it.isNotEmpty() }?.let { TdApi.InputFileRemote(it) } ?: TdApi.InputFileId(file.id) },
+        )
+        send(TdApi.SetBusinessStartPage(page), okOrError(done))
+    }
+
     fun setProfilePhoto(path: String, done: (String?) -> Unit) =
         send(TdApi.SetProfilePhoto(TdApi.InputChatPhotoStatic(TdApi.InputFileLocal(path)), false), okOrError(done))
 
@@ -1004,6 +1018,9 @@ class Telegram(
     }
 
     fun userFullInfo(userId: Long, onResult: (TdApi.UserFullInfo?) -> Unit) {
+        if (System.getProperty("pixelgram.demo.startpage") == "true") return onResult(TdApi.UserFullInfo().apply {
+            businessInfo = TdApi.BusinessInfo().apply { startPage = TdApi.BusinessStartPage("Hey, it's Bob!", "Tap the sticker to say hi", demoStickers().firstOrNull()) }
+        })
         send(TdApi.GetUserFullInfo().apply { this.userId = userId }) { result ->
             (result as? TdApi.UserFullInfo)?.let { blockedUsers[userId] = it.blockList != null }
             onResult(result as? TdApi.UserFullInfo)
