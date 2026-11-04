@@ -1182,6 +1182,11 @@ class Telegram(
                 } else if (filePaths.remove(file.id) != null) {
                     requestedFiles.remove(file.id)
                 }
+                if (local != null && local.isDownloadingActive && local.path.isNotEmpty()) {
+                    partialFiles[file.id] = local.path to local.downloadedPrefixSize
+                } else if (local?.isDownloadingCompleted == true || local?.isDownloadingActive == false) {
+                    partialFiles.remove(file.id)
+                }
                 val total = maxOf(file.size, file.expectedSize).toFloat()
                 when {
                     total > 0 && local?.isDownloadingActive == true -> transfers[file.id] = local.downloadedSize / total
@@ -3388,6 +3393,18 @@ class Telegram(
         return if (local != null && local.isDownloadingCompleted) local.path else null
     }
 
+    private val partialFiles = java.util.concurrent.ConcurrentHashMap<Int, Pair<String, Long>>()
+
+    fun streamPath(file: TdApi.File?, minimum: Long = StreamStartBytes): String? {
+        file ?: return null
+        localPath(file)?.let { return it }
+        progress(file)
+        val (path, ready) = partialFiles[file.id] ?: return null
+        return path.takeIf { ready >= minimum }
+    }
+
+    fun isDownloaded(file: TdApi.File?): Boolean = localPath(file) != null
+
     fun download(file: TdApi.File?) {
         file ?: return
         if (localPath(file) != null || !requestedFiles.add(file.id)) return
@@ -3614,3 +3631,4 @@ fun imageSize(file: File): Pair<Int, Int> = runCatching {
 
 private const val PhotoWindow = 100
 private const val DefaultGiftSellPeriod = 7 * 24 * 60 * 60
+private const val StreamStartBytes = 192L * 1024

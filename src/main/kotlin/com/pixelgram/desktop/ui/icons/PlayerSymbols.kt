@@ -24,3 +24,6 @@ val Icons.Rounded.FormatQuote: ImageVector get() = IconPacks.icon("Rounded.Forma
 
 private val openInFullSymbol by lazy { raised("Rounded.OpenInFull", "M160-120q-17 0-28.5-11.5T120-160v-240q0-17 11.5-28.5T160-440q17 0 28.5 11.5T200-400v144l504-504H560q-17 0-28.5-11.5T520-800q0-17 11.5-28.5T560-840h240q17 0 28.5 11.5T840-800v240q0 17-11.5 28.5T800-520q-17 0-28.5-11.5T760-560v-144L256-200h144q17 0 28.5 11.5T440-160q0 17-11.5 28.5T400-120H160Z") }
 val Icons.Rounded.OpenInFull: ImageVector get() = IconPacks.icon("Rounded.OpenInFull", openInFullSymbol)
+
+private val trackNoteSymbol by lazy { raised("Rounded.TrackNote", "M287-167q-47-47-47-113t47-113q47-47 113-47 23 0 42.5 5.5T480-418v-382q0-17 11.5-28.5T520-840h160q17 0 28.5 11.5T720-800v80q0 17-11.5 28.5T680-680H560v400q0 66-47 113t-113 47q-66 0-113-47Z") }
+val Icons.Rounded.TrackNote: ImageVector get() = trackNoteSymbol

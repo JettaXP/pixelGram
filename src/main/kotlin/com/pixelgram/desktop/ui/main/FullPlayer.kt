@@ -87,7 +87,7 @@ import com.pixelgram.desktop.ui.icons.QueueMusic
 import com.pixelgram.desktop.ui.icons.RepeatOne
 import com.pixelgram.desktop.ui.icons.filled.Favorite
 import com.pixelgram.desktop.ui.icons.filled.KeyboardArrowDown
-import com.pixelgram.desktop.ui.icons.filled.MusicNote
+import com.pixelgram.desktop.ui.icons.TrackNote
 import com.pixelgram.desktop.ui.icons.filled.Repeat
 import com.pixelgram.desktop.ui.icons.filled.RepeatOn
 import com.pixelgram.desktop.ui.icons.filled.Shuffle
@@ -177,7 +177,11 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                androidx.compose.animation.AnimatedVisibility(FullPlayer.view != PlayerView.Cover, enter = fadeIn(), exit = fadeOut()) {
+                androidx.compose.animation.AnimatedVisibility(
+                    FullPlayer.view != PlayerView.Cover,
+                    enter = fadeIn() + androidx.compose.animation.expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), expandFrom = Alignment.Start),
+                    exit = fadeOut() + androidx.compose.animation.shrinkHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), shrinkTowards = Alignment.Start),
+                ) {
                     SmallCover(
                         audio,
                         telegram,
@@ -217,6 +221,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                 onSeek = AudioPlayer::seekCurrent,
                 modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
                 playing = AudioPlayer.playing,
+                duration = AudioPlayer.duration,
             )
             Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
                 Text(formatDuration(AudioPlayer.position.toInt()), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
@@ -372,7 +377,7 @@ private fun AmbientBackdrop(cover: List<androidx.compose.ui.graphics.Color>?, mo
                 val turn = phase * spot.speed + i * 2.1f
                 val center = androidx.compose.ui.geometry.Offset(
                     w * (spot.x + 0.16f * kotlin.math.sin(turn)),
-                    h * (spot.y + 0.1f * kotlin.math.cos(turn * 0.8f)),
+                    h * (spot.y + 0.1f * kotlin.math.cos(turn + spot.y * 3f)),
                 )
                 drawCircle(blobs[i % blobs.size].copy(alpha = if (dark) 0.6f else 0.45f), radius = w * spot.radius, center = center)
             }
@@ -428,11 +433,8 @@ private fun SmallCover(audio: TdApi.Audio?, telegram: Telegram, size: androidx.c
         modifier.size(size).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        if (file != null || mini != null) {
-            ThumbImage(file, mini, telegram, Modifier.fillMaxSize())
-        } else {
-            Icon(Icons.Filled.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(size / 2.4f))
-        }
+        Icon(Icons.Rounded.TrackNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(size / 2.4f))
+        if (file != null || mini != null) ThumbImage(file, mini, telegram, Modifier.fillMaxSize())
     }
 }
 
@@ -440,10 +442,24 @@ private fun SmallCover(audio: TdApi.Audio?, telegram: Telegram, size: androidx.c
 private fun BigCover(audio: TdApi.Audio?, telegram: Telegram, modifier: Modifier = Modifier) {
     val (file, mini) = coverFile(audio)
     val breathe by animateFloatAsState(if (AudioPlayer.playing) 1f else 0.9f, spring(dampingRatio = 0.6f, stiffness = 220f))
-    val spin = rememberInfiniteTransition()
-    val angle by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(24_000, easing = LinearEasing), AnimationRepeat.Restart))
+    val spin = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(AudioPlayer.playing) {
+        if (AudioPlayer.playing) {
+            while (true) {
+                spin.animateTo(spin.value + 360f, tween(SpinMs, easing = LinearEasing))
+                spin.snapTo(spin.value % 360f)
+            }
+        } else {
+            val rest = kotlin.math.round(spin.value / CookieStep) * CookieStep
+            spin.animateTo(rest, spring(dampingRatio = 0.55f, stiffness = 120f))
+            spin.snapTo(spin.value % 360f)
+        }
+    }
+    val angle = spin.value
     Box(Modifier.aspectRatio(1f).then(modifier), contentAlignment = Alignment.Center) {
-        if (file != null || mini != null) {
+        LaunchedEffect(file?.id) { telegram.download(file) }
+        val hasImage = mini != null || (file != null && telegram.localPath(file) != null)
+        if (hasImage) {
             Box(
                 Modifier
                     .fillMaxSize()
@@ -452,7 +468,12 @@ private fun BigCover(audio: TdApi.Audio?, telegram: Telegram, modifier: Modifier
                         scaleY = breathe
                     }
                     .clip(RoundedCornerShape(32.dp)),
-            ) { ThumbImage(file, mini, telegram, Modifier.fillMaxSize()) }
+            ) {
+                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.TrackNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(96.dp))
+                }
+                ThumbImage(file, mini, telegram, Modifier.fillMaxSize())
+            }
         } else {
             Box(
                 Modifier
@@ -460,20 +481,22 @@ private fun BigCover(audio: TdApi.Audio?, telegram: Telegram, modifier: Modifier
                     .graphicsLayer {
                         scaleX = breathe
                         scaleY = breathe
-                        rotationZ = if (AudioPlayer.playing) angle else 0f
+                        rotationZ = angle
                     }
                     .clip(MaterialShapes.Cookie12Sided.toShape())
                     .background(MaterialTheme.colorScheme.primaryContainer),
             )
-            Icon(Icons.Filled.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(96.dp))
+            Icon(Icons.Rounded.TrackNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(96.dp))
         }
     }
 }
 
 @Composable
 private fun LyricsView(audio: TdApi.Audio?) {
-    val artist = audio?.performer.orEmpty()
-    val title = audio?.title?.ifBlank { null } ?: audio?.fileName?.substringBeforeLast('.').orEmpty()
+    val named = audio?.fileName?.substringBeforeLast('.').orEmpty()
+    val split = named.split(" - ", " – ", limit = 2).takeIf { it.size == 2 }
+    val artist = audio?.performer?.ifBlank { null } ?: split?.first()?.trim().orEmpty()
+    val title = audio?.title?.ifBlank { null } ?: split?.last()?.trim() ?: named
     val result by produceState(Lyrics.cached(artist, title) ?: LyricsResult.Loading, artist, title) {
         value = Lyrics.cached(artist, title) ?: LyricsResult.Loading
         if (value == LyricsResult.Loading) value = withContext(Dispatchers.IO) { Lyrics.load(artist, title, audio?.duration ?: 0) }
@@ -481,7 +504,7 @@ private fun LyricsView(audio: TdApi.Audio?) {
     when (val lyrics = result) {
         LyricsResult.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator() }
         LyricsResult.NotFound -> LyricsState(Icons.Rounded.FormatQuote, "No lyrics found", "There are no lyrics for this track on LRCLIB.")
-        LyricsResult.Instrumental -> LyricsState(Icons.Filled.MusicNote, "Instrumental", "This track is marked as having no lyrics.")
+        LyricsResult.Instrumental -> LyricsState(Icons.Rounded.TrackNote, "Instrumental", "This track is marked as having no lyrics.")
         is LyricsResult.Plain -> Column(
             Modifier.fillMaxSize().edgeFade().verticalScroll(rememberScrollState()).padding(vertical = 40.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -528,7 +551,7 @@ private fun SyncedLyrics(lines: List<LyricLine>) {
     }
     LazyColumn(
         state = state,
-        contentPadding = PaddingValues(vertical = 120.dp),
+        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 120.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
         modifier = Modifier
             .fillMaxSize()
@@ -561,7 +584,7 @@ private fun SyncedLyrics(lines: List<LyricLine>) {
                         scaleY = scale
                         transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
                     }
-                    .blur(blur.dp)
+                    .blur(blur.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
                     .clip(RoundedCornerShape(12.dp))
                     .clickable {
                         pausedUntil = 0L
@@ -613,6 +636,8 @@ private fun Modifier.edgeFade(): Modifier = this
     }
 
 private const val FollowPauseMs = 3_000L
+private const val SpinMs = 24_000
+private const val CookieStep = 30f
 private const val CoverKey = "player-cover"
 
 @Composable

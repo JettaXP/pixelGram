@@ -498,6 +498,24 @@ fun rememberOpener(file: TdApi.File?, telegram: Telegram, onReady: (String) -> U
     }
 }
 
+@Composable
+fun rememberStreamOpener(file: TdApi.File?, telegram: Telegram, onReady: (String) -> Unit): Pair<Boolean, () -> Unit> {
+    var waiting by remember(file?.id) { mutableStateOf(false) }
+    val path = telegram.streamPath(file)
+    LaunchedEffect(path, waiting) {
+        if (waiting && path != null) {
+            waiting = false
+            onReady(path)
+        }
+    }
+    return (waiting && path == null) to {
+        if (path != null) onReady(path) else {
+            waiting = true
+            telegram.download(file)
+        }
+    }
+}
+
 fun formatSize(bytes: Long): String = when {
     bytes >= 1L shl 30 -> "%.1f GB".format(bytes / (1L shl 30).toDouble())
     bytes >= 1L shl 20 -> "%.1f MB".format(bytes / (1L shl 20).toDouble())
@@ -709,7 +727,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
 @Composable
 fun PlayButton(key: Long, chatId: Long, title: String, file: TdApi.File?, telegram: Telegram, audio: TdApi.Audio? = null, cover: TdApi.File? = null) {
     val scheme = MaterialTheme.colorScheme
-    val (busy, start) = rememberOpener(file, telegram) { path -> AudioPlayer.toggle(key, path, title, chatId, audio) }
+    val (busy, start) = rememberStreamOpener(file, telegram) { path -> AudioPlayer.toggle(key, path, title, chatId, audio) { telegram.isDownloaded(file) } }
     val active = AudioPlayer.current == key
     val downloaded = telegram.localPath(file) != null
     val size = if (cover != null) CoverButton else PlayerButton

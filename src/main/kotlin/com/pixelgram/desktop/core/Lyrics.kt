@@ -29,16 +29,64 @@ object Lyrics {
         val key = key(artist, title)
         cache[key]?.let { return it }
         if (title.isBlank()) return LyricsResult.NotFound
-        val exact = request(
-            "https://lrclib.net/api/get?artist_name=${encode(artist)}&track_name=${encode(title)}" +
-                if (duration > 0) "&duration=$duration" else "",
-        )
-        val body = exact ?: request(
-            "https://lrclib.net/api/search?track_name=${encode(title)}" + if (artist.isNotBlank()) "&artist_name=${encode(artist)}" else "",
-        )?.takeIf { found -> field(found, "trackName")?.let { normalize(it) == normalize(title) } == true }
-        val result = body?.let(::parse) ?: LyricsResult.NotFound
+        val base = "https://lrclib.net/api/get?artist_name=${encode(artist)}&track_name=${encode(title)}"
+        val direct = listOfNotNull(
+            if (duration > 0) request("$base&duration=$duration") else null,
+            request(base),
+        ).map(::parse).firstOrNull { it.useful() }
+        val result = direct ?: search(artist, title) ?: LyricsResult.NotFound
         cache[key] = result
         return result
+    }
+
+    private fun search(artist: String, title: String): LyricsResult? {
+        val queries = listOfNotNull(
+            "track_name=${encode(title)}" + if (artist.isNotBlank()) "&artist_name=${encode(artist)}" else "",
+            "q=${encode("$artist $title".trim())}",
+        )
+        val wanted = normalize(title)
+        val candidates = queries.asSequence()
+            .mapNotNull { request("https://lrclib.net/api/search?$it") }
+            .flatMap { objects(it) }
+            .filter { item -> field(item, "trackName")?.let { normalize(it) == wanted || normalize(it).contains(wanted) } == true }
+            .map(::parse)
+            .filter { it.useful() }
+            .toList()
+        return candidates.firstOrNull { it is LyricsResult.Synced }
+            ?: candidates.firstOrNull { it is LyricsResult.Instrumental }
+            ?: candidates.firstOrNull()
+    }
+
+    private fun LyricsResult.useful(): Boolean = when (this) {
+        LyricsResult.Instrumental -> true
+        is LyricsResult.Synced -> lines.count { it.text.isNotBlank() } >= MinLines
+        is LyricsResult.Plain -> lines.count { it.isNotBlank() } >= MinLines
+        else -> false
+    }
+
+    private fun objects(body: String): List<String> {
+        val out = mutableListOf<String>()
+        var depth = 0
+        var start = -1
+        var quoted = false
+        var escaped = false
+        body.forEachIndexed { i, c ->
+            when {
+                escaped -> escaped = false
+                c == '\\' && quoted -> escaped = true
+                c == '"' -> quoted = !quoted
+                quoted -> Unit
+                c == '{' -> {
+                    if (depth == 0) start = i
+                    depth++
+                }
+                c == '}' -> {
+                    depth--
+                    if (depth == 0 && start >= 0) out += body.substring(start, i + 1)
+                }
+            }
+        }
+        return out
     }
 
     private fun request(url: String): String? = runCatching {
@@ -120,3 +168,5 @@ object Lyrics {
 
     private fun encode(value: String) = URLEncoder.encode(value, Charsets.UTF_8)
 }
+
+private const val MinLines = 3

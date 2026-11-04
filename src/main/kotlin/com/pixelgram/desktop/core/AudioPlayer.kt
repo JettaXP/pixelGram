@@ -59,19 +59,22 @@ object AudioPlayer {
     @Volatile private var seekTo: Float? = null
     @Volatile private var generation = 0
 
-    fun toggle(key: Long, path: String, title: String, chatId: Long, audio: TdApi.Audio? = null) {
+    fun toggle(key: Long, path: String, title: String, chatId: Long, audio: TdApi.Audio? = null, complete: (() -> Boolean)? = null) {
         if (key == current && !loading) {
             paused = playing
             playing = !playing
             return
         }
-        play(key, path, title, chatId, audio)
+        play(key, path, title, chatId, audio, complete)
     }
 
-    fun play(key: Long, path: String, title: String, chatId: Long, audio: TdApi.Audio? = null) {
+    @Volatile private var growing: (() -> Boolean)? = null
+
+    fun play(key: Long, path: String, title: String, chatId: Long, audio: TdApi.Audio? = null, complete: (() -> Boolean)? = null) {
         this.title = title
         this.chatId = chatId
         this.audio = audio
+        growing = complete
         start(key, path, 0f)
     }
 
@@ -104,11 +107,9 @@ object AudioPlayer {
 
     fun seek(key: Long, path: String, fraction: Float) {
         if (key == current) {
-            seekTo = fraction.coerceIn(0f, 1f) * duration
-            if (!playing) {
-                paused = false
-                playing = true
-            }
+            val target = fraction.coerceIn(0f, 1f) * duration
+            seekTo = target
+            position = target
         } else {
             start(key, path, fraction)
         }
@@ -139,7 +140,8 @@ object AudioPlayer {
     private fun ui(run: Int, block: () -> Unit) = EventQueue.invokeLater { if (run == generation) block() }
 
     private fun play(run: Int, path: String, fraction: Float) {
-        if (File(path).length() > StreamBytes) return stream(run, path, fraction)
+        val unfinished = growing?.let { done -> !done() } == true
+        if (unfinished || File(path).length() > StreamBytes) return stream(run, path, fraction)
         val pcm = decode(File(path))
         val frames = pcm.samples.size / pcm.channels
         val total = frames.toFloat() / pcm.rate
@@ -235,6 +237,7 @@ object AudioPlayer {
     }
 
     private fun stream(run: Int, path: String, fraction: Float) {
+        val done = growing
         val grabber = FFmpegFrameGrabber(path).apply {
             sampleMode = FrameGrabber.SampleMode.SHORT
             sampleFormat = avutil.AV_SAMPLE_FMT_S16
@@ -242,7 +245,8 @@ object AudioPlayer {
         grabber.start()
         val channels = grabber.audioChannels.coerceAtLeast(1)
         val rate = grabber.sampleRate.coerceAtLeast(1)
-        val total = grabber.lengthInTime / MicrosPerSecond
+        val known = audio?.duration?.toFloat()?.takeIf { it > 0f }
+        val total = if (done != null && !done() && known != null) known else (grabber.lengthInTime / MicrosPerSecond).takeIf { it > 0f } ?: (known ?: 0f)
         ui(run) {
             duration = total
             loading = false
@@ -289,6 +293,12 @@ object AudioPlayer {
                     continue
                 }
                 val frame = grabber.grabSamples()
+                if (frame == null && done != null && !done()) {
+                    Thread.sleep(GrowWaitMs)
+                    grabber.restart()
+                    grabber.setTimestamp((position * MicrosPerSecond).toLong())
+                    continue
+                }
                 if (frame == null) {
                     if (repeat) {
                         grabber.setTimestamp(0)
@@ -505,3 +515,5 @@ object AudioPlayer {
 private const val RewindSpeed = 3f
 private const val ForwardSpeed = 4f
 private const val RewindStep = 0.08f
+private const val GrowWaitMs = 250L
+

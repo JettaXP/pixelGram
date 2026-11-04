@@ -86,7 +86,25 @@ fun Telegram.loadDemo() {
             }
             javax.swing.SwingUtilities.invokeLater {
                 com.pixelgram.desktop.ui.main.AudioQueue.playlist = tracks
-                com.pixelgram.desktop.core.AudioPlayer.play(first.audio.id.toLong(), path, com.pixelgram.desktop.ui.main.AudioQueue.trackTitle(first), 0L, first)
+                if (System.getProperty("pixelgram.demo.grow") == "true") {
+                    val source = java.io.File(path).readBytes()
+                    val target = java.io.File.createTempFile("grow", "." + path.substringAfterLast('.')).apply { deleteOnExit() }
+                    val finished = java.util.concurrent.atomic.AtomicBoolean(false)
+                    target.writeBytes(source.copyOf(source.size / 10))
+                    Thread {
+                        var written = source.size / 10
+                        while (written < source.size) {
+                            Thread.sleep(500)
+                            val next = minOf(source.size, written + source.size / 20)
+                            java.io.FileOutputStream(target, true).use { it.write(source, written, next - written) }
+                            written = next
+                        }
+                        finished.set(true)
+                    }.apply { isDaemon = true }.start()
+                    com.pixelgram.desktop.core.AudioPlayer.play(first.audio.id.toLong(), target.absolutePath, com.pixelgram.desktop.ui.main.AudioQueue.trackTitle(first), 0L, first) { finished.get() }
+                } else {
+                    com.pixelgram.desktop.core.AudioPlayer.play(first.audio.id.toLong(), path, com.pixelgram.desktop.ui.main.AudioQueue.trackTitle(first), 0L, first)
+                }
                 com.pixelgram.desktop.ui.main.FullPlayer.open = true
                 com.pixelgram.desktop.ui.main.FullPlayer.view = when (System.getProperty("pixelgram.demo.player")) {
                     "lyrics" -> com.pixelgram.desktop.ui.main.PlayerView.Lyrics

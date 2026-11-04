@@ -20,6 +20,8 @@ import androidx.compose.material3.ripple
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.clickable
@@ -179,19 +181,20 @@ object AudioQueue {
 @Composable
 fun AudioQueueEffects(telegram: Telegram) {
     val pending = AudioQueue.pending
-    val path = pending?.let { telegram.localPath(AudioQueue.file(it)) }
+    val path = pending?.let { telegram.streamPath(AudioQueue.file(it)) }
     LaunchedEffect(pending?.key, path) {
         if (pending != null && path != null) {
             AudioQueue.pending = null
-            AudioPlayer.play(pending.key, path, AudioQueue.title(pending), pending.chatId, (pending.content as? TdApi.MessageAudio)?.audio)
+            val file = AudioQueue.file(pending)
+            AudioPlayer.play(pending.key, path, AudioQueue.title(pending), pending.chatId, (pending.content as? TdApi.MessageAudio)?.audio) { telegram.isDownloaded(file) }
         }
     }
     val track = AudioQueue.pendingTrack
-    val trackPath = track?.let { telegram.localPath(it.audio) }
+    val trackPath = track?.let { telegram.streamPath(it.audio) }
     LaunchedEffect(track?.audio?.id, trackPath) {
         if (track != null && trackPath != null) {
             AudioQueue.pendingTrack = null
-            AudioPlayer.play(track.audio.id.toLong(), trackPath, AudioQueue.trackTitle(track), 0L, track)
+            AudioPlayer.play(track.audio.id.toLong(), trackPath, AudioQueue.trackTitle(track), 0L, track) { telegram.isDownloaded(track.audio) }
         }
     }
     DisposableEffect(telegram) {
@@ -320,6 +323,7 @@ fun MiniPlayer(telegram: Telegram) {
                     onSeek = AudioPlayer::seekCurrent,
                     modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
                     playing = AudioPlayer.playing,
+                    duration = AudioPlayer.duration,
                 )
             }
         }
@@ -489,34 +493,105 @@ private const val ControlScale = 0.5f
 private const val HoldDelayMs = 400L
 private val ControlGap = 4.dp
 
-private const val WaveSettleMs = 260
+private const val WaveSettleMs = 420
 private val MiniVolumeWidth = 96.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = Modifier, playing: Boolean = true) {
-    var dragging by remember { mutableStateOf<Float?>(null) }
-    val wave by animateFloatAsState(if (playing) 1f else 0f, androidx.compose.animation.core.tween(WaveSettleMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
-    val interaction = remember { MutableInteractionSource() }
-    androidx.compose.material3.Slider(
-        value = dragging ?: fraction.coerceIn(0f, 1f),
-        onValueChange = { dragging = it },
-        onValueChangeFinished = {
-            dragging?.let(onSeek)
-            dragging = null
-        },
-        interactionSource = interaction,
-        thumb = { com.pixelgram.desktop.ui.components.expressive.SliderThumb(interaction, height = 22.dp) },
-        track = { state ->
-            LinearWavyProgressIndicator(
-                progress = { state.value },
-                modifier = Modifier.fillMaxWidth(),
-                amplitude = { progress -> WavyProgressIndicatorDefaults.indicatorAmplitude(progress) * wave },
-                waveSpeed = if (playing) WavyProgressIndicatorDefaults.LinearDeterminateWavelength else 0.dp,
+fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = Modifier, playing: Boolean = true, duration: Float = 0f) {
+    var drag by remember { mutableStateOf<Float?>(null) }
+    val amplitude = remember { androidx.compose.animation.core.Animatable(if (playing) 1f else 0f) }
+    var phase by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val active = playing && drag == null
+    LaunchedEffect(active) {
+        amplitude.animateTo(if (active) 1f else 0f, androidx.compose.animation.core.tween(WaveSettleMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+    }
+    LaunchedEffect(active) {
+        var last = 0L
+        while (active || amplitude.value > 0.001f) {
+            androidx.compose.runtime.withFrameNanos { now ->
+                if (last != 0L) phase += (now - last) / 1_000_000_000f * WaveCyclesPerSecond * amplitude.value
+                last = now
+            }
+        }
+    }
+    val colors = MaterialTheme.colorScheme
+    val shown = (drag ?: fraction).coerceIn(0f, 1f)
+    Box(modifier.height(28.dp)) {
+        androidx.compose.foundation.Canvas(
+            Modifier
+                .matchParentSize()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val down = awaitPointerEvent()
+                            val first = down.changes.firstOrNull { it.pressed } ?: continue
+                            var at = (first.position.x / size.width).coerceIn(0f, 1f)
+                            drag = at
+                            first.consume()
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull() ?: break
+                                at = (change.position.x / size.width).coerceIn(0f, 1f)
+                                drag = at
+                                change.consume()
+                                if (!change.pressed) break
+                            }
+                            onSeek(at)
+                            drag = null
+                        }
+                    }
+                },
+        ) {
+            val mid = size.height / 2f
+            val stroke = 4.dp.toPx()
+            val gap = 5.dp.toPx()
+            val x = size.width * shown
+            val amp = 3.dp.toPx() * amplitude.value
+            val wavelength = 26.dp.toPx()
+            val end = (x - gap).coerceAtLeast(0f)
+            if (end > stroke / 2) {
+                val path = androidx.compose.ui.graphics.Path()
+                var px = stroke / 2
+                path.moveTo(px, mid + amp * kotlin.math.sin((px / wavelength - phase) * 2f * kotlin.math.PI.toFloat()))
+                while (px < end) {
+                    px = (px + 2f).coerceAtMost(end)
+                    path.lineTo(px, mid + amp * kotlin.math.sin((px / wavelength - phase) * 2f * kotlin.math.PI.toFloat()))
+                }
+                drawPath(path, colors.primary, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = StrokeCap.Round))
+            }
+            val rest = x + gap
+            if (rest < size.width - stroke / 2) {
+                drawLine(colors.secondaryContainer, Offset(rest, mid), Offset(size.width - stroke / 2, mid), stroke, StrokeCap.Round)
+            }
+            drawCircle(colors.primary, stroke / 2, Offset(size.width - stroke / 2, mid))
+            val thumb = if (drag != null) 6.dp.toPx() else 4.dp.toPx()
+            drawRoundRect(
+                colors.primary,
+                topLeft = Offset(x - thumb / 2, mid - 11.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(thumb, 22.dp.toPx()),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(thumb / 2),
             )
-        },
-        modifier = modifier.height(28.dp),
-    )
+        }
+        val label = drag
+        if (label != null && duration > 0f) {
+            androidx.compose.ui.layout.Layout(
+                content = {
+                    Surface(shape = CircleShape, color = colors.inverseSurface, contentColor = colors.inverseOnSurface, shadowElevation = 4.dp) {
+                        Text(formatDuration((label * duration).toInt()), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                    }
+                },
+                modifier = Modifier.matchParentSize().zIndex(1f),
+            ) { measurables, constraints ->
+                val bubble = measurables.first().measure(constraints.copy(minWidth = 0, minHeight = 0))
+                layout(constraints.maxWidth, constraints.maxHeight) {
+                    val x = (constraints.maxWidth * label - bubble.width / 2f).toInt().coerceIn(0, (constraints.maxWidth - bubble.width).coerceAtLeast(0))
+                    bubble.place(x, -bubble.height - 6.dp.roundToPx())
+                }
+            }
+        }
+    }
 }
 
 private val FilletRadius = 24.dp
+private const val WaveCyclesPerSecond = 0.9f
