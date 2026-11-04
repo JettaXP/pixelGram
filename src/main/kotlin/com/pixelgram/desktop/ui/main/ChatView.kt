@@ -143,6 +143,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -786,23 +788,16 @@ private fun ChatViewContent(
                     val flashed = highlight?.takeIf { it.first == message.id }
                     if (flashed != null) {
                         LaunchedEffect(flashed) {
-                            flash.snapTo(1f)
-                            delay(HighlightHoldMs)
-                            flash.animateTo(0f, tween(HighlightFadeMs))
+                            flash.snapTo(0f)
+                            repeat(PulseCount) {
+                                flash.animateTo(1f, tween(PulseInMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                                flash.animateTo(0f, tween(PulseOutMs, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                            }
                         }
                     }
-                    val flashColor = MaterialTheme.colorScheme.primary
                     val itemModifier = Modifier
                         .padding(top = if (firstInRun && !newDay) GroupOuterGap else 0.dp)
                         .graphicsLayer { translationY = rise.value * size.height }
-                        .drawBehind {
-                            if (flash.value > 0f) {
-                                drawRoundRect(
-                                    flashColor.copy(alpha = HighlightAlpha * flash.value),
-                                    cornerRadius = CornerRadius(HighlightCorner.toPx()),
-                                )
-                            }
-                        }
                     val quote: (@Composable () -> Unit)? = if (message.replyToId != 0L) {
                         {
                             val replied = telegram.replyPreview(chat.id, message.replyToId)
@@ -823,6 +818,7 @@ private fun ChatViewContent(
                     } else {
                         null
                     }
+                    androidx.compose.runtime.CompositionLocalProvider(LocalBubblePulse provides { flash.value }) {
                     Column(
                         if (PowerSaving.messageAnimations) {
                             Modifier.animateItem(fadeInSpec = if (message.fresh) null else fade, placementSpec = if (listState.isScrollInProgress) null else placement, fadeOutSpec = fade)
@@ -925,6 +921,7 @@ private fun ChatViewContent(
                             }
                         }
                         if (index == 0) TypingBubble(chat, telegram)
+                    }
                     }
                 }
             }
@@ -1372,7 +1369,11 @@ fun MessageBubble(
             ),
             color = if (outgoing) colors.primaryContainer else colors.surfaceContainerHigh,
             contentColor = if (outgoing) colors.onPrimaryContainer else colors.onSurface,
-            modifier = Modifier.widthIn(max = 520.dp),
+            modifier = Modifier.widthIn(max = 520.dp).pulseRing(
+                bubbleShape(settings.bubbleRadius.value, settings.bubbleTailRadius.value, endSide),
+                colors.primary,
+                LocalBubblePulse.current,
+            ),
         ) {
             val metaColor = (if (outgoing) colors.onPrimaryContainer else colors.onSurfaceVariant).copy(alpha = 0.7f)
             val readColor = if (outgoing) colors.outgoingAccent else metaColor
@@ -1847,10 +1848,23 @@ object PluginViewer {
     var path by mutableStateOf<String?>(null)
 }
 private const val StickToBottomPx = 48
-private val HighlightCorner = 12.dp
-private const val HighlightAlpha = 0.22f
-private const val HighlightHoldMs = 500L
-private const val HighlightFadeMs = 1200
+private const val PulseCount = 2
+private const val PulseInMs = 260
+private const val PulseOutMs = 420
+private val PulseOutset = 8.dp
+private const val PulseAlpha = 0.75f
+
+val LocalBubblePulse = androidx.compose.runtime.staticCompositionLocalOf<() -> Float> { { 0f } }
+
+private fun Modifier.pulseRing(shape: androidx.compose.ui.graphics.Shape, color: Color, pulse: () -> Float): Modifier = drawBehind {
+    val value = pulse()
+    if (value <= 0f) return@drawBehind
+    val outset = PulseOutset.toPx() * value
+    val outline = shape.createOutline(androidx.compose.ui.geometry.Size(size.width + outset * 2, size.height + outset * 2), layoutDirection, this)
+    translate(-outset, -outset) {
+        drawOutline(outline, color.copy(alpha = PulseAlpha * value), style = androidx.compose.ui.graphics.drawscope.Stroke(width = outset * 1.4f))
+    }
+}
 private val QuoteMinWidth = 160.dp
 private const val EditWindowSeconds = 48 * 3600
 
@@ -2002,7 +2016,8 @@ private suspend fun revealMessage(listState: LazyListState, index: Int) {
         val top = item.offset
         val bottom = item.offset + item.size
         if (top >= start && bottom <= end) return 0f
-        return if (item.size <= viewport) (top - (start + (viewport - item.size) / 2)).toFloat() else (bottom - end).toFloat()
+        val shift = if (item.size <= viewport) top - (start + (viewport - item.size) / 2) else top - start
+        return if (info.reverseLayout) -shift.toFloat() else shift.toFloat()
     }
     val visible = fit()
     if (visible != null) {
