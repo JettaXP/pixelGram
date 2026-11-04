@@ -392,7 +392,7 @@ private fun ReceivedGiftDialog(gift: TdApi.ReceivedGift, own: Boolean, telegram:
         }
         add(InfoRow(Icons.Outlined.CalendarMonth, "Date", date))
         add(InfoRow(Icons.Outlined.Star, "Value", stars(regular.starCount)))
-        if (own && gift.sellStarCount > 0) add(InfoRow(Icons.Outlined.Payments, "Can be converted to", stars(gift.sellStarCount)))
+        if (own && telegram.canSellGift(gift)) add(InfoRow(Icons.Outlined.Payments, "Can be converted to", stars(gift.sellStarCount)))
         if (gift.canBeUpgraded && regular.upgradeStarCount > 0) add(InfoRow(Icons.Outlined.Upgrade, "Upgrade", stars(regular.upgradeStarCount)))
         if (gift.isPrivate) add(InfoRow(Icons.Outlined.Info, "Sender", "Hidden from others"))
     }
@@ -442,7 +442,7 @@ private fun ReceivedGiftDialog(gift: TdApi.ReceivedGift, own: Boolean, telegram:
                                                 upgrading = true
                                             })
                                         }
-                                        if (gift.sellStarCount > 0) {
+                                        if (telegram.canSellGift(gift)) {
                                             add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Payments, "Convert to " + stars(gift.sellStarCount)) {
                                                 menu = false
                                                 selling = true

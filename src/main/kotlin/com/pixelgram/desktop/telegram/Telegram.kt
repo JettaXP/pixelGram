@@ -961,6 +961,11 @@ class Telegram(
         send(TdApi.SetProfileAudioPosition(fileId, afterFileId)) { loadMyProfileAudios() }
     }
 
+    var giftSellPeriod = DefaultGiftSellPeriod
+
+    fun canSellGift(gift: TdApi.ReceivedGift): Boolean =
+        gift.sellStarCount > 0 && (gift.date == 0 || gift.date.toLong() + giftSellPeriod > System.currentTimeMillis() / 1000)
+
     val isPremium: Boolean get() = me?.isPremium == true
 
     fun sendContent(chatId: Long, content: TdApi.InputMessageContent, replyToId: Long = 0, done: (String?) -> Unit = {}) {
@@ -1073,6 +1078,9 @@ class Telegram(
             is TdApi.UpdateAuthorizationState -> handleAuthState(update.authorizationState)
             is TdApi.UpdateNewChat -> addChat(update.chat)
             is TdApi.UpdateChatTitle -> chats[update.chatId]?.title = update.title
+            is TdApi.UpdateOption -> if (update.name == "gift_sell_period") {
+                (update.value as? TdApi.OptionValueInteger)?.value?.toInt()?.let { giftSellPeriod = it }
+            }
             is TdApi.UpdateChatPhoto -> chats[update.chatId]?.let { state ->
                 state.photo = update.photo?.small
                 state.bigPhoto = update.photo?.big
@@ -3605,3 +3613,4 @@ fun imageSize(file: File): Pair<Int, Int> = runCatching {
 }.getOrDefault(0 to 0)
 
 private const val PhotoWindow = 100
+private const val DefaultGiftSellPeriod = 7 * 24 * 60 * 60

@@ -244,6 +244,27 @@ private fun ApplicationScope.PixelApp() {
         }
         PixelTray(trayImages, settings, onOpen = { visible = true }, onQuit = quit)
     }
+    if (!hasTray && settings.trayIcon.value && com.pixelgram.desktop.core.LinuxTray.needed) {
+        val nativeIcon = remember { AppIcons.sizes(scheme).maxByOrNull { it.width } }
+        val reopen by androidx.compose.runtime.rememberUpdatedState({ visible = true })
+        val leave by androidx.compose.runtime.rememberUpdatedState(quit)
+        LaunchedEffect(Unit) {
+            val image = nativeIcon ?: return@LaunchedEffect
+            withContext(Dispatchers.IO) {
+                com.pixelgram.desktop.core.LinuxTray.start(
+                    image,
+                    com.pixelgram.desktop.core.tr("Open pixelGram"),
+                    com.pixelgram.desktop.core.tr("Quit pixelGram"),
+                    onOpen = { reopen() },
+                    onQuit = { leave() },
+                )
+            }
+        }
+        androidx.compose.runtime.DisposableEffect(Unit) {
+            com.pixelgram.desktop.core.LinuxTray.show()
+            onDispose { com.pixelgram.desktop.core.LinuxTray.hide() }
+        }
+    }
 
     val toasts = remember { ToastStack() }
     var raise by remember { mutableIntStateOf(0) }
