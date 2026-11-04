@@ -785,9 +785,25 @@ class Telegram(
         return communities[id]
     }
 
-    fun communityChats(id: Long, onResult: (List<Long>) -> Unit) {
+    val communityInfo = mutableStateMapOf<Long, TdApi.CommunityFullInfo>()
+
+    fun isMember(chat: ChatState): Boolean = chat.positions.isNotEmpty()
+
+    fun communityChats(id: Long, onResult: (List<TdApi.CommunityChat>) -> Unit) {
+        communityInfo[id]?.let { info -> onResult(info.chats.filterNotNull()) }
         send(TdApi.GetCommunityFullInfo(id)) { result ->
-            onResult((result as? TdApi.CommunityFullInfo)?.chats?.filterNotNull()?.filter { !it.isHidden }?.map { it.chatId }.orEmpty())
+            when (result) {
+                is TdApi.CommunityFullInfo -> {
+                    communityInfo[id] = result
+                    val list = result.chats.filterNotNull()
+                    list.forEach { loadChat(it.chatId) }
+                    onResult(list)
+                }
+                is TdApi.Error -> {
+                    AppLog.write("Community $id: ${result.code} ${result.message}")
+                    if (communityInfo[id] == null) onResult(emptyList())
+                }
+            }
         }
     }
 
@@ -1282,6 +1298,7 @@ class Telegram(
                 supergroupCommunity[update.supergroupId] = update.supergroupFullInfo.communityId
             }
             is TdApi.UpdateCommunity -> communities[update.community.id] = update.community
+            is TdApi.UpdateCommunityFullInfo -> communityInfo[update.communityId] = update.communityFullInfo
             is TdApi.UpdateMessageIsPinned -> {
                 messages[update.chatId]?.let { list ->
                     val index = list.indexOfFirst { it.id == update.messageId }

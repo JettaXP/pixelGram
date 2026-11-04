@@ -543,6 +543,39 @@ fun ChatInfoDialog(
                     else -> ""
                 }
                 if (subtitle.isNotEmpty()) Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                telegram.communityOf(chat)?.let { community ->
+                    var openCommunity by remember(chat.id) { mutableStateOf(false) }
+                    val count = telegram.communityInfo[community.id]?.chats?.size
+                    LaunchedEffect(community.id) { telegram.communityChats(community.id) {} }
+                    androidx.compose.material3.Surface(
+                        onClick = { openCommunity = true },
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(12.dp),
+                        ) {
+                            com.pixelgram.desktop.ui.components.AvatarImage(community.name, community.photo?.small, telegram, RoundedCornerShape(12.dp), 44.dp)
+                            Column {
+                                EmojiText(community.name, style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    com.pixelgram.desktop.core.tr("Community") + (count?.let { " · $it ${com.pixelgram.desktop.core.tr("chats")}" } ?: ""),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    if (openCommunity) {
+                        CommunityDialog(community, telegram, settings, onOpen = { id ->
+                            openCommunity = false
+                            Links.navigate?.invoke(telegram, id)
+                        }) { openCommunity = false }
+                    }
+                }
                 if (!telegram.isSavedMessages(chat.id)) {
                     var moreAt by remember(chat.id) { mutableStateOf<DpOffset?>(null) }
                     val muted = telegram.isMuted(chat)

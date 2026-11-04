@@ -37,7 +37,7 @@ import it.tdlight.jni.TdApi
 @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CommunityDialog(community: TdApi.Community, telegram: Telegram, settings: AppSettings, onOpen: (Long) -> Unit, onDismiss: () -> Unit) {
-    var chats by remember(community.id) { mutableStateOf<List<Long>?>(null) }
+    var chats by remember(community.id) { mutableStateOf<List<TdApi.CommunityChat>?>(null) }
     LaunchedEffect(community.id) { telegram.communityChats(community.id) { chats = it } }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -56,27 +56,40 @@ fun CommunityDialog(community: TdApi.Community, telegram: Telegram, settings: Ap
         },
         text = {
             val list = chats
-            when {
-                list == null -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
-                else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Chats you are in", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                    val joined = list.mapNotNull { telegram.chats[it] }
-                    LazyColumn(Modifier.heightIn(max = ListHeight), verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-                        itemsIndexed(joined, key = { _, chat -> chat.id }) { index, chat ->
-                            SegmentedListItem(
-                                onClick = { onOpen(chat.id) },
-                                shapes = groupShapes(index, joined.size),
-                                leadingContent = { ChatAvatar(chat, telegram, settings, size = 44.dp) },
-                                supportingContent = {
-                                    EmojiText(
-                                        chat.lastMessage?.let { contentText(it.content).replace('\n', ' ') }.orEmpty(),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                },
-                            ) {
-                                EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
+            if (list == null) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
+                return@AlertDialog
+            }
+            val loaded = list.filter { telegram.chats[it.chatId] != null }
+            val joined = loaded.filter { !it.isHidden && telegram.isMember(telegram.chats.getValue(it.chatId)) }
+            val viewable = loaded.filter { !it.isHidden && it !in joined }
+            val hidden = loaded.filter { it.isHidden }
+            LazyColumn(Modifier.heightIn(max = ListHeight), verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                listOf("Chats you are in" to joined, "Chats you can view" to viewable, "Hidden chats" to hidden).forEach { (title, group) ->
+                    if (group.isEmpty()) return@forEach
+                    item(key = title) {
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                        )
+                    }
+                    itemsIndexed(group, key = { _, item -> item.chatId }) { index, item ->
+                        val chat = telegram.chats.getValue(item.chatId)
+                        SegmentedListItem(
+                            onClick = { onOpen(chat.id) },
+                            shapes = groupShapes(index, group.size),
+                            leadingContent = { ChatAvatar(chat, telegram, settings, size = 44.dp) },
+                            supportingContent = {
+                                EmojiText(
+                                    chat.lastMessage?.let { contentText(it.content).replace('\n', ' ') }.orEmpty(),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                        ) {
+                            EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }

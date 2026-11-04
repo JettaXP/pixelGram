@@ -327,6 +327,7 @@ private fun OnlineAvatar(chat: ChatState, telegram: Telegram, settings: AppSetti
         val community = telegram.communityOf(chat)
         if (community != null) {
             var open by remember(chat.id) { mutableStateOf(false) }
+            Box(Modifier.matchParentSize().clip(CircleShape).clickable { open = true })
             Box(
                 Modifier
                     .align(Alignment.BottomEnd)
