@@ -223,10 +223,19 @@ private fun SetupContent(msi: File?, version: String, dark: Boolean, onExit: () 
 @Composable
 private fun Logo(logo: androidx.compose.ui.graphics.ImageBitmap?, pulsing: Boolean) {
     val transition = rememberInfiniteTransition()
-    val pulse by transition.animateFloat(1f, PulseScale, infiniteRepeatable(tween(PulseMs), RepeatMode.Reverse))
-    val scale = if (pulsing) pulse else 1f
+    val pulse by transition.animateFloat(1f, PulseScale, infiniteRepeatable(tween(PulseMs, easing = FastOutSlowInEasing), RepeatMode.Reverse))
+    val active by animateFloatAsState(if (pulsing) 1f else 0f, tween(PulseMs))
     logo?.let {
-        Image(it, contentDescription = "pixelGram", modifier = Modifier.size(LogoBox).graphicsLayer { scaleX = scale; scaleY = scale })
+        Image(
+            it,
+            contentDescription = "pixelGram",
+            filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
+            modifier = Modifier.size(LogoBox).graphicsLayer {
+                val scale = 1f + (pulse - 1f) * active
+                scaleX = scale
+                scaleY = scale
+            },
+        )
     }
 }
 
@@ -241,6 +250,7 @@ private fun Welcome(
 ) {
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Logo(logo, pulsing = false)
+        val installed = remember(target) { java.io.File(target, "pixelGram.exe").isFile }
         Text("pixelGram", style = MaterialTheme.typography.headlineMedium)
         Text(
             "Telegram client in Material 3 Expressive" + if (version.isNotEmpty()) " · $version" else "",
@@ -252,7 +262,7 @@ private fun Welcome(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)) {
                 Icon(SetupIcons.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                    Text("Install to", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if (installed) "Installed in" else "Install to", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(target.absolutePath, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.StartEllipsis)
                 }
                 FilledTonalButton(onClick = onChange) { Text("Change") }
@@ -261,7 +271,7 @@ private fun Welcome(
         Box(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), modifier = Modifier.fillMaxWidth()) {
             TextButton(onClick = onCancel) { Text("Cancel") }
-            Button(onClick = onInstall) { Text("Install") }
+            Button(onClick = onInstall) { Text(if (installed) "Update" else "Install") }
         }
     }
 }
