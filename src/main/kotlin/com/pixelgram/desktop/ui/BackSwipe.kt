@@ -34,17 +34,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+enum class BackPhase { Idle, Dragging, Committed, Cancelled }
+
 class BackSwipeState {
-    val progress = Animatable(0f)
-    val active = Animatable(0f)
-    val commit = Animatable(0f)
+    var raw by mutableStateOf(0f)
+    var phase by mutableStateOf(BackPhase.Idle)
+    var reached by mutableStateOf(false)
     var dx = 0f
     var dy = 0f
     var locked: Boolean? = null
-    var reached = false
     var at by mutableStateOf(Offset.Zero)
     var job: Job? = null
-    var follow: Job? = null
 }
 
 object BackZones {
@@ -78,90 +78,121 @@ fun Modifier.backSwipe(state: BackSwipeState, enabled: () -> Boolean, onBack: ()
                 if (state.locked == true) {
                     change.consume()
                     val raw = (state.dx / threshold).coerceAtLeast(0f)
-                    val shown = if (raw <= 1f) raw else 1f + (raw - 1f) * OverDamping
                     if (!state.reached && raw >= 1f) state.reached = true
                     if (state.reached && raw < Deactivate) state.reached = false
-                    state.follow?.cancel()
-                    state.follow = scope.launch {
-                        launch { state.progress.animateTo(shown.coerceAtMost(MaxPull), spring(dampingRatio = 1f, stiffness = FollowStiffness)) }
-                        state.active.animateTo(if (state.reached) 1f else 0f, spring(dampingRatio = 0.55f, stiffness = 700f))
-                    }
+                    state.raw = raw
+                    state.phase = BackPhase.Dragging
                 }
                 state.job?.cancel()
                 state.job = scope.launch {
                     delay(SettleMs)
                     val fire = state.locked == true && state.reached
                     val where = state.at
+                    val dragging = state.locked == true
                     state.dx = 0f
                     state.dy = 0f
                     state.locked = null
                     state.reached = false
-                    state.follow?.cancel()
+                    if (!dragging) return@launch
                     if (fire) {
+                        state.phase = BackPhase.Committed
                         val list = BackZones.list
                         if (list != null && list.contains(where)) BackZones.onList?.invoke() else onBack()
-                        state.commit.animateTo(1f, spring(dampingRatio = 1f, stiffness = 500f))
-                        state.progress.snapTo(0f)
-                        state.active.snapTo(0f)
-                        state.commit.snapTo(0f)
                     } else {
-                        launch { state.active.animateTo(0f, spring(dampingRatio = 1f, stiffness = 600f)) }
-                        state.progress.animateTo(0f, spring(dampingRatio = 1f, stiffness = 500f))
+                        state.phase = BackPhase.Cancelled
                     }
+                    delay(FinishMs)
+                    state.phase = BackPhase.Idle
+                    state.raw = 0f
                 }
             }
         }
     }
 }
 
-private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
+private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t.coerceIn(0f, 1f)
+
+private class Dims(
+    val width: Float, val height: Float, val edge: Float, val far: Float,
+    val length: Float, val arrowHeight: Float, val arrowAlpha: Float,
+    val margin: Float, val scale: Float, val alpha: Float,
+)
+
+private class Springs(
+    val width: Pair<Float, Float>, val height: Pair<Float, Float>, val edge: Pair<Float, Float>, val far: Pair<Float, Float>,
+    val arrow: Pair<Float, Float>, val margin: Pair<Float, Float>, val scale: Pair<Float, Float>,
+)
+
+private val PreSprings = Springs(650f to 1f, 1500f to 0.45f, 250f to 0.5f, 300f to 1f, 100f to 0.6f, 6000f to 1f, 120f to 0.8f)
+private val ActiveSprings = Springs(850f to 0.75f, 10000f to 1f, 2600f to 0.855f, 1200f to 0.30f, 1500f to 0.29f, 1000f to 0.8f, 325f to 0.55f)
+private val EndSprings = Springs(10000f to 1f, 10000f to 1f, 10000f to 1f, 10000f to 1f, 1500f to 0.29f, 1000f to 0.8f, 325f to 0.55f)
+private val CancelSprings = Springs(450f to 0.65f, 1500f to 0.45f, 150f to 0.5f, 300f to 0.5f, 600f to 0.4f, 800f to 0.76f, 120f to 0.8f)
+
+@Composable
+private fun springy(target: Float, spec: Pair<Float, Float>): Float {
+    val anim = remember { Animatable(target) }
+    androidx.compose.runtime.LaunchedEffect(target, spec) { anim.animateTo(target, spring(dampingRatio = spec.second, stiffness = spec.first)) }
+    return anim.value
+}
 
 @Composable
 fun BoxScope.BackSwipeIndicator(state: BackSwipeState, followList: Boolean = true) {
-    val p = state.progress.value
-    if (p <= 0f && state.commit.value <= 0f) return
+    val density = LocalDensity.current
+    val dp = density.density
+    val phase = state.phase
+    val over = ((state.raw - 1f) / StretchRange).coerceIn(0f, 1f)
+    val pre = state.raw.coerceIn(0f, 1f)
+    val (target, springs) = when {
+        phase == BackPhase.Idle -> Dims(0f, 48f, 6f, 6f, 8.6f, 5f, 0f, 4f, 0.98f, 0f) to CancelSprings
+        phase == BackPhase.Committed -> Dims(lerp(48f, 60f, over), 48f, 24f, 24f, lerp(6.4f, 5.6f, over), lerp(7.2f, 8f, over), 0f, lerp(14f, 18f, over), CommitScale, 0f) to EndSprings
+        phase == BackPhase.Cancelled -> Dims(0f, 48f, 6f, 6f, 12f, 0f, 0f, 4f, 0.98f, 1f) to CancelSprings
+        state.reached -> Dims(lerp(48f, 60f, over), 48f, 24f, 24f, lerp(6.4f, 5.6f, over), lerp(7.2f, 8f, over), 1f, lerp(14f, 18f, over), 1f, 1f) to ActiveSprings
+        else -> Dims(lerp(0f, 51f, pre), lerp(48f, 46f, pre), lerp(6f, 16f, pre), lerp(6f, 20f, pre), lerp(8.6f, 8f, pre), lerp(5f, 5.6f, pre), (pre * 4f).coerceAtMost(1f), 4f, 0.98f, 1f) to PreSprings
+    }
+    val width = springy(target.width, springs.width)
+    val height = springy(target.height, springs.height)
+    val edge = springy(target.edge, springs.edge)
+    val far = springy(target.far, springs.far)
+    val length = springy(target.length, springs.arrow)
+    val arrowHeight = springy(target.arrowHeight, springs.arrow)
+    val arrowAlpha = springy(target.arrowAlpha, if (state.reached) 180f to 0.9f else 2000f to 0.6f)
+    val margin = springy(target.margin, springs.margin)
+    val scale = springy(target.scale, springs.scale)
+    val alpha = springy(target.alpha, 10000f to 1f)
+    if (phase == BackPhase.Idle && width < 0.5f) return
     val colors = MaterialTheme.colorScheme
     val background = colors.secondaryContainer
     val arrow = colors.onSecondaryContainer
     val list = BackZones.list.takeIf { followList }
     val inList = list != null && list.contains(state.at)
     Canvas(Modifier.fillMaxSize()) {
-        val pre = p.coerceAtMost(1f)
-        val over = (p - 1f).coerceAtLeast(0f) / (MaxPull - 1f)
-        val a = state.active.value
-        val c = state.commit.value
-        val width = lerp(lerp(0f, PreWidth.toPx(), pre), ActiveWidth.toPx(), a) + (StretchWidth.toPx() - ActiveWidth.toPx()) * over * a
-        val height = lerp(lerp(EntryHeight.toPx(), PreHeight.toPx(), pre), ActiveHeight.toPx(), a)
-        val edge = lerp(lerp(EntryCorner.toPx(), PreEdgeCorner.toPx(), pre), ActiveCorner.toPx(), a)
-        val far = lerp(lerp(EntryCorner.toPx(), PreFarCorner.toPx(), pre), ActiveCorner.toPx(), a)
-        val margin = lerp(EntryMargin.toPx(), ActiveMargin.toPx(), a) + (StretchMargin.toPx() - ActiveMargin.toPx()) * over * a
-        val arrowLength = lerp(lerp(EntryArrowLength.toPx(), PreArrowLength.toPx(), pre), ActiveArrowLength.toPx(), a)
-        val arrowHeight = lerp(lerp(EntryArrowHeight.toPx(), PreArrowHeight.toPx(), pre), ActiveArrowHeight.toPx(), a)
-        val arrowAlpha = (pre * 3f).coerceIn(0f, 1f) * (1f - c)
-        val scale = lerp(lerp(EntryScale, 1f, a), CommitScale, c)
+        val w = width.coerceAtLeast(0f) * dp
+        val h = height.coerceAtLeast(0f) * dp
         val left = if (inList) list!!.left else list?.right ?: 0f
         val centerY = if (inList) list!!.center.y else size.height / 2f
-        translate(left + margin, centerY) {
-            scale(scale, scale, pivot = Offset(0f, 0f)) {
+        translate(left + margin * dp, centerY) {
+            scale(scale, scale, pivot = Offset(w, 0f)) {
                 val path = Path().apply {
                     addRoundRect(
                         RoundRect(
-                            Rect(0f, -height / 2f, width, height / 2f),
-                            topLeft = CornerRadius(edge),
-                            bottomLeft = CornerRadius(edge),
-                            topRight = CornerRadius(far),
-                            bottomRight = CornerRadius(far),
+                            Rect(0f, -h / 2f, w, h / 2f),
+                            topLeft = CornerRadius(edge.coerceAtLeast(0f) * dp),
+                            bottomLeft = CornerRadius(edge.coerceAtLeast(0f) * dp),
+                            topRight = CornerRadius(far.coerceAtLeast(0f) * dp),
+                            bottomRight = CornerRadius(far.coerceAtLeast(0f) * dp),
                         ),
                     )
                 }
-                drawPath(path, background, alpha = 1f - c)
-                val offset = (width - arrowLength) / 2f
+                drawPath(path, background, alpha = alpha.coerceIn(0f, 1f))
+                val dx = length * dp
+                val dy = arrowHeight * dp
+                val offset = (w - dx) / 2f
                 val chevron = Path().apply {
-                    moveTo(offset + arrowLength, -arrowHeight)
+                    moveTo(offset + dx, -dy)
                     lineTo(offset, 0f)
-                    lineTo(offset + arrowLength, arrowHeight)
+                    lineTo(offset + dx, dy)
                 }
-                drawPath(chevron, arrow, alpha = arrowAlpha, style = Stroke(width = ArrowThickness.toPx(), cap = StrokeCap.Square))
+                drawPath(chevron, arrow, alpha = (arrowAlpha * alpha).coerceIn(0f, 1f), style = Stroke(width = ArrowThickness.toPx(), cap = StrokeCap.Square))
             }
         }
     }
@@ -181,32 +212,11 @@ private val ScrollStep = 64.dp
 private val LockDistance = 10.dp
 private const val LockRatio = 1.2f
 private const val Deactivate = 0.8f
-private const val OverDamping = 0.35f
+private const val StretchRange = 1.5f
 private const val SettleMs = 140L
-private const val MaxPull = 1.4f
-private const val FollowStiffness = 1400f
-private const val EntryScale = 0.98f
+private const val FinishMs = 450L
 private const val CommitScale = 0.85f
 private val ArrowThickness = 4.dp
-private val EntryHeight = 48.dp
-private val EntryCorner = 6.dp
-private val EntryMargin = 4.dp
-private val EntryArrowLength = 8.6.dp
-private val EntryArrowHeight = 5.dp
-private val PreWidth = 51.dp
-private val PreHeight = 46.dp
-private val PreEdgeCorner = 16.dp
-private val PreFarCorner = 20.dp
-private val PreArrowLength = 8.dp
-private val PreArrowHeight = 5.6.dp
-private val ActiveWidth = 48.dp
-private val ActiveHeight = 48.dp
-private val ActiveCorner = 24.dp
-private val ActiveMargin = 14.dp
-private val ActiveArrowLength = 6.4.dp
-private val ActiveArrowHeight = 7.2.dp
-private val StretchWidth = 60.dp
-private val StretchMargin = 18.dp
 
 object BackSwipeHolder {
     @Composable

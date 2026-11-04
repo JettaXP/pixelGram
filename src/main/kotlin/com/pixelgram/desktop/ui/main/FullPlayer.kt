@@ -690,7 +690,7 @@ private fun GapIndicator(gap: LyricItem.Gap, now: Float, modifier: Modifier) {
             .fillMaxWidth()
             .height(GapHeight * shown)
             .graphicsLayer { alpha = shown; clip = true },
-        contentAlignment = Alignment.CenterStart,
+        contentAlignment = Alignment.Center,
     ) {
         androidx.compose.material3.CircularWavyProgressIndicator(
             progress = { smooth },

@@ -1403,11 +1403,12 @@ private fun PaidMediaContent(content: TdApi.MessagePaidMedia, telegram: Telegram
                 color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = PaidPillAlpha),
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             ) {
-                Text(
-                    com.pixelgram.desktop.core.tr("Unlock for ⭐ {n}").replace("{n}", content.starCount.toString()),
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
+                val label = com.pixelgram.desktop.core.tr("Unlock for {star} {n}").replace("{n}", content.starCount.toString())
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text(label.substringBefore("{star}").trimEnd(), style = MaterialTheme.typography.labelLarge)
+                    androidx.compose.foundation.Image(com.pixelgram.desktop.ui.icons.TelegramStar, contentDescription = null, modifier = Modifier.padding(horizontal = 4.dp).size(16.dp))
+                    Text(label.substringAfter("{star}").trimStart(), style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
         if (content.media.size > 1) {

@@ -1600,7 +1600,6 @@ File path	נתיב הקובץ
 Chats you can view	שיחות שניתן לצפות בהן
 Hidden chats	שיחות מוסתרות
 Community	קהילה
-Unlock for ⭐ {n}	שחרר נעילה עבור ⭐ {n}
 Paid media	מדיה בתשלום
 Local photo	תמונה מקומית
 Only on this device	רק במכשיר זה
@@ -1612,3 +1611,5 @@ Paste from clipboard	הדבק מהלוח
 No image in the clipboard	אין תמונה בלוח
 Local photo, only on this device	תמונה מקומית, רק במכשיר זה
 Photo set by you	התמונה הוגדרה על ידך
+Unlock for {star} {n}	שחרר נעילה עבור {star} {n}
+Remove photo	הסר תמונה

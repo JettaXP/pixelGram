@@ -1,6 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
 import com.pixelgram.desktop.ui.components.ConfirmOnEnter
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
 import com.pixelgram.desktop.ui.icons.outlined.ContentPaste
 import com.pixelgram.desktop.ui.icons.outlined.Folder
@@ -409,7 +410,6 @@ private fun ContactDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> 
     var status by remember { mutableStateOf<String?>(null) }
     var personal by remember { mutableStateOf(false) }
     LaunchedEffect(userId) { telegram.userFullInfo(userId) { info -> personal = info?.personalPhoto != null } }
-    val local = com.pixelgram.desktop.core.LocalPhotos.get(userId)
     val scope = rememberCoroutineScope()
     fun withImage(fromClipboard: Boolean, use: (String) -> Unit) {
         scope.launch {
@@ -436,17 +436,7 @@ private fun ContactDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> 
                     }) { Text("Use original name") }
                 }
                 Text("Photo", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
-                PhotoSourceRow(
-                    "Local photo",
-                    "Only on this device",
-                    onFile = { withImage(false) { path -> com.pixelgram.desktop.core.LocalPhotos.set(userId, keepLocalPhoto(userId, path)); status = "Done" } },
-                    onPaste = { withImage(true) { path -> com.pixelgram.desktop.core.LocalPhotos.set(userId, keepLocalPhoto(userId, path)); status = "Done" } },
-                    onRemove = if (local != null) {
-                        { com.pixelgram.desktop.core.LocalPhotos.set(userId, null) }
-                    } else {
-                        null
-                    },
-                )
+                LocalPhotoRow(userId)
                 if (existing) {
                     PhotoSourceRow(
                         "Set photo for me",
@@ -495,10 +485,41 @@ private fun PhotoSourceRow(title: String, subtitle: String, onFile: () -> Unit, 
         }
         IconButton(onClick = onFile) { Icon(Icons.Outlined.Folder, contentDescription = "Choose file") }
         IconButton(onClick = onPaste) { Icon(Icons.Outlined.ContentPaste, contentDescription = "Paste from clipboard") }
-        if (onRemove != null) {
-            IconButton(onClick = onRemove) { Icon(Icons.Outlined.Delete, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error) }
+    }
+    if (onRemove != null) {
+        TextButton(onClick = onRemove) {
+            Icon(Icons.Outlined.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+            Text("Remove photo", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(start = 8.dp))
         }
     }
+}
+
+@Composable
+private fun LocalPhotoRow(key: Long) {
+    val scope = rememberCoroutineScope()
+    var missing by remember { mutableStateOf(false) }
+    val local = com.pixelgram.desktop.core.LocalPhotos.get(key)
+    fun take(fromClipboard: Boolean) {
+        scope.launch {
+            val file = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                (if (fromClipboard) Attachments.fromClipboard() else Attachments.pick()).firstOrNull { it.extension.lowercase() in PhotoExtensions }
+            }
+            missing = file == null && fromClipboard
+            if (file != null) com.pixelgram.desktop.core.LocalPhotos.set(key, keepLocalPhoto(key, file.absolutePath))
+        }
+    }
+    PhotoSourceRow(
+        "Local photo",
+        "Only on this device",
+        onFile = { take(false) },
+        onPaste = { take(true) },
+        onRemove = if (local != null) {
+            { com.pixelgram.desktop.core.LocalPhotos.set(key, null) }
+        } else {
+            null
+        },
+    )
+    if (missing) Text(com.pixelgram.desktop.core.tr("No image in the clipboard"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
 }
 
 private fun keepLocalPhoto(userId: Long, path: String): String? = runCatching {
@@ -539,6 +560,7 @@ private fun RenameDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> U
                         last = originalLast
                     },
                 ) { Text("Use original name") }
+                LocalPhotoRow(key)
             }
         },
         confirmButton = {

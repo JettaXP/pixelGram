@@ -1607,7 +1607,6 @@ File path	Путь к файлу
 Chats you can view	Чаты, которые можно просматривать
 Hidden chats	Скрытые чаты
 Community	Сообщество
-Unlock for ⭐ {n}	Раскрыть за ⭐ {n}
 Paid media	Платное медиа
 Local photo	Локальное фото
 Only on this device	Только на этом устройстве
@@ -1619,3 +1618,5 @@ Paste from clipboard	Вставить из буфера обмена
 No image in the clipboard	В буфере обмена нет изображения
 Local photo, only on this device	Локальное фото, только на этом устройстве
 Photo set by you	Фото установлено вами
+Unlock for {star} {n}	Раскрыть за {star} {n}
+Remove photo	Убрать фото

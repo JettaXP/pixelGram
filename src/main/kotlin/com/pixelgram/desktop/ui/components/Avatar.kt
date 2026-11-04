@@ -148,7 +148,7 @@ fun ChatAvatar(
     }
     val replies = chat.privateUserId == RepliesUserId
     if (!telegram.isSavedMessages(chat.id) && !replies) {
-        val local = chat.privateUserId.takeIf { it != 0L }?.let { com.pixelgram.desktop.core.LocalPhotos.get(it) }?.takeIf { java.io.File(it).isFile }
+        val local = com.pixelgram.desktop.core.LocalPhotos.get(if (chat.privateUserId != 0L) chat.privateUserId else chat.id)?.takeIf { java.io.File(it).isFile }
         Avatar(chat.title, chat.photo, telegram, settings, size, modifier, kind = telegram.avatarKind(chat), onClick = onClick, localPath = local)
         return
     }
