@@ -77,19 +77,20 @@ fun PhoneText(
             Text(text, style = style, color = tint)
         } else {
             val full = with(LocalDensity.current) { (style.fontSize.takeIf { it.value > 0 } ?: LocalTextStyle.current.fontSize).toDp() }
-            val digits = text.count(Char::isDigit).coerceAtLeast(1)
             val measurer = androidx.compose.ui.text.rememberTextMeasurer()
             val textWidth = with(LocalDensity.current) { measurer.measure(text, style).size.width.toDp() }
             BoxWithConstraints {
                 val room = if (maxWidth.value.isFinite()) minOf(maxWidth, textWidth) else textWidth
-                val size = minOf(full, room / ((digits + 1) * (1f + ShapeGap)))
+                val size = full
+                val step = size * (1f + ShapeGap)
+                val count = ((room - size * PlusScale - size * ShapeGap) / step).toInt().coerceAtLeast(1)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(size * ShapeGap),
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.height(full * 1.4f),
                 ) {
-                    Icon(Icons.Rounded.Add, contentDescription = null, tint = tint, modifier = Modifier.size(size * 1.1f))
-                    repeat(digits) { index ->
+                    Icon(Icons.Rounded.Add, contentDescription = null, tint = tint, modifier = Modifier.size(size * PlusScale))
+                    repeat(count) { index ->
                         Box(Modifier.size(size).background(tint, PhoneShapes[index % PhoneShapes.size].toShape()))
                     }
                 }
@@ -101,3 +102,4 @@ fun PhoneText(
 
 private const val PeekMs = 4000L
 private const val ShapeGap = 0.15f
+private const val PlusScale = 1.1f
