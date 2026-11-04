@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.50.1 Clamshell
+
+- The back arrow now behaves like the Android edge arrow from LineageOS: a thin bar while you pull, a bouncy circle once it will go back, it stretches if you keep pulling, and shrinks away when it fires or flattens when you let go early.
+- The lyrics waiting circle sits in the middle of the line.
+- Paid media use the Telegram star icon.
+- Remove photo in Edit contact and in Rename, shown only when you set a photo; Rename can set a local photo for groups and channels too.
+
 ## 0.50.0 Clamshell
 
 ### Music player
