@@ -395,6 +395,21 @@ fun MainScreen(
                         }
                     }
                 }
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = FullPlayer.open && com.pixelgram.desktop.core.AudioPlayer.current != null,
+                    enter = expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), expandFrom = Alignment.Start) +
+                        androidx.compose.animation.slideInVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) { -it / 3 } + fadeIn(fade),
+                    exit = shrinkHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), shrinkTowards = Alignment.Start) +
+                        androidx.compose.animation.slideOutVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) { -it / 3 } + fadeOut(fade),
+                ) {
+                    FullPlayerPanel(
+                        telegram,
+                        Modifier
+                            .width(FullPlayerWidth)
+                            .fillMaxHeight()
+                            .padding(top = if (AppPaths.isMac) 8.dp else 8.dp, end = 8.dp, bottom = 8.dp),
+                    )
+                }
             }
             val scrim by animateFloatAsState(if (menuOpen && !push) RailScrimAlpha else 0f, fade)
             if (scrim > 0f) {
@@ -889,3 +904,5 @@ private fun listTitle(telegram: Telegram, settings: AppSettings): String = when 
 }
 
 private const val AppTitle = "pixelGram"
+
+private val FullPlayerWidth = 380.dp

@@ -75,6 +75,27 @@ fun Telegram.loadDemo() {
     chats[102L]?.privateUserId = 3
     statuses[3] = TdApi.UserStatusOffline(now - 300)
     if (System.getProperty("pixelgram.demo.startpage") == "true") messages(102L).clear()
+    if (System.getProperty("pixelgram.demo.player") != null) {
+        val tracks = demoProfileAudios(1L)
+        val first = tracks.firstOrNull()
+        val path = System.getProperty("pixelgram.demo.audio")
+        if (first != null && path != null) {
+            System.getProperty("pixelgram.demo.track")?.split('|')?.takeIf { it.size == 2 }?.let { (artist, name) ->
+                first.performer = artist
+                first.title = name
+            }
+            javax.swing.SwingUtilities.invokeLater {
+                com.pixelgram.desktop.ui.main.AudioQueue.playlist = tracks
+                com.pixelgram.desktop.core.AudioPlayer.play(first.audio.id.toLong(), path, com.pixelgram.desktop.ui.main.AudioQueue.trackTitle(first), 0L, first)
+                com.pixelgram.desktop.ui.main.FullPlayer.open = true
+                com.pixelgram.desktop.ui.main.FullPlayer.view = when (System.getProperty("pixelgram.demo.player")) {
+                    "lyrics" -> com.pixelgram.desktop.ui.main.PlayerView.Lyrics
+                    "queue" -> com.pixelgram.desktop.ui.main.PlayerView.Queue
+                    else -> com.pixelgram.desktop.ui.main.PlayerView.Cover
+                }
+            }
+        }
+    }
     if (System.getProperty("pixelgram.demo.offline") == "true") connection = ConnectionStatus.Connecting
     if (System.getProperty("pixelgram.demo.protected") == "true") chats[106L]?.protectedContent = true
     if (System.getProperty("pixelgram.demo.secret") == "true") loadSecretDemo(now)

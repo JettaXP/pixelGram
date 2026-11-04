@@ -46,6 +46,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.RepeatOne
+import com.pixelgram.desktop.ui.icons.OpenInFull
 import com.pixelgram.desktop.ui.icons.automirrored.filled.VolumeOff
 import com.pixelgram.desktop.ui.icons.automirrored.filled.VolumeUp
 import com.pixelgram.desktop.ui.icons.filled.Close
@@ -80,10 +82,23 @@ import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.UiMessage
 import it.tdlight.jni.TdApi
 
+enum class RepeatMode { Off, All, One }
+
+class QueueTrack(val key: Long, val audio: TdApi.Audio?, val title: String, val performer: String, val message: UiMessage?)
+
 object AudioQueue {
     var pending by mutableStateOf<UiMessage?>(null)
     var pendingTrack by mutableStateOf<TdApi.Audio?>(null)
-    var playlist: List<TdApi.Audio> = emptyList()
+    var playlist by mutableStateOf<List<TdApi.Audio>>(emptyList())
+    var custom by mutableStateOf<List<UiMessage>?>(null)
+    var shuffle by mutableStateOf(false)
+    var repeatMode by mutableStateOf(RepeatMode.Off)
+        private set
+
+    fun cycleRepeat() {
+        repeatMode = RepeatMode.entries[(repeatMode.ordinal + 1) % RepeatMode.entries.size]
+        AudioPlayer.repeat = repeatMode == RepeatMode.One
+    }
 
     fun trackTitle(audio: TdApi.Audio): String =
         listOf(audio.performer, audio.title).filter { it.isNotBlank() }.joinToString(" – ").ifBlank { audio.fileName }
@@ -91,7 +106,7 @@ object AudioQueue {
     fun move(telegram: Telegram, key: Long, direction: Int) {
         val index = playlist.indexOfFirst { it.audio.id.toLong() == key }
         if (index < 0) return step(telegram, key, direction)
-        val next = playlist.getOrNull(index + direction) ?: return
+        val next = pick(playlist, index, direction) ?: return
         pendingTrack = next
         telegram.download(next.audio)
     }
@@ -107,15 +122,57 @@ object AudioQueue {
         else -> "Voice message"
     }
 
-    fun step(telegram: Telegram, key: Long, direction: Int) {
+    private fun chatList(telegram: Telegram, key: Long): List<UiMessage> {
+        custom?.takeIf { list -> list.any { it.key == key } }?.let { return it }
         val all = telegram.messages(AudioPlayer.chatId)
-        val kind = all.firstOrNull { it.key == key }?.content?.javaClass ?: return
-        val list = all.filter { it.content?.javaClass == kind && file(it) != null }
+        val kind = all.firstOrNull { it.key == key }?.content?.javaClass ?: return emptyList()
+        return all.filter { it.content?.javaClass == kind && file(it) != null }.reversed()
+    }
+
+    fun step(telegram: Telegram, key: Long, direction: Int) {
+        val list = chatList(telegram, key)
         val index = list.indexOfFirst { it.key == key }
         if (index < 0) return
-        val next = list.getOrNull(index - direction) ?: return
+        val next = pick(list, index, direction) ?: return
         pending = next
         telegram.download(file(next))
+    }
+
+    private fun <T> pick(list: List<T>, index: Int, direction: Int): T? {
+        if (shuffle && direction > 0 && list.size > 1) return list.filterIndexed { i, _ -> i != index }.random()
+        list.getOrNull(index + direction)?.let { return it }
+        return if (repeatMode == RepeatMode.All) list.getOrNull(if (direction > 0) 0 else list.lastIndex) else null
+    }
+
+    fun tracks(telegram: Telegram): List<QueueTrack> {
+        val key = AudioPlayer.current ?: return emptyList()
+        if (playlist.any { it.audio.id.toLong() == key }) {
+            return playlist.map { QueueTrack(it.audio.id.toLong(), it, it.title.ifBlank { it.fileName }, it.performer, null) }
+        }
+        return chatList(telegram, key).map { message ->
+            val audio = (message.content as? TdApi.MessageAudio)?.audio
+            QueueTrack(message.key, audio, audio?.let { it.title.ifBlank { it.fileName } } ?: title(message), audio?.performer.orEmpty(), message)
+        }
+    }
+
+    fun reorder(telegram: Telegram, from: Int, to: Int) {
+        val key = AudioPlayer.current ?: return
+        if (playlist.any { it.audio.id.toLong() == key }) {
+            playlist = playlist.toMutableList().apply { add(to, removeAt(from)) }
+            return
+        }
+        custom = chatList(telegram, key).toMutableList().apply { add(to, removeAt(from)) }
+    }
+
+    fun playAt(telegram: Telegram, track: QueueTrack) {
+        val message = track.message
+        if (message != null) {
+            pending = message
+            telegram.download(file(message))
+        } else if (track.audio != null) {
+            pendingTrack = track.audio
+            telegram.download(track.audio.audio)
+        }
     }
 }
 
@@ -188,7 +245,7 @@ fun MiniPlayer(telegram: Telegram) {
                         style = MaterialTheme.typography.titleSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp).clip(RoundedCornerShape(8.dp)).clickable { FullPlayer.open = !FullPlayer.open },
                     )
                     AnimatedVisibility(
                         visible = hovered,
@@ -215,11 +272,15 @@ fun MiniPlayer(telegram: Telegram) {
                                 },
                                 modifier = Modifier.width(MiniVolumeWidth).padding(end = 4.dp),
                             )
-                            IconButton(onClick = { AudioPlayer.repeat = !AudioPlayer.repeat }) {
+                            IconButton(onClick = AudioQueue::cycleRepeat) {
                                 Icon(
-                                    if (AudioPlayer.repeat) Icons.Filled.RepeatOn else Icons.Filled.Repeat,
+                                    when (AudioQueue.repeatMode) {
+                                        RepeatMode.Off -> Icons.Filled.Repeat
+                                        RepeatMode.All -> Icons.Filled.RepeatOn
+                                        RepeatMode.One -> Icons.Rounded.RepeatOne
+                                    },
                                     contentDescription = "Repeat",
-                                    tint = if (AudioPlayer.repeat) MaterialTheme.colorScheme.primary else androidx.compose.material3.LocalContentColor.current,
+                                    tint = if (AudioQueue.repeatMode != RepeatMode.Off) MaterialTheme.colorScheme.primary else androidx.compose.material3.LocalContentColor.current,
                                 )
                             }
                             TextButton(onClick = AudioPlayer::nextSpeed) {
@@ -242,8 +303,13 @@ fun MiniPlayer(telegram: Telegram) {
                             )
                         }
                     }
+                    IconButton(onClick = { FullPlayer.open = !FullPlayer.open }) {
+                        val turn by animateFloatAsState(if (FullPlayer.open) 180f else 0f)
+                        Icon(Icons.Rounded.OpenInFull, contentDescription = "Full player", modifier = Modifier.graphicsLayer { rotationZ = turn })
+                    }
                     IconButton(onClick = {
                         AudioQueue.pending = null
+                        FullPlayer.open = false
                         AudioPlayer.stop()
                     }) {
                         Icon(Icons.Filled.Close, contentDescription = "Close player")
@@ -272,7 +338,16 @@ private val BarHeight = 56.dp
 private enum class Control { Previous, Play, Next }
 
 @Composable
-private fun MorphControls(playing: Boolean, onPrevious: () -> Unit, onPlay: () -> Unit, onNext: () -> Unit) {
+internal fun MorphControls(
+    playing: Boolean,
+    onPrevious: () -> Unit,
+    onPlay: () -> Unit,
+    onNext: () -> Unit,
+    scale: Float = ControlScale,
+    gap: androidx.compose.ui.unit.Dp = ControlGap,
+    iconSize: androidx.compose.ui.unit.Dp = 22.dp,
+    playIcon: androidx.compose.ui.unit.Dp = 26.dp,
+) {
     val sources = remember { Control.entries.associateWith { MutableInteractionSource() } }
     val pressed = Control.entries.firstOrNull { sources.getValue(it).collectIsPressedAsState().value }
     val sideWidth = { me: Control ->
@@ -288,7 +363,7 @@ private fun MorphControls(playing: Boolean, onPrevious: () -> Unit, onPlay: () -
         else -> 88f
     }
     val scheme = MaterialTheme.colorScheme
-    Row(horizontalArrangement = Arrangement.spacedBy(ControlGap), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
         MorphButton(
             width = sideWidth(Control.Previous),
             height = 64f,
@@ -296,7 +371,8 @@ private fun MorphControls(playing: Boolean, onPrevious: () -> Unit, onPlay: () -
             colors = scheme.secondaryContainer to scheme.onSecondaryContainer,
             source = sources.getValue(Control.Previous),
             onClick = onPrevious,
-        ) { Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous", modifier = Modifier.size(22.dp)) }
+            scale = scale,
+        ) { Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous", modifier = Modifier.size(iconSize)) }
         MorphButton(
             width = playWidth,
             height = 88f,
@@ -308,7 +384,8 @@ private fun MorphControls(playing: Boolean, onPrevious: () -> Unit, onPlay: () -
             colors = scheme.primary to scheme.onPrimary,
             source = sources.getValue(Control.Play),
             onClick = onPlay,
-        ) { PlayPauseIcon(playing) }
+            scale = scale,
+        ) { PlayPauseMorph(playing, playIcon) }
         MorphButton(
             width = sideWidth(Control.Next),
             height = 64f,
@@ -316,7 +393,8 @@ private fun MorphControls(playing: Boolean, onPrevious: () -> Unit, onPlay: () -
             colors = scheme.secondaryContainer to scheme.onSecondaryContainer,
             source = sources.getValue(Control.Next),
             onClick = onNext,
-        ) { Icon(Icons.Rounded.SkipNext, contentDescription = "Next", modifier = Modifier.size(22.dp)) }
+            scale = scale,
+        ) { Icon(Icons.Rounded.SkipNext, contentDescription = "Next", modifier = Modifier.size(iconSize)) }
     }
 }
 
@@ -328,14 +406,15 @@ private fun MorphButton(
     colors: Pair<Color, Color>,
     source: MutableInteractionSource,
     onClick: () -> Unit,
+    scale: Float = ControlScale,
     content: @Composable () -> Unit,
 ) {
     val shownWidth by animateFloatAsState(width, spring(dampingRatio = 1f, stiffness = 700f))
     val shownRadius by animateFloatAsState(radius, spring(dampingRatio = 0.55f, stiffness = 520f))
     Box(
         Modifier
-            .size((shownWidth * ControlScale).dp, (height * ControlScale).dp)
-            .clip(RoundedCornerShape((shownRadius * ControlScale).coerceAtLeast(0f).dp))
+            .size((shownWidth * scale).dp, (height * scale).dp)
+            .clip(RoundedCornerShape((shownRadius * scale).coerceAtLeast(0f).dp))
             .background(colors.first)
             .clickable(interactionSource = source, indication = ripple(), onClick = onClick),
         contentAlignment = Alignment.Center,
