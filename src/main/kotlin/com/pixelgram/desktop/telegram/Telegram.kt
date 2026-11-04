@@ -2349,6 +2349,13 @@ class Telegram(
 
     val liveReactions = androidx.compose.runtime.snapshots.SnapshotStateMap<Long, androidx.compose.runtime.snapshots.SnapshotStateList<Long>>()
 
+    fun sawMessages(chatId: Long, ids: List<Long>) {
+        if (ids.isEmpty()) return
+        liveReactions[chatId]?.let { list -> if (list.any { it in ids }) list.removeAll { it in ids } }
+        val chat = chats[chatId] ?: return
+        if (chat.unreadReactions > 0 || chat.unreadMentions > 0) markRead(chatId, ids)
+    }
+
     fun takeLiveReaction(chatId: Long): Long? = liveReactions[chatId]?.removeLastOrNull()
 
     fun readAllReactions(chat: ChatState) {

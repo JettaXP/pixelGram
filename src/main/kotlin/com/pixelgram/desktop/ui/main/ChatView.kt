@@ -952,6 +952,13 @@ private fun ChatViewContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
             ) {
+                LaunchedEffect(chat.id, listState) {
+                    androidx.compose.runtime.snapshotFlow { listState.layoutInfo.visibleItemsInfo.mapNotNull { (it.key as? Long)?.let { key -> shown.firstOrNull { m -> m.key == key }?.id } } }
+                        .collect { ids ->
+                            kotlinx.coroutines.delay(SeenDelayMs)
+                            telegram.sawMessages(chat.id, ids)
+                        }
+                }
                 val live = telegram.liveReactions[chat.id]?.size ?: 0
                 UnreadJumpButton(
                     maxOf(chat.unreadReactions, live),
@@ -1855,6 +1862,8 @@ private const val NewerThreshold = 5
 private const val PanelScaleFrom = 0.9f
 private const val SwapScaleFrom = 0.6f
 private val SendSlot = 40.dp
+private const val SwapMs = 180
+private const val SeenDelayMs = 600L
 private val SendButtonSlot = 48.dp
 private val ServicePhotoSize = 120.dp
 object VoiceButton {
@@ -2752,13 +2761,13 @@ private fun Composer(
             } else {
                 val showMic = voice.active || (VoiceButton.preferred && !canSend && editing == null)
                 val swapFade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-                val swapScale = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+                val swapScale = androidx.compose.animation.core.tween<Float>(SwapMs, easing = androidx.compose.animation.core.FastOutSlowInEasing)
                 Box(Modifier.size(SendButtonSlot), contentAlignment = Alignment.Center) {
                     AnimatedContent(
                         targetState = showMic,
                         transitionSpec = {
                             ((fadeIn(swapFade) + scaleIn(swapScale, initialScale = SwapScaleFrom)) togetherWith
-                                (fadeOut(swapFade) + scaleOut(swapScale, targetScale = SwapScaleFrom))) using SizeTransform(clip = false)
+                                (fadeOut(swapFade) + scaleOut(swapScale, targetScale = SwapScaleFrom))) using SizeTransform(clip = false) { _, _ -> androidx.compose.animation.core.snap() }
                         },
                         contentAlignment = Alignment.Center,
                     ) { mic ->

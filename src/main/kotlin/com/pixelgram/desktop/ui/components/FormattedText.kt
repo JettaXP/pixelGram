@@ -145,20 +145,69 @@ fun formatDateEntity(unixTime: Int): String =
             ),
         )
 
+private class FoldedText(val text: String, val entities: List<TdApi.TextEntity>, val toggles: List<Pair<IntRange, Int>>)
+
+private fun foldQuotes(text: String, entities: List<TdApi.TextEntity>, opened: Set<Int>): FoldedText {
+    val expandable = entities.filter { it.type is TdApi.TextEntityTypeExpandableBlockQuote }.sortedBy { it.offset }
+    if (expandable.isEmpty()) return FoldedText(text, entities, emptyList())
+    var out = text
+    var list = entities.toList()
+    val toggles = mutableListOf<Pair<IntRange, Int>>()
+    var shift = 0
+    for (quote in expandable) {
+        val start = quote.offset + shift
+        val end = (start + quote.length).coerceAtMost(out.length)
+        if (start < 0 || start >= end) continue
+        val body = out.substring(start, end)
+        val lines = body.split('\n')
+        val long = lines.size > FoldLines || body.length > FoldChars
+        if (!long || quote.offset in opened) {
+            if (long) toggles += (start until end) to quote.offset
+            continue
+        }
+        val keep = lines.take(FoldLines).joinToString("\n").take(FoldChars).trimEnd() + "…"
+        val removed = body.length - keep.length
+        out = out.substring(0, start) + keep + out.substring(end)
+        val cut = start + keep.length
+        list = list.mapNotNull { entity ->
+            val from = entity.offset
+            val to = entity.offset + entity.length
+            when {
+                entity === quote || (from == quote.offset + shift && entity.type is TdApi.TextEntityTypeExpandableBlockQuote) ->
+                    TdApi.TextEntity(start, keep.length, entity.type)
+                to <= cut -> entity
+                from >= end -> TdApi.TextEntity(from - removed, entity.length, entity.type)
+                from >= cut -> null
+                else -> TdApi.TextEntity(from, (minOf(to, cut) - from).coerceAtLeast(0), entity.type)
+            }
+        }.filter { it.length > 0 }
+        toggles += (start until start + keep.length) to quote.offset
+        shift -= removed
+    }
+    return FoldedText(out, list, toggles)
+}
+
+private const val FoldLines = 3
+private const val FoldChars = 180
+
 private fun ranges(entities: List<TdApi.TextEntity>, length: Int, match: (TdApi.TextEntityType) -> Boolean) =
     entities.filter { match(it.type) }.map { it.offset.coerceIn(0, length) until (it.offset + it.length).coerceIn(0, length) }
         .filter { !it.isEmpty() }
 
 @Composable
 fun FormattedText(
-    text: String,
-    entities: List<TdApi.TextEntity>,
+    rawText: String,
+    rawEntities: List<TdApi.TextEntity>,
     modifier: Modifier = Modifier,
     style: TextStyle = LocalTextStyle.current,
     color: Color = Color.Unspecified,
     onTextLayout: (TextLayoutResult) -> Unit = {},
     quoteBackground: Boolean = true,
 ) {
+    var opened by remember(rawText, rawEntities) { mutableStateOf(emptySet<Int>()) }
+    val folded = remember(rawText, rawEntities, opened) { foldQuotes(rawText, rawEntities, opened) }
+    val text = folded.text
+    val entities = folded.entities
     val scheme = MaterialTheme.colorScheme
     val colors = FormatColors(scheme.primary, scheme.onSurface.copy(alpha = 0.1f), scheme.primary)
     val (annotated, inline) = remember(text, entities, colors) { withEmoji(formattedString(text, entities, colors)) }
@@ -195,7 +244,7 @@ fun FormattedText(
     }
     Box(
         modifier
-            .pointerInput(hidden, layout) {
+            .pointerInput(hidden, layout, folded) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -212,7 +261,13 @@ fun FormattedText(
                         } else {
                             null
                         }
-                        overSpoiler = hit != null && event.type != PointerEventType.Exit
+                        val fold = folded.toggles.firstOrNull { (range, _) -> index in range }
+                        overSpoiler = (hit != null || fold != null) && event.type != PointerEventType.Exit
+                        if (event.type == PointerEventType.Press && hit == null && fold != null && event.buttons.isPrimaryPressed) {
+                            change.consume()
+                            opened = if (fold.second in opened) opened - fold.second else opened + fold.second
+                            continue
+                        }
                         if (event.type != PointerEventType.Press || hit == null || !event.buttons.isPrimaryPressed) continue
                         change.consume()
                         revealed = revealed + hit.first
