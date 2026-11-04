@@ -631,8 +631,43 @@ class Telegram(
             send(TdApi.SendMessage().apply {
                 chatId = chat.id
                 inputMessageContent = content
-            }) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+            }) { result ->
+                done((result as? TdApi.Error)?.message?.let(::friendlyError))
+                tidyServiceBot(chat.id)
+            }
         }
+    }
+
+    @Volatile private var serviceBotChat = 0L
+
+    private fun isServiceBot(chat: ChatState): Boolean {
+        if (chat.privateUserId == 0L) return false
+        val names = users[chat.privateUserId]?.usernames?.activeUsernames ?: return false
+        return names.any { it.equals(com.pixelgram.desktop.core.Banners.Bot, ignoreCase = true) }
+    }
+
+    private fun tidyServiceBot(chatId: Long) {
+        if (serviceBotChat != chatId) {
+            serviceBotChat = chatId
+            listCache.clear()
+            listsVersion++
+        }
+        send(TdApi.SetChatNotificationSettings(chatId, TdApi.ChatNotificationSettings().apply {
+            useDefaultMuteFor = false
+            muteFor = Int.MAX_VALUE
+            useDefaultSound = true
+            useDefaultShowPreview = true
+            useDefaultMuteStories = true
+            useDefaultStorySound = true
+            useDefaultShowStoryPoster = true
+            useDefaultDisablePinnedMessageNotifications = true
+            useDefaultDisableMentionNotifications = true
+        })) {}
+        send(TdApi.AddChatToList(chatId, TdApi.ChatListArchive())) {}
+        Thread {
+            Thread.sleep(ServiceBotCleanupMs)
+            send(TdApi.DeleteChatHistory(chatId, true, false)) {}
+        }.apply { isDaemon = true }.start()
     }
 
     fun sendBadge(badge: com.pixelgram.desktop.core.CustomBadge?, done: (String?) -> Unit) {
@@ -642,7 +677,10 @@ class Telegram(
             send(TdApi.SendMessage().apply {
                 chatId = chat.id
                 inputMessageContent = TdApi.InputMessageText().apply { text = TdApi.FormattedText(badge?.command() ?: "/badge", emptyArray()) }
-            }) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
+            }) { result ->
+                done((result as? TdApi.Error)?.message?.let(::friendlyError))
+                tidyServiceBot(chat.id)
+            }
         }
     }
 
@@ -1488,6 +1526,7 @@ class Telegram(
                 val source = if (key == ChatListKey.Unread || key == ChatListKey.Mentions) ChatListKey.Main else key
                 val ordered = ArrayList<Pair<ChatState, Long>>()
                 for (chat in chats.values) {
+                    if (chat.id == serviceBotChat || isServiceBot(chat)) continue
                     val order = chat.positions[source] ?: continue
                     val keep = when (key) {
                         ChatListKey.Unread -> chat.unreadCount > 0 || chat.markedUnread
@@ -3656,3 +3695,4 @@ fun imageSize(file: File): Pair<Int, Int> = runCatching {
 private const val PhotoWindow = 100
 private const val DefaultGiftSellPeriod = 7 * 24 * 60 * 60
 private const val StreamStartBytes = 192L * 1024
+private const val ServiceBotCleanupMs = 15_000L
