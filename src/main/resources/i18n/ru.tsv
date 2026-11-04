@@ -1627,3 +1627,7 @@ Copy emoji	Копировать эмодзи
 Copy emoji ID	Копировать ID эмодзи
 View emoji set	Открыть набор эмодзи
 pixelGram Preferences from {file} will replace your current ones. Accounts stay as they are.	Настройки pixelGram из {file} заменят текущие. Аккаунты останутся как есть.
+Gift from {name}	Подарок от {name}
+{name} sent you a gift for {stars}	{name} отправил(а) вам подарок за {stars}
+Rounded icons	Скруглённые иконки
+Material Symbols Rounded instead of the sharp outlined style	Material Symbols Rounded вместо острого контурного стиля

@@ -1299,7 +1299,7 @@ fun GiftCard(message: UiMessage, telegram: Telegram, modifier: Modifier = Modifi
             title = when {
                 name.isBlank() -> "Gift"
                 message.isOutgoing -> "Gift for $name"
-                else -> "Gift from $name"
+                else -> com.pixelgram.desktop.core.tr("Gift from {name}").replace("{name}", name)
             }
             subtitle = stars(content.gift.starCount)
         }
@@ -1345,7 +1345,7 @@ fun GiftCard(message: UiMessage, telegram: Telegram, modifier: Modifier = Modifi
 fun giftServiceText(message: UiMessage, telegram: Telegram): String? = when (val content = message.content) {
     is TdApi.MessageGift ->
         if (message.isOutgoing) "You sent a gift for ${stars(content.gift.starCount)}"
-        else "${telegram.senderTitle(content.senderId)} sent you a gift for ${stars(content.gift.starCount)}"
+        else com.pixelgram.desktop.core.tr("{name} sent you a gift for {stars}").replace("{name}", telegram.senderTitle(content.senderId)).replace("{stars}", stars(content.gift.starCount))
     is TdApi.MessageUpgradedGift -> "Collectible gift"
     is TdApi.MessageGiftedStars -> {
         val paid = paidPrice(content.currency, content.amount, content.cryptocurrency, content.cryptocurrencyAmount)?.let { " for $it" }.orEmpty()

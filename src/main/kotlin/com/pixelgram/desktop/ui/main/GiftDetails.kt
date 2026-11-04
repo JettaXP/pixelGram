@@ -77,7 +77,7 @@ fun paidPrice(currency: String?, amount: Long, crypto: String?, cryptoAmount: Lo
 
 private const val GiftDateSlack = 5
 
-fun stars(count: Long) = if (count == 1L) "1 Star" else "$count Stars"
+fun stars(count: Long) = com.pixelgram.desktop.core.tr(if (count == 1L) "1 Star" else "$count Stars")
 
 @Composable
 fun GiftDetailsDialog(message: UiMessage, telegram: Telegram, onDismiss: () -> Unit) {
@@ -120,8 +120,8 @@ fun GiftDetailsDialog(message: UiMessage, telegram: Telegram, onDismiss: () -> U
                     saved ?: content.isSaved -> "Shown on the profile"
                     else -> "Not shown on the profile"
                 }
-                add(InfoRow(Icons.Outlined.Info, "Status", status))
-                if (content.isPrivate) add(InfoRow(Icons.Outlined.Info, "Sender", "Hidden from others"))
+                add(InfoRow(Icons.Outlined.Info, "Status", com.pixelgram.desktop.core.tr(status)))
+                if (content.isPrivate) add(InfoRow(Icons.Outlined.Info, "Sender", com.pixelgram.desktop.core.tr("Hidden from others")))
             }
             is TdApi.MessageUpgradedGift -> {
                 val gift = content.gift
@@ -172,7 +172,7 @@ fun GiftDetailsDialog(message: UiMessage, telegram: Telegram, onDismiss: () -> U
                 } else {
                     StickerView(sticker, telegram, 140.dp)
                 }
-                EmojiText(giftTitle(message) ?: "Gift", style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
+                EmojiText(com.pixelgram.desktop.core.tr(giftTitle(message) ?: "Gift"), style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
                 (content as? TdApi.MessageGift)?.text?.text?.takeIf { it.isNotBlank() }?.let {
                     EmojiText(it, style = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Center))
                 }

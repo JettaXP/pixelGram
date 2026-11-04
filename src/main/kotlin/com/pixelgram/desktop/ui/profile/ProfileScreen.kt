@@ -172,14 +172,6 @@ fun ProfileContent(
                     onEdit = { editing = ProfileField.Birthday },
                 )
             )
-            add(
-                InfoRow(
-                    Icons.Outlined.Sticker,
-                    "Start page",
-                    fullInfo?.businessInfo?.startPage?.title?.takeIf { it.isNotBlank() } ?: "Not set",
-                    onEdit = { editing = ProfileField.StartPage },
-                )
-            )
             add(InfoRow(Icons.Outlined.Numbers, "ID", me.id.toString()))
         }
         ProfileMusic(telegram, settings, me.id, own = true)
@@ -221,6 +213,7 @@ fun ProfileContent(
             title = "Name",
             initial = listOf(me?.firstName.orEmpty(), me?.lastName.orEmpty()),
             labels = listOf("First name", "Last name"),
+            stacked = true,
             onDismiss = dismiss,
             onSaved = saved,
         ) { values, done -> telegram.setName(values[0], values[1], done) }
@@ -303,6 +296,7 @@ private fun EditDialog(
     numbers: Boolean = false,
     ranges: List<IntRange> = emptyList(),
     valid: (List<String>) -> Boolean = { true },
+    stacked: Boolean = false,
     onSave: (List<String>, (String?) -> Unit) -> Unit,
 ) {
     var values by remember { mutableStateOf(initial) }
@@ -313,7 +307,7 @@ private fun EditDialog(
         title = { Text(title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val fields = @Composable { fieldModifier: (Int) -> Modifier ->
                     labels.forEachIndexed { index, label ->
                         OutlinedTextField(
                             value = values[index],
@@ -331,9 +325,14 @@ private fun EditDialog(
                             } else {
                                 null
                             },
-                            modifier = if (labels.size > 1) Modifier.weight(1f) else Modifier.width(320.dp),
+                            modifier = fieldModifier(index),
                         )
                     }
+                }
+                if (stacked || labels.size == 1) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { fields { Modifier.fillMaxWidth() } }
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { fields { Modifier.weight(1f) } }
                 }
                 supporting?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }

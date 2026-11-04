@@ -21,6 +21,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.automirrored.outlined.Reply
+import com.pixelgram.desktop.ui.icons.filled.Close
 import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
 import com.pixelgram.desktop.ui.icons.automirrored.filled.KeyboardArrowRight
 import com.pixelgram.desktop.ui.icons.automirrored.filled.Send
@@ -131,6 +133,24 @@ fun CommentsView(post: UiMessage, telegram: Telegram, settings: AppSettings, onO
         true
     }
     val thread = telegram.activeThread
+    var replyTo by remember(post.key) { mutableStateOf<UiMessage?>(null) }
+    var deleting by remember(post.key) { mutableStateOf<UiMessage?>(null) }
+    var forwarding by remember(post.key) { mutableStateOf<UiMessage?>(null) }
+    val actions = remember(post.key) {
+        MessageActions(
+            onReply = { replyTo = it },
+            onEdit = {},
+            onDelete = { deleting = it },
+            onQuoteClick = {},
+            onCopyPhoto = { message -> telegram.photoPath(message)?.let(Attachments::copyImage) },
+            onForward = { forwarding = it },
+            onReact = { message, emoji -> telegram.toggleReaction(message, emoji) },
+            loadReactions = { message, done -> telegram.availableReactions(message, done) },
+            canEdit = { _, done -> done(false) },
+            properties = { message, done -> telegram.messageProperties(message, done) },
+            onDoubleClick = { replyTo = it },
+        )
+    }
     Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
         Column {
             Row(
@@ -181,15 +201,17 @@ fun CommentsView(post: UiMessage, telegram: Telegram, settings: AppSettings, onO
                                         if (lastInRun) SenderAvatar(message, telegram, settings) { openSender(message) }
                                     }
                                 }
-                                MessageBubble(
-                                    modifier = Modifier.weight(1f),
-                                    message = message,
-                                    senderName = if (message.isOutgoing || !firstInRun) null else telegram.senderName(message),
-                                    senderTag = if (message.isOutgoing || !firstInRun) null else telegram.chats[message.chatId]?.let { telegram.senderTag(it, message) },
-                                    settings = settings,
-                                    telegram = telegram,
-                                    onReact = { emoji -> telegram.toggleReaction(message, emoji) },
-                                )
+                                MessageGestures(message, actions, Modifier.weight(1f)) {
+                                    MessageBubble(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        message = message,
+                                        senderName = if (message.isOutgoing || !firstInRun) null else telegram.senderName(message),
+                                        senderTag = if (message.isOutgoing || !firstInRun) null else telegram.chats[message.chatId]?.let { telegram.senderTag(it, message) },
+                                        settings = settings,
+                                        telegram = telegram,
+                                        onReact = { emoji -> telegram.toggleReaction(message, emoji) },
+                                    )
+                                }
                             }
                         }
                         telegram.threadRoot?.let { root ->
@@ -217,12 +239,46 @@ fun CommentsView(post: UiMessage, telegram: Telegram, settings: AppSettings, onO
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                     ) { Text("Join group") }
                 } else {
-                    CommentComposer { telegram.sendComment(it) }
+                    replyTo?.let { target ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 6.dp),
+                        ) {
+                            Icon(Icons.AutoMirrored.Outlined.Reply, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                Text(telegram.senderName(target), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+                                Text(target.text.ifBlank { "Message" }, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            }
+                            IconButton(onClick = { replyTo = null }) { Icon(Icons.Filled.Close, contentDescription = "Cancel reply") }
+                        }
+                    }
+                    CommentComposer {
+                        telegram.sendComment(it, replyTo?.id ?: 0L)
+                        replyTo = null
+                    }
                 }
             }
         }
     }
     profile?.let { shown -> ChatInfoDialog(shown, telegram, settings, onOpenChat) { profile = null } }
+    deleting?.let { message ->
+        DeleteMessageDialog(
+            canRevoke = message.isOutgoing,
+            revokeLabel = "Delete for everyone",
+            onDismiss = { deleting = null },
+            onConfirm = { revoke ->
+                telegram.deleteMessages(message.chatId, longArrayOf(message.id), revoke)
+                deleting = null
+            },
+        )
+    }
+    forwarding?.let { message ->
+        ForwardDialog(telegram, settings, onDismiss = { forwarding = null }) { target ->
+            PendingForward.start(target, message.chatId, listOf(message))
+            forwarding = null
+            onOpenChat?.invoke(target)
+        }
+    }
 }
 
 @Composable

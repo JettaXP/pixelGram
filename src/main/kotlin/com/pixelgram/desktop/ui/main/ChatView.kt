@@ -2138,9 +2138,14 @@ private const val WelcomeDelayMs = 700L
 private fun emDash(before: String, typed: TextFieldValue): TextFieldValue {
     val end = typed.selection.end
     if (!typed.selection.collapsed || typed.text.length != before.length + 1 || end < 2) return typed
-    if (typed.text.substring(end - 2, end) != "--") return typed
+    val replacement = when (typed.text.substring(end - 2, end)) {
+        "--" -> "—"
+        ">>" -> "»"
+        "<<" -> "«"
+        else -> return typed
+    }
     if (typed.text.substring(0, end - 1) + typed.text.substring(end) != before) return typed
-    return TextFieldValue(typed.text.substring(0, end - 2) + "—" + typed.text.substring(end), TextRange(end - 1))
+    return TextFieldValue(typed.text.substring(0, end - 2) + replacement + typed.text.substring(end), TextRange(end - 1))
 }
 
 @Composable

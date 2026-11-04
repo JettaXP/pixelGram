@@ -2463,12 +2463,13 @@ class Telegram(
         send(TdApi.JoinChat(chatId)) { result -> done((result as? TdApi.Error)?.message?.let(::friendlyError)) }
     }
 
-    fun sendComment(text: String) {
+    fun sendComment(text: String, replyToId: Long = 0L) {
         val (chatId, threadId) = activeThread ?: return
         if (text.isBlank()) return
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
             topicId = TdApi.MessageTopicThread(threadId)
+            replyTo = replyInput(replyToId)
             inputMessageContent = TdApi.InputMessageText().apply { this.text = TdApi.FormattedText(text, emptyArray()) }
         }) { result -> if (result is TdApi.Error) AppLog.write("Comment failed ${result.code}: ${result.message}") }
     }
