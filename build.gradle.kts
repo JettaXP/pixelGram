@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.49.0"
+version = "0.49.1"
 val codename = "Soft Burst"
 
 kotlin {

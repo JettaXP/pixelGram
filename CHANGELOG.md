@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.49.1 Soft Burst
+
+- The updater no longer offers an older version after updating.
+- Grouped message corners follow the rabbitGram Desktop scheme: joined corners on the sender's side are small, the end of a group gets the tail corner.
+
 ## 0.49.0 Soft Burst
 
 ### Music player

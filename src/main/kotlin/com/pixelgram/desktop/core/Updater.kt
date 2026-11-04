@@ -27,8 +27,6 @@ sealed interface UpdateState {
 
 object Updater {
     private const val Repository = "JettaXP/pixelGram"
-    private const val Channel = "nightly"
-    private const val ApiUrl = "https://api.github.com/repos/$Repository/releases/tags/$Channel"
     private const val LatestUrl = "https://api.github.com/repos/$Repository/releases/latest"
     private const val LatestPage = "https://github.com/$Repository/releases/latest"
     private const val TimeoutMs = 15_000
@@ -62,18 +60,11 @@ object Updater {
     }
 
     private fun fetch(): UpdateState? {
-        val nightly = read(ApiUrl)
-        if (nightly != null) {
-            val commit = commitOf(nightly) ?: return UpdateState.Unavailable
-            if (commit.equals(BuildConfig.COMMIT, ignoreCase = true)) return UpdateState.UpToDate
-            available(nightly, commit)?.let { return it }
-        }
-        val latest = read(LatestUrl) ?: return if (nightly != null) UpdateState.Building else null
+        val latest = read(LatestUrl) ?: return null
         val commit = commitOf(latest) ?: return UpdateState.Unavailable
-        val tag = Regex(""""tag_name"\s*:\s*"v?([^"]+)"""").find(latest)?.groupValues?.get(1)
-        val installed = commit.equals(BuildConfig.COMMIT, ignoreCase = true) || tag == BuildConfig.VERSION
-        if (installed) return if (nightly != null) UpdateState.Building else UpdateState.UpToDate
-        return available(latest, commit) ?: if (nightly != null) UpdateState.Building else UpdateState.Unavailable
+        val tag = Regex(""""tag_name"\s*:\s*"v?([^"]+)"""").find(latest)?.groupValues?.get(1) ?: return UpdateState.Unavailable
+        if (commit.equals(BuildConfig.COMMIT, ignoreCase = true) || !isNewer(tag, BuildConfig.VERSION)) return UpdateState.UpToDate
+        return available(latest, commit) ?: UpdateState.Building
     }
 
     private fun read(url: String): String? {
