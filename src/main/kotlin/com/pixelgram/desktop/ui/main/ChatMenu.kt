@@ -496,7 +496,7 @@ fun ChatInfoDialog(
             modifier = Modifier.widthIn(min = 360.dp, max = 460.dp).heightIn(max = DialogMaxHeight),
         ) {
           val scroll = rememberScrollState()
-          Box {
+          com.pixelgram.desktop.ui.BackSwipeBox(onBack = onDismiss) {
             val bannerId = if (chat.privateUserId != 0L) chat.privateUserId else chat.id
             if (Banners.banner(bannerId) != null) {
                 val bannerPx = with(LocalDensity.current) { DialogBannerHeight.toPx() }

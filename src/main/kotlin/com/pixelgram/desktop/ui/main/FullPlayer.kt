@@ -188,7 +188,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                     PlayerView.Cover -> BigCover(
                         audio,
                         telegram,
-                        Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedContent, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.RemeasureToBounds),
+                        Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedContent, boundsTransform = { _, _ -> spring(dampingRatio = CoverSpringDamping, stiffness = CoverSpringStiffness) }, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.RemeasureToBounds),
                     )
                     PlayerView.Lyrics -> LyricsView(audio)
                     PlayerView.Queue -> QueueView(telegram, tracks, index)
@@ -204,7 +204,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                         audio,
                         telegram,
                         56.dp,
-                        Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedVisibility, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.RemeasureToBounds),
+                        Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedVisibility, boundsTransform = { _, _ -> spring(dampingRatio = CoverSpringDamping, stiffness = CoverSpringStiffness) }, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.RemeasureToBounds),
                     )
                 }
                 Column(Modifier.weight(1f)) {
@@ -456,8 +456,9 @@ private fun coverFile(audio: TdApi.Audio?): Pair<TdApi.File?, TdApi.Minithumbnai
 @Composable
 private fun SmallCover(audio: TdApi.Audio?, telegram: Telegram, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
     val (file, mini) = coverFile(audio)
+    val shape = if (file != null || mini != null) RoundedCornerShape(16.dp) else MaterialShapes.Cookie12Sided.toShape()
     Box(
-        modifier.size(size).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primaryContainer),
+        modifier.size(size).clip(shape).background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
         Icon(Icons.Rounded.TrackNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(size / 2.4f))
@@ -798,6 +799,8 @@ private fun Modifier.edgeFade(): Modifier = this
     }
 
 private val LyricsBleed = 20.dp
+private const val CoverSpringDamping = 0.68f
+private const val CoverSpringStiffness = 260f
 private val MenuWidth = 280.dp
 private val LinePad = 10.dp
 private val LineSpacing = 10.dp
