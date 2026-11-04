@@ -165,6 +165,10 @@ object AudioPlayer {
         val chunk = pcm.rate / 25
         var bytes = ByteArray(chunk * frameBytes)
         val stretch = TimeStretch(pcm.channels, pcm.rate)
+        var level = 0f
+        var fadedFrames = 0
+        val fadeOutStep = 1f / (pcm.rate * FadeOutMs / 1000f)
+        val fadeInStep = 1f / (pcm.rate * FadeInMs / 1000f)
         try {
             while (run == generation) {
                 seekTo?.let {
@@ -173,10 +177,16 @@ object AudioPlayer {
                     stretch.reset()
                     sink.flush()
                 }
-                if (paused) {
+                if (paused && level <= 0f) {
+                    if (fadedFrames > 0) {
+                        index = (index - fadedFrames).coerceAtLeast(0)
+                        fadedFrames = 0
+                    }
                     Thread.sleep(25)
                     continue
                 }
+                val target = if (paused) 0f else 1f
+                val levelStep = if (paused) fadeOutStep else fadeInStep
                 if (index >= frames) {
                     if (repeat) {
                         index = 0
@@ -203,9 +213,10 @@ object AudioPlayer {
                         continue
                     }
                     var o = 0
+                    level = toward(level, target, levelStep * count)
                     for (frame in index - 1 downTo index - count) {
                         for (c in 0 until pcm.channels) {
-                            val sample = (pcm.samples[frame * pcm.channels + c] * gain).toInt()
+                            val sample = (pcm.samples[frame * pcm.channels + c] * gain * level).toInt()
                             bytes[o++] = sample.toByte()
                             bytes[o++] = (sample shr 8).toByte()
                         }
@@ -216,17 +227,23 @@ object AudioPlayer {
                     stretch.reset()
                     val count = minOf(chunk, frames - index)
                     var o = 0
-                    for (i in index * pcm.channels until (index + count) * pcm.channels) {
-                        val sample = (pcm.samples[i] * gain).toInt()
-                        bytes[o++] = sample.toByte()
-                        bytes[o++] = (sample shr 8).toByte()
+                    for (frame in index until index + count) {
+                        level = toward(level, target, levelStep)
+                        for (c in 0 until pcm.channels) {
+                            val sample = (pcm.samples[frame * pcm.channels + c] * gain * level).toInt()
+                            bytes[o++] = sample.toByte()
+                            bytes[o++] = (sample shr 8).toByte()
+                        }
                     }
                     sink.write(bytes, o)
+                    if (paused) fadedFrames += count
                     index += count
                 } else {
                     val need = minOf((chunk * step).toInt(), frames - index)
                     val out = stretch.process(pcm.samples.copyOfRange(index * pcm.channels, (index + need) * pcm.channels), need, step)
-                    bytes = pack(out, gain, bytes)
+                    level = toward(level, target, levelStep * need)
+                    bytes = pack(out, gain * level, bytes)
+                    if (paused) fadedFrames += need
                     sink.write(bytes, out.size * 2)
                     index += need
                 }
@@ -521,3 +538,8 @@ private const val ForwardSpeed = 4f
 private const val RewindStep = 0.08f
 private const val GrowWaitMs = 250L
 
+private fun toward(value: Float, target: Float, step: Float): Float =
+    if (value < target) minOf(target, value + step) else maxOf(target, value - step)
+
+private const val FadeOutMs = 180
+private const val FadeInMs = 120

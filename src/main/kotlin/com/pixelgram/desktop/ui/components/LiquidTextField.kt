@@ -70,6 +70,7 @@ fun ComposerField(
     color: Color,
     modifier: Modifier = Modifier,
     trailJump: Long = 0L,
+    customEmoji: List<Pair<IntRange, Long>> = emptyList(),
 ) {
     val scroll = rememberScrollState()
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -108,17 +109,18 @@ fun ComposerField(
                     .bringIntoViewRequester(requester)
                     .onFocusChanged { focused = it.isFocused },
             )
-            if (images) EmojiOverlay(layout)
+            if (images) EmojiOverlay(layout, customEmoji)
+            CustomEmojiOverlay(layout, customEmoji)
             if (liquid) CustomCaret(value.selection, layout, focused, settings, colors.primary, Modifier.matchParentSize(), trailJump)
         }
     }
 }
 
 @Composable
-private fun EmojiOverlay(layout: TextLayoutResult?) {
+private fun EmojiOverlay(layout: TextLayoutResult?, custom: List<Pair<IntRange, Long>> = emptyList()) {
     val current = layout ?: return
     val text = current.layoutInput.text.text
-    val ranges = remember(text) { emojiRanges(text) }
+    val ranges = remember(text, custom) { emojiRanges(text).filter { range -> custom.none { (other, _) -> range.first <= other.last && other.first <= range.last } } }
     val density = LocalDensity.current
     ranges.forEach { range ->
         val box = current.getBoundingBox(range.first)
@@ -135,6 +137,28 @@ private fun EmojiOverlay(layout: TextLayoutResult?) {
     }
 }
 
+@Composable
+private fun CustomEmojiOverlay(layout: TextLayoutResult?, custom: List<Pair<IntRange, Long>>) {
+    val current = layout ?: return
+    val text = current.layoutInput.text.text
+    val density = LocalDensity.current
+    custom.forEach { (range, id) ->
+        if (range.first < 0 || range.last >= text.length) return@forEach
+        val box = current.getBoundingBox(range.first)
+        val side = box.height * CustomEmojiScale
+        with(density) {
+            Box(
+                Modifier
+                    .offset { IntOffset((box.left + (box.width - side) / 2).roundToInt(), (box.center.y - side / 2).roundToInt()) }
+                    .size(side.toDp()),
+            ) {
+                key(id, range.first) { com.pixelgram.desktop.ui.main.CustomEmojiView(id, text.substring(range.first, range.last + 1)) }
+            }
+        }
+    }
+}
+
+private const val CustomEmojiScale = 1.15f
 private const val EmojiScale = 1f
 
 @Composable

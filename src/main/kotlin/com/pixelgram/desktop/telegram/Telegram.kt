@@ -2818,6 +2818,19 @@ class Telegram(
         }
     }
 
+    private val stickerSetTitles = androidx.compose.runtime.mutableStateMapOf<Long, String>()
+    private val stickerSetRequested = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+
+    fun stickerSetTitle(id: Long): String? {
+        stickerSetTitles[id]?.let { return it }
+        if (stickerSetRequested.add(id)) {
+            send(TdApi.GetStickerSet(id)) { result ->
+                (result as? TdApi.StickerSet)?.let { set -> scope.launch(Dispatchers.Main) { stickerSetTitles[id] = set.title } }
+            }
+        }
+        return null
+    }
+
     fun customEmoji(id: Long): TdApi.Sticker? {
         customEmojiStickers[id]?.let { return it }
         if (customEmojiRequested.add(id)) {

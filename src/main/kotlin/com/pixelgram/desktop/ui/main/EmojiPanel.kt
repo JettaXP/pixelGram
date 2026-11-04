@@ -224,7 +224,7 @@ fun EmojiPanel(
 @Composable
 private fun PanelHeader(title: String, translate: Boolean = true) {
     Text(
-        if (translate) title else title,
+        if (translate) com.pixelgram.desktop.core.tr(title) else title,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp),

@@ -207,7 +207,7 @@ private fun StickersTab(
                 sections.forEach { (section, stickers) ->
                     item(span = { GridItemSpan(maxLineSpan) }, key = "title${section.id}") {
                         EmojiText(
-                            section.title,
+                            if (section.id == 0L || section.id == FavoritesId) com.pixelgram.desktop.core.tr(section.title) else section.title,
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp),

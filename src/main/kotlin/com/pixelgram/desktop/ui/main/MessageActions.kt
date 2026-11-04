@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.wrapContentHeight
 
 import com.pixelgram.desktop.ui.components.ConfirmOnEnter
@@ -439,7 +440,36 @@ private fun MessageMenu(
                 }
             }
         } else null
-        MenuGroups(listOf(retry, reply, copies, manage).filter { it.isNotEmpty() }, leading = reactions.takeIf { !pending })
+        val client = Links.active?.invoke()
+        val packIds = remember(message.key, message.text, message.entities) {
+            com.pixelgram.desktop.core.LocalPremiumEmoji.incoming(message.text, message.entities.toTypedArray())
+                .mapNotNull { (it.type as? TdApi.TextEntityTypeCustomEmoji)?.customEmojiId }
+                .distinct()
+        }.mapNotNull { id -> client?.customEmoji(id)?.setId?.takeIf { it != 0L } }.distinct()
+        val packs: (@Composable ColumnScope.() -> Unit)? = if (client != null && packIds.isNotEmpty()) {
+            {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        if (packIds.size == 1) "This message contains emoji from this pack:" else "This message contains emoji from these packs:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    packIds.forEach { setId ->
+                        Text(
+                            client.stickerSetTitle(setId) ?: "…",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable {
+                                onDismiss()
+                                StickerPack.current = StickerPackRequest(client, message.chatId, setId)
+                            }.padding(vertical = 4.dp),
+                        )
+                    }
+                }
+            }
+        } else null
+        MenuGroups(listOf(retry, reply, copies, manage).filter { it.isNotEmpty() }, leading = reactions.takeIf { !pending }, trailing = packs)
     }
 }
 

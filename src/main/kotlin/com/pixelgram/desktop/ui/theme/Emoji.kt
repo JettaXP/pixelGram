@@ -289,8 +289,8 @@ fun withEmoji(text: AnnotatedString): Pair<AnnotatedString, Map<String, InlineTe
         slots += Triple(annotation.start, annotation.end, key)
         if (key !in inline) {
             val fallback = plain.substring(annotation.start, annotation.end)
-            inline[key] = InlineTextContent(Placeholder(EmojiSize, EmojiSize, PlaceholderVerticalAlign.TextCenter)) {
-                CustomEmojiView(annotation.item.toLong(), fallback)
+            inline[key] = InlineTextContent(Placeholder(CustomEmojiSize, CustomEmojiSize, PlaceholderVerticalAlign.TextCenter)) {
+                CustomEmojiView(annotation.item.toLong(), fallback, openPack = true)
             }
         }
     }
@@ -319,6 +319,7 @@ const val CustomEmojiPrefix = "ce:"
 const val InlineContentTag = "androidx.compose.foundation.text.inlineContent"
 
 private val EmojiSize = 1.2.em
+private val CustomEmojiSize = 1.45.em
 
 @Composable
 fun Emoji3DImage(emoji: String) {

@@ -246,6 +246,7 @@ private fun ChatViewContent(
     }
     val messages = telegram.messages(chat.id)
     val shown by remember(chat.id) { derivedStateOf { groupAlbums(messages.toList()) } }
+    androidx.compose.runtime.SideEffect { ActiveChat.id = chat.id }
     val groupStarts by remember(chat.id) { derivedStateOf { messageGroupStarts(shown) } }
     val listState = rememberLazyListState()
     var jumping by remember(chat.id) { mutableStateOf(false) }
@@ -801,7 +802,7 @@ private fun ChatViewContent(
                 itemsIndexed(shown, key = { _, message -> message.key }, contentType = { _, message -> messageContentType(message) }) { index, message ->
                     val newDay = index == shown.lastIndex || !sameDay(message.date, shown[index + 1].date)
                     val firstInRun = groupStarts.getOrElse(index) { true }
-                    val typingJoins = index == 0 && typingSameSender(chat, telegram, message, settings)
+                    val typingJoins = index == 0 && (chat.isGroup || wide) && typingSameSender(chat, telegram, message, settings)
                     val lastInRun = !typingJoins && (index == 0 || groupStarts.getOrElse(index - 1) { true })
                     val rise = remember { Animatable(if (PowerSaving.messageAnimations && message.fresh && slidIn.add(message.key)) 1f else 0f) }
                     if (rise.value != 0f || rise.isRunning) LaunchedEffect(Unit) { rise.animateTo(0f, slide) }
@@ -1230,7 +1231,7 @@ private fun ChatViewContent(
 private enum class BarMode { Select, SecretPending, SecretClosed, Blocked, Start, Join, Mute, Restricted, Compose }
 
 private fun typingSameSender(chat: ChatState, telegram: Telegram, message: UiMessage, settings: AppSettings): Boolean {
-    if (settings.typingBubble.value == false || !chat.isGroup || chat.isChannel || message.isOutgoing) return false
+    if (settings.typingBubble.value == false || chat.isChannel || message.isOutgoing) return false
     return when (val typer = telegram.typing(chat.id).firstOrNull()) {
         is TdApi.MessageSenderUser -> typer.userId == message.senderUserId
         is TdApi.MessageSenderChat -> typer.chatId == message.senderChatId
@@ -1250,7 +1251,7 @@ private fun TypingBubble(chat: ChatState, telegram: Telegram) {
         exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec(), shrinkTowards = Alignment.Top) + fadeOut(),
     ) {
         val colors = MaterialTheme.colorScheme
-        val group = chat.isGroup && !chat.isChannel
+        val group = !chat.isChannel && (chat.isGroup || LocalWideChat.current)
         Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 4.dp)) {
             val sender = last
             if (group && sender != null) {
@@ -1406,6 +1407,11 @@ fun MessageBubble(
             giftServiceText(message, telegram)?.let { ServiceMessage(it, message.date, seconds, Modifier) }
             GiftCard(message, telegram, Modifier.padding(vertical = 4.dp))
         }
+        return
+    }
+    val bigEmoji = remember(message.text, message.entities, content) { bigCustomEmoji(message) }
+    if (telegram != null && bigEmoji != null) {
+        BareMessage(message, telegram, settings, status, seconds, quote, modifier, onReact) { BigEmojiRow(bigEmoji) }
         return
     }
     if (telegram != null && isBareContent(content)) {
@@ -1684,6 +1690,7 @@ private fun BareMessage(
     quote: (@Composable () -> Unit)?,
     modifier: Modifier,
     onReact: ((String) -> Unit)?,
+    body: @Composable () -> Unit = { BareContent(message, telegram) },
 ) {
     remember(message.chatId, message.id) { ReactionMemory.note(message) }
     if (message.reactions.isEmpty()) ReactionMemory.forget(message.chatId to message.id)
@@ -1694,7 +1701,7 @@ private fun BareMessage(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             if (quote != null) Box(Modifier.widthIn(min = QuoteMinWidth, max = 280.dp)) { quote() }
-            BareContent(message, telegram)
+            body()
             if (message.reactions.isNotEmpty() && onReact != null) {
                 ReactionChips(
                     message.chatId to message.id,
@@ -1718,6 +1725,30 @@ private fun BareMessage(
         }
     }
 }
+
+private fun bigCustomEmoji(message: UiMessage): List<Pair<String, Long>>? {
+    if (message.content !is TdApi.MessageText) return null
+    val text = message.text
+    if (text.isBlank()) return null
+    val entities = com.pixelgram.desktop.core.LocalPremiumEmoji.incoming(text, message.entities.toTypedArray())
+    val custom = entities.mapNotNull { entity -> (entity.type as? TdApi.TextEntityTypeCustomEmoji)?.let { entity to it.customEmojiId } }.sortedBy { it.first.offset }
+    if (custom.isEmpty() || custom.size > BigEmojiMax) return null
+    val covered = BooleanArray(text.length)
+    custom.forEach { (entity, _) -> for (i in entity.offset until (entity.offset + entity.length).coerceAtMost(text.length)) covered[i] = true }
+    if (text.indices.any { !covered[it] && !text[it].isWhitespace() }) return null
+    return custom.map { (entity, id) -> text.substring(entity.offset, (entity.offset + entity.length).coerceAtMost(text.length)) to id }
+}
+
+@Composable
+private fun BigEmojiRow(emoji: List<Pair<String, Long>>) {
+    val size = BigEmojiSizes.getOrElse(emoji.size - 1) { BigEmojiSizes.last() }
+    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.widthIn(max = 420.dp)) {
+        emoji.forEach { (fallback, id) -> CustomEmojiView(id, fallback, Modifier.size(size), openPack = true) }
+    }
+}
+
+private const val BigEmojiMax = 7
+private val BigEmojiSizes = listOf(112.dp, 88.dp, 72.dp, 60.dp, 52.dp, 46.dp, 40.dp)
 
 @Composable
 private fun MessageMeta(
@@ -2623,6 +2654,7 @@ private fun Composer(
                     androidx.compose.ui.graphics.lerp(ghostColor, MaterialTheme.colorScheme.onSurface, settle.value),
                 ),
                 trailJump = trailJump,
+                customEmoji = spans.filter { it.type == FormatType.CustomEmoji && it.end > it.start }.mapNotNull { span -> span.url.toLongOrNull()?.let { (span.start until span.end) to it } },
                 settings = settings,
                 shape = MaterialTheme.shapes.extraLarge,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,

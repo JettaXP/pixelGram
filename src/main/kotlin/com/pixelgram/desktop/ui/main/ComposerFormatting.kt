@@ -172,7 +172,7 @@ class FormatTransformation(
                 FormatType.Spoiler -> SpanStyle(background = accent.copy(alpha = 0.3f))
                 FormatType.Link -> SpanStyle(color = accent, textDecoration = TextDecoration.Underline)
                 FormatType.Date, FormatType.Mention -> SpanStyle(color = accent)
-                FormatType.CustomEmoji -> SpanStyle()
+                FormatType.CustomEmoji -> SpanStyle(color = Color.Transparent)
             }
             builder.addStyle(style, start, end)
             if (span.type == FormatType.Code && code != null) {

@@ -62,6 +62,7 @@ fun MenuGroups(
     groups: List<List<MenuEntry>>,
     width: androidx.compose.ui.unit.Dp = MenuWidth,
     leading: (@Composable ColumnScope.() -> Unit)? = null,
+    trailing: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val shown = groups.filter { it.isNotEmpty() }
     val scope = rememberCoroutineScope()
@@ -107,6 +108,16 @@ fun MenuGroups(
                         }
                     }
                 }
+            }
+        }
+        if (trailing != null) {
+            Surface(
+                shape = groupShapes(0, 1).shape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shadowElevation = MenuShadow,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(content = trailing)
             }
         }
     }
