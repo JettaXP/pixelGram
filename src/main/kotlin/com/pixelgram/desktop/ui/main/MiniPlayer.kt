@@ -204,7 +204,7 @@ fun AudioQueueEffects(telegram: Telegram) {
 fun MiniPlayer(telegram: Telegram) {
     LaunchedEffect(telegram, telegram.me?.id) { telegram.loadMyProfileAudios() }
     AnimatedVisibility(
-        visible = AudioPlayer.current != null || AudioQueue.pending != null,
+        visible = (AudioPlayer.current != null || AudioQueue.pending != null) && !(FullPlayer.open && AudioPlayer.current != null),
         enter = expandVertically() + fadeIn(),
         exit = shrinkVertically() + fadeOut(),
     ) {
