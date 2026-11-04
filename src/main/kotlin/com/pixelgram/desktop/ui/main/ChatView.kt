@@ -174,6 +174,7 @@ import androidx.compose.ui.window.PopupProperties
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.ChatState
 import com.pixelgram.desktop.telegram.Telegram
+import com.pixelgram.desktop.telegram.fullName
 import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.telegram.SenderTag
 import com.pixelgram.desktop.telegram.SecretStatus
@@ -883,7 +884,7 @@ private fun ChatViewContent(
                                 chat.isChannel && message.senderUserId != 0L
                             MessageGestures(message, actions, itemModifier) {
                               Row(verticalAlignment = Alignment.Bottom) {
-                                if (groupChat) {
+                                if (groupChat || (wide && message.isOutgoing && chat.isGroup && !chat.isChannel)) {
                                     Box(Modifier.width(SenderAvatarSlot)) {
                                         if (lastInRun) {
                                             SenderAvatar(message, telegram, settings) {
@@ -2007,13 +2008,14 @@ fun senderColor(id: Long): Color {
 
 @Composable
 internal fun SenderAvatar(message: UiMessage, telegram: Telegram, settings: AppSettings, onClick: () -> Unit) {
+    val me = telegram.me?.takeIf { message.isOutgoing && message.senderChatId == 0L }
     val photo = if (message.senderUserId != 0L) {
-        telegram.users[message.senderUserId]?.profilePhoto?.small
+        telegram.users[message.senderUserId]?.profilePhoto?.small ?: me?.profilePhoto?.small
     } else {
         telegram.chats[message.senderChatId]?.photo
     }
     Avatar(
-        telegram.senderName(message),
+        telegram.senderName(message).ifBlank { me?.fullName().orEmpty() },
         photo,
         telegram,
         settings,
