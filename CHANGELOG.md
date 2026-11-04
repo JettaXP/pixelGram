@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.51.2 Bun
+
+- Messages made only of premium emoji show them big and without a bubble, like in Telegram: one emoji is the biggest, up to seven get smaller step by step.
+- Click a premium emoji to open its pack. The message menu lists the packs used in the message.
+- Premium emoji show as themselves in the message field and are a bit bigger in text.
+- The typing bubble shows the avatar in one-side mode.
+- Music fades out softly on pause and fades back in.
+- Sticker panel headers are translated.
+
 ## 0.51.1 Bun
 
 - While a back swipe is in progress, the chat no longer scrolls up or down until you let go.
