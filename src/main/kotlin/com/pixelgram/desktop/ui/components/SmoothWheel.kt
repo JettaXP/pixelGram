@@ -39,7 +39,15 @@ fun Modifier.smoothWheel(state: ScrollableState, reverse: Boolean = false): Modi
                 val delta = change.scrollDelta
                 if (delta.y == 0f || abs(delta.x) > abs(delta.y)) continue
                 change.consume()
-                glide.remaining += delta.y * step * if (reverse) -1f else 1f
+                val sign = if (reverse) -1f else 1f
+                val notch = abs(delta.y - kotlin.math.round(delta.y)) < NotchTolerance && abs(delta.y) >= 1f
+                if (!notch) {
+                    glide.job?.cancel()
+                    glide.remaining = 0f
+                    state.dispatchRawDelta(delta.y * step * TouchpadFactor * sign)
+                    continue
+                }
+                glide.remaining += delta.y * step * sign
                 glide.job?.cancel()
                 glide.job = scope.launch {
                     val target = glide.remaining
@@ -64,6 +72,8 @@ object SmoothWheelScope {
 
 private val WheelStep = 72.dp
 private const val GlideMs = 280
+private const val NotchTolerance = 0.001f
+private const val TouchpadFactor = 1f
 
 fun Modifier.smoothClip(shape: androidx.compose.ui.graphics.Shape): Modifier = this
     .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }

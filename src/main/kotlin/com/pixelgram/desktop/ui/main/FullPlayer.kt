@@ -106,6 +106,9 @@ import com.pixelgram.desktop.ui.icons.outlined.FavoriteBorder
 import it.tdlight.jni.TdApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.text.drawText
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -553,10 +556,32 @@ private fun LyricsState(icon: androidx.compose.ui.graphics.vector.ImageVector, t
     }
 }
 
+private sealed interface LyricItem {
+    val start: Float
+    class Line(val index: Int, override val start: Float) : LyricItem
+    class Gap(override val start: Float, val end: Float) : LyricItem
+}
+
+private fun lyricItems(lines: List<LyricLine>): List<LyricItem> {
+    val out = mutableListOf<LyricItem>()
+    val first = lines.firstOrNull { it.text.isNotBlank() }
+    if (first != null && first.time > GapSeconds) out += LyricItem.Gap(0f, first.time)
+    lines.forEachIndexed { i, line ->
+        if (line.text.isNotBlank()) {
+            out += LyricItem.Line(i, line.time)
+        } else {
+            val next = lines.drop(i + 1).firstOrNull { it.text.isNotBlank() }?.time
+            if (next != null && next - line.time > GapSeconds && out.lastOrNull() !is LyricItem.Gap) out += LyricItem.Gap(line.time, next)
+        }
+    }
+    return out
+}
+
 @Composable
 private fun SyncedLyrics(lines: List<LyricLine>) {
     val now = AudioPlayer.position
-    val current = lines.indexOfLast { it.time <= now + 0.15f }
+    val items = remember(lines) { lyricItems(lines) }
+    val current = items.indexOfLast { it.start <= now + 0.15f }
     val state = rememberLazyListState()
     var pausedUntil by remember { mutableStateOf(0L) }
     val follow = remember {
@@ -572,17 +597,20 @@ private fun SyncedLyrics(lines: List<LyricLine>) {
         val wait = pausedUntil - System.currentTimeMillis()
         if (wait > 0) kotlinx.coroutines.delay(wait)
         if (current < 0) return@LaunchedEffect
-        val item = state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == current }
+        val info = state.layoutInfo
+        val item = info.visibleItemsInfo.firstOrNull { it.index == current }
+        val previous = info.visibleItemsInfo.firstOrNull { it.index == current - 1 }?.size ?: 0
+        val desired = (viewport * LyricsTopFade).toInt() + previous + info.mainAxisItemSpacing
         if (item != null) {
-            state.animateScrollBy((item.offset - viewport / 3).toFloat(), tween(LineScrollMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            state.animateScrollBy((item.offset - info.viewportStartOffset - desired).toFloat(), tween(LineScrollMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         } else {
-            state.animateScrollToItem(current, -viewport / 3)
+            state.animateScrollToItem(current, -desired + info.beforeContentPadding)
         }
     }
     LazyColumn(
         state = state,
-        contentPadding = PaddingValues(horizontal = 6.dp + LyricsBleed, vertical = 120.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        contentPadding = PaddingValues(horizontal = 6.dp + LyricsBleed - LinePad, vertical = 120.dp),
+        verticalArrangement = Arrangement.spacedBy(LineSpacing),
         modifier = Modifier
             .fillMaxSize()
             .layout { measurable, constraints ->
@@ -597,12 +625,17 @@ private fun SyncedLyrics(lines: List<LyricLine>) {
             .nestedScroll(follow)
             .edgeFade(),
     ) {
-        itemsIndexed(lines) { position, line ->
+        itemsIndexed(items) { position, entry ->
+            val ease = androidx.compose.animation.core.FastOutSlowInEasing
+            if (entry is LyricItem.Gap) {
+                GapIndicator(entry, now, Modifier.padding(horizontal = LinePad))
+                return@itemsIndexed
+            }
+            val line = lines[(entry as LyricItem.Line).index]
             val distance = if (current < 0) position + 1 else abs(position - current)
             val upcoming = position > current
-            val lineEnd = lines.getOrNull(position + 1)?.time ?: (line.time + 5f)
+            val lineEnd = items.getOrNull(position + 1)?.start ?: (line.time + 5f)
             val done = distance == 0 && now >= lineEnd - LineSettle
-            val ease = androidx.compose.animation.core.FastOutSlowInEasing
             val alpha by animateFloatAsState(if (distance == 0) 1f else if (upcoming) 0.5f else 0.4f, tween(LineFadeMs, easing = ease))
             val blur by animateFloatAsState(if (distance == 0) 0f else (distance * 1.3f).coerceAtMost(5f), tween(LineFadeMs, easing = ease))
             val scale by animateFloatAsState(
@@ -615,17 +648,8 @@ private fun SyncedLyrics(lines: List<LyricLine>) {
             )
             val style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
             val color = MaterialTheme.colorScheme.onSurface
-            val text = if (distance == 0) {
-                val end = lines.getOrNull(position + 1)?.time ?: (line.time + 5f)
-                karaoke(line, now, end, color)
-            } else {
-                androidx.compose.ui.text.AnnotatedString(line.text.ifBlank { "♪" })
-            }
-            Text(
-                text,
-                style = style,
-                color = color,
-                modifier = Modifier
+            Box(
+                Modifier
                     .fillMaxWidth()
                     .graphicsLayer {
                         this.alpha = alpha
@@ -634,19 +658,51 @@ private fun SyncedLyrics(lines: List<LyricLine>) {
                         transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
                     }
                     .blur(blur.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .clickable {
                         pausedUntil = 0L
                         if (AudioPlayer.duration > 0f) AudioPlayer.seekCurrent(line.time / AudioPlayer.duration)
-                    },
-            )
+                    }
+                    .padding(horizontal = LinePad, vertical = LinePad * 0.75f),
+            ) {
+                if (distance == 0) {
+                    KaraokeLine(line.text, sungChars(line, now, lineEnd), style, color, MaterialTheme.colorScheme.primary)
+                } else {
+                    Text(line.text, style = style, color = color)
+                }
+            }
         }
     }
 }
 
-private fun karaoke(line: LyricLine, now: Float, end: Float, color: androidx.compose.ui.graphics.Color): androidx.compose.ui.text.AnnotatedString {
-    val text = line.text.ifBlank { "♪" }
-    val sung = if (line.words.isNotEmpty()) {
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun GapIndicator(gap: LyricItem.Gap, now: Float, modifier: Modifier) {
+    val end = gap.end - GapLead
+    val visible = now >= gap.start && now <= end
+    val shown by animateFloatAsState(if (visible) 1f else 0f, tween(GapFadeMs))
+    val progress = if (end > gap.start) ((now - gap.start) / (end - gap.start)).coerceIn(0f, 1f) else 0f
+    val smooth by animateFloatAsState(progress, tween(100, easing = androidx.compose.animation.core.LinearEasing))
+    val color = MaterialTheme.colorScheme.primary
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(GapHeight * shown)
+            .graphicsLayer { alpha = shown; clip = true },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        androidx.compose.material3.CircularWavyProgressIndicator(
+            progress = { smooth },
+            modifier = Modifier.size(36.dp),
+            color = color,
+            trackColor = color.copy(alpha = 0.2f),
+        )
+    }
+}
+
+private fun sungChars(line: LyricLine, now: Float, end: Float): Float {
+    val text = line.text
+    return if (line.words.isNotEmpty()) {
         var chars = 0f
         var offset = 0
         line.words.forEachIndexed { i, word ->
@@ -661,10 +717,67 @@ private fun karaoke(line: LyricLine, now: Float, end: Float, color: androidx.com
         val span = (end - line.time).coerceIn(0.4f, text.length * 0.09f + 0.6f)
         ((now - line.time) / span).coerceIn(0f, 1f) * text.length
     }
-    return androidx.compose.ui.text.buildAnnotatedString {
-        text.forEachIndexed { i, ch ->
-            val lit = (sung - i).coerceIn(0f, 1f)
-            withStyle(androidx.compose.ui.text.SpanStyle(color = color.copy(alpha = 0.35f + 0.65f * lit))) { append(ch) }
+}
+
+@Composable
+private fun KaraokeLine(
+    text: String,
+    sung: Float,
+    style: androidx.compose.ui.text.TextStyle,
+    color: androidx.compose.ui.graphics.Color,
+    glow: androidx.compose.ui.graphics.Color,
+) {
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val width = constraints.maxWidth
+        val layout = remember(text, style, width) {
+            measurer.measure(text, style, constraints = androidx.compose.ui.unit.Constraints(maxWidth = width))
+        }
+        val height = with(androidx.compose.ui.platform.LocalDensity.current) { layout.size.height.toDp() }
+        androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(height)) {
+            val glowRadius = GlowRadius.toPx()
+            for (i in text.indices) {
+                if (text[i].isWhitespace() || text[i].isLowSurrogate()) continue
+                val box = layout.getBoundingBox(i)
+                if (box.width <= 0f) continue
+                val lit = (sung - i).coerceIn(0f, 1f)
+                val nudge = if (lit > 0f && lit < 1f) NudgeStrength * kotlin.math.sin(lit * kotlin.math.PI.toFloat()) * kotlin.math.exp(-3f * lit) else 0f
+                val top = box.top - box.height * 0.3f
+                val bottom = box.bottom + box.height * 0.3f
+                withTransform({
+                    scale(1f + nudge * 0.3f, 1f + nudge, pivot = androidx.compose.ui.geometry.Offset(box.center.x, box.bottom))
+                }) {
+                    if (lit >= 1f) {
+                        clipRect(box.left, top, box.right, bottom) { drawText(layout, color = color) }
+                    } else {
+                        clipRect(box.left, top, box.right, bottom) { drawText(layout, color = color.copy(alpha = DimAlpha)) }
+                        if (lit > 0f) {
+                            val fade = (lit * 5f).coerceIn(0f, 1f) * ((1f - lit) * 8f).coerceIn(0f, 1f)
+                            if (fade > 0.01f) {
+                                clipRect(box.left - glowRadius, top - glowRadius, box.right + glowRadius, bottom + glowRadius) {
+                                    drawText(
+                                        layout,
+                                        color = androidx.compose.ui.graphics.Color.Transparent,
+                                        shadow = androidx.compose.ui.graphics.Shadow(glow.copy(alpha = GlowAlpha * fade), blurRadius = glowRadius * fade),
+                                    )
+                                }
+                            }
+                            val filled = box.width * lit
+                            val edge = (box.width * EdgeShare).coerceAtLeast(1f)
+                            val solid = (filled - edge).coerceAtLeast(0f)
+                            if (solid > 0f) clipRect(box.left, top, box.left + solid, bottom) { drawText(layout, color = color) }
+                            for (j in 0 until EdgeSlices) {
+                                val from = box.left + solid + j * edge / EdgeSlices
+                                val to = (box.left + solid + (j + 1) * edge / EdgeSlices + 0.5f).coerceAtMost(box.left + filled)
+                                if (to > from) {
+                                    val a = DimAlpha + (1f - DimAlpha) * (1f - (j + 0.5f) / EdgeSlices)
+                                    clipRect(from, top, to, bottom) { drawText(layout, color = color.copy(alpha = a)) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -685,6 +798,19 @@ private fun Modifier.edgeFade(): Modifier = this
     }
 
 private val LyricsBleed = 20.dp
+private val LinePad = 10.dp
+private val LineSpacing = 10.dp
+private val GapHeight = 56.dp
+private val GlowRadius = 12.dp
+private const val GapSeconds = 4f
+private const val GapLead = 0.65f
+private const val GapFadeMs = 200
+private const val DimAlpha = 0.35f
+private const val GlowAlpha = 0.35f
+private const val NudgeStrength = 0.038f
+private const val EdgeShare = 0.45f
+private const val EdgeSlices = 12
+private const val LyricsTopFade = 0.1f
 private const val FollowPauseMs = 3_000L
 private const val LineScrollMs = 650
 private const val LineFadeMs = 700
