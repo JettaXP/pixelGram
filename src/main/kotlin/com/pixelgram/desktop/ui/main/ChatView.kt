@@ -348,6 +348,7 @@ private fun ChatViewContent(
         }
     }
     var highlight by remember(chat.id) { mutableStateOf<Pair<Long, Long>?>(null) }
+    val returnStack = remember(chat.id) { androidx.compose.runtime.mutableStateListOf<Long>() }
     var pinning by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var commentsFor by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     val selected = remember(chat.id) { mutableStateListOf<Long>() }
@@ -431,7 +432,10 @@ private fun ChatViewContent(
                     DoubleClickAction.Nothing -> Unit
                 }
             },
-            onQuoteClick = { id -> MessageSearch.jump = chat.id to id },
+            onQuoteClick = { id ->
+                listState.layoutInfo.visibleItemsInfo.firstOrNull()?.let { item -> shown.getOrNull(item.index)?.id }?.let { from -> if (from != id) returnStack.add(from) }
+                MessageSearch.jump = chat.id to id
+            },
         )
     }
     LaunchedEffect(chat.id) { MessageSearch.lastChat = chat.id }
@@ -660,7 +664,7 @@ private fun ChatViewContent(
                 pins,
                 index,
                 onClick = {
-                    pins.getOrNull(index)?.let { MessageSearch.jump = chat.id to it.id }
+                    pins.getOrNull(index)?.let { actions.onQuoteClick(it.id) }
                     pinIndex = if (pins.isEmpty()) 0 else (index + 1) % pins.size
                 },
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
@@ -828,7 +832,7 @@ private fun ChatViewContent(
                     androidx.compose.runtime.CompositionLocalProvider(LocalBubblePulse provides { flash.value }, LocalBubbleGroup provides BubbleGroup(top = firstInRun || newDay, bottom = lastInRun || !sameDay(message.date, shown[index - 1].date))) {
                     Column(
                         if (PowerSaving.messageAnimations) {
-                            Modifier.animateItem(fadeInSpec = if (message.fresh) null else fade, placementSpec = if (listState.isScrollInProgress) null else placement, fadeOutSpec = fade)
+                            Modifier.animateItem(fadeInSpec = if (message.fresh || jumping) null else fade, placementSpec = if (listState.isScrollInProgress || jumping) null else placement, fadeOutSpec = if (jumping) null else fade)
                         } else {
                             Modifier
                         },
@@ -983,11 +987,15 @@ private fun ChatViewContent(
                 )
                 ScrollDownButton(
                     listState,
-                    forceVisible = detached,
-                    onLatest = if (detached) {
-                        { telegram.returnToLatest(chat.id) { scope.launch { listState.scrollToItem(0) } } }
-                    } else {
-                        null
+                    forceVisible = detached || returnStack.isNotEmpty(),
+                    onLatest = when {
+                        returnStack.isNotEmpty() -> {
+                            { MessageSearch.jump = chat.id to returnStack.removeAt(returnStack.lastIndex) }
+                        }
+                        detached -> {
+                            { telegram.returnToLatest(chat.id) { scope.launch { listState.scrollToItem(0) } } }
+                        }
+                        else -> null
                     },
                 )
             }
