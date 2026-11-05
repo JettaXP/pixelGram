@@ -148,7 +148,7 @@ fun BasicAlertDialog(
 
 private const val StartScale = 0.88f
 private val MinWidth = 280.dp
-private val MaxWidth = 560.dp
+private val MaxWidth = 400.dp
 private val DialogPadding = 24.dp
 private val DialogCorner = 32.dp
 private val ButtonGap = 8.dp
