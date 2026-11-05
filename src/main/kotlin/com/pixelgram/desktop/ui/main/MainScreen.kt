@@ -816,8 +816,8 @@ private fun AccountHeader(
         }
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.Top) {
-                Box(Modifier.clip(CircleShape).background(colors.surface.copy(alpha = 0.35f)).padding(4.dp)) {
-                    Avatar(name, me.profilePhoto?.small, telegram, settings, size = 60.dp)
+                Box {
+                    Avatar(name, me.profilePhoto?.small, telegram, settings, size = 68.dp)
                 }
                 Spacer(Modifier.weight(1f))
                 val turn by animateFloatAsState(

@@ -385,10 +385,10 @@ private fun CompactChatList(
         FollowOwnSend(compactState, chatsFor(listKey).filter { it.pinned[listKey] != true })
         LazyColumn(
             state = compactState,
-            modifier = Modifier.listScrollbar(compactState, edge = 1f),
+            modifier = Modifier.listScrollbar(compactState, edge = -4f),
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = PaddingValues(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (archivedCount > 0 && listKey == archiveOn) {
                 item(key = "archive") {
