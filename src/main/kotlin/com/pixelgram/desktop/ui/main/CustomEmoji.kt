@@ -9,7 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
@@ -26,10 +30,17 @@ fun CustomEmojiView(id: Long, fallback: String, modifier: Modifier = Modifier.fi
     val sticker = telegram?.customEmoji(id)
     val packId = sticker?.setId?.takeIf { openPack && it != 0L }
     val clickable = if (packId != null && telegram != null) {
-        Modifier.pointerHoverIcon(androidx.compose.ui.input.pointer.PointerIcon.Hand).clickable(
-            interactionSource = null,
-            indication = null,
-        ) { StickerPack.current = StickerPackRequest(telegram, ActiveChat.id, packId) }
+        Modifier.pointerHoverIcon(androidx.compose.ui.input.pointer.PointerIcon.Hand).pointerInput(packId) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                if (!currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
+                val up = waitForUpOrCancellation(androidx.compose.ui.input.pointer.PointerEventPass.Initial) ?: return@awaitEachGesture
+                if ((up.position - down.position).getDistance() < viewConfiguration.touchSlop) {
+                    up.consume()
+                    StickerPack.current = StickerPackRequest(telegram, ActiveChat.id, packId)
+                }
+            }
+        }
     } else {
         Modifier
     }

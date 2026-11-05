@@ -77,7 +77,14 @@ fun ComposerField(
     var focused by remember { mutableStateOf(false) }
     val requester = remember { BringIntoViewRequester() }
     val colors = MaterialTheme.colorScheme
-    val style = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface)
+    val style = MaterialTheme.typography.bodyLarge.copy(
+        color = colors.onSurface,
+        lineHeight = ComposerLineHeight,
+        lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
+            androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
+            androidx.compose.ui.text.style.LineHeightStyle.Trim.None,
+        ),
+    )
     val liquid = settings.liquidCursor.value
     val images = EmojiFonts.use3D
     val transformation = remember(visualTransformation, images) {
@@ -159,6 +166,7 @@ private fun CustomEmojiOverlay(layout: TextLayoutResult?, custom: List<Pair<IntR
 }
 
 private const val CustomEmojiScale = 1.15f
+private val ComposerLineHeight = androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp)
 private const val EmojiScale = 1f
 
 @Composable

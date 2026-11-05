@@ -276,6 +276,33 @@ fun EmojiText(
     )
 }
 
+@Composable
+fun CustomEmojiLine(
+    raw: String,
+    entities: List<it.tdlight.jni.TdApi.TextEntity>,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    style: TextStyle = LocalTextStyle.current,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
+) {
+    val custom = remember(raw, entities) {
+        com.pixelgram.desktop.core.LocalPremiumEmoji.incoming(raw, entities.toTypedArray())
+            .mapNotNull { entity -> (entity.type as? it.tdlight.jni.TdApi.TextEntityTypeCustomEmoji)?.let { entity to it.customEmojiId } }
+            .filter { (entity, _) -> entity.offset >= 0 && entity.offset + entity.length <= raw.length }
+    }
+    if (custom.isEmpty()) {
+        EmojiText(raw, modifier, color, style = style, maxLines = maxLines, overflow = overflow)
+        return
+    }
+    val (annotated, inline) = remember(raw, custom) {
+        val builder = AnnotatedString.Builder(raw)
+        custom.forEach { (entity, id) -> builder.addStringAnnotation(CustomEmojiTag, id.toString(), entity.offset, entity.offset + entity.length) }
+        withEmoji(builder.toAnnotatedString())
+    }
+    Text(annotated, modifier = modifier, color = color, style = style, maxLines = maxLines, overflow = overflow, inlineContent = inline)
+}
+
 fun withEmoji(text: AnnotatedString): Pair<AnnotatedString, Map<String, InlineTextContent>> {
     val plain = text.text
     val custom = text.getStringAnnotations(CustomEmojiTag, 0, plain.length)

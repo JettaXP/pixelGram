@@ -128,12 +128,22 @@ fun PinnedBar(pins: List<UiMessage>, index: Int, onClick: () -> Unit, modifier: 
                     }
                 }
                 AnimatedContent(current.key, transitionSpec = { fadeIn() togetherWith fadeOut() }) { _ ->
-                    EmojiText(
-                        (current.text.takeIf { it.isNotBlank() } ?: contentText(current.content)).replace('\n', ' '),
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (current.text.isNotBlank()) {
+                        com.pixelgram.desktop.ui.theme.CustomEmojiLine(
+                            current.text.replace('\n', ' '),
+                            current.entities,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    } else {
+                        EmojiText(
+                            contentText(current.content).replace('\n', ' '),
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }

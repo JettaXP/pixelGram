@@ -517,11 +517,21 @@ private fun ChatRow(
                         if (thumb != null) {
                             com.pixelgram.desktop.ui.components.AvatarImage("", thumb, telegram, RoundedCornerShape(4.dp), PreviewThumb, Modifier.padding(end = 4.dp))
                         }
-                        EmojiText(
-                            last?.let { contentText(it.content).replace('\n', ' ') } ?: "",
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        val formatted = (last?.content as? TdApi.MessageText)?.text
+                        if (formatted != null) {
+                            com.pixelgram.desktop.ui.theme.CustomEmojiLine(
+                                formatted.text.replace('\n', ' '),
+                                formatted.entities.toList(),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        } else {
+                            EmojiText(
+                                last?.let { contentText(it.content).replace('\n', ' ') } ?: "",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
             },

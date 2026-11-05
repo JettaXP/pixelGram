@@ -95,6 +95,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -2571,10 +2572,6 @@ private fun Composer(
                     contentPadding = PaddingValues(horizontal = 14.dp),
                     modifier = Modifier.height(36.dp),
                 ) { Text("Menu") }
-            } else {
-                IconButton(onClick = { openCommands() }) {
-                    Text("/", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
             }
         }
         AttachButton(
@@ -2752,6 +2749,20 @@ private fun Composer(
                 }
             }
             if (scheduledOpen) ScheduledDialog(composerChat, telegram) { scheduledOpen = false }
+        }
+        if (botApp == null && commands.isNotEmpty() && composerChat?.privateUserId == 0L) {
+            IconButton(onClick = {
+                setText(TextFieldValue("/", TextRange(1)))
+                runCatching { focus.requestFocus() }
+            }) {
+                val tint = MaterialTheme.colorScheme.onSurfaceVariant
+                Box(
+                    Modifier.size(22.dp).border(2.dp, tint, RoundedCornerShape(6.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("/", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = tint)
+                }
+            }
         }
         Box {
             var dismissedAt by remember { mutableStateOf(0L) }
