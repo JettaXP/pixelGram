@@ -322,7 +322,13 @@ private fun StickersTab(
 
 
 @Composable
-internal fun StickerHoldPreview(preview: TdApi.Sticker?, telegram: Telegram, onDismiss: () -> Unit) {
+internal fun StickerHoldPreview(
+    preview: TdApi.Sticker?,
+    telegram: Telegram,
+    dismissOnPress: Boolean = false,
+    footer: (@Composable (TdApi.Sticker) -> Unit)? = null,
+    onDismiss: () -> Unit,
+) {
     val previewState = remember { androidx.compose.animation.core.MutableTransitionState(false) }
     previewState.targetState = preview != null
     if (previewState.currentState || previewState.targetState) {
@@ -349,7 +355,8 @@ internal fun StickerHoldPreview(preview: TdApi.Sticker?, telegram: Telegram, onD
                             awaitPointerEventScope {
                                 while (true) {
                                     val event = awaitPointerEvent()
-                                    if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Release) onDismiss()
+                                    val closing = if (dismissOnPress) androidx.compose.ui.input.pointer.PointerEventType.Press else androidx.compose.ui.input.pointer.PointerEventType.Release
+                                    if (event.type == closing && event.changes.none { it.isConsumed }) onDismiss()
                                 }
                             }
                         },
@@ -365,6 +372,7 @@ internal fun StickerHoldPreview(preview: TdApi.Sticker?, telegram: Telegram, onD
                         ) {
                             EmojiText(sticker.emoji, style = MaterialTheme.typography.displaySmall)
                             StickerView(sticker, telegram, PreviewSize)
+                            footer?.invoke(sticker)
                         }
                     }
                 }

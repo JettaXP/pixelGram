@@ -535,6 +535,7 @@ private fun ChatViewContent(
     }
     PluginViewer.path?.let { path -> PluginDialog(path, telegram) { PluginViewer.path = null } }
     BackupViewer.path?.let { path -> BackupImportDialog(java.io.File(path), settings) { BackupViewer.path = null } }
+    EmojiPreviewHost()
     ThemeImport.request?.let { request -> ThemeImportDialog(request, settings) { ThemeImport.request = null } }
     MarkdownViewer.path?.let { path -> MarkdownDialog(path) { MarkdownViewer.path = null } }
     deleting?.let { message ->

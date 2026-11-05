@@ -1656,3 +1656,5 @@ View Photo	Посмотреть фото
 today at {time}	сегодня в {time}
 yesterday at {time}	вчера в {time}
 {date} at {time}	{date} в {time}
+This emoji is from the {pack} pack	Этот эмодзи из набора «{pack}»
+View pack	Открыть набор

@@ -9,6 +9,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -37,7 +41,7 @@ fun CustomEmojiView(id: Long, fallback: String, modifier: Modifier = Modifier.fi
                 val up = waitForUpOrCancellation(androidx.compose.ui.input.pointer.PointerEventPass.Initial) ?: return@awaitEachGesture
                 if ((up.position - down.position).getDistance() < viewConfiguration.touchSlop) {
                     up.consume()
-                    StickerPack.current = StickerPackRequest(telegram, ActiveChat.id, packId)
+                    EmojiPreview.current = EmojiPreviewRequest(telegram, sticker)
                 }
             }
         }
@@ -72,4 +76,49 @@ fun CustomEmojiView(id: Long, fallback: String, modifier: Modifier = Modifier.fi
 
 object ActiveChat {
     @Volatile var id = 0L
+}
+
+class EmojiPreviewRequest(val telegram: com.pixelgram.desktop.telegram.Telegram, val sticker: TdApi.Sticker)
+
+object EmojiPreview {
+    var current by androidx.compose.runtime.mutableStateOf<EmojiPreviewRequest?>(null)
+}
+
+@Composable
+fun EmojiPreviewHost() {
+    val request = EmojiPreview.current
+    var last by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(request) }
+    request?.let { last = it }
+    val telegram = last?.telegram ?: return
+    StickerHoldPreview(
+        request?.sticker,
+        telegram,
+        dismissOnPress = true,
+        footer = { sticker ->
+            val setId = sticker.setId
+            if (setId != 0L) {
+                androidx.compose.material3.Surface(
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.padding(top = 12.dp),
+                ) {
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                    ) {
+                        com.pixelgram.desktop.ui.components.Text(
+                            com.pixelgram.desktop.core.tr("This emoji is from the {pack} pack").replace("{pack}", telegram.stickerSetTitle(setId) ?: "…"),
+                            style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+                        )
+                        com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = {
+                            EmojiPreview.current = null
+                            StickerPack.current = StickerPackRequest(telegram, ActiveChat.id, setId)
+                        }) { com.pixelgram.desktop.ui.components.Text("View pack") }
+                    }
+                }
+            }
+        },
+        onDismiss = { EmojiPreview.current = null },
+    )
 }
