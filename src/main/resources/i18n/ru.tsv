@@ -1661,3 +1661,4 @@ View pack	Открыть набор
 Remove local photo	Убрать локальное фото
 Remove photo for me	Убрать фото для себя
 Use this photo	Куда поставить фото
+{file} has the .{ext} extension. It can run programs on your computer. Open it only if you trust the sender.	У файла {file} расширение .{ext}. Он может запускать программы на компьютере. Открывайте его, только если доверяете отправителю.

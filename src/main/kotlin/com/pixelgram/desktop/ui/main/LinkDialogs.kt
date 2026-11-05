@@ -75,7 +75,8 @@ private fun DangerousFileDialog(path: String, onDismiss: () -> Unit) {
         title = { Text("Open this file?") },
         text = {
             Text(
-                "$name has the .${FileSafety.extension(name)} extension. It can run programs on your computer. Open it only if you trust the sender.",
+                com.pixelgram.desktop.core.tr("{file} has the .{ext} extension. It can run programs on your computer. Open it only if you trust the sender.")
+                    .replace("{file}", name).replace("{ext}", FileSafety.extension(name)),
             )
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
