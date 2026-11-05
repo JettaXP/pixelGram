@@ -267,7 +267,7 @@ private fun ApplicationScope.PixelApp() {
         }
     }
 
-    if (com.pixelgram.desktop.core.Mpris.supported) {
+    run {
         val reopenPlayer by androidx.compose.runtime.rememberUpdatedState({ visible = true })
         val leavePlayer by androidx.compose.runtime.rememberUpdatedState(quit)
         LaunchedEffect(Unit) {
@@ -283,7 +283,7 @@ private fun ApplicationScope.PixelApp() {
                 val audio = com.pixelgram.desktop.core.AudioPlayer.audio
                 com.pixelgram.desktop.ui.main.Links.active?.invoke()?.localPath(audio?.albumCoverThumbnail?.file ?: audio?.externalAlbumCovers?.maxByOrNull { it.width }?.file)
             }
-            withContext(Dispatchers.IO) { mpris.start() }
+            if (mpris.supported) withContext(Dispatchers.IO) { mpris.start() }
         }
     }
 
@@ -398,6 +398,9 @@ private fun ApplicationScope.PixelApp() {
         state = windowState,
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
+        if (com.pixelgram.desktop.core.WindowsMedia.supported) {
+            LaunchedEffect(window) { com.pixelgram.desktop.core.WindowsMedia.start(com.sun.jna.Native.getComponentID(window)) }
+        }
         DisposableEffect(window) {
             Notifications.window = window
             onDispose { if (Notifications.window == window) Notifications.window = null }
