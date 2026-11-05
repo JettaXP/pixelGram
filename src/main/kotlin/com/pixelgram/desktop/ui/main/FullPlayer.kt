@@ -474,14 +474,15 @@ private fun coverFile(audio: TdApi.Audio?): Pair<TdApi.File?, TdApi.Minithumbnai
 @Composable
 private fun SmallCover(audio: TdApi.Audio?, telegram: Telegram, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
     val (file, mini) = coverFile(audio)
-    val hasImage = mini != null || (file != null && telegram.localPath(file) != null)
+    val found = com.pixelgram.desktop.core.CoverArt.path(audio)
+        val hasImage = found != null || mini != null || (file != null && telegram.localPath(file) != null)
     val shape = if (hasImage) RoundedCornerShape(16.dp) else MaterialShapes.Cookie12Sided.toShape()
     Box(
         modifier.size(size).clip(shape).background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
         Icon(Icons.Rounded.TrackNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(size / 2.4f))
-        if (hasImage) ThumbImage(file, mini, telegram, Modifier.fillMaxSize())
+        if (hasImage) ThumbImage(file, mini, telegram, Modifier.fillMaxSize(), localPath = found)
     }
 }
 
@@ -505,7 +506,8 @@ private fun BigCover(audio: TdApi.Audio?, telegram: Telegram, modifier: Modifier
     val angle = spin.value
     Box(Modifier.aspectRatio(1f).then(modifier), contentAlignment = Alignment.Center) {
         LaunchedEffect(file?.id) { telegram.download(file) }
-        val hasImage = mini != null || (file != null && telegram.localPath(file) != null)
+        val found = com.pixelgram.desktop.core.CoverArt.path(audio)
+        val hasImage = found != null || mini != null || (file != null && telegram.localPath(file) != null)
         if (hasImage) {
             Box(
                 Modifier
@@ -519,7 +521,7 @@ private fun BigCover(audio: TdApi.Audio?, telegram: Telegram, modifier: Modifier
                 Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.TrackNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(96.dp))
                 }
-                ThumbImage(file, mini, telegram, Modifier.fillMaxSize())
+                ThumbImage(file, mini, telegram, Modifier.fillMaxSize(), localPath = found)
             }
         } else {
             Box(

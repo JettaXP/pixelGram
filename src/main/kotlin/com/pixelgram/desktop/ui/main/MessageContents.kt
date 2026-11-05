@@ -411,9 +411,10 @@ fun ThumbImage(
     telegram: Telegram,
     modifier: Modifier,
     scale: ContentScale = ContentScale.Crop,
+    localPath: String? = null,
 ) {
     LaunchedEffect(file?.id) { telegram.download(file) }
-    val path = telegram.localPath(file)
+    val path = localPath ?: telegram.localPath(file)
     val miniImage = remember(mini) {
         mini?.data?.let { runCatching { SkiaImage.makeFromEncoded(it).use { image -> image.toComposeImageBitmap() } }.getOrNull() }
     }
@@ -727,22 +728,23 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun PlayButton(key: Long, chatId: Long, title: String, file: TdApi.File?, telegram: Telegram, audio: TdApi.Audio? = null, cover: TdApi.File? = null) {
+fun PlayButton(key: Long, chatId: Long, title: String, file: TdApi.File?, telegram: Telegram, audio: TdApi.Audio? = null, cover: TdApi.File? = null, coverPath: String? = null) {
     val scheme = MaterialTheme.colorScheme
     val (busy, start) = rememberStreamOpener(file, telegram) { path -> AudioPlayer.toggle(key, path, title, chatId, audio) { telegram.isDownloaded(file) } }
     val active = AudioPlayer.current == key
     val downloaded = telegram.localPath(file) != null
-    val size = if (cover != null) CoverButton else PlayerButton
+    val hasCover = cover != null || coverPath != null
+    val size = if (hasCover) CoverButton else PlayerButton
     Box(Modifier.size(size)) {
         Box(
             Modifier.fillMaxSize().clip(CircleShape).background(scheme.primary).clickable(onClick = start),
             contentAlignment = Alignment.Center,
         ) {
-            if (cover != null) {
-                com.pixelgram.desktop.ui.components.AvatarImage(title, cover, telegram, CircleShape, size)
+            if (hasCover) {
+                com.pixelgram.desktop.ui.components.AvatarImage(title, cover, telegram, CircleShape, size, localPath = coverPath)
                 Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = CoverScrim)))
             }
-            val tint = if (cover != null) androidx.compose.ui.graphics.Color.White else scheme.onPrimary
+            val tint = if (hasCover) androidx.compose.ui.graphics.Color.White else scheme.onPrimary
             when {
                 busy -> TransferRing(telegram.progress(file), tint, { telegram.cancelDownload(file) }, 40.dp)
                 active && AudioPlayer.loading -> LoadingIndicator(Modifier.size(32.dp), color = tint)
@@ -862,7 +864,7 @@ private fun AudioContent(message: UiMessage, audio: TdApi.Audio, telegram: Teleg
     val title = audioTitle(audio)
     val cover = audio.albumCoverThumbnail?.file ?: audio.externalAlbumCovers?.firstOrNull()?.file
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PlayButton(key, message.chatId, title, audio.audio, telegram, audio, cover = cover)
+        PlayButton(key, message.chatId, title, audio.audio, telegram, audio, cover = cover, coverPath = com.pixelgram.desktop.core.CoverArt.path(audio))
         Column(Modifier.width(WaveWidth)) {
             val name = audio.title.ifBlank { audio.fileName.ifBlank { "Audio" } }
             EmojiText(name, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)

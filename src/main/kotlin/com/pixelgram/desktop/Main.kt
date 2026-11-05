@@ -281,7 +281,8 @@ private fun ApplicationScope.PixelApp() {
             }
             mpris.coverPath = {
                 val audio = com.pixelgram.desktop.core.AudioPlayer.audio
-                com.pixelgram.desktop.ui.main.Links.active?.invoke()?.localPath(audio?.albumCoverThumbnail?.file ?: audio?.externalAlbumCovers?.maxByOrNull { it.width }?.file)
+                com.pixelgram.desktop.core.CoverArt.path(audio)
+                    ?: com.pixelgram.desktop.ui.main.Links.active?.invoke()?.localPath(audio?.albumCoverThumbnail?.file ?: audio?.externalAlbumCovers?.maxByOrNull { it.width }?.file)
             }
             if (mpris.supported) withContext(Dispatchers.IO) { mpris.start() }
         }
