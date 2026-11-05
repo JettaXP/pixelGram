@@ -1949,9 +1949,10 @@ class Telegram(
     }
 
     private val officialSupergroups = KeyedState<Long, Boolean>()
+    private val OfficialSupergroupIds = setOf(4378271602L)
 
     fun isOfficial(chat: ChatState): Boolean =
-        chat.supergroupId != 0L && officialSupergroups[chat.supergroupId] == true ||
+        chat.supergroupId != 0L && (officialSupergroups[chat.supergroupId] == true || chat.supergroupId in OfficialSupergroupIds) ||
             System.getProperty("pixelgram.demo") == "true" && chat.id == DemoOfficialChat
 
     fun isVerified(chat: ChatState): Boolean = when {
