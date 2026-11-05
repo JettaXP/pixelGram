@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.noBackSwipe
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -146,7 +147,7 @@ private fun MdBlock(node: ASTNode, src: String) {
             Text(
                 codeText(node, src),
                 style = body.copy(fontFamily = FontFamily.Monospace, fontSize = typography.bodyMedium.fontSize),
-                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(14.dp),
+                modifier = Modifier.noBackSwipe().horizontalScroll(rememberScrollState()).padding(14.dp),
             )
         }
         MarkdownElementTypes.BLOCK_QUOTE -> Row(Modifier.height(IntrinsicSize.Min)) {
@@ -201,7 +202,7 @@ private fun MdList(node: ASTNode, src: String, ordered: Boolean) {
 private fun MdTable(node: ASTNode, src: String) {
     val rows = node.children.filter { it.type == GFMElementTypes.HEADER || it.type == GFMElementTypes.ROW }
     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.horizontalScroll(rememberScrollState())) {
+        Column(Modifier.noBackSwipe().horizontalScroll(rememberScrollState())) {
             rows.forEachIndexed { index, row ->
                 val header = row.type == GFMElementTypes.HEADER
                 Row(Modifier.background(if (header) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)) {

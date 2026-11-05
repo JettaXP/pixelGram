@@ -162,5 +162,5 @@ private object WholeWindow : androidx.compose.ui.window.PopupPositionProvider {
 
 private const val FadeMs = 700
 private const val CloseMs = 220
-private const val ScrimAlpha = 0.9f
+private const val ScrimAlpha = 1f
 private const val MsPerPx = 22f

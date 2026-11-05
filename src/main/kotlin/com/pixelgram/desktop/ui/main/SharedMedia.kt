@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.noBackSwipe
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import com.pixelgram.desktop.ui.icons.automirrored.outlined.Forward
 import com.pixelgram.desktop.ui.icons.automirrored.outlined.OpenInNew
@@ -132,7 +133,7 @@ fun PillTabs(
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.horizontalScroll(rememberScrollState()),
+        modifier = modifier.noBackSwipe().horizontalScroll(rememberScrollState()),
     ) {
         tabs.forEachIndexed { index, title ->
             val active = index == selected

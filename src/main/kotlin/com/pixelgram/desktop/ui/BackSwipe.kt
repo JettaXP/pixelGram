@@ -28,6 +28,9 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.areAnyPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -44,10 +47,22 @@ class BackSwipeState {
     var dy = 0f
     var locked: Boolean? = null
     var rangeMin = 0f
+    var origin = Offset.Zero
     var sticky = false
     var lastEvent = 0L
     var at by mutableStateOf(Offset.Zero)
     var job: Job? = null
+}
+
+object BackSwipeExclusions {
+    val rects = androidx.compose.runtime.mutableStateMapOf<Any, Rect>()
+}
+
+@Composable
+fun Modifier.noBackSwipe(): Modifier {
+    val key = remember { Any() }
+    androidx.compose.runtime.DisposableEffect(key) { onDispose { BackSwipeExclusions.rects.remove(key) } }
+    return onGloballyPositioned { BackSwipeExclusions.rects[key] = it.boundsInWindow() }
 }
 
 object BackZones {
@@ -66,7 +81,7 @@ fun Modifier.backSwipe(state: BackSwipeState, enabled: () -> Boolean, onBack: ()
     val step = with(density) { ScrollStep.toPx() }
     val lock = with(density) { LockDistance.toPx() }
     val settings = com.pixelgram.desktop.ui.theme.LocalAppSettings.current
-    return pointerInput(Unit) {
+    return onGloballyPositioned { state.origin = it.positionInWindow() }.pointerInput(Unit) {
         awaitPointerEventScope {
             while (true) {
                 val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -98,7 +113,9 @@ fun Modifier.backSwipe(state: BackSwipeState, enabled: () -> Boolean, onBack: ()
                 state.dy += change.scrollDelta.y * step
                 if (state.locked == null && abs(state.dx) + abs(state.dy) >= lock) {
                     val horizontal = abs(state.dx) - abs(state.dy) > lock / 2f
-                    state.locked = horizontal && state.dx > 0f && enabled() && settings?.backSwipe?.value == true
+                    val window = state.at + state.origin
+                    val excluded = BackSwipeExclusions.rects.values.any { it.contains(window) }
+                    state.locked = horizontal && state.dx > 0f && !excluded && enabled() && settings?.backSwipe?.value == true
                     state.rangeMin = 0f
                 }
                 if (state.locked == null && abs(change.scrollDelta.x) > abs(change.scrollDelta.y)) change.consume()

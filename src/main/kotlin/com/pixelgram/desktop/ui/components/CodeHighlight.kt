@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.components
 
+import com.pixelgram.desktop.ui.noBackSwipe
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -259,7 +260,7 @@ fun CodeBlock(code: String, language: String, style: TextStyle, modifier: Modifi
                     highlighted,
                     style = style.copy(fontFamily = FontFamily.Monospace, fontSize = style.fontSize * CodeScale),
                     softWrap = false,
-                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 10.dp, vertical = 8.dp),
+                    modifier = Modifier.noBackSwipe().horizontalScroll(rememberScrollState()).padding(horizontal = 10.dp, vertical = 8.dp),
                 )
             }
         }

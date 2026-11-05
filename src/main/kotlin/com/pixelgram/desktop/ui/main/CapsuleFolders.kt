@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.noBackSwipe
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -103,7 +104,7 @@ internal fun CapsuleFolders(
 
     Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
         Surface(shape = CircleShape, color = colors.surfaceContainerHighest) {
-            Box(Modifier.padding(CapsuleInset).clip(CircleShape).horizontalScroll(scroll)) {
+            Box(Modifier.padding(CapsuleInset).noBackSwipe().clip(CircleShape).horizontalScroll(scroll)) {
                 Box(
                     Modifier
                         .layout { measurable, _ ->
