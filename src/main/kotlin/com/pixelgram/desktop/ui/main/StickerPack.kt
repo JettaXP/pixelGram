@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.icons.outlined.Numbers
+import com.pixelgram.desktop.ui.icons.outlined.Send
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -178,6 +180,18 @@ fun StickerPackDialog(request: StickerPackRequest, settings: AppSettings, onDism
                                         )
                                     }
                                     DropdownMenu(expanded = true, onDismissRequest = { menuFor = null }, shape = RoundedCornerShape(16.dp)) {
+                                        val customId = (sticker.fullType as? TdApi.StickerFullTypeCustomEmoji)?.customEmojiId
+                                        if (customId != null) {
+                                            val copy = { value: String -> java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(java.awt.datatransfer.StringSelection(value), null) }
+                                            if (request.chatId != 0L) {
+                                                item("Send emoji", Icons.Outlined.Send, false) {
+                                                    telegram.sendText(request.chatId, sticker.emoji, entities = arrayOf(TdApi.TextEntity(0, sticker.emoji.length, TdApi.TextEntityTypeCustomEmoji(customId))))
+                                                    onDismiss()
+                                                }
+                                            }
+                                            item("Copy emoji", Icons.Outlined.ContentCopy, false) { copy(sticker.emoji) }
+                                            item("Copy emoji ID", Icons.Outlined.Numbers, false) { copy(customId.toString()) }
+                                        }
                                         if (sendable) {
                                             item("Send without sound", Icons.Outlined.NotificationsOff, false) {
                                                 telegram.sendSticker(request.chatId, sticker, silent = true)

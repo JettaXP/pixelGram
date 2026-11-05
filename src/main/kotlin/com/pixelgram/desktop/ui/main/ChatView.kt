@@ -95,6 +95,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import com.pixelgram.desktop.ui.icons.outlined.Lock
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -2121,8 +2124,81 @@ internal fun SenderAvatar(message: UiMessage, telegram: Telegram, settings: AppS
         SenderAvatarSize,
         kind = AvatarKind.Private,
         onClick = onClick,
+        localPath = com.pixelgram.desktop.core.LocalPhotos.get(if (message.senderUserId != 0L) message.senderUserId else message.senderChatId)?.takeIf { java.io.File(it).isFile },
     )
 }
+@Composable
+private fun SendAsButton(chat: ChatState, telegram: Telegram, settings: AppSettings) {
+    var senders by remember(chat.id) { mutableStateOf(emptyList<TdApi.ChatMessageSender>()) }
+    var picking by remember(chat.id) { mutableStateOf(false) }
+    LaunchedEffect(chat.id) {
+        telegram.loadMessageSender(chat.id)
+        telegram.availableSenders(chat.id) { senders = it }
+    }
+    if (senders.size < 2) return
+    val current = telegram.messageSenders[chat.id] ?: senders.first().sender
+    IconButton(onClick = { picking = true }) {
+        Avatar(telegram.senderTitle(current), senderPhoto(telegram, current), telegram, settings, 28.dp)
+    }
+    if (picking) {
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            title = { Text("Send message as…") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text("Choose whether you want to be displayed as your personal account or as your channel.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(12.dp))
+                    senders.forEach { option ->
+                        val locked = option.needsPremium && !telegram.isPremium
+                        val selected = sameSender(option.sender, current)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                                .clickable(enabled = !locked) {
+                                    telegram.setMessageSender(chat.id, option.sender)
+                                    picking = false
+                                }
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                        ) {
+                            Avatar(telegram.senderTitle(option.sender), senderPhoto(telegram, option.sender), telegram, settings, 40.dp)
+                            Column(Modifier.weight(1f)) {
+                                EmojiText(telegram.senderTitle(option.sender), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(
+                                    when {
+                                        option.sender is TdApi.MessageSenderUser -> "personal account"
+                                        locked -> "Telegram Premium"
+                                        else -> "channel"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (locked) Icon(Icons.Outlined.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { picking = false }) { Text("Done") } },
+        )
+    }
+}
+
+private fun senderPhoto(telegram: Telegram, sender: TdApi.MessageSender): TdApi.File? = when (sender) {
+    is TdApi.MessageSenderUser -> telegram.users[sender.userId]?.profilePhoto?.small
+    is TdApi.MessageSenderChat -> telegram.chats[sender.chatId]?.photo
+    else -> null
+}
+
+private fun sameSender(a: TdApi.MessageSender, b: TdApi.MessageSender): Boolean = when {
+    a is TdApi.MessageSenderUser && b is TdApi.MessageSenderUser -> a.userId == b.userId
+    a is TdApi.MessageSenderChat && b is TdApi.MessageSenderChat -> a.chatId == b.chatId
+    else -> false
+}
+
 private const val DraftSaveDelayMs = 1_500L
 private const val PanelReopenGuardMs = 300L
 private val ForwardAvatarSize = 16.dp
@@ -2606,6 +2682,7 @@ private fun Composer(
                 ) { Text("Menu") }
             }
         }
+        if (composerChat != null && composerChat.isGroup && !composerChat.isChannel) SendAsButton(composerChat, telegram, settings)
         AttachButton(
             chat = composerChat,
             telegram = telegram,

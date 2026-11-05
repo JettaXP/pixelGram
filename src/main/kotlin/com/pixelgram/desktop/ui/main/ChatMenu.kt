@@ -425,6 +425,25 @@ private fun ContactDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> 
         title = { Text(if (existing) "Edit contact" else "Add to contacts") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    ChatAvatar(
+                        chat,
+                        telegram,
+                        settings = com.pixelgram.desktop.ui.theme.LocalAppSettings.current ?: return@Column,
+                        size = 88.dp,
+                        onClick = if (chat.photo != null) {
+                            { com.pixelgram.desktop.ui.profile.openProfilePhotos(telegram, userId, telegram.chatTitle(chat)) }
+                        } else {
+                            null
+                        },
+                    )
+                    val note = when {
+                        com.pixelgram.desktop.core.LocalPhotos.get(userId) != null -> "Local photo, only on this device"
+                        personal -> "Photo set by you"
+                        else -> null
+                    }
+                    note?.let { Text(com.pixelgram.desktop.core.tr(it), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) }
+                }
                 androidx.compose.material3.OutlinedTextField(first, { first = it }, label = { Text("First name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 androidx.compose.material3.OutlinedTextField(last, { last = it }, label = { Text("Last name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 val originalFirst = original?.getOrNull(0).orEmpty()

@@ -1011,6 +1011,27 @@ class Telegram(
     fun setProfilePhoto(path: String, done: (String?) -> Unit) =
         send(TdApi.SetProfilePhoto(TdApi.InputChatPhotoStatic(TdApi.InputFileLocal(path)), false), okOrError(done))
 
+    val messageSenders = androidx.compose.runtime.mutableStateMapOf<Long, TdApi.MessageSender>()
+
+    fun loadMessageSender(chatId: Long) {
+        send(TdApi.GetChat(chatId)) { result ->
+            (result as? TdApi.Chat)?.messageSenderId?.let { sender -> scope.launch(Dispatchers.Main) { messageSenders[chatId] = sender } }
+        }
+    }
+
+    fun availableSenders(chatId: Long, done: (List<TdApi.ChatMessageSender>) -> Unit) {
+        send(TdApi.GetChatAvailableMessageSenders(chatId)) { result ->
+            val list = (result as? TdApi.ChatMessageSenders)?.senders?.toList().orEmpty()
+            scope.launch(Dispatchers.Main) { done(list) }
+        }
+    }
+
+    fun setMessageSender(chatId: Long, sender: TdApi.MessageSender) {
+        send(TdApi.SetChatMessageSender(chatId, sender)) { result ->
+            if (result !is TdApi.Error) scope.launch(Dispatchers.Main) { messageSenders[chatId] = sender }
+        }
+    }
+
     fun setPersonalPhoto(userId: Long, path: String?, done: (String?) -> Unit) =
         send(TdApi.SetUserPersonalProfilePhoto(userId, path?.let { TdApi.InputChatPhotoStatic(TdApi.InputFileLocal(it)) }), okOrError(done))
 
@@ -1140,6 +1161,10 @@ class Telegram(
             is TdApi.UpdateChatTitle -> chats[update.chatId]?.title = update.title
             is TdApi.UpdateOption -> if (update.name == "gift_sell_period") {
                 (update.value as? TdApi.OptionValueInteger)?.value?.toInt()?.let { giftSellPeriod = it }
+            }
+            is TdApi.UpdateChatMessageSender -> scope.launch(Dispatchers.Main) {
+                val sender = update.messageSenderId
+                if (sender != null) messageSenders[update.chatId] = sender else messageSenders.remove(update.chatId)
             }
             is TdApi.UpdateChatPhoto -> chats[update.chatId]?.let { state ->
                 state.photo = update.photo?.small

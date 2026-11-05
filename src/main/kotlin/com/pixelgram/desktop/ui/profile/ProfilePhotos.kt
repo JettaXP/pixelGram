@@ -156,13 +156,19 @@ fun ProfilePhotosDialog(
 }
 
 fun openProfilePhotos(telegram: Telegram, userId: Long, name: String) {
+    telegram.userFullInfo(userId) { info -> showProfilePhotos(telegram, userId, name, info?.personalPhoto?.id ?: 0L) }
+}
+
+private fun showProfilePhotos(telegram: Telegram, userId: Long, name: String, personalId: Long) {
     telegram.profilePhotos(userId) { photos ->
         val formatter = photoDateFormat()
         val items = photos.mapNotNull { photo ->
             val small = photo.sizes.minByOrNull { it.width }?.photo ?: return@mapNotNull null
             val big = photo.sizes.maxByOrNull { it.width }?.photo ?: small
             val date = java.time.Instant.ofEpochSecond(photo.addedDate.toLong()).atZone(java.time.ZoneId.systemDefault()).format(formatter)
-            com.pixelgram.desktop.ui.main.ViewedPhoto(telegram, small, big, "", subtitle = "$name • ${com.pixelgram.desktop.core.tr("set")} $date")
+            val mine = personalId != 0L && photo.id == personalId
+            val label = if (mine) "$name • ${com.pixelgram.desktop.core.tr("Photo set by you")}" else "$name • ${com.pixelgram.desktop.core.tr("set")} $date"
+            com.pixelgram.desktop.ui.main.ViewedPhoto(telegram, small, big, "", subtitle = label)
         }
         val first = items.firstOrNull() ?: return@profilePhotos
         javax.swing.SwingUtilities.invokeLater {
