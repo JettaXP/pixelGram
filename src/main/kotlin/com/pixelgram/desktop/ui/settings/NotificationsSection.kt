@@ -310,8 +310,8 @@ private fun ScreenPicker(selected: ToastSide, onSelect: (ToastSide) -> Unit) {
 @Composable
 private fun MiniToast(active: Boolean) {
     val colors = MaterialTheme.colorScheme
-    val container by animateColorAsState(if (active) colors.primaryContainer else colors.surfaceContainerHigh)
-    val line by animateColorAsState(if (active) colors.onPrimaryContainer.copy(alpha = 0.6f) else colors.outlineVariant)
+    val container by animateColorAsState(if (active) colors.primaryContainer else colors.surfaceContainerHigh, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
+    val line by animateColorAsState(if (active) colors.onPrimaryContainer.copy(alpha = 0.6f) else colors.outlineVariant, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),

@@ -250,7 +250,7 @@ private fun DropZoneCard(zone: DropZone, active: Boolean, modifier: Modifier) {
             verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
             modifier = Modifier.fillMaxSize().padding(24.dp),
         ) {
-            AnimatedVisibility(true, enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut()) {
+            AnimatedVisibility(true, enter = scaleIn(com.pixelgram.desktop.ui.components.Motion.spatial()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()), exit = scaleOut(com.pixelgram.desktop.ui.components.Motion.fastSpatial()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects())) {
                 Box(
                     Modifier
                         .size(88.dp)

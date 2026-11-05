@@ -52,8 +52,8 @@ fun JoinRequestsBar(chat: ChatState, telegram: Telegram, settings: AppSettings, 
     var open by remember(chat.id) { mutableStateOf(false) }
     AnimatedVisibility(
         visible = chat.joinRequests > 0 && telegram.canManage(chat),
-        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
-        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
     ) {
         Surface(
             onClick = { open = true },

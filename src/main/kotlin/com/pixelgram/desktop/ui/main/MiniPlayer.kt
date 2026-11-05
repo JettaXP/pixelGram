@@ -208,8 +208,8 @@ fun MiniPlayer(telegram: Telegram) {
     LaunchedEffect(telegram, telegram.me?.id) { telegram.loadMyProfileAudios() }
     AnimatedVisibility(
         visible = (AudioPlayer.current != null || AudioQueue.pending != null) && !(FullPlayer.open && AudioPlayer.current != null),
-        enter = expandVertically() + fadeIn(),
-        exit = shrinkVertically() + fadeOut(),
+        enter = expandVertically(com.pixelgram.desktop.ui.components.Motion.spatial()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = shrinkVertically(com.pixelgram.desktop.ui.components.Motion.fastSpatial()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
     ) {
         val hover = remember { MutableInteractionSource() }
         val hovered by hover.collectIsHoveredAsState()
@@ -252,8 +252,8 @@ fun MiniPlayer(telegram: Telegram) {
                     )
                     AnimatedVisibility(
                         visible = hovered,
-                        enter = expandHorizontally(expandFrom = Alignment.End) + fadeIn(),
-                        exit = shrinkHorizontally(shrinkTowards = Alignment.End) + fadeOut(),
+                        enter = expandHorizontally(expandFrom = Alignment.End) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                        exit = shrinkHorizontally(shrinkTowards = Alignment.End) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -307,7 +307,7 @@ fun MiniPlayer(telegram: Telegram) {
                         }
                     }
                     IconButton(onClick = { FullPlayer.open = !FullPlayer.open }) {
-                        val turn by animateFloatAsState(if (FullPlayer.open) 180f else 0f)
+                        val turn by animateFloatAsState(if (FullPlayer.open) 180f else 0f, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
                         Icon(Icons.Rounded.OpenInFull, contentDescription = "Full player", modifier = Modifier.graphicsLayer { rotationZ = turn })
                     }
                     IconButton(onClick = {

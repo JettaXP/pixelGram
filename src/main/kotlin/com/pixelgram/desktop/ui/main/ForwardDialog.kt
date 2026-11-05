@@ -89,8 +89,8 @@ fun ForwardDialog(telegram: Telegram, settings: AppSettings, onDismiss: () -> Un
                     contentKey = { it.first to query.isBlank() },
                     transitionSpec = {
                         val forward = targetState.first >= initialState.first
-                        (androidx.compose.animation.slideInHorizontally { if (forward) it / 4 else -it / 4 } + androidx.compose.animation.fadeIn()) togetherWith
-                            (androidx.compose.animation.slideOutHorizontally { if (forward) -it / 4 else it / 4 } + androidx.compose.animation.fadeOut())
+                        (androidx.compose.animation.slideInHorizontally { if (forward) it / 4 else -it / 4 } + androidx.compose.animation.fadeIn(com.pixelgram.desktop.ui.components.Motion.effects())) togetherWith
+                            (androidx.compose.animation.slideOutHorizontally { if (forward) -it / 4 else it / 4 } + androidx.compose.animation.fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()))
                     },
                 ) { (_, list) ->
                     LazyColumn(

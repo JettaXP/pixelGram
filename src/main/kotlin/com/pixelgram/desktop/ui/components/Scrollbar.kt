@@ -51,13 +51,13 @@ fun Modifier.listScrollbar(state: LazyListState, edge: Float = 4f): Modifier {
     var dragging by remember { mutableStateOf(false) }
     val active = state.isScrollInProgress || hovered || dragging
     LaunchedEffect(active) {
-        if (active) alpha.animateTo(1f, tween(FadeInMs))
+        if (active) alpha.animateTo(1f, Motion.effects())
         else {
             delay(HideDelayMs)
-            alpha.animateTo(0f, tween(FadeOutMs))
+            alpha.animateTo(0f, Motion.effects())
         }
     }
-    val width by animateDpAsState(if (hovered || dragging) WideThumb else Thumb)
+    val width by animateDpAsState(if (hovered || dragging) WideThumb else Thumb, animationSpec = com.pixelgram.desktop.ui.components.Motion.spatial())
     val colors = MaterialTheme.colorScheme
     val idle = colors.onSurfaceVariant.copy(alpha = IdleAlpha)
     val held = colors.primary
@@ -130,6 +130,4 @@ private val WideThumb = 8.dp
 private val MinThumb = 36.dp
 private val HitZone = 14.dp
 private const val IdleAlpha = 0.6f
-private const val FadeInMs = 120
-private const val FadeOutMs = 300
 private const val HideDelayMs = 900L

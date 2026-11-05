@@ -268,7 +268,7 @@ private fun PhaseOverlay(call: ActiveVideoChat, modifier: Modifier) {
         VideoChatPhase.Ended -> call.status ?: "Video chat ended"
         VideoChatPhase.Active -> null
     }
-    AnimatedVisibility(text != null || CallLibrary.downloading, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
+    AnimatedVisibility(text != null || CallLibrary.downloading, enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()), exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()), modifier = modifier) {
         Surface(shape = RoundedCornerShape(24.dp), color = colors.surfaceContainerHigh, shadowElevation = 4.dp) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp).width(260.dp)) {
                 Text(text ?: "Downloading call components…", style = MaterialTheme.typography.titleMedium)
@@ -376,7 +376,7 @@ private fun VideoGrid(call: ActiveVideoChat, tiles: List<VideoTile>, modifier: M
 private fun VideoTileView(call: ActiveVideoChat, tile: VideoTile, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
     val speaking = tile.participant?.isSpeaking == true && !tile.screen
-    val border by animateColorAsState(if (speaking) colors.primary else Color.Transparent)
+    val border by animateColorAsState(if (speaking) colors.primary else Color.Transparent, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
     var menu by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(24.dp)
     Box(
@@ -433,7 +433,7 @@ private fun ParticipantGrid(call: ActiveVideoChat, participants: List<TdApi.Grou
 private fun ParticipantTile(call: ActiveVideoChat, participant: TdApi.GroupCallParticipant) {
     val colors = MaterialTheme.colorScheme
     var menu by remember { mutableStateOf(false) }
-    val container by animateColorAsState(if (participant.isSpeaking) colors.surfaceContainerHigh else colors.surfaceContainer)
+    val container by animateColorAsState(if (participant.isSpeaking) colors.surfaceContainerHigh else colors.surfaceContainer, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
     Box {
         Surface(
             shape = RoundedCornerShape(28.dp),
@@ -480,7 +480,7 @@ private fun SpeakerAvatar(telegram: Telegram, participant: TdApi.GroupCallPartic
     val pulse by spin.animateFloat(1f, 1.06f, infiniteRepeatable(tween(700), RepeatMode.Reverse))
     val morph = remember { Morph(MaterialShapes.Circle, MaterialShapes.Cookie12Sided) }
     val outline = remember(progress) { MorphShape(morph, progress) }
-    val halo by animateColorAsState(if (speaking) colors.primary else colors.surfaceContainerHighest)
+    val halo by animateColorAsState(if (speaking) colors.primary else colors.surfaceContainerHighest, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
     val ring = size * 0.14f
     Box(contentAlignment = Alignment.Center, modifier = Modifier.size(size + ring)) {
         Box(
@@ -685,7 +685,7 @@ private fun MainMicButton(call: ActiveVideoChat) {
             !speak -> colors.tertiaryContainer
             live -> colors.primary
             else -> colors.secondaryContainer
-        }
+        }, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects()
     )
     val content by animateColorAsState(
         when {
@@ -693,7 +693,7 @@ private fun MainMicButton(call: ActiveVideoChat) {
             !speak -> colors.onTertiaryContainer
             live -> colors.onPrimary
             else -> colors.onSecondaryContainer
-        }
+        }, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects()
     )
     val label = when {
         !speak && call.handRaised -> "Hand raised"

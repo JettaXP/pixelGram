@@ -172,7 +172,7 @@ fun ForumSidebar(chat: ChatState, telegram: Telegram, modifier: Modifier = Modif
 @Composable
 private fun TopicRow(topic: TdApi.ForumTopic, selected: Boolean, telegram: Telegram, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    val background by animateColorAsState(if (selected) colors.secondaryContainer else Color.Transparent)
+    val background by animateColorAsState(if (selected) colors.secondaryContainer else Color.Transparent, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
     val preview = topic.lastMessage?.let { last ->
         val text = contentText(last.content)
         val sender = last.senderId?.let { telegram.senderTitle(it).substringBefore(' ') }.orEmpty()

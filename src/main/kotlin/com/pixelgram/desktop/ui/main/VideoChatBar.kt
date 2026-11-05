@@ -70,8 +70,8 @@ fun VideoChatBar(chat: ChatState, telegram: Telegram, modifier: Modifier = Modif
     if (call != null) last = call
     AnimatedVisibility(
         visible = call != null,
-        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
-        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
         modifier = modifier,
     ) {
         val shown = call ?: last ?: return@AnimatedVisibility

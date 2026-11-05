@@ -172,8 +172,8 @@ private fun Pill(name: String, selected: Boolean, avatar: @Composable () -> Unit
     val hover = remember { MutableInteractionSource() }
     val hovered by hover.collectIsHoveredAsState()
     val colors = MaterialTheme.colorScheme
-    val container by androidx.compose.animation.animateColorAsState(if (selected) colors.primary else colors.secondaryContainer)
-    val content by androidx.compose.animation.animateColorAsState(if (selected) colors.onPrimary else colors.onSecondaryContainer)
+    val container by androidx.compose.animation.animateColorAsState(if (selected) colors.primary else colors.secondaryContainer, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
+    val content by androidx.compose.animation.animateColorAsState(if (selected) colors.onPrimary else colors.onSecondaryContainer, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
     Surface(
         shape = CircleShape,
         color = container,

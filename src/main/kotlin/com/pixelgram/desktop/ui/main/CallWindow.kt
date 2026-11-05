@@ -210,7 +210,7 @@ private fun StatusLine(call: ActiveCall) {
 @Composable
 private fun Controls(call: ActiveCall, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
-    AnimatedVisibility(call.phase != CallPhase.Ended, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
+    AnimatedVisibility(call.phase != CallPhase.Ended, enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()), exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()), modifier = modifier) {
         if (call.phase == CallPhase.Incoming) {
             Row(horizontalArrangement = Arrangement.spacedBy(48.dp), verticalAlignment = Alignment.CenterVertically) {
                 RoundAction(Icons.Filled.CallEnd, "Decline", EndSize, colors.error, colors.onError, onClick = Calls::decline)
@@ -263,8 +263,8 @@ internal fun ScreenShareButton(sharing: Boolean, screens: () -> List<CallDevice>
 @Composable
 internal fun CallToggle(icon: ImageVector, label: String, active: Boolean, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    val container by animateColorAsState(if (active) colors.secondaryContainer else colors.surfaceContainerHighest)
-    val content by animateColorAsState(if (active) colors.onSecondaryContainer else colors.onSurfaceVariant)
+    val container by animateColorAsState(if (active) colors.secondaryContainer else colors.surfaceContainerHighest, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
+    val content by animateColorAsState(if (active) colors.onSecondaryContainer else colors.onSurfaceVariant, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
     RoundAction(icon, label, ControlSize, container, content, active, onClick)
 }
 

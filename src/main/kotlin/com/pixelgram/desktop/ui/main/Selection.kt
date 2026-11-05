@@ -86,7 +86,7 @@ fun SelectionBar(count: Int, onForward: () -> Unit, onDelete: () -> Unit, onShot
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth().height(SelectionBarHeight).padding(horizontal = 16.dp),
     ) {
-        AnimatedContent(count, transitionSpec = { fadeIn() togetherWith fadeOut() }, modifier = Modifier.weight(1f)) { shown ->
+        AnimatedContent(count, transitionSpec = { fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) togetherWith fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) }, modifier = Modifier.weight(1f)) { shown ->
             Text("$shown selected", style = MaterialTheme.typography.titleSmall)
         }
         FilledTonalButton(onClick = onForward, enabled = canCopy) { Text("Forward $count") }
@@ -127,7 +127,7 @@ fun PinnedBar(pins: List<UiMessage>, index: Int, onClick: () -> Unit, modifier: 
                         )
                     }
                 }
-                AnimatedContent(current.key, transitionSpec = { fadeIn() togetherWith fadeOut() }) { _ ->
+                AnimatedContent(current.key, transitionSpec = { fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) togetherWith fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) }) { _ ->
                     if (current.text.isNotBlank()) {
                         com.pixelgram.desktop.ui.theme.CustomEmojiLine(
                             current.text.replace('\n', ' '),

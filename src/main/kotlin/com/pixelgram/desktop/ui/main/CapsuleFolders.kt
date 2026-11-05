@@ -141,8 +141,8 @@ internal fun CapsuleFolders(
                             if (mode == com.pixelgram.desktop.core.FolderTitle.ActiveName) {
                                 androidx.compose.animation.AnimatedVisibility(
                                     visible = isSelected,
-                                    enter = androidx.compose.animation.expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) + androidx.compose.animation.fadeIn(),
-                                    exit = androidx.compose.animation.shrinkHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) + androidx.compose.animation.fadeOut(),
+                                    enter = androidx.compose.animation.expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) + androidx.compose.animation.fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                                    exit = androidx.compose.animation.shrinkHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) + androidx.compose.animation.fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                                 ) {
                                     EmojiText(tab.title, color = content, style = MaterialTheme.typography.labelLarge, maxLines = 1, modifier = Modifier.padding(start = LabelGap))
                                 }

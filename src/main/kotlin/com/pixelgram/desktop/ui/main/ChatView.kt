@@ -579,8 +579,8 @@ private fun ChatViewContent(
         ) {
             AnimatedVisibility(
                 visible = onBack != null,
-                enter = expandHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(),
-                exit = shrinkHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(),
+                enter = expandHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                exit = shrinkHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
             ) {
                 IconButton(onClick = { onBack?.invoke() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -613,7 +613,7 @@ private fun ChatViewContent(
                 val status = telegram.activity(chat) ?: telegram.presence(chat)?.let { presence ->
                     if (topicName != null) presence.copy(label = topicName + " · " + presence.label) else presence
                 }
-                AnimatedContent(status, transitionSpec = { fadeIn() togetherWith fadeOut() }) { text ->
+                AnimatedContent(status, transitionSpec = { fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) togetherWith fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) }) { text ->
                     if (text != null) {
                         EmojiText(
                             text.label,
@@ -672,8 +672,8 @@ private fun ChatViewContent(
         val pins = telegram.pinnedMessages[chat.id].orEmpty()
         AnimatedVisibility(
             visible = pins.isNotEmpty(),
-            enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
-            exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+            enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+            exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
         ) {
             val index = pinIndex.coerceIn(0, (pins.size - 1).coerceAtLeast(0))
             PinnedBar(
@@ -890,8 +890,8 @@ private fun ChatViewContent(
                             ) {
                             AnimatedVisibility(
                                 visible = selecting,
-                                enter = expandHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(),
-                                exit = shrinkHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(),
+                                enter = expandHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                                exit = shrinkHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                             ) {
                                 val pop by animateFloatAsState(if (isSelected) 1f else 0.85f, MaterialTheme.motionScheme.fastSpatialSpec())
                                 Crossfade(isSelected, animationSpec = MaterialTheme.motionScheme.fastEffectsSpec()) { checked ->
@@ -1223,8 +1223,8 @@ private fun ChatViewContent(
     }
     AnimatedVisibility(
         visible = commentsFor != null,
-        enter = slideInHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 3 } + fadeIn(),
-        exit = slideOutHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 3 } + fadeOut(),
+        enter = slideInHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 3 } + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = slideOutHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 3 } + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
     ) {
         var shownPost by remember { mutableStateOf(commentsFor) }
         commentsFor?.let { shownPost = it }
@@ -1254,8 +1254,8 @@ private fun TypingBubble(chat: ChatState, telegram: Telegram) {
     typers.firstOrNull()?.let { last = it }
     AnimatedVisibility(
         visible = typers.isNotEmpty(),
-        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec(), expandFrom = Alignment.Top) + fadeIn(),
-        exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec(), shrinkTowards = Alignment.Top) + fadeOut(),
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec(), expandFrom = Alignment.Top) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec(), shrinkTowards = Alignment.Top) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
     ) {
         val colors = MaterialTheme.colorScheme
         val group = !chat.isChannel && (chat.isGroup || LocalWideChat.current)
@@ -1329,7 +1329,7 @@ private fun ComposerBar(label: String, accent: Boolean = false, enabled: Boolean
         Box(contentAlignment = Alignment.Center, modifier = Modifier.heightIn(min = SendSlot + 16.dp)) {
             AnimatedContent(
                 targetState = label,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                transitionSpec = { fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) togetherWith fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) },
             ) { text ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -1993,7 +1993,7 @@ fun MessageStatusIcon(status: MessageStatus, color: Color, size: Dp, modifier: M
         MessageStatus.Read -> Icons.Filled.DoneAll
         MessageStatus.Failed -> Icons.Outlined.ErrorOutline
     }
-    Crossfade(status, modifier = modifier) {
+    Crossfade(status, modifier = modifier, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects()) {
         Icon(
             icon,
             contentDescription = status.name,
@@ -2508,8 +2508,8 @@ private fun Composer(
     if (editing != null) banner = true to editing else if (replyTo != null) banner = false to replyTo
     AnimatedVisibility(
         visibleState = shown,
-        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
-        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 8.dp),
@@ -2556,8 +2556,8 @@ private fun Composer(
     }
     AnimatedVisibility(
         visible = showSuggestions,
-        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
-        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
     ) {
         MentionSuggestions(
             shownSuggestions,
@@ -2570,8 +2570,8 @@ private fun Composer(
     }
     AnimatedVisibility(
         visible = showCommands,
-        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
-        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
     ) {
         CommandSuggestions(
             shownCommands,
@@ -2584,8 +2584,8 @@ private fun Composer(
     }
     AnimatedVisibility(
         visible = showInline,
-        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
-        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
     ) {
         InlineResultsPanel(
             inlineResults,
@@ -2957,7 +2957,7 @@ private fun Composer(
                 }
             }
         }
-        Crossfade(inlineLoading) { loading ->
+        Crossfade(inlineLoading, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects()) { loading ->
             if (loading) {
                 Box(Modifier.size(SendSlot), contentAlignment = Alignment.Center) {
                     LoadingIndicator(Modifier.size(SendSlot))
@@ -3027,7 +3027,7 @@ private fun Composer(
                                     }
                                 },
                             ) {
-                                Crossfade(editing != null) { isEditing ->
+                                Crossfade(editing != null, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects()) { isEditing ->
                                     if (isEditing) {
                                         Icon(Icons.Filled.Check, contentDescription = "Save")
                                     } else {
@@ -3057,8 +3057,8 @@ private fun Composer(
     }
     AnimatedVisibility(
         visible = keyboard != null && keyboardOpen,
-        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
-        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
     ) {
         keyboard?.let { shown ->
             ReplyKeyboardPanel(shown, onPress = { button ->

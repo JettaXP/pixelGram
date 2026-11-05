@@ -102,7 +102,7 @@ private val PopEasing = CubicBezierEasing(0.34f, 1.56f, 0.64f, 1f)
 
 private fun enterFor(side: ToastSide): EnterTransition {
     val spec = tween<IntOffset>(550, easing = EmphasizedDecelerate)
-    return fadeIn(tween(150)) + when (side.column) {
+    return fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) + when (side.column) {
         0 -> slideInHorizontally(spec) { -it - 32 }
         2 -> slideInHorizontally(spec) { it + 32 }
         else -> if (side.top) slideInVertically(spec) { -it - 32 } else slideInVertically(spec) { it + 32 }
@@ -159,8 +159,8 @@ fun ToastStackContent(stack: ToastStack, settings: AppSettings, onOpen: (ToastDa
     val closeAll: @Composable () -> Unit = {
         AnimatedVisibility(
             visible = stack.shown.size >= stack.max && stack.max > 1,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically(),
+            enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) + expandVertically(com.pixelgram.desktop.ui.components.Motion.spatial()),
+            exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) + shrinkVertically(com.pixelgram.desktop.ui.components.Motion.fastSpatial()),
         ) {
             FilledTonalButton(onClick = stack::dismissAll) {
                 Icon(Icons.Filled.ClearAll, contentDescription = null, modifier = Modifier.size(18.dp))

@@ -149,7 +149,7 @@ fun ReactionChips(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(start = 8.dp, end = 10.dp, top = 3.dp, bottom = 3.dp).animateContentSize(),
+                    modifier = Modifier.padding(start = 8.dp, end = 10.dp, top = 3.dp, bottom = 3.dp).animateContentSize(com.pixelgram.desktop.ui.components.Motion.spatial()),
                 ) {
                     val shot = if (telegram != null) ReactionEffects.pending[owner]?.takeIf { it.emoji == clean } else null
                     var covered by remember { mutableStateOf(false) }
@@ -384,8 +384,8 @@ fun BotAnswer(answer: Pair<String, Boolean>?, onDismiss: () -> Unit, modifier: M
     if (text != null) shown = text
     androidx.compose.animation.AnimatedVisibility(
         visible = text != null,
-        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { -it },
-        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically { -it },
+        enter = androidx.compose.animation.fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) + androidx.compose.animation.slideInVertically { -it },
+        exit = androidx.compose.animation.fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) + androidx.compose.animation.slideOutVertically { -it },
         modifier = modifier,
     ) {
         Surface(

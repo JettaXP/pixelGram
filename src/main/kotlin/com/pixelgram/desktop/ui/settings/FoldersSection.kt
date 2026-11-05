@@ -102,7 +102,7 @@ fun FoldersSection(telegram: Telegram, settings: AppSettings) {
 
     Description("Drag folders to change their order. Folders sync with your other Telegram apps; Unread and Mentions live in pixelGram.")
     Header("My folders")
-    Column(verticalArrangement = Arrangement.spacedBy(RowGap), modifier = Modifier.animateContentSize()) {
+    Column(verticalArrangement = Arrangement.spacedBy(RowGap), modifier = Modifier.animateContentSize(com.pixelgram.desktop.ui.components.Motion.spatial())) {
         order.forEachIndexed { index, key ->
             val moving = index == dragged
             val lift by animateFloatAsState(if (moving) LiftScale else 1f, MaterialTheme.motionScheme.fastSpatialSpec())
@@ -307,7 +307,7 @@ private fun FolderEditor(telegram: Telegram, settings: AppSettings, folderId: In
             } else {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.verticalScroll(rememberScrollState()).animateContentSize(),
+                    modifier = Modifier.verticalScroll(rememberScrollState()).animateContentSize(com.pixelgram.desktop.ui.components.Motion.spatial()),
                 ) {
                     OutlinedTextField(title, { title = it.take(NameLimit) }, label = { Text("Folder name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Text("Icon", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
@@ -343,8 +343,8 @@ private fun FolderEditor(telegram: Telegram, settings: AppSettings, folderId: In
                     }
                     AnimatedVisibility(
                         visible = error != null,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut(),
+                        enter = expandVertically(com.pixelgram.desktop.ui.components.Motion.spatial()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                        exit = shrinkVertically(com.pixelgram.desktop.ui.components.Motion.fastSpatial()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                     ) {
                         Text(error.orEmpty(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }

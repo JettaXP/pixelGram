@@ -130,8 +130,8 @@ fun FloatingDate(
     top.value?.let { label = it }
     androidx.compose.animation.AnimatedVisibility(
         visible = shown && label != 0,
-        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { -it / 2 },
-        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically { -it / 2 },
+        enter = androidx.compose.animation.fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) + androidx.compose.animation.slideInVertically { -it / 2 },
+        exit = androidx.compose.animation.fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) + androidx.compose.animation.slideOutVertically { -it / 2 },
         modifier = modifier,
     ) {
         DatePill(label, elevation = 3.dp, modifier = if (onClick != null) Modifier.clip(CircleShape).clickable { onClick(label) } else Modifier)

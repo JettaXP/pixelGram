@@ -135,7 +135,7 @@ fun PrivacySection(telegram: Telegram, settings: AppSettings) {
         targetState = page,
         transitionSpec = {
             val direction = if (targetState != PrivacyPage.Main) 1 else -1
-            (slideInHorizontally { it / 4 * direction } + fadeIn()) togetherWith (slideOutHorizontally { -it / 4 * direction } + fadeOut())
+            (slideInHorizontally { it / 4 * direction } + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects())) togetherWith (slideOutHorizontally { -it / 4 * direction } + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()))
         },
     ) { shown ->
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -363,10 +363,10 @@ private fun RulesDialog(
                     }
                 }
                 Text("Add exceptions", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 12.dp))
-                androidx.compose.animation.AnimatedVisibility(audience != Audience.Everybody) {
+                androidx.compose.animation.AnimatedVisibility(audience != Audience.Everybody, enter = com.pixelgram.desktop.ui.components.Motion.appear(), exit = com.pixelgram.desktop.ui.components.Motion.disappear()) {
                     ExceptionRowLink("Always share with", count(allowUsers, allowChats)) { picking = true }
                 }
-                androidx.compose.animation.AnimatedVisibility(audience != Audience.Nobody) {
+                androidx.compose.animation.AnimatedVisibility(audience != Audience.Nobody, enter = com.pixelgram.desktop.ui.components.Motion.appear(), exit = com.pixelgram.desktop.ui.components.Motion.disappear()) {
                     ExceptionRowLink("Never share with", count(restrictUsers, restrictChats)) { picking = false }
                 }
                 Text(

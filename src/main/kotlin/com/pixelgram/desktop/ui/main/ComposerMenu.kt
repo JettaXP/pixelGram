@@ -62,8 +62,8 @@ fun ComposerMenu(
                 targetState = formatting,
                 transitionSpec = {
                     val direction = if (targetState) 1 else -1
-                    (slideInHorizontally { it / 3 * direction } + fadeIn()) togetherWith
-                        (slideOutHorizontally { -it / 3 * direction } + fadeOut())
+                    (slideInHorizontally { it / 3 * direction } + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects())) togetherWith
+                        (slideOutHorizontally { -it / 3 * direction } + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()))
                 },
             ) { inFormatting ->
                 Column(Modifier.width(MenuWidth)) {

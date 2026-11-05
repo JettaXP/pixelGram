@@ -644,8 +644,8 @@ private fun LockButton() {
         androidx.compose.animation.AnimatedContent(
             targetState = closing,
             transitionSpec = {
-                (androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = 0.6f)) togetherWith
-                    (androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = 1.3f))
+                (androidx.compose.animation.fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) + androidx.compose.animation.scaleIn(initialScale = 0.6f)) togetherWith
+                    (androidx.compose.animation.fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) + androidx.compose.animation.scaleOut(targetScale = 1.3f))
             },
         ) { locked ->
             Icon(

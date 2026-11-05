@@ -81,7 +81,7 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     val typography = font.family?.takeIf { font.everywhere }?.let(::typographyWith) ?: PixelTypography
     MaterialExpressiveTheme(
         colorScheme = appColorScheme(settings),
-        motionScheme = if (settings.interfaceAnimations.value) MotionScheme.expressive() else InstantMotion,
+        motionScheme = (if (settings.interfaceAnimations.value) MotionScheme.expressive() else InstantMotion).also { com.pixelgram.desktop.ui.components.Motion.scheme = it },
         typography = typography,
         shapes = com.pixelgram.desktop.ui.components.cornerShapes(corners),
     ) {

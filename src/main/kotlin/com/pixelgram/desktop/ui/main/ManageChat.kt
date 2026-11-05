@@ -275,8 +275,8 @@ fun ManageChatDialog(
                     transitionSpec = {
                         val forward = stack.size > 1 && targetState == stack.last() && initialState != targetState
                         val direction = if (forward) 1 else -1
-                        (slideInHorizontally(spatial) { it / 5 * direction } + fadeIn()) togetherWith
-                            (slideOutHorizontally(spatial) { -it / 5 * direction } + fadeOut())
+                        (slideInHorizontally(spatial) { it / 5 * direction } + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects())) togetherWith
+                            (slideOutHorizontally(spatial) { -it / 5 * direction } + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()))
                     },
                 ) { shown ->
                     when (shown) {

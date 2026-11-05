@@ -40,8 +40,8 @@ fun ConnectionPill(status: ConnectionStatus, modifier: Modifier = Modifier) {
     val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.unit.IntSize>()
     AnimatedVisibility(
         visible = status != ConnectionStatus.Ready,
-        enter = scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(),
-        exit = scaleOut() + fadeOut(),
+        enter = scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = scaleOut(com.pixelgram.desktop.ui.components.Motion.fastSpatial()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
         modifier = modifier.wrapContentWidth(Alignment.Start, unbounded = true),
     ) {
         Surface(
@@ -55,8 +55,8 @@ fun ConnectionPill(status: ConnectionStatus, modifier: Modifier = Modifier) {
                 LoadingIndicator(Modifier.size(32.dp))
                 AnimatedVisibility(
                     visible = hovered,
-                    enter = expandHorizontally(spatial, expandFrom = Alignment.Start) + fadeIn(),
-                    exit = shrinkHorizontally(spatial, shrinkTowards = Alignment.Start) + fadeOut(),
+                    enter = expandHorizontally(spatial, expandFrom = Alignment.Start) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                    exit = shrinkHorizontally(spatial, shrinkTowards = Alignment.Start) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                 ) {
                     Text(
                         label,

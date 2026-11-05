@@ -108,8 +108,8 @@ fun ForwardBar(chatId: Long, telegram: Telegram, settings: AppSettings, onOpenCh
     var editing by remember { mutableStateOf(false) }
     AnimatedVisibility(
         visible = draft != null,
-        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
-        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
     ) {
         val current = shown ?: return@AnimatedVisibility
         Row(
@@ -181,7 +181,7 @@ private fun ForwardOptionsDialog(
                     modifier = Modifier.align(Alignment.End).widthIn(max = 320.dp).padding(bottom = 8.dp),
                 ) {
                     Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        AnimatedVisibility(!hideSender) {
+                        AnimatedVisibility(!hideSender, enter = com.pixelgram.desktop.ui.components.Motion.appear(), exit = com.pixelgram.desktop.ui.components.Motion.disappear()) {
                             EmojiText(
                                 com.pixelgram.desktop.core.tr("Forwarded from") + " " + draft.messages.map { senderOf(telegram, it) }.distinct().joinToString(", "),
                                 style = MaterialTheme.typography.labelLarge,

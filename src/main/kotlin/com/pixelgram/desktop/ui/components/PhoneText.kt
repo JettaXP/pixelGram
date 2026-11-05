@@ -68,7 +68,7 @@ fun PhoneText(
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr) {
     AnimatedContent(
         targetState = hidden && !peek,
-        transitionSpec = { (fadeIn() + scaleIn(initialScale = 0.9f)) togetherWith fadeOut() },
+        transitionSpec = { (fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) + scaleIn(initialScale = 0.9f)) togetherWith fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) },
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .then(if (hidden) Modifier.clickable { peek = !peek } else Modifier),

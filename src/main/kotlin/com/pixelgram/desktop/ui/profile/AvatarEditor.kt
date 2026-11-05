@@ -74,8 +74,8 @@ fun AvatarEditor(size: Dp, onPicked: (File) -> Unit, modifier: Modifier = Modifi
         avatar()
         AnimatedVisibility(
             visible = hovered || menu,
-            enter = slideInVertically(MaterialTheme.motionScheme.fastSpatialSpec()) { it } + fadeIn(),
-            exit = slideOutVertically(MaterialTheme.motionScheme.fastSpatialSpec()) { it } + fadeOut(),
+            enter = slideInVertically(MaterialTheme.motionScheme.fastSpatialSpec()) { it } + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+            exit = slideOutVertically(MaterialTheme.motionScheme.fastSpatialSpec()) { it } + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
         ) {
             Box {

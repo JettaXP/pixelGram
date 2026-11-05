@@ -378,8 +378,8 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
             androidx.compose.animation.AnimatedContent(
                 targetState = if (voice.locked && voice.active) null else RecordButton.mode,
                 transitionSpec = {
-                    (androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = 0.5f)) togetherWith
-                        (androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = 0.5f))
+                    (androidx.compose.animation.fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) + androidx.compose.animation.scaleIn(initialScale = 0.5f)) togetherWith
+                        (androidx.compose.animation.fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) + androidx.compose.animation.scaleOut(targetScale = 0.5f))
                 },
                 modifier = Modifier.graphicsLayer { rotationZ = -turn },
             ) { mode ->

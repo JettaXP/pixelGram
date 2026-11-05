@@ -125,8 +125,8 @@ private fun PowerGroup(icon: ImageVector, title: String, options: List<PowerOpti
             }
             AnimatedVisibility(
                 visible = expanded && !single,
-                enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
-                exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(),
+                enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
             ) {
                 Column(Modifier.padding(start = 28.dp, end = 12.dp, bottom = 8.dp)) {
                     options.forEach { option ->

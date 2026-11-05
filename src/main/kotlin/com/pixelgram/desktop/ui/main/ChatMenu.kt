@@ -202,8 +202,8 @@ fun ChatActions(
                     targetState = page,
                     transitionSpec = {
                         val direction = if (targetState != MenuPage.Main) 1 else -1
-                        (slideInHorizontally { it / 3 * direction } + fadeIn()) togetherWith
-                            (slideOutHorizontally { -it / 3 * direction } + fadeOut())
+                        (slideInHorizontally { it / 3 * direction } + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects())) togetherWith
+                            (slideOutHorizontally { -it / 3 * direction } + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()))
                     },
                 ) { current ->
                     Column {
@@ -896,7 +896,7 @@ private fun ProfileAction(
     onClick: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    val container by animateColorAsState(if (checked) colors.secondaryContainer else colors.surfaceContainerHighest)
+    val container by animateColorAsState(if (checked) colors.secondaryContainer else colors.surfaceContainerHighest, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val corner by animateDpAsState(
@@ -919,8 +919,8 @@ private fun ProfileAction(
             androidx.compose.animation.AnimatedContent(
                 targetState = icon to label,
                 transitionSpec = {
-                    (androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = 0.7f)) togetherWith
-                        (androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = 0.7f))
+                    (androidx.compose.animation.fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) + androidx.compose.animation.scaleIn(initialScale = 0.7f)) togetherWith
+                        (androidx.compose.animation.fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) + androidx.compose.animation.scaleOut(targetScale = 0.7f))
                 },
                 contentAlignment = Alignment.Center,
             ) { (shownIcon, shownLabel) ->

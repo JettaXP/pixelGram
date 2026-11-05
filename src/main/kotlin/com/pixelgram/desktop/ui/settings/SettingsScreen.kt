@@ -892,7 +892,7 @@ private fun AppearanceSection(settings: AppSettings, onOpen: (Section) -> Unit) 
         settings.iconPack.value,
         { settings.iconPack.value = it },
     )
-    androidx.compose.animation.AnimatedVisibility(settings.iconPack.value == com.pixelgram.desktop.core.IconPack.Material) {
+    androidx.compose.animation.AnimatedVisibility(settings.iconPack.value == com.pixelgram.desktop.core.IconPack.Material, enter = com.pixelgram.desktop.ui.components.Motion.appear(), exit = com.pixelgram.desktop.ui.components.Motion.disappear()) {
         SegmentedGroup {
             SwitchRow(0, 1, "Rounded icons", "Material Symbols Rounded instead of the sharp outlined style", settings.roundedIcons.value) { settings.roundedIcons.value = it }
         }
@@ -1648,8 +1648,8 @@ private fun WallpaperSettings(settings: AppSettings) {
                 }
                 androidx.compose.animation.AnimatedVisibility(
                     selected,
-                    enter = androidx.compose.animation.scaleIn() + androidx.compose.animation.fadeIn(),
-                    exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut(),
+                    enter = androidx.compose.animation.scaleIn(com.pixelgram.desktop.ui.components.Motion.spatial()) + androidx.compose.animation.fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                    exit = androidx.compose.animation.scaleOut(com.pixelgram.desktop.ui.components.Motion.fastSpatial()) + androidx.compose.animation.fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                 ) {
                     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(56.dp)) {
                         Icon(Icons.Filled.Check, contentDescription = "Current", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(14.dp))

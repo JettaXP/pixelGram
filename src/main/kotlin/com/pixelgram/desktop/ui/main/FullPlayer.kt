@@ -214,8 +214,8 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                 Box(Modifier.width(coverSlot.coerceAtLeast(0.dp)).height(56.dp)) {
                 androidx.compose.animation.AnimatedVisibility(
                     FullPlayer.view != PlayerView.Cover,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
+                    enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                    exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                 ) {
                     SmallCover(
                         audio,
@@ -285,7 +285,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                     onHold = AudioPlayer::scrub,
                 )
                 IconButton(onClick = { AudioQueue.cycleRepeat() }) {
-                    AnimatedContent(AudioQueue.repeatMode, transitionSpec = { scaleIn() + fadeIn() togetherWith scaleOut() + fadeOut() }) { mode ->
+                    AnimatedContent(AudioQueue.repeatMode, transitionSpec = { scaleIn(com.pixelgram.desktop.ui.components.Motion.spatial()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) togetherWith scaleOut(com.pixelgram.desktop.ui.components.Motion.fastSpatial()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) }) { mode ->
                         Icon(
                             when (mode) {
                                 RepeatMode.Off -> Icons.Filled.Repeat
@@ -346,8 +346,8 @@ private fun ScrubPill(modifier: Modifier) {
     if (direction != 0) shown = direction
     androidx.compose.animation.AnimatedVisibility(
         visible = direction != 0,
-        enter = scaleIn(spring(dampingRatio = 0.6f, stiffness = 500f), initialScale = 0.6f) + fadeIn(),
-        exit = scaleOut(targetScale = 0.8f) + fadeOut(),
+        enter = scaleIn(spring(dampingRatio = 0.6f, stiffness = 500f), initialScale = 0.6f) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+        exit = scaleOut(targetScale = 0.8f) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
         modifier = modifier,
     ) {
         val colors = MaterialTheme.colorScheme
@@ -870,7 +870,7 @@ private fun QueueView(telegram: Telegram, tracks: List<QueueTrack>, current: Int
         itemsIndexed(tracks, key = { _, track -> track.key }) { position, track ->
             val lifted = track.key == draggingKey
             val playing = position == current
-            val elevation by animateFloatAsState(if (lifted) 1f else 0f)
+            val elevation by animateFloatAsState(if (lifted) 1f else 0f, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -990,7 +990,7 @@ private fun PlayerMenu(telegram: Telegram) {
             open = true
         }) { Icon(Icons.Filled.MoreVert, contentDescription = "More") }
         com.pixelgram.desktop.ui.components.GroupedMenu(expanded = open, onDismiss = { open = false }) {
-            AnimatedContent(details, transitionSpec = { (fadeIn() togetherWith fadeOut()).using(null) }, modifier = Modifier.width(MenuWidth), contentAlignment = Alignment.TopEnd) { showDetails ->
+            AnimatedContent(details, transitionSpec = { (fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) togetherWith fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects())).using(null) }, modifier = Modifier.width(MenuWidth), contentAlignment = Alignment.TopEnd) { showDetails ->
                 if (!showDetails) {
                     com.pixelgram.desktop.ui.components.MenuGroups(
                         listOf(

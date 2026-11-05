@@ -157,12 +157,12 @@ fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
                     if (pill != null) lastPill = pill
                     AnimatedVisibility(
                         visible = pill != null,
-                        enter = scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(),
-                        exit = scaleOut() + fadeOut(),
+                        enter = scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                        exit = scaleOut(com.pixelgram.desktop.ui.components.Motion.fastSpatial()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                     ) {
                         lastPill?.let { (label, action) ->
                             FilledTonalButton(onClick = action) {
-                                AnimatedContent(label, transitionSpec = { fadeIn() togetherWith fadeOut() }) { Text(it) }
+                                AnimatedContent(label, transitionSpec = { fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) togetherWith fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) }) { Text(it) }
                             }
                         }
                     }

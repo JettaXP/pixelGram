@@ -340,8 +340,8 @@ internal fun StickerHoldPreview(
             val density = androidx.compose.ui.platform.LocalDensity.current
             androidx.compose.animation.AnimatedVisibility(
                 visibleState = previewState,
-                enter = androidx.compose.animation.fadeIn(),
-                exit = androidx.compose.animation.fadeOut(),
+                enter = androidx.compose.animation.fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                exit = androidx.compose.animation.fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                 modifier = with(density) { Modifier.size(window.width.toDp(), window.height.toDp()) },
             ) {
                 var shown by remember { mutableStateOf(preview) }
@@ -641,8 +641,8 @@ internal fun GifHoldPreview(telegram: Telegram) {
         val density = androidx.compose.ui.platform.LocalDensity.current
         androidx.compose.animation.AnimatedVisibility(
             visibleState = state,
-            enter = androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.fadeOut(),
+            enter = androidx.compose.animation.fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+            exit = androidx.compose.animation.fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
             modifier = with(density) { Modifier.size(window.width.toDp(), window.height.toDp()) },
         ) {
             Box(

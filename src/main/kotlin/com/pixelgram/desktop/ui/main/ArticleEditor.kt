@@ -296,8 +296,8 @@ fun ArticleEditor(telegram: Telegram, chatId: Long, replyToId: Long, onDismiss: 
                 }
                 androidx.compose.animation.AnimatedVisibility(
                     visible = toast != null,
-                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = ToastScale),
-                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = ToastScale),
+                    enter = androidx.compose.animation.fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) + androidx.compose.animation.scaleIn(initialScale = ToastScale),
+                    exit = androidx.compose.animation.fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) + androidx.compose.animation.scaleOut(targetScale = ToastScale),
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = ToastBottom),
                 ) {
                     var shown by remember { mutableStateOf("") }

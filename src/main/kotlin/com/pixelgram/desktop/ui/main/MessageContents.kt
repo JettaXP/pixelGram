@@ -737,11 +737,11 @@ fun PlayButton(key: Long, chatId: Long, title: String, file: TdApi.File?, telegr
     val size = if (hasCover) CoverButton else PlayerButton
     Box(Modifier.size(size)) {
         Box(
-            Modifier.fillMaxSize().clip(CircleShape).background(scheme.primary).clickable(onClick = start),
+            Modifier.fillMaxSize().clip(CircleShape).background(if (hasCover) androidx.compose.ui.graphics.Color.Transparent else scheme.primary).clickable(onClick = start),
             contentAlignment = Alignment.Center,
         ) {
             if (hasCover) {
-                com.pixelgram.desktop.ui.components.AvatarImage(title, cover, telegram, CircleShape, size, localPath = coverPath)
+                com.pixelgram.desktop.ui.components.AvatarImage(title, cover, telegram, androidx.compose.ui.graphics.RectangleShape, size, localPath = coverPath)
                 Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = CoverScrim)))
             }
             val tint = if (hasCover) androidx.compose.ui.graphics.Color.White else scheme.onPrimary
@@ -847,7 +847,7 @@ private fun TranscribeButton(message: UiMessage, result: TdApi.SpeechRecognition
 @Composable
 private fun TranscriptText(message: UiMessage, result: TdApi.SpeechRecognitionResult?) {
     val (text, pending) = com.pixelgram.desktop.telegram.speechText(result) ?: return
-    androidx.compose.animation.AnimatedVisibility(transcriptsShown[message.key] == true) {
+    androidx.compose.animation.AnimatedVisibility(transcriptsShown[message.key] == true, enter = com.pixelgram.desktop.ui.components.Motion.appear(), exit = com.pixelgram.desktop.ui.components.Motion.disappear()) {
         Text(
             text,
             style = MaterialTheme.typography.bodyMedium,
@@ -1167,7 +1167,7 @@ fun TransferRing(progress: Float?, color: Color, onCancel: (() -> Unit)?, size: 
         Modifier.size(size).then(if (onCancel != null) Modifier.clip(CircleShape).clickable(onClick = onCancel) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
-        val shown by animateFloatAsState((progress ?: 0f).coerceIn(MinRingProgress, 1f))
+        val shown by animateFloatAsState((progress ?: 0f).coerceIn(MinRingProgress, 1f), animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
         CircularWavyProgressIndicator(
             progress = { shown },
             modifier = Modifier.size(size),

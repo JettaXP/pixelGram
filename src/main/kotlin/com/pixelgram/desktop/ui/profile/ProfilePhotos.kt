@@ -83,7 +83,7 @@ fun ProfilePhotosDialog(
                         list == null -> LoadingIndicator()
                         list.isEmpty() -> Text("No photos yet")
                         else -> {
-                            AnimatedContent(index.coerceIn(0, list.lastIndex), transitionSpec = { fadeIn() togetherWith fadeOut() }) { shown ->
+                            AnimatedContent(index.coerceIn(0, list.lastIndex), transitionSpec = { fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) togetherWith fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) }) { shown ->
                                 val photo = list[shown]
                                 ThumbImage(
                                     photo.sizes.maxByOrNull { it.width }?.photo,

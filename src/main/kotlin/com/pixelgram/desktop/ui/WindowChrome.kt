@@ -319,9 +319,9 @@ private fun TitleButton(icon: ImageVector, label: String, danger: Boolean = fals
             hovered && danger -> colors.error
             hovered -> colors.surfaceContainerHighest
             else -> Color.Transparent
-        },
+        }, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects(),
     )
-    val content by animateColorAsState(if (hovered && danger) colors.onError else colors.onSurfaceVariant)
+    val content by animateColorAsState(if (hovered && danger) colors.onError else colors.onSurfaceVariant, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
     Box(
         modifier = Modifier
             .padding(horizontal = 2.dp)

@@ -399,7 +399,7 @@ private fun PollDialog(telegram: Telegram, chat: ChatState, replyToId: Long, onD
             row(Icons.Filled.Shuffle, Orange, "Shuffle Options", "Answers appear in random order for each voter.", shuffle) { shuffle = it }
             row(Icons.Filled.CheckCircle, Green, "Set Correct Answer", "Mark one or more options as the right answer.", quiz) { quiz = it }
         }
-        androidx.compose.animation.AnimatedVisibility(quiz) {
+        androidx.compose.animation.AnimatedVisibility(quiz, enter = com.pixelgram.desktop.ui.components.Motion.appear(), exit = com.pixelgram.desktop.ui.components.Motion.disappear()) {
             OutlinedTextField(explanation, { explanation = it }, placeholder = { Text("Explanation (optional)") }, modifier = Modifier.fillMaxWidth())
         }
         SettingGroup {
@@ -417,7 +417,7 @@ private fun PollDialog(telegram: Telegram, chat: ChatState, replyToId: Long, onD
                 Text(if (countries.isEmpty()) "Choose countries" else countries.joinToString(", ") { code -> countryName(code) })
             }
         }
-        androidx.compose.animation.AnimatedVisibility(limitDuration) {
+        androidx.compose.animation.AnimatedVisibility(limitDuration, enter = com.pixelgram.desktop.ui.components.Motion.appear(), exit = com.pixelgram.desktop.ui.components.Motion.disappear()) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 DurationChoices.forEach { (seconds, label) ->
                     androidx.compose.material3.FilterChip(selected = duration == seconds, onClick = { duration = seconds }, label = { Text(label) })

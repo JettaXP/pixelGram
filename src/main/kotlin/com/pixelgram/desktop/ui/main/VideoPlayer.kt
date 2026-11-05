@@ -482,7 +482,7 @@ fun VideoPlayerWindow(request: VideoRequest, settings: AppSettings) {
     ) {
         PixelTheme(settings) {
             Box(Modifier.fillMaxSize()) {
-            AnimatedVisibility(shown, enter = fadeIn(), exit = fadeOut()) {
+            AnimatedVisibility(shown, enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()), exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects())) {
                 VideoSurface(request, engine, close)
             }
             }
@@ -535,7 +535,7 @@ private fun VideoSurface(request: VideoRequest, engine: VideoEngine?, close: () 
                 LoadingIndicator(Modifier.size(72.dp), color = Color.White)
             }
         }
-        AnimatedVisibility(controls, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopEnd)) {
+        AnimatedVisibility(controls, enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()), exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()), modifier = Modifier.align(Alignment.TopEnd)) {
             FilledTonalIconButton(onClick = close, modifier = Modifier.padding(24.dp)) {
                 Icon(Icons.Rounded.Close, contentDescription = "Close")
             }
@@ -543,8 +543,8 @@ private fun VideoSurface(request: VideoRequest, engine: VideoEngine?, close: () 
         if (engine != null) {
             AnimatedVisibility(
                 controls,
-                enter = fadeIn(),
-                exit = fadeOut(),
+                enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp),
             ) {
                 VideoControls(request, engine)

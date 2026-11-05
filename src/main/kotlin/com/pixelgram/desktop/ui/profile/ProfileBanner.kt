@@ -180,8 +180,8 @@ private fun BannerPill(userId: Long, telegram: Telegram, hasBanner: Boolean, mod
         }
         AnimatedVisibility(
             visible = status != null,
-            enter = fadeIn(),
-            exit = fadeOut(),
+            enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+            exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
             modifier = Modifier.align(Alignment.TopEnd).padding(top = 48.dp),
         ) {
             Surface(shape = CircleShape, color = MaterialTheme.colorScheme.inverseSurface, contentColor = MaterialTheme.colorScheme.inverseOnSurface) {

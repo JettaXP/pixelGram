@@ -190,7 +190,7 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
     ) {
         PixelTheme(settings) {
             Box(Modifier.fillMaxSize()) {
-            AnimatedVisibility(shown, enter = fadeIn(), exit = fadeOut()) {
+            AnimatedVisibility(shown, enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()), exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects())) {
                 Box(
                     Modifier
                         .fillMaxSize()
@@ -301,8 +301,8 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
 private fun NavArrow(icon: ImageVector, label: String, visible: Boolean, chrome: Float, modifier: Modifier, onClick: () -> Unit) {
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn() + scaleIn(initialScale = 0.8f),
-        exit = fadeOut() + scaleOut(targetScale = 0.8f),
+        enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) + scaleIn(initialScale = 0.8f),
+        exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) + scaleOut(targetScale = 0.8f),
         modifier = modifier.padding(horizontal = 24.dp),
     ) {
         Box(
@@ -336,7 +336,7 @@ private fun ZoomablePhoto(photo: ViewedPhoto, modifier: Modifier) {
     val density = LocalDensity.current
     var zoom by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
-    val shownZoom by animateFloatAsState(zoom)
+    val shownZoom by animateFloatAsState(zoom, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
     Box(
         modifier
             .fillMaxSize()

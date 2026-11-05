@@ -136,8 +136,8 @@ fun PillTabs(
     ) {
         tabs.forEachIndexed { index, title ->
             val active = index == selected
-            val container by animateColorAsState(if (active) colors.secondaryContainer else colors.secondaryContainer.copy(alpha = 0f))
-            val content by animateColorAsState(if (active) colors.onSecondaryContainer else colors.onSurfaceVariant)
+            val container by animateColorAsState(if (active) colors.secondaryContainer else colors.secondaryContainer.copy(alpha = 0f), animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
+            val content by animateColorAsState(if (active) colors.onSecondaryContainer else colors.onSurfaceVariant, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
             Surface(onClick = { onSelect(index) }, shape = CircleShape, color = container, contentColor = content) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -529,8 +529,8 @@ fun SavedMessagesDialog(
                 targetState = topic,
                 transitionSpec = {
                     val forward = targetState != null
-                    (slideInHorizontally { if (forward) it / 4 else -it / 4 } + fadeIn()) togetherWith
-                        (slideOutHorizontally { if (forward) -it / 4 else it / 4 } + fadeOut())
+                    (slideInHorizontally { if (forward) it / 4 else -it / 4 } + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects())) togetherWith
+                        (slideOutHorizontally { if (forward) -it / 4 else it / 4 } + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()))
                 },
             ) { opened ->
                 if (opened != null) {

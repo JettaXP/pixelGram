@@ -383,7 +383,7 @@ fun MainScreen(
                     val chat = openChatId?.let { telegram.chats[it] }
                     AnimatedContent(
                         targetState = chat,
-                        transitionSpec = { fadeIn(tween(EmptyFadeMs)) togetherWith fadeOut(tween(EmptyFadeMs)) },
+                        transitionSpec = { fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()) togetherWith fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()) },
                         contentKey = { it?.id },
                     ) { shown ->
                         if (shown != null) {
@@ -394,8 +394,8 @@ fun MainScreen(
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth().weight(1f)) {
                                 androidx.compose.animation.AnimatedVisibility(
                                     settings.emptyShapes.value,
-                                    enter = fadeIn(),
-                                    exit = fadeOut(),
+                                    enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                                    exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                                     modifier = Modifier.matchParentSize(),
                                 ) { EmptyShapes() }
                                 Surface(
@@ -849,7 +849,6 @@ internal fun TopFolders(
 
 private val TopFolderWidth = 80.dp
 private const val RailFadeOutMs = 110
-private const val EmptyFadeMs = 180
 private const val RailFadeInMs = 180
 private const val RailResizeMs = 280
 private val MinChatWidth = 380.dp
