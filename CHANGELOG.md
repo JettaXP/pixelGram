@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.51.7 Bun
+
+- Back swipe works like Telegram Desktop: it picks the direction at once, fills in a short distance, pulling back cancels right away, and the arrow follows your fingers without lag. It stays in Experimental settings.
+
 ## 0.51.6 Bun
 
 ### Look and motion
