@@ -643,11 +643,6 @@ private fun MainMenu(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(label, style = MaterialTheme.typography.titleSmall)
-                                if (label == "Money") {
-                                    androidx.compose.material3.Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primary) {
-                                        Text("NEW", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                                    }
-                                }
                             }
                         }
                     }

@@ -140,6 +140,7 @@ fun ProfileContent(
             EmojiText(name, style = MaterialTheme.typography.headlineMediumEmphasized)
             com.pixelgram.desktop.ui.components.UserBadge.of(me.id)?.let { com.pixelgram.desktop.ui.components.UserBadgeView(it, telegram, 30.dp) }
         }
+        com.pixelgram.desktop.ui.main.ProfileBalance(me.id, telegram)
         val rows = buildList {
             add(InfoRow(Icons.Outlined.Person, "Name", name, onEdit = { editing = ProfileField.Name }))
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {

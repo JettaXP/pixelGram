@@ -39,6 +39,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -56,6 +60,8 @@ import com.pixelgram.desktop.ui.icons.filled.ArrowDownward
 import com.pixelgram.desktop.ui.icons.filled.Close
 import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
 import com.pixelgram.desktop.ui.icons.outlined.Diamond
+import com.pixelgram.desktop.ui.icons.outlined.KeyboardArrowDown
+import androidx.compose.ui.draw.rotate
 import com.pixelgram.desktop.ui.icons.outlined.Send
 import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
@@ -131,16 +137,48 @@ private fun WalletDialog(telegram: Telegram, onDismiss: () -> Unit) {
 
 @Composable
 private fun WalletCard(state: TdApi.TonWalletState, telegram: Telegram, modifier: Modifier, onQr: () -> Unit) {
+    val me = telegram.me
+    val name = me?.let { listOf(it.firstName, it.lastName).filter(String::isNotBlank).joinToString(" ") }.orEmpty()
+    GramCard(state.address, state.gramAmount, name, modifier, onQr)
+}
+
+@Composable
+private fun GramCard(address: String, nano: Long, owner: String, modifier: Modifier, onQr: (() -> Unit)?) {
     val colors = MaterialTheme.colorScheme
+    val tiltX = remember { androidx.compose.animation.core.Animatable(0f) }
+    val tiltY = remember { androidx.compose.animation.core.Animatable(0f) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val spring = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     Box(
         modifier
             .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragEnd = {
+                        scope.launch { tiltX.animateTo(0f, spring) }
+                        scope.launch { tiltY.animateTo(0f, spring) }
+                    },
+                    onDragCancel = {
+                        scope.launch { tiltX.animateTo(0f, spring) }
+                        scope.launch { tiltY.animateTo(0f, spring) }
+                    },
+                ) { change, amount ->
+                    change.consume()
+                    scope.launch { tiltY.snapTo((tiltY.value + amount.x * TiltPerPx).coerceIn(-MaxTilt, MaxTilt)) }
+                    scope.launch { tiltX.snapTo((tiltX.value - amount.y * TiltPerPx).coerceIn(-MaxTilt, MaxTilt)) }
+                }
+            }
+            .graphicsLayer {
+                rotationX = tiltX.value
+                rotationY = tiltY.value
+                cameraDistance = 12f * density
+            }
             .aspectRatio(CardRatio)
             .clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(listOf(colors.primary, colors.tertiary))),
     ) {
         Text(
-            state.address.chunked(4).joinToString(" "),
+            address.chunked(4).joinToString(" "),
             style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
             color = colors.onPrimary.copy(alpha = 0.55f),
             maxLines = 3,
@@ -151,7 +189,7 @@ private fun WalletCard(state: TdApi.TonWalletState, telegram: Telegram, modifier
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(horizontal = 20.dp),
         ) {
-            val amount = gramText(state.gramAmount)
+            val amount = gramText(nano)
             val big = amount.length <= BigAmountLength
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
                 Icon(Icons.Outlined.Diamond, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(if (big) 28.dp else 22.dp))
@@ -165,18 +203,20 @@ private fun WalletCard(state: TdApi.TonWalletState, telegram: Telegram, modifier
                 )
                 Text("GRAM", style = if (big) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleMedium, color = colors.onPrimary.copy(alpha = 0.7f), maxLines = 1)
             }
-            Surface(
-                onClick = onQr,
-                shape = RoundedCornerShape(16.dp),
-                color = colors.onPrimary.copy(alpha = 0.2f),
-                modifier = Modifier.size(56.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) { Text("QR", style = MaterialTheme.typography.titleMedium, color = colors.onPrimary) }
+            if (onQr != null) {
+                Surface(
+                    onClick = onQr,
+                    shape = RoundedCornerShape(16.dp),
+                    color = colors.onPrimary.copy(alpha = 0.2f),
+                    modifier = Modifier.size(56.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) { Text("QR", style = MaterialTheme.typography.titleMedium, color = colors.onPrimary) }
+                }
             }
         }
-        telegram.me?.let { me ->
+        if (owner.isNotBlank()) {
             EmojiText(
-                listOf(me.firstName, me.lastName).filter(String::isNotBlank).joinToString(" ").uppercase(),
+                owner.uppercase(),
                 style = MaterialTheme.typography.titleSmall.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
                 color = colors.onPrimary,
                 maxLines = 1,
@@ -345,25 +385,30 @@ private fun ReceiveDialog(address: String, onDismiss: () -> Unit) {
     )
 }
 
+class UserWallet(val address: String, val nano: Long)
+
 @Composable
 fun ProfileBalance(userId: Long, telegram: Telegram, modifier: Modifier = Modifier) {
     val own = userId == telegram.me?.id
-    var balance by remember(userId) { mutableStateOf<Long?>(if (own) telegram.tonWallet?.gramAmount else null) }
+    var other by remember(userId) { mutableStateOf<UserWallet?>(null) }
+    var open by remember(userId) { mutableStateOf(false) }
     LaunchedEffect(userId, own) {
         if (own) return@LaunchedEffect
         telegram.send(TdApi.GetUserTonWalletAddresses(longArrayOf(userId))) { result ->
-            val address = (result as? TdApi.UserTonWalletAddresses)?.addresses?.firstOrNull()?.walletAddress ?: return@send
+            val address = (result as? TdApi.UserTonWalletAddresses)?.addresses?.firstOrNull { it.userId == userId }?.walletAddress
+                ?: (result as? TdApi.UserTonWalletAddresses)?.addresses?.firstOrNull()?.walletAddress
+                ?: return@send
             telegram.send(TdApi.SendTonCenterApiRequest("/api/v2/getAddressBalance", TdApi.TonCenterApiRequestTypeGet("address=$address"))) { reply ->
                 val json = (reply as? TdApi.Text)?.text ?: return@send
-                balance = Regex(""""result"\s*:\s*"?(\d+)""").find(json)?.groupValues?.get(1)?.toLongOrNull()
+                val nano = Regex(""""result"\s*:\s*"?(\d+)""").find(json)?.groupValues?.get(1)?.toLongOrNull() ?: return@send
+                other = UserWallet(address, nano)
             }
         }
     }
-    val shown = if (own) telegram.tonWallet?.takeIf { it.address.isNotBlank() }?.gramAmount else balance
-    if (shown == null) return
+    val wallet = if (own) telegram.tonWallet?.takeIf { it.address.isNotBlank() }?.let { UserWallet(it.address, it.gramAmount) } else other
+    if (wallet == null) return
     Surface(
-        onClick = { if (own) WalletWindow.open = telegram },
-        enabled = own,
+        onClick = { open = true },
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         modifier = modifier,
@@ -371,18 +416,76 @@ fun ProfileBalance(userId: Long, telegram: Telegram, modifier: Modifier = Modifi
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
         ) {
             Text("Balance:", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Icon(Icons.Outlined.Diamond, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-            Text(gramText(shown), style = MaterialTheme.typography.labelLarge)
+            Text(gramText(wallet.nano), style = MaterialTheme.typography.labelLarge)
+            Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp).rotate(-90f))
         }
     }
+    if (open) BalanceCardDialog(userId, wallet, own, telegram) { open = false }
+}
+
+@Composable
+private fun BalanceCardDialog(userId: Long, wallet: UserWallet, own: Boolean, telegram: Telegram, onDismiss: () -> Unit) {
+    val name = telegram.userName(userId)
+    var how by remember { mutableStateOf(false) }
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.width(DialogWidth)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(24.dp)) {
+                val grams = gramText(wallet.nano)
+                Text(
+                    when {
+                        own -> tr("Your balance is public due to blockchain transparency.")
+                        wallet.nano > 0 -> tr("{name} owns {amount} Grams on the TON blockchain.").replace("{name}", name).replace("{amount}", grams)
+                        else -> tr("{name} doesn't own any Grams yet.").replace("{name}", name)
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                GramCard(wallet.address, wallet.nano, if (own) name else name, Modifier, null)
+                val mine = telegram.tonWallet?.address?.isNotBlank() == true
+                when {
+                    own -> Button(onClick = { onDismiss(); WalletWindow.open = telegram }, modifier = Modifier.height(48.dp)) { Text("Open My Wallet") }
+                    !mine -> FilledTonalButton(onClick = { how = true }, modifier = Modifier.height(48.dp)) { Text("How does it work?") }
+                }
+            }
+        }
+    }
+    if (how) HowItWorksDialog { how = false }
+}
+
+@Composable
+private fun HowItWorksDialog(onDismiss: () -> Unit) {
+    com.pixelgram.desktop.ui.components.expressive.AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Outlined.Diamond, contentDescription = null) },
+        title = { Text("How It Works") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                listOf(
+                    "Send Money Instantly" to "Send Grams in any chat, just like sharing a photo.",
+                    "No Fees" to "First transfers each day are free, the rest cost almost nothing.",
+                    "Blockchain Verified" to "All transactions are recorded and verifiable on a public ledger.",
+                ).forEach { (title, text) ->
+                    Column {
+                        Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                        Text(text, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        },
+        confirmButton = { com.pixelgram.desktop.ui.components.expressive.TextButton(onClick = onDismiss) { Text("OK") } },
+    )
 }
 
 private const val NanoPerGram = 1_000_000_000L
 private const val CardRatio = 1.75f
 private const val BigAmountLength = 7
+private const val TiltPerPx = 0.25f
+private const val MaxTilt = 18f
 private val DialogWidth = 420.dp
 private val DialogHeight = 760.dp
 private val ListHeight = 320.dp
