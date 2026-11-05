@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.51.4"
+version = "0.51.5"
 val codename = "Bun"
 
 kotlin {

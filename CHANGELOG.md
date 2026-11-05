@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.51.5 Bun
+
+- Windows: the music shows up in the system media controls (the volume flyout and the quick settings) with the title, the artist and the cover, and its play, pause, next and previous buttons and the media keys control pixelGram.
+
 ## 0.51.4 Bun
 
 ### Fixes
