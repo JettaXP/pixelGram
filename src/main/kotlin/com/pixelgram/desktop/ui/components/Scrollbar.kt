@@ -26,7 +26,7 @@ import kotlinx.coroutines.delay
 
 private class ThumbGeometry(val top: Float, val height: Float, val travel: Float, val range: Float)
 
-private fun LazyListState.thumb(minHeight: Float): ThumbGeometry? {
+private fun LazyListState.thumb(minHeight: Float, reverse: Boolean = false): ThumbGeometry? {
     val info = layoutInfo
     val visible = info.visibleItemsInfo
     if (visible.isEmpty()) return null
@@ -39,11 +39,12 @@ private fun LazyListState.thumb(minHeight: Float): ThumbGeometry? {
     val offset = (firstVisibleItemIndex * average + firstVisibleItemScrollOffset).coerceIn(0f, range)
     val height = (viewport * viewport / total).coerceIn(minHeight, viewport)
     val travel = viewport - height
-    return ThumbGeometry(info.viewportStartOffset.coerceAtLeast(0) + travel * offset / range, height, travel, range)
+    val along = travel * offset / range
+    return ThumbGeometry(info.viewportStartOffset.coerceAtLeast(0) + if (reverse) travel - along else along, height, travel, range)
 }
 
 @Composable
-fun Modifier.listScrollbar(state: LazyListState, edge: Float = 4f): Modifier {
+fun Modifier.listScrollbar(state: LazyListState, edge: Float = 4f, reverse: Boolean = false): Modifier {
     val settings = LocalAppSettings.current
     if (settings?.scrollbars?.value == false) return this
     val alpha = remember { Animatable(0f) }
@@ -76,25 +77,25 @@ fun Modifier.listScrollbar(state: LazyListState, edge: Float = 4f): Modifier {
                         PointerEventType.Move -> {
                             hovered = inZone || dragging
                             if (dragging) {
-                                val geometry = state.thumb(minHeight)
+                                val geometry = state.thumb(minHeight, reverse)
                                 if (geometry != null && geometry.travel > 0f) {
                                     val targetTop = startTop + (change.position.y - grab)
-                                    val wanted = (targetTop - geometry.top) * geometry.range / geometry.travel
+                                    val wanted = (targetTop - geometry.top) * geometry.range / geometry.travel * (if (reverse) -1f else 1f)
                                     state.dispatchRawDelta(wanted)
                                 }
                                 change.consume()
                             }
                         }
                         PointerEventType.Press -> if (inZone) {
-                            val geometry = state.thumb(minHeight)
+                            val geometry = state.thumb(minHeight, reverse)
                             if (geometry != null) {
                                 val y = change.position.y
                                 if (y < geometry.top || y > geometry.top + geometry.height) {
-                                    val jump = (y - geometry.height / 2 - geometry.top) * geometry.range / geometry.travel.coerceAtLeast(1f)
+                                    val jump = (y - geometry.height / 2 - geometry.top) * geometry.range / geometry.travel.coerceAtLeast(1f) * (if (reverse) -1f else 1f)
                                     state.dispatchRawDelta(jump)
                                 }
                                 grab = y
-                                startTop = state.thumb(minHeight)?.top ?: geometry.top
+                                startTop = state.thumb(minHeight, reverse)?.top ?: geometry.top
                                 dragging = true
                                 change.consume()
                             }
@@ -113,7 +114,7 @@ fun Modifier.listScrollbar(state: LazyListState, edge: Float = 4f): Modifier {
             drawContent()
             val a = alpha.value
             if (a <= 0f) return@drawWithContent
-            val geometry = state.thumb(MinThumb.toPx()) ?: return@drawWithContent
+            val geometry = state.thumb(MinThumb.toPx(), reverse) ?: return@drawWithContent
             val w = width.toPx()
             val x = size.width - w - edge.dp.toPx()
             drawRoundRect(

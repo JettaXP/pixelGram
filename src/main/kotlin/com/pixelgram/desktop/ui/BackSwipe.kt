@@ -154,18 +154,18 @@ fun BoxScope.BackSwipeIndicator(state: BackSwipeState, followList: Boolean = tru
         spring(dampingRatio = ReachDamping, stiffness = ReachStiffness),
     )
     val end = remember { Animatable(0f) }
-    var frozen by remember { mutableStateOf(0f) }
+    val frozen = remember { floatArrayOf(0f) }
+    if (dragging) frozen[0] = state.raw
     androidx.compose.runtime.LaunchedEffect(phase) {
         when (phase) {
             BackPhase.Committed, BackPhase.Cancelled -> {
-                frozen = state.raw
                 end.snapTo(0f)
                 end.animateTo(1f, spring(dampingRatio = 1f, stiffness = if (phase == BackPhase.Committed) EndStiffness else CancelStiffness))
             }
             else -> end.snapTo(0f)
         }
     }
-    val raw = if (dragging) state.raw else frozen
+    val raw = if (dragging) state.raw else frozen[0]
     val pre = raw.coerceIn(0f, 1f)
     val over = ((raw - 1f) / StretchRange).coerceIn(0f, 1f)
     val fade = when (phase) {
@@ -235,10 +235,10 @@ fun BackSwipeBox(onBack: () -> Unit, modifier: Modifier = Modifier, content: @Co
 private val BackThreshold = 80.dp
 private val ScrollStep = 64.dp
 private val LockDistance = 4.dp
-private const val Deactivate = 0.95f
+private const val Deactivate = 0.8f
 private const val StretchRange = 1.5f
-private const val SettleMs = 110L
-private const val StickyGapMs = 260L
+private const val SettleMs = 260L
+private const val StickyGapMs = 400L
 private const val FinishMs = 450L
 private const val CommitScale = 0.86f
 private const val RangeSpan = 1f + StretchRange

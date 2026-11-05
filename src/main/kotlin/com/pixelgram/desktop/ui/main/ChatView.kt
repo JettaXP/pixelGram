@@ -112,6 +112,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import com.pixelgram.desktop.ui.components.listScrollbar
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -801,7 +802,7 @@ private fun ChatViewContent(
             LazyColumn(
                 state = listState,
                 reverseLayout = true,
-                modifier = Modifier.fillMaxSize().onSizeChanged { listWidth = it.width }.then(with(com.pixelgram.desktop.ui.components.SmoothWheelScope) { Modifier.glide(listState, reverse = true) }),
+                modifier = Modifier.fillMaxSize().onSizeChanged { listWidth = it.width }.then(with(com.pixelgram.desktop.ui.components.SmoothWheelScope) { Modifier.glide(listState, reverse = true) }).then(Modifier.listScrollbar(listState, reverse = true)),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(GroupInnerGap, Alignment.Bottom),
             ) {
