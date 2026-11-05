@@ -194,11 +194,16 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                     PlayerView.Queue -> QueueView(telegram, tracks, index)
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val coverSlot by androidx.compose.animation.core.animateDpAsState(
+                    if (FullPlayer.view != PlayerView.Cover) 70.dp else 0.dp,
+                    spring(dampingRatio = CoverSpringDamping, stiffness = CoverSpringStiffness),
+                )
+                Box(Modifier.width(coverSlot.coerceAtLeast(0.dp)).height(56.dp)) {
                 androidx.compose.animation.AnimatedVisibility(
                     FullPlayer.view != PlayerView.Cover,
-                    enter = fadeIn() + androidx.compose.animation.expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), expandFrom = Alignment.Start),
-                    exit = fadeOut() + androidx.compose.animation.shrinkHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), shrinkTowards = Alignment.Start),
+                    enter = fadeIn(),
+                    exit = fadeOut(),
                 ) {
                     SmallCover(
                         audio,
@@ -206,6 +211,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                         56.dp,
                         Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedVisibility, boundsTransform = { _, _ -> spring(dampingRatio = CoverSpringDamping, stiffness = CoverSpringStiffness) }, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.RemeasureToBounds),
                     )
+                }
                 }
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -584,7 +590,8 @@ private fun SyncedLyrics(lines: List<LyricLine>) {
     val now = AudioPlayer.position
     val items = remember(lines) { lyricItems(lines) }
     val current = items.indexOfLast { it.start <= now + 0.15f }
-    val state = rememberLazyListState()
+    val state = rememberLazyListState(initialFirstVisibleItemIndex = (current - 1).coerceAtLeast(0))
+    var placed by remember { mutableStateOf(false) }
     var pausedUntil by remember { mutableStateOf(0L) }
     val follow = remember {
         object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
@@ -603,10 +610,13 @@ private fun SyncedLyrics(lines: List<LyricLine>) {
         val item = info.visibleItemsInfo.firstOrNull { it.index == current }
         val previous = info.visibleItemsInfo.firstOrNull { it.index == current - 1 }?.size ?: 0
         val desired = (viewport * LyricsTopFade).toInt() + previous + info.mainAxisItemSpacing
-        if (item != null) {
-            state.animateScrollBy((item.offset - info.viewportStartOffset - desired).toFloat(), tween(LineScrollMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
-        } else {
-            state.animateScrollToItem(current, -desired + info.beforeContentPadding)
+        when {
+            !placed -> {
+                state.scrollToItem(current, -desired + info.beforeContentPadding)
+                placed = true
+            }
+            item != null -> state.animateScrollBy((item.offset - info.viewportStartOffset - desired).toFloat(), tween(LineScrollMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            else -> state.animateScrollToItem(current, -desired + info.beforeContentPadding)
         }
     }
     LazyColumn(

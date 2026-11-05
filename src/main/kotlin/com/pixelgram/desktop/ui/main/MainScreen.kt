@@ -816,7 +816,7 @@ private fun AccountHeader(
 }
 
 @Composable
-private fun TopFolders(
+internal fun TopFolders(
     tabs: List<FolderTab>,
     selected: ChatListKey,
     mode: com.pixelgram.desktop.core.FolderTitle,

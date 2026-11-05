@@ -177,7 +177,8 @@ object AudioPlayer {
                     stretch.reset()
                     sink.flush()
                 }
-                if (paused && level <= 0f) {
+                val holding = scrub != 0f
+                if (paused && !holding && level <= 0f) {
                     if (fadedFrames > 0) {
                         index = (index - fadedFrames).coerceAtLeast(0)
                         fadedFrames = 0
@@ -185,8 +186,8 @@ object AudioPlayer {
                     Thread.sleep(25)
                     continue
                 }
-                val target = if (paused) 0f else 1f
-                val levelStep = if (paused) fadeOutStep else fadeInStep
+                val target = if (paused && !holding) 0f else 1f
+                val levelStep = if (paused && !holding) fadeOutStep else fadeInStep
                 if (index >= frames) {
                     if (repeat) {
                         index = 0
@@ -236,14 +237,14 @@ object AudioPlayer {
                         }
                     }
                     sink.write(bytes, o)
-                    if (paused) fadedFrames += count
+                    if (paused && !holding) fadedFrames += count
                     index += count
                 } else {
                     val need = minOf((chunk * step).toInt(), frames - index)
                     val out = stretch.process(pcm.samples.copyOfRange(index * pcm.channels, (index + need) * pcm.channels), need, step)
                     level = toward(level, target, levelStep * need)
                     bytes = pack(out, gain * level, bytes)
-                    if (paused) fadedFrames += need
+                    if (paused && !holding) fadedFrames += need
                     sink.write(bytes, out.size * 2)
                     index += need
                 }
@@ -304,7 +305,7 @@ object AudioPlayer {
                     stretch.reset()
                     sink.flush()
                 }
-                if (paused) {
+                if (paused && scrub == 0f) {
                     Thread.sleep(25)
                     continue
                 }

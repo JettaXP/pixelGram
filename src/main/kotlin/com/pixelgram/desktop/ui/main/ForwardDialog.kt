@@ -81,22 +81,7 @@ fun ForwardDialog(telegram: Telegram, settings: AppSettings, onDismiss: () -> Un
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 )
                 if (tabs.size > 1 && query.isBlank()) {
-                    val selected = tabs.indexOfFirst { it.key == folder }.coerceAtLeast(0)
-                    androidx.compose.material3.PrimaryScrollableTabRow(
-                        selectedTabIndex = selected,
-                        containerColor = Color.Transparent,
-                        edgePadding = 16.dp,
-                        divider = {},
-                    ) {
-                        tabs.forEachIndexed { i, tab ->
-                            androidx.compose.material3.Tab(
-                                selected = i == selected,
-                                onClick = { folder = tab.key },
-                                text = { EmojiText(tab.title, maxLines = 1) },
-                                icon = { Icon(folderIcon(tab.icon, i == selected), contentDescription = null, modifier = Modifier.size(20.dp)) },
-                            )
-                        }
-                    }
+                    TopFolders(tabs, folder, com.pixelgram.desktop.core.FolderTitle.NamesAndIcons) { folder = it }
                 }
                 val order = tabs.indexOfFirst { it.key == folder }
                 androidx.compose.animation.AnimatedContent(
