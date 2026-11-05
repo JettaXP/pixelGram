@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.52.5 Puffy Diamond
+
+- The color picker can take a color from a photo: tap the picture button next to the hex field, then click or drag on the photo.
+- Send as file in the send button's right-click menu sends photos and videos as documents without compression.
+- pixelSettings links work with ?s/key as well as ?s=key, and their previews say Open setting instead of Open channel.
+- The blue field in the color picker is labeled B in every language.
+
 ## 0.52.4 Puffy Diamond
 
 - Right-click a setting or a settings section to copy its link.
