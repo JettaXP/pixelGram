@@ -662,6 +662,13 @@ fun ChatInfoDialog(
     onOpenChat: ((Long) -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
+    if (telegram.isSavedMessages(chat.id) && Links.openOwnProfile != null) {
+        LaunchedEffect(chat.id) {
+            onDismiss()
+            Links.openOwnProfile?.invoke()
+        }
+        return
+    }
     val user = telegram.users[chat.privateUserId]
     var bio by remember(chat.id) { mutableStateOf("") }
     var bioEntities by remember(chat.id) { mutableStateOf(emptyList<TdApi.TextEntity>()) }

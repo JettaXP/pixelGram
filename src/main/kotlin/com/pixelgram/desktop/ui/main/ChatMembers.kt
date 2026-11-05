@@ -105,7 +105,12 @@ private fun MembersDialog(
     LaunchedEffect(chat.id, admins, reload) { telegram.chatMembers(chat, admins) { members = it } }
     val openProfile = { sender: TdApi.MessageSender ->
         when (sender) {
-            is TdApi.MessageSenderUser -> telegram.openPrivateChat(sender.userId) { id -> telegram.chats[id]?.let { profile = it } }
+            is TdApi.MessageSenderUser -> if (sender.userId == telegram.me?.id) {
+                onDismiss()
+                Links.openOwnProfile?.invoke()
+            } else {
+                telegram.openPrivateChat(sender.userId) { id -> telegram.chats[id]?.let { profile = it } }
+            }
             is TdApi.MessageSenderChat -> telegram.chats[sender.chatId]?.let { profile = it }
         }
     }
@@ -151,7 +156,7 @@ private fun MemberItem(
     onManage: (ManageStart) -> Unit,
     onChanged: () -> Unit,
 ) {
-    val name = telegram.senderTitle(member.memberId)
+    val name = (member.memberId as? TdApi.MessageSenderUser)?.let { telegram.userName(it.userId) } ?: telegram.senderTitle(member.memberId)
     val status = member.status
     val owner = status is TdApi.ChatMemberStatusCreator
     val admin = status is TdApi.ChatMemberStatusAdministrator

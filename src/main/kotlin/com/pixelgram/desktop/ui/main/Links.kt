@@ -15,6 +15,7 @@ import javax.swing.SwingUtilities
 object Links : UriHandler {
     var active: (() -> Telegram?)? = null
     var navigate: ((Telegram, Long) -> Unit)? = null
+    var openOwnProfile: (() -> Unit)? = null
     var pending by mutableStateOf<String?>(null)
     var invite by mutableStateOf<InviteRequest?>(null)
     var confirm by mutableStateOf<String?>(null)

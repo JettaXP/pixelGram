@@ -588,6 +588,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
     val chatBack = { openChatId = chatTrail.removeLastOrNull() }
     DisposableEffect(telegram) {
         Links.active = { telegram.takeIf { it.authState == AuthState.Ready } }
+        Links.openOwnProfile = { navigate(Screen.Profile) }
         Links.navigate = { owner, chatId ->
             if (owner != telegram) accounts.switchTo(owner)
             openChatInside(chatId)
