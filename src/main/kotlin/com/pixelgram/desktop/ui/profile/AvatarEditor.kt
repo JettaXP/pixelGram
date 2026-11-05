@@ -64,7 +64,7 @@ private val CameraWidth = 520.dp
 fun isVideoFile(file: File) = file.extension.lowercase() in VideoExtensions
 
 @Composable
-fun AvatarEditor(size: Dp, onPicked: (File) -> Unit, modifier: Modifier = Modifier, avatar: @Composable () -> Unit) {
+fun AvatarEditor(size: Dp, onPicked: (File) -> Unit, modifier: Modifier = Modifier, extra: (@Composable (close: () -> Unit) -> Unit)? = null, avatar: @Composable () -> Unit) {
     val hover = remember { MutableInteractionSource() }
     val hovered by hover.collectIsHoveredAsState()
     var menu by remember { mutableStateOf(false) }
@@ -119,6 +119,7 @@ fun AvatarEditor(size: Dp, onPicked: (File) -> Unit, modifier: Modifier = Modifi
                             Attachments.fromClipboard().firstOrNull()?.let(onPicked)
                         },
                     )
+                    extra?.invoke { menu = false }
                 }
             }
         }
