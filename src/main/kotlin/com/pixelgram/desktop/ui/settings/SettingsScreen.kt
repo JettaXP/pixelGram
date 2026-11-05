@@ -897,6 +897,9 @@ private fun AppearanceSection(settings: AppSettings, onOpen: (Section) -> Unit) 
             SwitchRow(0, 1, "Rounded icons", "Material Symbols Rounded instead of the sharp outlined style", settings.roundedIcons.value) { settings.roundedIcons.value = it }
         }
     }
+    SegmentedGroup {
+        SwitchRow(0, 1, "Scrollbars", "Thin scrollbars in the chat list and the player", settings.scrollbars.value) { settings.scrollbars.value = it }
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(vertical = 4.dp)) {
         listOf(
             Icons.Outlined.Search, Icons.Outlined.Settings, Icons.AutoMirrored.Outlined.Reply, Icons.Outlined.ContentCopy,

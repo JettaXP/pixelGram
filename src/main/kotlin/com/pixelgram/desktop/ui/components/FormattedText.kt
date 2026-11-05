@@ -211,7 +211,7 @@ fun FormattedText(
     val entities = folded.entities
     val scheme = MaterialTheme.colorScheme
     val colors = FormatColors(scheme.primary, scheme.onSurface.copy(alpha = 0.1f), scheme.primary)
-    val (annotated, inline) = remember(text, entities, colors) { withEmoji(formattedString(text, entities, colors)) }
+    val (annotated, inline) = remember(text, entities, colors) { withEmoji(formattedString(text, entities, colors), openPack = true) }
     if (entities.isEmpty()) {
         Text(annotated, modifier = modifier, style = style, color = color, inlineContent = inline, onTextLayout = onTextLayout)
         return

@@ -1750,7 +1750,7 @@ private fun bigCustomEmoji(message: UiMessage): List<Pair<String, Long>>? {
 private fun BigEmojiRow(emoji: List<Pair<String, Long>>) {
     val size = BigEmojiSizes.getOrElse(emoji.size - 1) { BigEmojiSizes.last() }
     androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.widthIn(max = 420.dp)) {
-        emoji.forEach { (fallback, id) -> CustomEmojiView(id, fallback, Modifier.size(size), openPack = true) }
+        emoji.forEach { (fallback, id) -> CustomEmojiView(id, fallback, Modifier.size(size)) }
     }
 }
 

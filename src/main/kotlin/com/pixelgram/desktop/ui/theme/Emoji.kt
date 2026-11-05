@@ -303,7 +303,7 @@ fun CustomEmojiLine(
     Text(annotated, modifier = modifier, color = color, style = style, maxLines = maxLines, overflow = overflow, inlineContent = inline)
 }
 
-fun withEmoji(text: AnnotatedString): Pair<AnnotatedString, Map<String, InlineTextContent>> {
+fun withEmoji(text: AnnotatedString, openPack: Boolean = false): Pair<AnnotatedString, Map<String, InlineTextContent>> {
     val plain = text.text
     val custom = text.getStringAnnotations(CustomEmojiTag, 0, plain.length)
     val ranges = emojiRanges(plain).filter { range -> custom.none { range.first < it.end && range.last + 1 > it.start } }
@@ -317,7 +317,7 @@ fun withEmoji(text: AnnotatedString): Pair<AnnotatedString, Map<String, InlineTe
         if (key !in inline) {
             val fallback = plain.substring(annotation.start, annotation.end)
             inline[key] = InlineTextContent(Placeholder(CustomEmojiSize, CustomEmojiSize, PlaceholderVerticalAlign.TextCenter)) {
-                CustomEmojiView(annotation.item.toLong(), fallback, openPack = true)
+                CustomEmojiView(annotation.item.toLong(), fallback, openPack = openPack)
             }
         }
     }

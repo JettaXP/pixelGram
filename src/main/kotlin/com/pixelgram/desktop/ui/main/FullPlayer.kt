@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import com.pixelgram.desktop.ui.components.listScrollbar
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -636,6 +637,7 @@ private fun SyncedLyrics(lines: List<LyricLine>) {
         verticalArrangement = Arrangement.spacedBy(LineSpacing),
         modifier = Modifier
             .fillMaxSize()
+            .listScrollbar(state)
             .layout { measurable, constraints ->
                 val extra = LyricsBleed.roundToPx()
                 val wide = constraints.copy(
@@ -862,7 +864,7 @@ private fun QueueView(telegram: Telegram, tracks: List<QueueTrack>, current: Int
     val latest by androidx.compose.runtime.rememberUpdatedState(tracks)
     val rowPx = with(androidx.compose.ui.platform.LocalDensity.current) { QueueRow.toPx() }
     val placement = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.unit.IntOffset>()
-    LazyColumn(state = state, modifier = Modifier.fillMaxSize()) {
+    LazyColumn(state = state, modifier = Modifier.fillMaxSize().listScrollbar(state)) {
         itemsIndexed(tracks, key = { _, track -> track.key }) { position, track ->
             val lifted = track.key == draggingKey
             val playing = position == current

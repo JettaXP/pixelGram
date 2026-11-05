@@ -64,6 +64,7 @@ import androidx.compose.foundation.layout.size
 import com.pixelgram.desktop.ui.icons.outlined.Lock
 import com.pixelgram.desktop.ui.icons.outlined.LockOpen
 import androidx.compose.foundation.lazy.LazyColumn
+import com.pixelgram.desktop.ui.components.listScrollbar
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -238,7 +239,7 @@ private fun ChatListBody(
             }
             LazyColumn(
                 state = listState,
-                modifier = with(com.pixelgram.desktop.ui.components.SmoothWheelScope) { Modifier.glide(listState) },
+                modifier = with(com.pixelgram.desktop.ui.components.SmoothWheelScope) { Modifier.glide(listState) }.listScrollbar(listState, edge = 1f),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
@@ -381,6 +382,7 @@ private fun CompactChatList(
         LoadMoreChats(compactState, listKey, chatsFor(listKey).size, telegram)
         LazyColumn(
             state = compactState,
+            modifier = Modifier.listScrollbar(compactState, edge = 1f),
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = PaddingValues(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),

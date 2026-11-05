@@ -17,6 +17,7 @@ import com.pixelgram.desktop.ui.icons.outlined.StarOutline
 import com.pixelgram.desktop.ui.icons.outlined.Star
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -211,7 +212,19 @@ private fun StickersTab(
                             if (section.id == 0L || section.id == FavoritesId) com.pixelgram.desktop.core.tr(section.title) else section.title,
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp),
+                            modifier = Modifier
+                                .padding(start = 4.dp, top = 8.dp)
+                                .then(
+                                    if (section.id != 0L && section.id != FavoritesId) {
+                                        Modifier
+                                            .clip(androidx.compose.foundation.shape.CircleShape)
+                                            .pointerHoverIcon(androidx.compose.ui.input.pointer.PointerIcon.Hand)
+                                            .clickable { StickerPack.current = StickerPackRequest(telegram, chatId, section.id) }
+                                    } else {
+                                        Modifier
+                                    },
+                                )
+                                .padding(horizontal = 4.dp, vertical = 4.dp),
                         )
                     }
                     items(stickers, key = { "${section.id}-${it.sticker.id}" }) { sticker ->

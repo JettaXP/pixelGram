@@ -1,6 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
@@ -210,7 +211,7 @@ fun EmojiPanel(
                     items(group.emoji) { emoji -> EmojiCellView(PanelEmoji.Plain(emoji), pick, actions) }
                 }
                 packs.forEach { pack ->
-                    item(span = { GridItemSpan(maxLineSpan) }) { PanelHeader(pack.title, translate = false) }
+                    item(span = { GridItemSpan(maxLineSpan) }) { PanelHeader(pack.title, translate = false) { StickerPack.current = StickerPackRequest(telegram!!, ActiveChat.id, pack.id) } }
                     items(pack.emoji) { (emoji, id) -> EmojiCellView(PanelEmoji.Custom(emoji, id), pick, actions) }
                 }
             }
@@ -252,12 +253,24 @@ private class EmojiActions(
 )
 
 @Composable
-private fun PanelHeader(title: String, translate: Boolean = true) {
+private fun PanelHeader(title: String, translate: Boolean = true, onClick: (() -> Unit)? = null) {
     Text(
         if (translate) com.pixelgram.desktop.core.tr(title) else title,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp),
+        modifier = Modifier
+            .padding(start = 4.dp, top = 8.dp)
+            .then(
+                if (onClick != null) {
+                    Modifier
+                        .clip(CircleShape)
+                        .pointerHoverIcon(androidx.compose.ui.input.pointer.PointerIcon.Hand)
+                        .clickable(onClick = onClick)
+                } else {
+                    Modifier
+                },
+            )
+            .padding(horizontal = 4.dp, vertical = 4.dp),
     )
 }
 
