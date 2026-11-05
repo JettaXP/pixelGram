@@ -18,6 +18,19 @@ object Links : UriHandler {
     var openOwnProfile: (() -> Unit)? = null
     var openPreferences: (() -> Unit)? = null
 
+    fun isPreferences(url: String): Boolean = runCatching { URI(url.trim()) }.getOrNull()?.let(::isPreferences) == true
+
+    private fun isPreferences(uri: URI): Boolean {
+        val scheme = uri.scheme?.lowercase()
+        val host = uri.host?.lowercase()?.removePrefix("www.")
+        val name = when {
+            scheme == "tg" && uri.host.equals("resolve", ignoreCase = true) -> uri.query.orEmpty().split('&').firstOrNull { it.startsWith("domain=") }?.substringAfter('=')
+            host in TelegramHosts -> uri.path.orEmpty().trim('/').substringBefore('/')
+            else -> null
+        }
+        return name.equals(PreferencesUsername, ignoreCase = true)
+    }
+
     private fun special(url: String): Boolean {
         val uri = runCatching { URI(url.trim()) }.getOrNull() ?: return false
         val scheme = uri.scheme?.lowercase()
@@ -25,14 +38,14 @@ object Links : UriHandler {
             SwingUtilities.invokeLater { com.pixelgram.desktop.ui.Credits.open = true }
             return true
         }
-        val host = uri.host?.lowercase()?.removePrefix("www.")
-        val name = when {
-            scheme == "tg" && uri.host.equals("resolve", ignoreCase = true) -> uri.query.orEmpty().split('&').firstOrNull { it.startsWith("domain=") }?.substringAfter('=')
-            host in TelegramHosts -> uri.path.orEmpty().trim('/').substringBefore('/')
-            else -> null
-        }
-        if (!name.equals(PreferencesUsername, ignoreCase = true)) return false
-        val key = uri.query.orEmpty().split('&').firstOrNull { it.startsWith("s=") }?.substringAfter('=')
+        if (!isPreferences(uri)) return false
+        val key = uri.query.orEmpty().split('&').firstNotNullOfOrNull { part ->
+            when {
+                part.startsWith("s=", ignoreCase = true) -> part.substring(2)
+                part.startsWith("s/", ignoreCase = true) -> part.substring(2).trim('/')
+                else -> null
+            }
+        } ?: uri.path.orEmpty().trim('/').split('/').getOrNull(1)
         SwingUtilities.invokeLater {
             com.pixelgram.desktop.ui.settings.SettingsLink.request = key.orEmpty()
             openPreferences?.invoke()

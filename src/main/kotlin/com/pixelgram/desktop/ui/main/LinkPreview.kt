@@ -163,7 +163,7 @@ fun LinkPreviewCard(preview: TdApi.LinkPreview, telegram: Telegram, outgoing: Bo
                 }
             }
             if (large && !preview.showMediaAboveDescription) LargeMedia(media, telegram)
-            type?.action()?.let { label ->
+            (if (Links.isPreferences(preview.url)) "Open setting" else type?.action())?.let { label ->
                 FilledTonalButton(onClick = open, modifier = Modifier.fillMaxWidth()) {
                     Text(label)
                 }
