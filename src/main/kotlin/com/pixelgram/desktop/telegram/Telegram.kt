@@ -589,7 +589,7 @@ class Telegram(
     }
 
     fun openSavedMessages(onChat: (Long) -> Unit) {
-        if (myUserId != 0L) openPrivateChat(myUserId, onChat)
+        if (myUserId != 0L) openPrivateChat(myUserId, onChat = onChat)
     }
 
     fun openPublicChat(username: String, onChat: (Long) -> Unit, onFail: () -> Unit) {
@@ -714,7 +714,7 @@ class Telegram(
         send(TdApi.SearchStickerSet(name, false)) { result -> onResult(result as? TdApi.StickerSet) }
     }
 
-    fun openPrivateChat(userId: Long, onChat: (Long) -> Unit) {
+    fun openPrivateChat(userId: Long, onFail: () -> Unit = {}, onChat: (Long) -> Unit) {
         if (System.getProperty("pixelgram.demo") == "true") {
             chats.values.firstOrNull { it.privateUserId == userId && it.secretChatId == 0 }?.let { onChat(it.id) }
             return
@@ -723,7 +723,7 @@ class Telegram(
             this.userId = userId
             force = false
         }) { result ->
-            if (result is TdApi.Chat) onChat(result.id)
+            if (result is TdApi.Chat) onChat(result.id) else onFail()
         }
     }
 

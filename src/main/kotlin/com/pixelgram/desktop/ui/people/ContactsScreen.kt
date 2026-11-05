@@ -78,7 +78,7 @@ fun ContactsScreen(
         ) {
             itemsIndexed(contacts, key = { _, user -> user.id }) { index, user ->
                 SegmentedListItem(
-                    onClick = { telegram.openPrivateChat(user.id, onOpenChat) },
+                    onClick = { telegram.openPrivateChat(user.id, onChat = onOpenChat) },
                     shapes = groupShapes(index, contacts.size),
                     modifier = itemMotion(),
                     leadingContent = {

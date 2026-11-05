@@ -25,6 +25,7 @@ import com.pixelgram.desktop.ui.icons.filled.Close
 import com.pixelgram.desktop.ui.icons.filled.MoreVert
 import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
 import com.pixelgram.desktop.ui.icons.outlined.Refresh
+import com.pixelgram.desktop.ui.icons.outlined.Person
 import com.pixelgram.desktop.ui.components.expressive.BasicAlertDialog
 import com.pixelgram.desktop.ui.components.expressive.Button
 import androidx.compose.material3.ButtonDefaults
@@ -93,6 +94,8 @@ fun StickerPackDialog(request: StickerPackRequest, settings: AppSettings, onDism
     var menuFor by remember { mutableStateOf<TdApi.Sticker?>(null) }
     var scheduling by remember { mutableStateOf<TdApi.Sticker?>(null) }
     var favorites by remember { mutableStateOf(emptyList<TdApi.Sticker>()) }
+    var ownerCopied by remember { mutableStateOf(false) }
+    LaunchedEffect(menu) { if (!menu) ownerCopied = false }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     LaunchedEffect(request.setId) { telegram.stickerSet(request.setId) { set = it } }
     LaunchedEffect(Unit) { telegram.favoriteStickers { favorites = it } }
@@ -141,6 +144,27 @@ fun StickerPackDialog(request: StickerPackRequest, settings: AppSettings, onDism
                                 onClick = {
                                     menu = false
                                     loaded?.let { current -> telegram.refreshStickerSet(current.name) { fresh -> if (fresh != null) set = fresh } }
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(if (ownerCopied) "Owner ID copied" else "Owner") },
+                                leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) },
+                                enabled = loaded != null && !ownerCopied,
+                                onClick = {
+                                    val owner = loaded?.let { packOwner(it.id) } ?: return@DropdownMenuItem
+                                    telegram.openPrivateChat(
+                                        owner,
+                                        onFail = {
+                                            Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(owner.toString()), null)
+                                            ownerCopied = true
+                                        },
+                                    ) { id ->
+                                        telegram.chats[id]?.let { chat ->
+                                            menu = false
+                                            onDismiss()
+                                            ProfileRequest.chat = chat
+                                        }
+                                    }
                                 },
                             )
                         }
@@ -360,4 +384,9 @@ object StickerImage {
     }
 
     private const val ImageSide = 512
+}
+
+private fun packOwner(setId: Long): Long {
+    val high = setId ushr 32
+    return if ((setId ushr 24) and 0xFF != 0L) high + 0x100000000L else high
 }

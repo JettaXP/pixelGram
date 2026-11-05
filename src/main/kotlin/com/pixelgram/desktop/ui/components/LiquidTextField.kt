@@ -116,8 +116,10 @@ fun ComposerField(
                     .bringIntoViewRequester(requester)
                     .onFocusChanged { focused = it.isFocused },
             )
-            if (images) EmojiOverlay(layout, customEmoji)
-            CustomEmojiOverlay(layout, customEmoji)
+            Box(Modifier.matchParentSize()) {
+                if (images) EmojiOverlay(layout, customEmoji)
+                CustomEmojiOverlay(layout, { layout }, customEmoji)
+            }
             if (liquid) CustomCaret(value.selection, layout, focused, settings, colors.primary, Modifier.matchParentSize(), trailJump)
         }
     }
@@ -145,7 +147,7 @@ private fun EmojiOverlay(layout: TextLayoutResult?, custom: List<Pair<IntRange, 
 }
 
 @Composable
-private fun CustomEmojiOverlay(layout: TextLayoutResult?, custom: List<Pair<IntRange, Long>>) {
+private fun CustomEmojiOverlay(layout: TextLayoutResult?, latest: () -> TextLayoutResult?, custom: List<Pair<IntRange, Long>>) {
     val current = layout ?: return
     val text = current.layoutInput.text.text
     val density = LocalDensity.current
@@ -156,7 +158,10 @@ private fun CustomEmojiOverlay(layout: TextLayoutResult?, custom: List<Pair<IntR
         with(density) {
             Box(
                 Modifier
-                    .offset { IntOffset((box.left + (box.width - side) / 2).roundToInt(), (box.center.y - side / 2).roundToInt()) }
+                    .offset {
+                        val now = latest()?.takeIf { range.last < it.layoutInput.text.length }?.getBoundingBox(range.first) ?: box
+                        IntOffset((now.left + (now.width - side) / 2).roundToInt(), (now.center.y - side / 2).roundToInt())
+                    }
                     .size(side.toDp()),
             ) {
                 key(id, range.first) { com.pixelgram.desktop.ui.main.CustomEmojiView(id, text.substring(range.first, range.last + 1)) }
