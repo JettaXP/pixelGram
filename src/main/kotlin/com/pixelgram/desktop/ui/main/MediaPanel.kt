@@ -452,6 +452,7 @@ private fun GifsTab(
     onInline: (Long, String) -> Unit,
     modifier: Modifier,
 ) {
+    GifHoldPreview(telegram)
     var query by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf<List<TdApi.Animation>?>(null) }
     var found by remember { mutableStateOf<TdApi.InlineQueryResults?>(null) }
@@ -610,9 +611,67 @@ private fun GifCellView(animation: TdApi.Animation, telegram: Telegram, modifier
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .onSecondaryPress(onMenu)
-            .clickable(onClick = onClick),
+            .pointerInput(animation.animation.id) {
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = { GifHold.current = animation },
+                    onPress = {
+                        tryAwaitRelease()
+                        GifHold.current = null
+                    },
+                )
+            },
     )
 }
+
+internal object GifHold {
+    var current by mutableStateOf<TdApi.Animation?>(null)
+}
+
+@Composable
+internal fun GifHoldPreview(telegram: Telegram) {
+    val held = GifHold.current
+    val state = remember { androidx.compose.animation.core.MutableTransitionState(false) }
+    state.targetState = held != null
+    var shown by remember { mutableStateOf(held) }
+    held?.let { shown = it }
+    if (!state.currentState && !state.targetState) return
+    androidx.compose.ui.window.Popup(popupPositionProvider = FullWindow, properties = androidx.compose.ui.window.PopupProperties(focusable = false)) {
+        val window = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        androidx.compose.animation.AnimatedVisibility(
+            visibleState = state,
+            enter = androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.fadeOut(),
+            modifier = with(density) { Modifier.size(window.width.toDp(), window.height.toDp()) },
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.scrim.copy(alpha = PreviewScrim)),
+            ) {
+                shown?.let { gif ->
+                    LaunchedEffect(gif.animation.id) { telegram.download(gif.animation) }
+                    val path = telegram.localPath(gif.animation)
+                    val ratio = if (gif.width > 0 && gif.height > 0) gif.width.toFloat() / gif.height else 1f
+                    val box = if (ratio >= 1f) Modifier.size(GifPreviewSize, GifPreviewSize / ratio) else Modifier.size(GifPreviewSize * ratio, GifPreviewSize)
+                    Box(
+                        box
+                            .animateEnterExit(
+                                enter = androidx.compose.animation.scaleIn(MaterialTheme.motionScheme.defaultSpatialSpec(), initialScale = 0.6f),
+                                exit = androidx.compose.animation.scaleOut(MaterialTheme.motionScheme.fastSpatialSpec(), targetScale = 0.6f),
+                            )
+                            .clip(RoundedCornerShape(20.dp)),
+                    ) {
+                        ThumbImage(gif.thumbnail?.file, gif.minithumbnail, telegram, Modifier.fillMaxSize())
+                        if (path != null) InlineVideo(path, Modifier.fillMaxSize())
+                    }
+                }
+            }
+        }
+    }
+}
+
+private val GifPreviewSize = 360.dp
 
 private val PreviewSize = 320.dp
 private const val PreviewScrim = 0.45f
