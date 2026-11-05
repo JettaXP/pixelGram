@@ -1642,3 +1642,9 @@ Suggested profile photo	הוצעה תמונת פרופיל
 You suggested this photo for {name}'s Telegram profile.	הצעת את התמונה הזו לפרופיל הטלגרם של {name}.
 {name} suggests this photo for your Telegram profile.	{name} מציע את התמונה הזו לפרופיל הטלגרם שלך.
 View Photo	הצג תמונה
+{a}/{b} Reacted	{a}/{b} הגיבו
+{n} Reacted	{n} הגיבו
+{n} Seen	{n} צפו
+today at {time}	היום ב-{time}
+yesterday at {time}	אתמול ב-{time}
+{date} at {time}	{date} ב-{time}

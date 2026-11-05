@@ -469,7 +469,15 @@ private fun MessageMenu(
                 }
             }
         } else null
-        MenuGroups(listOf(retry, reply, copies, manage).filter { it.isNotEmpty() }, leading = reactions.takeIf { !pending }, trailing = packs)
+        val seenChat = client?.chats?.get(message.chatId)
+        MenuGroups(
+            listOf(retry, reply, copies, manage).filter { it.isNotEmpty() },
+            leading = reactions.takeIf { !pending },
+            trailing = packs,
+            footer = if (client != null && !pending) {
+                { SeenFooter(message, client, seenChat) }
+            } else null,
+        )
     }
 }
 

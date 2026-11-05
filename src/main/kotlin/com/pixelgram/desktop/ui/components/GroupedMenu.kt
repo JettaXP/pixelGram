@@ -63,6 +63,7 @@ fun MenuGroups(
     width: androidx.compose.ui.unit.Dp = MenuWidth,
     leading: (@Composable ColumnScope.() -> Unit)? = null,
     trailing: (@Composable ColumnScope.() -> Unit)? = null,
+    footer: (@Composable () -> Unit)? = null,
 ) {
     val shown = groups.filter { it.isNotEmpty() }
     val scope = rememberCoroutineScope()
@@ -110,6 +111,7 @@ fun MenuGroups(
                 }
             }
         }
+        footer?.invoke()
         if (trailing != null) {
             Surface(
                 shape = groupShapes(0, 1).shape,

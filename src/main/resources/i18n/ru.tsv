@@ -1650,3 +1650,9 @@ Suggested profile photo	Предложено фото профиля
 You suggested this photo for {name}'s Telegram profile.	Вы предложили это фото для профиля {name} в Telegram.
 {name} suggests this photo for your Telegram profile.	{name} предлагает это фото для вашего профиля в Telegram.
 View Photo	Посмотреть фото
+{a}/{b} Reacted	{a}/{b} отреагировали
+{n} Reacted	Реакций: {n}
+{n} Seen	Просмотров: {n}
+today at {time}	сегодня в {time}
+yesterday at {time}	вчера в {time}
+{date} at {time}	{date} в {time}
