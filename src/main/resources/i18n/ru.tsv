@@ -1712,3 +1712,8 @@ Owner ID copied	ID владельца скопирован
 Pick from photo	Выбрать с фото
 Send as file	Отправить как файл
 Open setting	Открыть настройку
+Installed: {build}	Установлено: {build}
+pixelGram {version} is out ({commit})	Вышел pixelGram {version} ({commit})
+New nightly {commit} is out	Вышла новая ночная сборка {commit}
+Downloading {name}… {percent}%	Загрузка {name}… {percent}%
+Downloaded {file}.	Загружено: {file}.

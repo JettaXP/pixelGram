@@ -28,7 +28,7 @@ import java.awt.datatransfer.StringSelection
 fun UpdatePanel(onBeforeExit: () -> Unit, modifier: Modifier = Modifier, showActions: Boolean = true) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val build = if (Updater.enabled) "${BuildConfig.VERSION} (${BuildConfig.COMMIT.take(7)})" else "${BuildConfig.VERSION} (dev build)"
-        Text("Installed: $build", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(com.pixelgram.desktop.core.tr("Installed: {build}").replace("{build}", build), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         when (val state = Updater.state) {
             UpdateState.Idle -> Unit
             UpdateState.Checking -> Text("Checking…")
@@ -36,15 +36,16 @@ fun UpdatePanel(onBeforeExit: () -> Unit, modifier: Modifier = Modifier, showAct
             UpdateState.Unavailable -> Text("Updates are unavailable right now.")
             UpdateState.Building -> Text("A new version is being built. Try again in a few minutes.")
             is UpdateState.Available -> Text(
-                state.version?.let { "pixelGram $it is out (${state.commit})" } ?: "New nightly ${state.commit} is out",
+                state.version?.let { com.pixelgram.desktop.core.tr("pixelGram {version} is out ({commit})").replace("{version}", it).replace("{commit}", state.commit) }
+                    ?: com.pixelgram.desktop.core.tr("New nightly {commit} is out").replace("{commit}", state.commit),
                 style = MaterialTheme.typography.titleMedium,
             )
             is UpdateState.Downloading -> {
-                Text("Downloading ${state.version?.let { "pixelGram $it" } ?: state.asset.name}… ${(Updater.progress * 100).toInt()}%")
+                Text(com.pixelgram.desktop.core.tr("Downloading {name}… {percent}%").replace("{name}", state.version?.let { "pixelGram $it" } ?: state.asset.name).replace("{percent}", (Updater.progress * 100).toInt().toString()))
                 LinearWavyProgressIndicator(progress = { Updater.progress }, modifier = Modifier.fillMaxWidth())
             }
             is UpdateState.Ready -> {
-                Text("Downloaded ${state.file.name}.")
+                Text(com.pixelgram.desktop.core.tr("Downloaded {file}.").replace("{file}", state.file.name))
                 state.manual?.let { step ->
                     Text(step, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 }

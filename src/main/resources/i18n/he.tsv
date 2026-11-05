@@ -1704,3 +1704,8 @@ Owner ID copied	מזהה הבעלים הועתק
 Pick from photo	בחירה מתמונה
 Send as file	שליחה כקובץ
 Open setting	פתיחת ההגדרה
+Installed: {build}	מותקן: {build}
+pixelGram {version} is out ({commit})	pixelGram {version} זמין ({commit})
+New nightly {commit} is out	גרסה לילית חדשה {commit} זמינה
+Downloading {name}… {percent}%	מוריד את {name}… {percent}%
+Downloaded {file}.	הורד: {file}.
