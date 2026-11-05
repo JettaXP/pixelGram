@@ -134,7 +134,7 @@ fun ProfilePhotosDialog(
                     }
                 }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+                com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
             }
         }
     }

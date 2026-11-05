@@ -111,7 +111,7 @@ fun ForwardDialog(telegram: Telegram, settings: AppSettings, onDismiss: () -> Un
                         }
                     }
                 }
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End).padding(end = 16.dp)) {
+                com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End).padding(end = 16.dp)) {
                     Text("Cancel")
                 }
             }

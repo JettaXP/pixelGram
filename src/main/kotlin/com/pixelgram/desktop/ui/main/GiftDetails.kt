@@ -177,7 +177,7 @@ fun GiftDetailsDialog(message: UiMessage, telegram: Telegram, onDismiss: () -> U
                     EmojiText(it, style = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Center))
                 }
                 Column(Modifier.fillMaxWidth().padding(top = 8.dp)) { InfoGroup(rows) }
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+                com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
             }
         }
     }
@@ -421,7 +421,7 @@ private fun ReceivedGiftDialog(gift: TdApi.ReceivedGift, own: Boolean, telegram:
                         }
                     }
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+                    com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
                 }
                 if (own) {
                     Box(Modifier.align(Alignment.TopEnd).padding(8.dp)) {

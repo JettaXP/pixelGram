@@ -182,12 +182,12 @@ fun NftDialog(telegram: Telegram, name: String, received: TdApi.ReceivedGift? = 
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.align(Alignment.End)) {
                     if (current != null) {
-                        FilledTonalButton(onClick = {
+                        com.pixelgram.desktop.ui.components.expressive.Button(onClick = {
                             clipboard.setText(AnnotatedString(nftLink(current)))
                             copied = true
                         }) { Text(if (copied) "Link copied" else "Copy link") }
                     }
-                    TextButton(onClick = onDismiss) { Text("Close") }
+                    com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss) { Text("Close") }
                 }
             }
             gift?.let { NftMenu(it, received, telegram, onChanged, onDismiss, Modifier.align(Alignment.TopEnd).padding(8.dp)) }

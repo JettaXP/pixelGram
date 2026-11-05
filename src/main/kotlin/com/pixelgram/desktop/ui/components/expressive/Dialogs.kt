@@ -1,6 +1,31 @@
 package com.pixelgram.desktop.ui.components.expressive
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Surface
+import androidx.compose.material3.toShape
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -28,6 +53,11 @@ fun Modifier.popIn(): Modifier {
     }.then(this)
 }
 
+enum class DialogSlot { None, Confirm, Dismiss }
+
+val LocalDialogSlot = staticCompositionLocalOf { DialogSlot.None }
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun AlertDialog(
     onDismissRequest: () -> Unit,
@@ -38,16 +68,80 @@ fun AlertDialog(
     title: @Composable (() -> Unit)? = null,
     text: @Composable (() -> Unit)? = null,
     properties: DialogProperties = DialogProperties(),
-) = androidx.compose.material3.AlertDialog(
+) = androidx.compose.material3.BasicAlertDialog(
     onDismissRequest = onDismissRequest,
-    confirmButton = confirmButton,
     modifier = modifier.popIn(),
-    dismissButton = dismissButton,
-    icon = icon,
-    title = title,
-    text = text,
     properties = properties,
-)
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        color = colors.surfaceContainerHigh,
+        modifier = Modifier.widthIn(min = MinWidth, max = MaxWidth),
+    ) {
+        CompositionLocalProvider(LocalDialogSlot provides DialogSlot.None) {
+            Column(Modifier.padding(DialogPadding)) {
+                if (icon != null) {
+                    Box(
+                        Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .size(IconBox)
+                            .clip(MaterialShapes.Cookie9Sided.toShape())
+                            .background(colors.secondaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CompositionLocalProvider(LocalContentColor provides colors.onSecondaryContainer) { icon() }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+                if (title != null) {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = if (icon != null) Alignment.Center else Alignment.CenterStart) {
+                        CompositionLocalProvider(LocalContentColor provides colors.onSurface) {
+                            ProvideTextStyle(
+                                MaterialTheme.typography.headlineSmall.copy(
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = if (icon != null) TextAlign.Center else TextAlign.Start,
+                                ),
+                            ) { title() }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+                if (text != null) {
+                    Box(Modifier.weight(1f, fill = false).fillMaxWidth()) {
+                        CompositionLocalProvider(LocalContentColor provides colors.onSurfaceVariant) {
+                            ProvideTextStyle(MaterialTheme.typography.bodyMedium) { text() }
+                        }
+                    }
+                    Spacer(Modifier.height(24.dp))
+                }
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (dismissButton != null) {
+                        CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Dismiss) { dismissButton() }
+                    }
+                    CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Confirm) { confirmButton() }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DialogActions(dismiss: (@Composable () -> Unit)? = null, confirm: @Composable () -> Unit) {
+    @OptIn(ExperimentalLayoutApi::class)
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (dismiss != null) CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Dismiss) { dismiss() }
+        CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Confirm) { confirm() }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,3 +158,7 @@ fun BasicAlertDialog(
 )
 
 private const val StartScale = 0.88f
+private val MinWidth = 280.dp
+private val MaxWidth = 560.dp
+private val DialogPadding = 24.dp
+private val IconBox = 56.dp

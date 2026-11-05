@@ -15,7 +15,7 @@ import com.pixelgram.desktop.core.Backup
 import java.io.File
 
 object BackupViewer {
-    var path by mutableStateOf<String?>(null)
+    var path by mutableStateOf<String?>(System.getProperty("pixelgram.demo.backup"))
 }
 
 @Composable

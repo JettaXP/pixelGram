@@ -825,7 +825,7 @@ fun ChatInfoDialog(
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
                 }
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+                com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
             }
         }
       }

@@ -152,7 +152,7 @@ internal fun ColorPickerDialog(initial: Color, onDismiss: () -> Unit, onPick: (C
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), modifier = Modifier.fillMaxWidth()) {
-                    TextButton(onClick = onDismiss, modifier = Modifier.focusProperties { canFocus = false }) { Text("Cancel") }
+                    com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss, modifier = Modifier.focusProperties { canFocus = false }) { Text("Cancel") }
                     Button(onClick = { onPick(color) }, modifier = Modifier.focusProperties { canFocus = false }) { Text("Done") }
                 }
             }

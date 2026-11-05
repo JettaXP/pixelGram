@@ -1844,7 +1844,7 @@ private fun FontPickerDialog(settings: AppSettings, onDismiss: () -> Unit) {
                         }
                     }
                 }
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+                com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
             }
         }
     }

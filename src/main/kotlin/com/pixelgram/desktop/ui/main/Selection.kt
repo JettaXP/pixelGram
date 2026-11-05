@@ -246,7 +246,7 @@ fun ShotDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Close") }
+                    com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss) { Text("Close") }
                     FilledTonalButton(enabled = busy == 0, onClick = { render { Attachments.copyImage(it) } }) { Text("Copy") }
                     Button(enabled = busy == 0, onClick = {
                         render { image ->

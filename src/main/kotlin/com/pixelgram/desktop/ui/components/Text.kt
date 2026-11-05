@@ -76,10 +76,13 @@ fun Text(
     onTextLayout: ((TextLayoutResult) -> Unit)? = null,
     style: TextStyle = LocalTextStyle.current,
 ) {
+    val danger = com.pixelgram.desktop.ui.components.expressive.LocalDangerSink.current
+    val error = androidx.compose.material3.MaterialTheme.colorScheme.error
+    if (danger != null && color == error) androidx.compose.runtime.SideEffect { danger.value = true }
     androidx.compose.material3.Text(
         tr(text),
         modifier = modifier.highlightIf(text),
-        color = color,
+        color = if (danger != null && color == error) Color.Unspecified else color,
         fontSize = fontSize,
         fontStyle = fontStyle,
         fontWeight = fontWeight,
