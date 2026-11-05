@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.52.0 Puffy Diamond
+
+### Money
+- A Money button in the side menu with a NEW badge, shown when your account has a GRAM wallet.
+- The wallet window shows your balance card, Add Funds with your address and QR code, transactions and collectibles. Sending is coming next.
+- Profiles show a GRAM balance pill when the person has a wallet.
+
+### Side menu
+- Customize the side menu in Appearance: drag items to reorder them, move them between the tiles at the top and the list, use any number of tiles or none, tap to hide and tap again to bring back.
+- pixelGram Preferences can be added to the side menu from the hidden items.
+
+### Player
+- Next and previous work again, and the queue goes on after a song ends instead of closing the player.
+- The playing track highlight in the queue moves smoothly.
+
+### Power saving
+- While battery saver is active, the Battery and Animations options turn off and lock; turn off Save Power on Low Battery to change them.
+
 ## 0.51.8 Bun
 
 - Save Power on Low Battery: animations and autoplay pause while Windows battery saver, the Linux power-saver profile or macOS Low Power Mode is on, and come back when it turns off. Find it in Power Saving.

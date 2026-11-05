@@ -10,6 +10,7 @@ enum class SideItem(val title: String, val group: Int) {
     NewGroup("New Group", 2),
     NewChannel("New Channel", 2),
     Settings("Settings", 3),
+    PixelSettings("pixelGram Preferences", 3),
 }
 
 data class SideLayout(val tiles: List<SideItem>, val list: List<SideItem>, val hidden: List<SideItem>)
@@ -18,8 +19,9 @@ object SideMenuLayout {
     val default = SideLayout(
         listOf(SideItem.Theme, SideItem.Saved),
         listOf(SideItem.Profile, SideItem.Contacts, SideItem.Calls, SideItem.Money, SideItem.NewGroup, SideItem.NewChannel, SideItem.Settings),
-        emptyList(),
+        listOf(SideItem.PixelSettings),
     )
+    private val hiddenByDefault = setOf(SideItem.PixelSettings)
 
     fun read(settings: AppSettings): SideLayout {
         val raw = settings.sideMenuLayout.value
@@ -30,7 +32,7 @@ object SideMenuLayout {
         val list = names(1).filter { it !in tiles }.distinct()
         val hidden = names(2).filter { it !in tiles && it !in list }.distinct()
         val missing = SideItem.entries.filter { it !in tiles && it !in list && it !in hidden }
-        return SideLayout(tiles, list + missing, hidden.filter { it != SideItem.Settings })
+        return SideLayout(tiles, list + missing.filter { it !in hiddenByDefault }, hidden.filter { it != SideItem.Settings } + missing.filter { it in hiddenByDefault })
     }
 
     fun write(settings: AppSettings, layout: SideLayout) {

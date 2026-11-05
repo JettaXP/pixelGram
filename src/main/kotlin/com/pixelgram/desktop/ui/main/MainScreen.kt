@@ -16,6 +16,7 @@ import com.pixelgram.desktop.ui.OnEscape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.outlined.Diamond
+import com.pixelgram.desktop.ui.icons.outlined.Star
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -588,6 +589,7 @@ private fun MainMenu(
                 com.pixelgram.desktop.core.SideItem.NewGroup -> onNewChat(false)
                 com.pixelgram.desktop.core.SideItem.NewChannel -> onNewChat(true)
                 com.pixelgram.desktop.core.SideItem.Settings -> onNavigate(Screen.Settings())
+                com.pixelgram.desktop.core.SideItem.PixelSettings -> onNavigate(Screen.Settings(preferences = true))
             }
         }
         val tiles = layout.tiles.filter(::available)
@@ -976,4 +978,5 @@ internal fun sideIcon(item: com.pixelgram.desktop.core.SideItem, dark: Boolean):
     com.pixelgram.desktop.core.SideItem.NewGroup -> Icons.Outlined.Groups
     com.pixelgram.desktop.core.SideItem.NewChannel -> Icons.Outlined.Campaign
     com.pixelgram.desktop.core.SideItem.Settings -> Icons.Outlined.Settings
+    com.pixelgram.desktop.core.SideItem.PixelSettings -> Icons.Outlined.Star
 }
