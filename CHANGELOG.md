@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.51.6 Bun
+
+### Look and motion
+- Dialogs follow Android 17: a regular title, an outlined Cancel and a filled main button on the right, red buttons for deleting, rounder corners, at most 400 dp wide.
+- Animations use the Material 3 Expressive motion springs everywhere, so fades, swaps and size changes feel the same across the app.
+- Thin scrollbars in the chat list, the avatar rail, lyrics and the queue. Turn them off in Appearance.
+- The send button morphs into a rounded square while pressed.
+- The chat list leaves room under the new chat button.
+
+### Chats
+- The message menu shows who reacted and who read your message in small groups, with a list on hover, and the read time in private chats.
+- The chat list follows your chat to the top after you send a message.
+- Click a premium emoji in a text message to see it big with its pack and a View pack button. Emoji-only messages no longer open the pack.
+- Pack titles in the emoji and sticker panels open the pack, and holding a GIF previews it big.
+- Suggested profile photo messages are shown as a card.
+- Usernames in channel and group descriptions are clickable.
+
+### Profiles and contacts
+- Tap a name you renamed in a profile to see the original name, tap again to go back.
+- Rename and Edit contact show the avatar on top with a camera button on hover, then ask where the photo goes: this device, only for you, or suggested to the person.
+- "Photo set by you" shows only in the photo viewer, with the date in your language.
+- Opening yourself from a members list or a mention opens your own profile, the members list shows your name, and Saved Messages no longer shows your badges.
+- Gift senders open their profile, and community chats you joined are no longer listed as hidden.
+
+### Music
+- Songs without a cover get one from the iTunes search, in messages, the player and the system media controls.
+- Lyrics karaoke runs smoothly and letters sit on the line.
+- Lyrics that were not found while offline are looked up again.
+- Share in the player opens the Windows share window with the song file; on Linux and macOS it shows the file in its folder.
+
+### Fixes
+- Fixed a crash in the full-screen player.
+- Back swipe with the Android arrow is now in Experimental settings and off by default.
+- The Telegram icon pack uses outlined icons for contacts, calls, groups and settings.
+
 ## 0.51.5 Bun
 
 - Windows: the music shows up in the system media controls (the volume flyout and the quick settings) with the title, the artist and the cover, and its play, pause, next and previous buttons and the media keys control pixelGram.
