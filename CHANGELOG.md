@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.52.4 Puffy Diamond
+
+- Right-click a setting or a settings section to copy its link.
+- The pixelGram group gets the official badge.
+
 ## 0.52.3 Puffy Diamond
 
 ### Money
