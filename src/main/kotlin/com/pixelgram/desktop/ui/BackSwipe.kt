@@ -44,6 +44,8 @@ class BackSwipeState {
     var dy = 0f
     var locked: Boolean? = null
     var rangeMin = 0f
+    var sticky = false
+    var lastEvent = 0L
     var at by mutableStateOf(Offset.Zero)
     var job: Job? = null
 }
@@ -71,6 +73,16 @@ fun Modifier.backSwipe(state: BackSwipeState, enabled: () -> Boolean, onBack: ()
                 if (event.type != PointerEventType.Scroll) continue
                 val change = event.changes.firstOrNull() ?: continue
                 if (change.isConsumed || event.buttons.areAnyPressed) continue
+                val time = change.uptimeMillis
+                val quiet = time - state.lastEvent
+                state.lastEvent = time
+                if (state.sticky) {
+                    if (quiet < StickyGapMs) {
+                        change.consume()
+                        continue
+                    }
+                    state.sticky = false
+                }
                 if (state.locked == false) {
                     state.job?.cancel()
                     state.job = scope.launch {
@@ -112,6 +124,7 @@ fun Modifier.backSwipe(state: BackSwipeState, enabled: () -> Boolean, onBack: ()
                     state.locked = null
                     state.reached = false
                     if (!dragging) return@launch
+                    state.sticky = true
                     if (fire) {
                         state.phase = BackPhase.Committed
                         val list = BackZones.list
@@ -225,6 +238,7 @@ private val LockDistance = 4.dp
 private const val Deactivate = 0.95f
 private const val StretchRange = 1.5f
 private const val SettleMs = 110L
+private const val StickyGapMs = 260L
 private const val FinishMs = 450L
 private const val CommitScale = 0.86f
 private const val RangeSpan = 1f + StretchRange

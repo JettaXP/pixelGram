@@ -248,7 +248,7 @@ fun MessageGestures(
                             }
                         } else if (event.type == PointerEventType.Scroll) {
                             val delta = change.scrollDelta
-                            if (event.buttons.areAnyPressed) continue
+                            if (event.buttons.areAnyPressed || change.isConsumed) continue
                             if (!swipe.active) {
                                 swipe.active = true
                                 swipe.startY = change.position.y
