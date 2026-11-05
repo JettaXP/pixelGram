@@ -62,6 +62,7 @@ fun Modifier.backSwipe(state: BackSwipeState, enabled: () -> Boolean, onBack: ()
     val threshold = with(density) { BackThreshold.toPx() }
     val step = with(density) { ScrollStep.toPx() }
     val lock = with(density) { LockDistance.toPx() }
+    val settings = com.pixelgram.desktop.ui.theme.LocalAppSettings.current
     return pointerInput(Unit) {
         awaitPointerEventScope {
             while (true) {
@@ -83,7 +84,7 @@ fun Modifier.backSwipe(state: BackSwipeState, enabled: () -> Boolean, onBack: ()
                 state.dx += -change.scrollDelta.x * step
                 state.dy += change.scrollDelta.y * step
                 if (state.locked == null && abs(state.dx) + abs(state.dy) >= lock) {
-                    state.locked = abs(state.dx) > abs(state.dy) * LockRatio && state.dx > 0f && enabled()
+                    state.locked = abs(state.dx) > abs(state.dy) * LockRatio && state.dx > 0f && enabled() && settings?.backSwipe?.value == true
                 }
                 if (state.locked == null && abs(change.scrollDelta.x) > abs(change.scrollDelta.y)) change.consume()
                 if (state.locked == true) {

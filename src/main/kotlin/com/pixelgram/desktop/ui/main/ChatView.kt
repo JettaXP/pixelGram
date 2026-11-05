@@ -139,6 +139,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -3000,10 +3001,16 @@ private fun Composer(
                                     if (person) item("Send when online", Icons.Outlined.Alarm) { onSendWith(AttachmentSend(schedule = TdApi.MessageSchedulingStateSendWhenOnline())) }
                                 }
                             }
+                            val sendPress = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            val sendHeld by sendPress.collectIsPressedAsState()
+                            val sendMorph = remember { androidx.graphics.shapes.Morph(MaterialShapes.Cookie12Sided, MaterialShapes.Square) }
+                            val sendProgress by animateFloatAsState(if (sendHeld) 1f else 0f, MaterialTheme.motionScheme.fastSpatialSpec())
+                            val sendShape = remember(sendProgress) { MorphShape(sendMorph, sendProgress) }
                             FilledIconButton(
                                 onClick = send,
                                 enabled = canSend,
-                                shape = MaterialShapes.Cookie12Sided.toShape(),
+                                shapes = androidx.compose.material3.IconButtonShapes(sendShape, sendShape),
+                                interactionSource = sendPress,
                                 modifier = Modifier.pointerInput(canSend) {
                                     awaitPointerEventScope {
                                         while (true) {

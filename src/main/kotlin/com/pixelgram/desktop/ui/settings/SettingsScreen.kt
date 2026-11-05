@@ -1960,6 +1960,14 @@ private fun ExperimentalSection(settings: AppSettings) {
         checked = true
     }
     Description("These features are still in testing and may change or break.")
+    Header("Back swipe")
+    SwitchRow(
+        0,
+        1,
+        "Swipe to go back",
+        "Swipe right with two fingers to go back, with the arrow from Android. Only for laptops: needs a touchpad.",
+        settings.backSwipe.value,
+    ) { settings.backSwipe.value = it }
     Header("Python in messages")
     SwitchRow(
         0,
