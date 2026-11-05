@@ -960,6 +960,7 @@ private fun ChatViewContent(
             }
             }
             profileChat?.let { ChatInfoDialog(it, telegram, settings, onOpenChat) { profileChat = null } }
+            ProfileRequest.chat?.let { ChatInfoDialog(it, telegram, settings, onOpenChat) { ProfileRequest.chat = null } }
             if (savedHub) SavedMessagesDialog(chat, telegram, settings, onOpenChat) { savedHub = false }
             StickerPack.current?.takeIf { it.chatId == chat.id && it.telegram == telegram }?.let { request ->
                 StickerPackDialog(request, settings) { StickerPack.current = null }

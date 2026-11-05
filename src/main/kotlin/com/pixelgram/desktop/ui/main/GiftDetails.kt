@@ -103,6 +103,7 @@ fun GiftDetailsDialog(message: UiMessage, telegram: Telegram, onDismiss: () -> U
         label,
         title,
         leading = { com.pixelgram.desktop.ui.components.AvatarImage(title, telegram.senderPhoto(sender), telegram, androidx.compose.foundation.shape.CircleShape, 32.dp) },
+        onClick = { ProfileRequest.open(telegram, sender) },
     )
     val rows = buildList {
         when (content) {
@@ -385,6 +386,7 @@ private fun ReceivedGiftDialog(gift: TdApi.ReceivedGift, own: Boolean, telegram:
                     "From",
                     title,
                     leading = { com.pixelgram.desktop.ui.components.AvatarImage(title, telegram.senderPhoto(sender), telegram, androidx.compose.foundation.shape.CircleShape, 32.dp) },
+                    onClick = { ProfileRequest.open(telegram, sender) },
                 ),
             )
         } else {
@@ -538,4 +540,15 @@ private fun UpgradeGiftDialog(gift: TdApi.ReceivedGift, regular: TdApi.Gift, tel
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
+
+object ProfileRequest {
+    var chat by androidx.compose.runtime.mutableStateOf<com.pixelgram.desktop.telegram.ChatState?>(null)
+
+    fun open(telegram: Telegram, sender: TdApi.MessageSender) {
+        when (sender) {
+            is TdApi.MessageSenderUser -> telegram.openPrivateChat(sender.userId) { id -> telegram.chats[id]?.let { chat = it } }
+            is TdApi.MessageSenderChat -> telegram.chats[sender.chatId]?.let { chat = it }
+        }
+    }
 }

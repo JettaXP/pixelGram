@@ -601,7 +601,7 @@ private fun lyricItems(lines: List<LyricLine>): List<LyricItem> {
 
 @Composable
 private fun SyncedLyrics(lines: List<LyricLine>) {
-    val now = AudioPlayer.position
+    val now = rememberSmoothPosition()
     val items = remember(lines) { lyricItems(lines) }
     val current = items.indexOfLast { it.start <= now + 0.15f }
     val state = rememberLazyListState(initialFirstVisibleItemIndex = (current - 1).coerceAtLeast(0))
@@ -747,6 +747,31 @@ private fun sungChars(line: LyricLine, now: Float, end: Float): Float {
 }
 
 @Composable
+private fun rememberSmoothPosition(): Float {
+    var shown by remember { mutableFloatStateOf(AudioPlayer.position) }
+    LaunchedEffect(Unit) {
+        var last = -1L
+        while (true) {
+            androidx.compose.runtime.withFrameNanos { time ->
+                val dt = if (last < 0) 0f else (time - last) / 1_000_000_000f
+                last = time
+                val target = AudioPlayer.position
+                shown = if (!AudioPlayer.playing) {
+                    target
+                } else {
+                    val predicted = shown + dt * AudioPlayer.speed
+                    if (kotlin.math.abs(target - predicted) > ResyncSeconds) target else predicted + (target - predicted) * ClockPull
+                }
+            }
+        }
+    }
+    return shown
+}
+
+private const val ResyncSeconds = 0.35f
+private const val ClockPull = 0.06f
+
+@Composable
 private fun KaraokeLine(
     text: String,
     sung: Float,
@@ -777,7 +802,7 @@ private fun KaraokeLine(
             letters.forEach { (index, letter) ->
                 val box = layout.getBoundingBox(index)
                 val line = layout.getLineForOffset(index)
-                val top = layout.getLineTop(line)
+                val top = layout.getLineBaseline(line) - letter.firstBaseline
                 val lit = (sung - index).coerceIn(0f, 1f)
                 val nudge = if (lit > 0f && lit < 1f) NudgeStrength * kotlin.math.sin(lit * kotlin.math.PI.toFloat()) * kotlin.math.exp(-3f * lit) else 0f
                 val w = letter.size.width.toFloat()

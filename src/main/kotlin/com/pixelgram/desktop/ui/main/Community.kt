@@ -61,9 +61,9 @@ fun CommunityDialog(community: TdApi.Community, telegram: Telegram, settings: Ap
                 return@AlertDialog
             }
             val loaded = list.filter { telegram.chats[it.chatId] != null }
-            val joined = loaded.filter { !it.isHidden && telegram.isMember(telegram.chats.getValue(it.chatId)) }
+            val joined = loaded.filter { telegram.isMember(telegram.chats.getValue(it.chatId)) }
             val viewable = loaded.filter { !it.isHidden && it !in joined }
-            val hidden = loaded.filter { it.isHidden }
+            val hidden = loaded.filter { it.isHidden && it !in joined }
             LazyColumn(Modifier.heightIn(max = ListHeight), verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
                 listOf("Chats you are in" to joined, "Chats you can view" to viewable, "Hidden chats" to hidden).forEach { (title, group) ->
                     if (group.isEmpty()) return@forEach
