@@ -81,7 +81,7 @@ fun Text(
     if (danger != null && color == error) androidx.compose.runtime.SideEffect { danger.value = true }
     androidx.compose.material3.Text(
         tr(text),
-        modifier = modifier.highlightIf(text),
+        modifier = modifier.highlightIf(text).linkTarget(text),
         color = if (danger != null && color == error) Color.Unspecified else color,
         fontSize = fontSize,
         fontStyle = fontStyle,

@@ -124,6 +124,11 @@ import com.pixelgram.desktop.ui.icons.outlined.Tune
 import com.pixelgram.desktop.ui.components.expressive.AlertDialog
 import com.pixelgram.desktop.ui.components.expressive.Button
 import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -335,6 +340,7 @@ fun SettingsScreen(
         true
     }
     val materialYou = settings.settingsStyle.value == com.pixelgram.desktop.core.SettingsStyle.MaterialYou
+    SettingsLinkHost {
     Surface(color = if (materialYou) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxSize()) {
         Row {
             Column(
@@ -568,6 +574,7 @@ fun SettingsScreen(
                 }
             }
         }
+    }
     }
 }
 
@@ -2192,4 +2199,48 @@ object SettingsLink {
     }
 
     fun link(section: String, title: String?): String = "https://t.me/pixelSettings" + "?s=" + slug(title ?: Section.entries.firstOrNull { it.name == section }?.title ?: section)
+}
+
+@Composable
+private fun SettingsLinkHost(content: @Composable () -> Unit) {
+    val targets = remember { com.pixelgram.desktop.ui.components.LinkTargets { text -> SettingsLink.resolve(SettingsLink.slug(text))?.let { SettingsLink.link(it.first, it.second) } } }
+    var menu by remember { mutableStateOf<Pair<androidx.compose.ui.geometry.Offset, String>?>(null) }
+    var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    Box(
+        Modifier
+            .fillMaxSize()
+            .onGloballyPositioned { origin = it.positionInWindow() }
+            .pointerInput(Unit) {
+                val band = 28.dp.toPx()
+                val reach = 72.dp.toPx()
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        if (event.type != androidx.compose.ui.input.pointer.PointerEventType.Press || !event.buttons.isSecondaryPressed) continue
+                        val change = event.changes.firstOrNull() ?: continue
+                        val at = change.position + origin
+                        val link = targets.find(at.x, at.y, band, reach) ?: continue
+                        change.consume()
+                        menu = change.position to link
+                    }
+                }
+            },
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(com.pixelgram.desktop.ui.components.LocalLinkTargets provides targets) { content() }
+        menu?.let { (at, link) ->
+            Box(Modifier.offset { androidx.compose.ui.unit.IntOffset(at.x.toInt(), at.y.toInt()) }) {
+                DropdownMenu(expanded = true, onDismissRequest = { menu = null }) {
+                    DropdownMenuItem(
+                        text = { Text("Copy link") },
+                        leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) },
+                        onClick = {
+                            menu = null
+                            java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(java.awt.datatransfer.StringSelection(link), null)
+                        },
+                    )
+                }
+            }
+        }
+    }
 }
