@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
+import androidx.compose.foundation.layout.heightIn
 import kotlin.math.roundToInt
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.focusRequester
@@ -1844,7 +1845,7 @@ private fun FontPickerDialog(settings: AppSettings, onDismiss: () -> Unit) {
                         }
                     }
                 }
-                com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+                com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth().heightIn(min = com.pixelgram.desktop.ui.components.expressive.DialogButtonHeight)) { Text("Close") }
             }
         }
     }

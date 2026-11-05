@@ -22,6 +22,9 @@ import androidx.compose.material3.toShape
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -95,12 +98,12 @@ fun AlertDialog(
                     Spacer(Modifier.height(16.dp))
                 }
                 if (title != null) {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = if (icon != null) Alignment.Center else Alignment.CenterStart) {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         CompositionLocalProvider(LocalContentColor provides colors.onSurface) {
                             ProvideTextStyle(
                                 MaterialTheme.typography.headlineSmall.copy(
                                     fontWeight = FontWeight.Medium,
-                                    textAlign = if (icon != null) TextAlign.Center else TextAlign.Start,
+                                    textAlign = TextAlign.Center,
                                 ),
                             ) { title() }
                         }
@@ -115,15 +118,11 @@ fun AlertDialog(
                     }
                     Spacer(Modifier.height(24.dp))
                 }
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                DialogButtonRow {
+                    CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Confirm) { confirmButton() }
                     if (dismissButton != null) {
                         CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Dismiss) { dismissButton() }
                     }
-                    CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Confirm) { confirmButton() }
                 }
             }
         }
@@ -132,14 +131,40 @@ fun AlertDialog(
 
 @Composable
 fun DialogActions(dismiss: (@Composable () -> Unit)? = null, confirm: @Composable () -> Unit) {
-    @OptIn(ExperimentalLayoutApi::class)
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        if (dismiss != null) CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Dismiss) { dismiss() }
+    DialogButtonRow {
         CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Confirm) { confirm() }
+        if (dismiss != null) CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Dismiss) { dismiss() }
+    }
+}
+
+@Composable
+private fun DialogButtonRow(content: @Composable () -> Unit) {
+    val gap = with(LocalDensity.current) { ButtonGap.roundToPx() }
+    Layout(content, Modifier.fillMaxWidth()) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val count = measurables.size
+        if (count == 0) return@Layout layout(width, 0) {}
+        val share = (width - gap * (count - 1)) / count
+        val fits = measurables.all { it.maxIntrinsicWidth(Constraints.Infinity) <= share }
+        if (fits) {
+            val placeables = measurables.map { it.measure(Constraints.fixedWidth(share)) }
+            val height = placeables.maxOf { it.height }
+            layout(width, height) {
+                placeables.reversed().forEachIndexed { index, placeable ->
+                    placeable.place(index * (share + gap), (height - placeable.height) / 2)
+                }
+            }
+        } else {
+            val placeables = measurables.map { it.measure(Constraints.fixedWidth(width)) }
+            val height = placeables.sumOf { it.height } + gap * (count - 1)
+            layout(width, height) {
+                var y = 0
+                placeables.forEach { placeable ->
+                    placeable.place(0, y)
+                    y += placeable.height + gap
+                }
+            }
+        }
     }
 }
 
@@ -162,3 +187,5 @@ private val MinWidth = 280.dp
 private val MaxWidth = 560.dp
 private val DialogPadding = 24.dp
 private val IconBox = 56.dp
+private val ButtonGap = 8.dp
+val DialogButtonHeight = 48.dp

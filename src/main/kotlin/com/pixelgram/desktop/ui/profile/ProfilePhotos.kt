@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.profile
 
+import androidx.compose.foundation.layout.heightIn
 import com.pixelgram.desktop.ui.components.expressive.AlertDialog
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -134,7 +135,7 @@ fun ProfilePhotosDialog(
                     }
                 }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+                com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth().heightIn(min = com.pixelgram.desktop.ui.components.expressive.DialogButtonHeight)) { Text("Close") }
             }
         }
     }
