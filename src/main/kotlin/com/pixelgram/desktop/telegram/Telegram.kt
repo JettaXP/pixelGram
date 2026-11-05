@@ -3695,6 +3695,7 @@ private fun mediaPreview(emoji: String, label: String, caption: String?): String
 
 fun contentText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageText -> content.text?.text ?: ""
+    is TdApi.MessageRichMessage -> com.pixelgram.desktop.ui.main.richPreviewText(content.message)
     is TdApi.MessagePhoto -> mediaPreview("🖼", "Photo", content.caption?.text)
     is TdApi.MessagePaidMedia -> mediaPreview("⭐", "Paid media", content.caption?.text)
     is TdApi.MessageVideo -> mediaPreview("🎬", "Video", content.caption?.text)

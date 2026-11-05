@@ -53,6 +53,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import com.pixelgram.desktop.ui.icons.filled.PlayArrow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -530,14 +531,25 @@ private fun ChatRow(
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (!sender.isNullOrBlank()) EmojiText("$sender: ", color = colors.primary, maxLines = 1)
-                        val thumb = when (val content = last?.content) {
-                            is TdApi.MessagePhoto -> content.photo.sizes.minByOrNull { it.width }?.photo
-                            is TdApi.MessageVideo -> content.video.thumbnail?.file
-                            is TdApi.MessageAnimation -> content.animation.thumbnail?.file
-                            else -> null
+                        val (thumb, video) = when (val content = last?.content) {
+                            is TdApi.MessagePhoto -> content.photo.sizes.minByOrNull { it.width }?.photo to false
+                            is TdApi.MessageVideo -> content.video.thumbnail?.file to true
+                            is TdApi.MessageAnimation -> content.animation.thumbnail?.file to false
+                            is TdApi.MessageRichMessage -> richThumb(content.message) ?: (null to false)
+                            else -> null to false
                         }
                         if (thumb != null) {
-                            com.pixelgram.desktop.ui.components.AvatarImage("", thumb, telegram, RoundedCornerShape(4.dp), PreviewThumb, Modifier.padding(end = 4.dp))
+                            Box(Modifier.padding(end = 4.dp), contentAlignment = Alignment.Center) {
+                                com.pixelgram.desktop.ui.components.AvatarImage("", thumb, telegram, RoundedCornerShape(4.dp), PreviewThumb)
+                                if (video) {
+                                    Icon(
+                                        Icons.Filled.PlayArrow,
+                                        contentDescription = null,
+                                        tint = androidx.compose.ui.graphics.Color.White,
+                                        modifier = Modifier.size(PreviewThumb * 0.7f),
+                                    )
+                                }
+                            }
                         }
                         val formatted = (last?.content as? TdApi.MessageText)?.text
                         if (formatted != null) {
@@ -549,7 +561,10 @@ private fun ChatRow(
                             )
                         } else {
                             EmojiText(
-                                last?.let { contentText(it.content).replace('\n', ' ') } ?: "",
+                                last?.let { message ->
+                                    val text = contentText(message.content).replace('\n', ' ')
+                                    if (thumb != null) MediaMarks.fold(text) { acc, mark -> acc.removePrefix(mark) } else text
+                                } ?: "",
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -663,3 +678,5 @@ private const val ChatRowType = "chat"
 private const val PreviewHoldMs = 675L
 
 private val FabClearance = 88.dp
+
+private val MediaMarks = listOf("🖼 ", "🎬 ", "🎞 ")

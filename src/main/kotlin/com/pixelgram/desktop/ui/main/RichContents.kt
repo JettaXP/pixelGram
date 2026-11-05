@@ -268,3 +268,43 @@ private val PhotoWidth = 400.dp
 private val PhotoHeight = 240.dp
 private val QuoteBar = 40.dp
 private const val MarkAlpha = 0.25f
+
+private fun richMedia(blocks: Array<TdApi.PageBlock>): TdApi.PageBlock? = blocks.firstNotNullOfOrNull { block ->
+    when (block) {
+        is TdApi.PageBlockPhoto, is TdApi.PageBlockVideo, is TdApi.PageBlockAnimation -> block
+        is TdApi.PageBlockCollage -> richMedia(block.blocks)
+        is TdApi.PageBlockSlideshow -> richMedia(block.blocks)
+        is TdApi.PageBlockCover -> richMedia(arrayOf(block.cover))
+        else -> null
+    }
+}
+
+private fun richCaption(blocks: Array<TdApi.PageBlock>): String? = blocks.firstNotNullOfOrNull { block ->
+    when (block) {
+        is TdApi.PageBlockPhoto -> block.caption?.text?.let(::richPlain)
+        is TdApi.PageBlockVideo -> block.caption?.text?.let(::richPlain)
+        is TdApi.PageBlockAnimation -> block.caption?.text?.let(::richPlain)
+        is TdApi.PageBlockCollage -> block.caption?.text?.let(::richPlain) ?: richCaption(block.blocks)
+        is TdApi.PageBlockSlideshow -> block.caption?.text?.let(::richPlain) ?: richCaption(block.blocks)
+        else -> null
+    }?.takeIf { it.isNotBlank() }
+}
+
+fun richPreviewText(rich: TdApi.RichMessage): String {
+    val media = richMedia(rich.blocks)
+    val text = richCaption(rich.blocks) ?: richTitle(rich)
+    val mark = when (media) {
+        is TdApi.PageBlockVideo -> "🎬 "
+        is TdApi.PageBlockAnimation -> "🎞 "
+        null -> ""
+        else -> "🖼 "
+    }
+    return (mark + text).trim()
+}
+
+fun richThumb(rich: TdApi.RichMessage): Pair<TdApi.File?, Boolean>? = when (val media = richMedia(rich.blocks)) {
+    is TdApi.PageBlockPhoto -> media.photo?.sizes?.minByOrNull { it.width }?.photo to false
+    is TdApi.PageBlockVideo -> media.video?.thumbnail?.file to true
+    is TdApi.PageBlockAnimation -> media.animation?.thumbnail?.file to false
+    else -> null
+}
