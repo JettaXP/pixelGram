@@ -1,0 +1,32 @@
+# Maintainer: JettaX <113067749+JettaXP@users.noreply.github.com>
+pkgname=pixelgram-bin
+pkgver=0.51.5
+pkgrel=1
+pkgdesc="Telegram client with Material 3 Expressive"
+arch=('x86_64')
+url="https://github.com/JettaXP/pixelGram"
+license=('GPL-3.0-only')
+depends=('openssl' 'zlib' 'fontconfig' 'libxext' 'libxrender' 'libxtst' 'libxi' 'alsa-lib' 'libnotify')
+provides=('pixelgram')
+conflicts=('pixelgram')
+options=('!strip' '!debug')
+_raw="https://raw.githubusercontent.com/JettaXP/pixelGram/v$pkgver"
+source=("pixelGram-$pkgver.tar.gz::$url/releases/download/v$pkgver/pixelGram-$pkgver-linux-x86_64.tar.gz"
+        "com.pixelgram.desktop.desktop::$_raw/packaging/arch/com.pixelgram.desktop.desktop"
+        "LICENSE::$_raw/LICENSE")
+for _size in 16 24 32 48 64 128 256 512; do
+    source+=("icon-$_size.png::$_raw/packaging/icons/hicolor/$_size.png")
+done
+sha256sums=('232de3ddf157b3be8effd176eeb6f7789057501fd481d95666f4ac1d3f8b8f73'
+            SKIP SKIP SKIP SKIP SKIP SKIP SKIP SKIP SKIP SKIP)
+
+package() {
+    install -d "$pkgdir/opt/pixelgram" "$pkgdir/usr/bin"
+    cp -a "$srcdir/pixelGram/." "$pkgdir/opt/pixelgram/"
+    ln -s /opt/pixelgram/bin/pixelGram "$pkgdir/usr/bin/pixelgram"
+    install -Dm644 com.pixelgram.desktop.desktop "$pkgdir/usr/share/applications/com.pixelgram.desktop.desktop"
+    for _size in 16 24 32 48 64 128 256 512; do
+        install -Dm644 "icon-$_size.png" "$pkgdir/usr/share/icons/hicolor/${_size}x${_size}/apps/com.pixelgram.desktop.png"
+    done
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
