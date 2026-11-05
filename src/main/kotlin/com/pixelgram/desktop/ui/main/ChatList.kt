@@ -240,7 +240,7 @@ private fun ChatListBody(
             LazyColumn(
                 state = listState,
                 modifier = with(com.pixelgram.desktop.ui.components.SmoothWheelScope) { Modifier.glide(listState) }.listScrollbar(listState, edge = 1f),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = FabClearance),
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
                 if (archivedCount > 0 && key == archiveOn) {
@@ -641,3 +641,5 @@ private const val LockAnimationMs = 260L
 private const val ChatRowType = "chat"
 
 private const val PreviewHoldMs = 675L
+
+private val FabClearance = 88.dp
