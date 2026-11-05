@@ -20,6 +20,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
@@ -483,6 +484,33 @@ private fun ApplicationScope.PixelApp() {
                         if (!it.hasFocus) focusScope.launch { runCatching { rootFocus.requestFocus() } }
                     }
                     .focusable()
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Press) com.pixelgram.desktop.ui.main.PlayerKeys.armed = false
+                            }
+                        }
+                    }
+                    .onPreviewKeyEvent { event ->
+                        val keys = com.pixelgram.desktop.ui.main.PlayerKeys
+                        if (event.type != KeyEventType.KeyDown || !keys.armed) return@onPreviewKeyEvent false
+                        when (event.key) {
+                            Key.Spacebar -> {
+                                com.pixelgram.desktop.core.AudioPlayer.pauseOrResume()
+                                true
+                            }
+                            Key.Enter, Key.NumPadEnter -> {
+                                keys.armed = false
+                                com.pixelgram.desktop.ui.main.ComposerSend.request = com.pixelgram.desktop.ui.main.ActiveChat.id to System.nanoTime()
+                                true
+                            }
+                            else -> {
+                                keys.armed = false
+                                false
+                            }
+                        }
+                    }
                     .onKeyEvent { event ->
                         when {
                             event.type != KeyEventType.KeyDown -> false

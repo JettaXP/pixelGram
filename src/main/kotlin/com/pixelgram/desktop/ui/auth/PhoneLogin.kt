@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.auth
 
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
@@ -66,6 +68,9 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit, onCancel: (() -> Unit)? = nu
     var code by remember { mutableStateOf("") }
     var number by remember { mutableStateOf("") }
     var picking by remember { mutableStateOf(false) }
+    val numberFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    var numberVisited by remember { mutableStateOf(false) }
+    var codeTouched by remember { mutableStateOf(false) }
 
     LaunchedEffect(countries) {
         if (code.isEmpty() && countries.isNotEmpty()) {
@@ -115,18 +120,30 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit, onCancel: (() -> Unit)? = nu
         }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+        var codeField by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue("+$code", androidx.compose.ui.text.TextRange(code.length + 1))) }
+        if (codeField.text != "+$code") codeField = androidx.compose.ui.text.input.TextFieldValue("+$code", androidx.compose.ui.text.TextRange(code.length + 1))
         OutlinedTextField(
-            value = "+$code",
+            value = codeField,
             onValueChange = { value ->
-                code = value.filter(Char::isDigit).take(MaxCodeDigits)
+                val typed = value.text.filter(Char::isDigit).take(MaxCodeDigits)
+                val changed = typed != code
+                code = typed
                 picked = null
+                codeField = androidx.compose.ui.text.input.TextFieldValue(
+                    "+$typed",
+                    androidx.compose.ui.text.TextRange(value.selection.start.coerceIn(1, typed.length + 1), value.selection.end.coerceIn(1, typed.length + 1)),
+                )
+                val unique = typed.isNotEmpty() && countries.any { it.callingCode == typed } && countries.none { it.callingCode != typed && it.callingCode.startsWith(typed) }
+                if (changed && unique && !codeTouched) numberFocus.requestFocus()
             },
             label = { Text("Code") },
             singleLine = true,
             isError = code.isNotEmpty() && countries.isNotEmpty() && country == null,
             enabled = !busy,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
-            modifier = Modifier.width(96.dp),
+            modifier = Modifier.width(96.dp).onFocusChanged { state ->
+                if (state.isFocused && numberVisited) codeTouched = true
+            },
         )
         OutlinedTextField(
             value = number,
@@ -152,7 +169,7 @@ fun PhoneStep(telegram: Telegram, onQr: () -> Unit, onCancel: (() -> Unit)? = nu
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { submit() }),
             enabled = !busy,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).focusRequester(numberFocus).onFocusChanged { if (it.isFocused) numberVisited = true },
         )
     }
     Text(

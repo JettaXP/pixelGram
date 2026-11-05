@@ -1942,6 +1942,10 @@ object ComposerFocus {
     var request by mutableStateOf<Pair<Long, Long>?>(null)
 }
 
+object ComposerSend {
+    var request by mutableStateOf<Pair<Long, Long>?>(null)
+}
+
 private const val FocusAfterClickMs = 360L
 
 object PluginViewer {
@@ -2373,6 +2377,13 @@ private fun Composer(
             text = TextFieldValue("")
             spans = emptyList()
         }
+    }
+    LaunchedEffect(ComposerSend.request) {
+        val (target, _) = ComposerSend.request ?: return@LaunchedEffect
+        if (target != chatId) return@LaunchedEffect
+        ComposerSend.request = null
+        runCatching { focus.requestFocus() }
+        if (canSend) send()
     }
     LaunchedEffect(sendRequested) {
         if (sendRequested) {

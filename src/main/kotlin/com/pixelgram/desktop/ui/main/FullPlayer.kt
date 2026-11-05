@@ -141,7 +141,18 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
     val tracks = AudioQueue.tracks(telegram)
     val index = tracks.indexOfFirst { it.key == AudioPlayer.current }
     val colors = MaterialTheme.colorScheme
-    Surface(shape = MaterialTheme.shapes.extraLarge, color = colors.surfaceContainerLow, modifier = modifier) {
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        color = colors.surfaceContainerLow,
+        modifier = modifier.pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                    if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Press) PlayerKeys.armed = true
+                }
+            }
+        },
+    ) {
         Box(Modifier.fillMaxSize()) {
         AmbientBackdrop(palette, Modifier.matchParentSize())
         androidx.compose.animation.SharedTransitionLayout(Modifier.fillMaxSize()) {
@@ -1072,4 +1083,8 @@ private fun saveToMusic(source: java.io.File, name: String) {
         val target = java.io.File(java.io.File(music, "pixelGram").apply { mkdirs() }, com.pixelgram.desktop.core.FileSafety.clean(name))
         source.copyTo(target, overwrite = true)
     }.onFailure { com.pixelgram.desktop.core.AppLog.write("Save to music failed", it) }
+}
+
+object PlayerKeys {
+    var armed by mutableStateOf(false)
 }
