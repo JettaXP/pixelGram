@@ -824,7 +824,18 @@ fun ChatInfoDialog(
                                 ),
                             )
                         }
-                        if (about.isNotBlank()) add(InfoRow(Icons.Outlined.Info, "Description", about))
+                        if (about.isNotBlank()) {
+                            add(
+                                InfoRow(
+                                    Icons.Outlined.Info,
+                                    "Description",
+                                    about,
+                                    onMention = { username ->
+                                        telegram.openPublicChat(username, { id -> telegram.chats[id]?.let { mentioned = it } }, { Links.notFound = username })
+                                    },
+                                ),
+                            )
+                        }
                     }
                     val extra = user?.usernames?.activeUsernames?.drop(1).orEmpty()
                     user?.usernames?.activeUsernames?.firstOrNull()?.let { username ->
