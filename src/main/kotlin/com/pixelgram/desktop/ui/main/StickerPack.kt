@@ -24,6 +24,7 @@ import com.pixelgram.desktop.ui.icons.automirrored.outlined.Forward
 import com.pixelgram.desktop.ui.icons.filled.Close
 import com.pixelgram.desktop.ui.icons.filled.MoreVert
 import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
+import com.pixelgram.desktop.ui.icons.outlined.Refresh
 import com.pixelgram.desktop.ui.components.expressive.BasicAlertDialog
 import com.pixelgram.desktop.ui.components.expressive.Button
 import androidx.compose.material3.ButtonDefaults
@@ -131,6 +132,15 @@ fun StickerPackDialog(request: StickerPackRequest, settings: AppSettings, onDism
                                 onClick = {
                                     menu = false
                                     link?.let { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(it), null) }
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Refresh") },
+                                leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null) },
+                                enabled = loaded != null,
+                                onClick = {
+                                    menu = false
+                                    loaded?.let { current -> telegram.refreshStickerSet(current.name) { fresh -> if (fresh != null) set = fresh } }
                                 },
                             )
                         }

@@ -2941,6 +2941,10 @@ class Telegram(
         send(TdApi.GetStickerSet(setId)) { result -> onResult(result as? TdApi.StickerSet) }
     }
 
+    fun refreshStickerSet(name: String, onResult: (TdApi.StickerSet?) -> Unit) {
+        send(TdApi.SearchStickerSet(name, true)) { result -> onResult(result as? TdApi.StickerSet) }
+    }
+
     fun setStickerSetInstalled(setId: Long, installed: Boolean, done: () -> Unit) {
         send(TdApi.ChangeStickerSet(setId, installed, false)) { done() }
     }

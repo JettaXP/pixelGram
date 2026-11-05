@@ -589,6 +589,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
     DisposableEffect(telegram) {
         Links.active = { telegram.takeIf { it.authState == AuthState.Ready } }
         Links.openOwnProfile = { navigate(Screen.Profile) }
+        Links.openPreferences = { navigate(Screen.Settings(preferences = true)) }
         Links.navigate = { owner, chatId ->
             if (owner != telegram) accounts.switchTo(owner)
             openChatInside(chatId)

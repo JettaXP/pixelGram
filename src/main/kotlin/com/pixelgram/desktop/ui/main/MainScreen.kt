@@ -185,6 +185,7 @@ fun MainScreen(
     onChatBack: (() -> Unit)? = null,
 ) {
     WalletHost()
+    com.pixelgram.desktop.ui.CreditsOverlay()
     LinkDialogs(settings, onOpenChat)
     val tabs = FolderLayout.tabs(telegram, settings)
     var selectedKey by rememberSaveable { mutableStateOf<ChatListKey>(ChatListKey.Main) }

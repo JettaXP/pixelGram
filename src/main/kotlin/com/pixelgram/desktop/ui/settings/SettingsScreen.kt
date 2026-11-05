@@ -307,6 +307,18 @@ fun SettingsScreen(
         searching = false
         query = ""
     }
+    val linkRequest = SettingsLink.request
+    LaunchedEffect(linkRequest) {
+        val key = linkRequest ?: return@LaunchedEffect
+        SettingsLink.request = null
+        val found = SettingsLink.resolve(key)
+        if (found != null) {
+            val target = Section.entries.firstOrNull { it.name == found.first }
+            if (target != null) openResult(target, found.second)
+        } else {
+            openResult(Section.General, null)
+        }
+    }
     OnEscape {
         val parent = section.parent
         if (searching) {
@@ -2163,4 +2175,21 @@ private fun LinkItem(
     ) {
         Text(title)
     }
+}
+
+object SettingsLink {
+    var request by mutableStateOf<String?>(null)
+
+    fun slug(text: String): String {
+        val words = text.split(Regex("[^A-Za-z0-9]+")).filter { it.isNotEmpty() }
+        return words.mapIndexed { index, word -> if (index == 0) word.lowercase() else word.lowercase().replaceFirstChar { it.uppercase() } }.joinToString("")
+    }
+
+    fun resolve(key: String): Pair<String, String?>? {
+        if (key.isBlank()) return null
+        Section.entries.firstOrNull { slug(it.title).equals(key, ignoreCase = true) || it.name.equals(key, ignoreCase = true) }?.let { return it.name to null }
+        return SettingsIndex.firstOrNull { (_, title) -> slug(title).equals(key, ignoreCase = true) }?.let { (section, title) -> section to title }
+    }
+
+    fun link(section: String, title: String?): String = "https://t.me/pixelSettings" + "?s=" + slug(title ?: Section.entries.firstOrNull { it.name == section }?.title ?: section)
 }

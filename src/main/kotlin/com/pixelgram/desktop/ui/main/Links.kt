@@ -16,6 +16,31 @@ object Links : UriHandler {
     var active: (() -> Telegram?)? = null
     var navigate: ((Telegram, Long) -> Unit)? = null
     var openOwnProfile: (() -> Unit)? = null
+    var openPreferences: (() -> Unit)? = null
+
+    private fun special(url: String): Boolean {
+        val uri = runCatching { URI(url.trim()) }.getOrNull() ?: return false
+        val scheme = uri.scheme?.lowercase()
+        if (scheme == "tg" && (uri.host ?: uri.schemeSpecificPart.removePrefix("//").substringBefore('?')).equals("credits", ignoreCase = true)) {
+            SwingUtilities.invokeLater { com.pixelgram.desktop.ui.Credits.open = true }
+            return true
+        }
+        val host = uri.host?.lowercase()?.removePrefix("www.")
+        val name = when {
+            scheme == "tg" && uri.host.equals("resolve", ignoreCase = true) -> uri.query.orEmpty().split('&').firstOrNull { it.startsWith("domain=") }?.substringAfter('=')
+            host in TelegramHosts -> uri.path.orEmpty().trim('/').substringBefore('/')
+            else -> null
+        }
+        if (!name.equals(PreferencesUsername, ignoreCase = true)) return false
+        val key = uri.query.orEmpty().split('&').firstOrNull { it.startsWith("s=") }?.substringAfter('=')
+        SwingUtilities.invokeLater {
+            com.pixelgram.desktop.ui.settings.SettingsLink.request = key.orEmpty()
+            openPreferences?.invoke()
+        }
+        return true
+    }
+
+    private const val PreferencesUsername = "pixelSettings"
     var pending by mutableStateOf<String?>(null)
     var invite by mutableStateOf<InviteRequest?>(null)
     var confirm by mutableStateOf<String?>(null)
@@ -48,6 +73,7 @@ object Links : UriHandler {
     override fun openUri(uri: String) = open(uri)
 
     fun open(url: String) {
+        if (special(url)) return
         if (!isTelegram(url)) return openBrowser(url)
         com.pixelgram.desktop.core.ProxyEntry.parseLink(url)?.let { found ->
             SwingUtilities.invokeLater { proxy = found }
