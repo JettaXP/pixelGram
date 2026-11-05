@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.52.1 Puffy Diamond
+
+- The chat list previews rich posts with their first picture and caption instead of "Rich message".
+- Video thumbnails in the chat list have a play mark.
+- macOS builds are back.
+
 ## 0.52.0 Puffy Diamond
 
 ### Money
