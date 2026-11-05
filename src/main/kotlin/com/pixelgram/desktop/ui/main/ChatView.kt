@@ -1395,7 +1395,10 @@ fun MessageBubble(
     if (message.service) {
         val serviceText = listOfNotNull(senderName?.takeIf { it.isNotBlank() }, message.text).joinToString(" · ")
         val newPhoto = (message.content as? TdApi.MessageChatChangePhoto)?.photo
-        if (newPhoto != null && telegram != null) {
+        val suggested = (message.content as? TdApi.MessageSuggestProfilePhoto)?.photo
+        if (suggested != null && telegram != null) {
+            SuggestedPhotoCard(message, suggested, telegram, modifier)
+        } else if (newPhoto != null && telegram != null) {
             Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 ServiceMessage(serviceText, message.date, seconds, Modifier)
                 val small = newPhoto.sizes.minByOrNull { it.width }?.photo
@@ -3130,3 +3133,29 @@ private const val GhostAlpha = 0.6f
 
 private const val TypingIdleMs = 5_000L
 private const val ActionRepeatMs = 4_500L
+
+@Composable
+private fun SuggestedPhotoCard(message: UiMessage, photo: TdApi.ChatPhoto, telegram: Telegram, modifier: Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val small = photo.sizes.minByOrNull { it.width }?.photo
+    val big = photo.sizes.maxByOrNull { it.width }?.photo
+    val name = telegram.chats[message.chatId]?.let { telegram.chatTitle(it) }.orEmpty()
+    val text = if (message.isOutgoing) {
+        com.pixelgram.desktop.core.tr("You suggested this photo for {name}'s Telegram profile.")
+    } else {
+        com.pixelgram.desktop.core.tr("{name} suggests this photo for your Telegram profile.")
+    }.replace("{name}", name)
+    val open = { if (small != null) PhotoViewer.current = ViewedPhoto(telegram, small, big ?: small, "") }
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Surface(shape = MaterialTheme.shapes.extraLarge, color = colors.surfaceContainerHigh, modifier = Modifier.padding(vertical = 4.dp).widthIn(max = SuggestCardWidth)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(20.dp)) {
+                com.pixelgram.desktop.ui.components.AvatarImage(name, small, telegram, CircleShape, SuggestPhotoSize, full = big, onClick = { open() })
+                Text(text, style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = { open() }) { Text("View Photo") }
+            }
+        }
+    }
+}
+
+private val SuggestPhotoSize = 120.dp
+private val SuggestCardWidth = 280.dp

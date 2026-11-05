@@ -999,7 +999,7 @@ private fun PlayerMenu(telegram: Telegram) {
                                 },
                                 com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Share, "Share", enabled = path != null) {
                                     open = false
-                                    path?.let { copyFile(java.io.File(it)) }
+                                    path?.let { com.pixelgram.desktop.core.SystemShare.share(java.io.File(it), ::showInFolder) }
                                 },
                                 com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Download, "Save to Music", enabled = path != null) {
                                     open = false
@@ -1067,15 +1067,6 @@ private fun TrackDetails(audio: TdApi.Audio, path: String?, name: String, onBack
             }
         }
     }
-}
-
-private fun copyFile(file: java.io.File) {
-    val transfer = object : java.awt.datatransfer.Transferable {
-        override fun getTransferDataFlavors() = arrayOf(java.awt.datatransfer.DataFlavor.javaFileListFlavor)
-        override fun isDataFlavorSupported(flavor: java.awt.datatransfer.DataFlavor) = flavor == java.awt.datatransfer.DataFlavor.javaFileListFlavor
-        override fun getTransferData(flavor: java.awt.datatransfer.DataFlavor): Any = listOf(file)
-    }
-    runCatching { java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(transfer, null) }
 }
 
 private fun saveToMusic(source: java.io.File, name: String) {

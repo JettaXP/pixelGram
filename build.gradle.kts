@@ -157,7 +157,7 @@ compose.desktop {
             vendor = "jettax"
             licenseFile.set(project.file("LICENSE"))
             appResourcesRootDir.set(project.layout.projectDirectory.dir("appResources"))
-            modules("java.sql", "jdk.unsupported", "java.naming", "jdk.security.auth", "jdk.jsobject", "jdk.xml.dom", "java.net.http", "jdk.unsupported.desktop")
+            modules("java.sql", "jdk.localedata", "jdk.unsupported", "java.naming", "jdk.security.auth", "jdk.jsobject", "jdk.xml.dom", "java.net.http", "jdk.unsupported.desktop")
 
             linux {
                 packageName = "pixelgram"

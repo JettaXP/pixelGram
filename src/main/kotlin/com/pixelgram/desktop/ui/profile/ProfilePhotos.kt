@@ -157,12 +157,14 @@ fun ProfilePhotosDialog(
 }
 
 fun openProfilePhotos(telegram: Telegram, userId: Long, name: String) {
-    telegram.userFullInfo(userId) { info -> showProfilePhotos(telegram, userId, name, info?.personalPhoto?.id ?: 0L) }
+    telegram.userFullInfo(userId) { info -> showProfilePhotos(telegram, userId, name, info?.personalPhoto) }
 }
 
-private fun showProfilePhotos(telegram: Telegram, userId: Long, name: String, personalId: Long) {
-    telegram.profilePhotos(userId) { photos ->
+private fun showProfilePhotos(telegram: Telegram, userId: Long, name: String, personal: it.tdlight.jni.TdApi.ChatPhoto?) {
+    val personalId = personal?.id ?: 0L
+    telegram.profilePhotos(userId) { loaded ->
         val formatter = photoDateFormat()
+        val photos = if (personal != null && loaded.none { it.id == personalId }) listOf(personal) + loaded else loaded
         val items = photos.mapNotNull { photo ->
             val small = photo.sizes.minByOrNull { it.width }?.photo ?: return@mapNotNull null
             val big = photo.sizes.maxByOrNull { it.width }?.photo ?: small

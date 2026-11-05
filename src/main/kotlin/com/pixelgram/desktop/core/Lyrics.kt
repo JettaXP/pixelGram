@@ -29,13 +29,14 @@ object Lyrics {
         val key = key(artist, title)
         cache[key]?.let { return it }
         if (title.isBlank()) return LyricsResult.NotFound
+        failed.set(false)
         val base = "https://lrclib.net/api/get?artist_name=${encode(artist)}&track_name=${encode(title)}"
         val direct = listOfNotNull(
             if (duration > 0) request("$base&duration=$duration") else null,
             request(base),
         ).map(::parse).firstOrNull { it.useful() }
         val result = direct ?: search(artist, title) ?: LyricsResult.NotFound
-        cache[key] = result
+        if (result != LyricsResult.NotFound || !failed.get()) cache[key] = result
         return result
     }
 
@@ -89,6 +90,8 @@ object Lyrics {
         return out
     }
 
+    private val failed = ThreadLocal.withInitial { false }
+
     private fun request(url: String): String? = runCatching {
         val request = HttpRequest.newBuilder(URI(url))
             .timeout(Duration.ofSeconds(12))
@@ -96,8 +99,9 @@ object Lyrics {
             .GET()
             .build()
         val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() != 200 && response.statusCode() != 404) failed.set(true)
         response.body().takeIf { response.statusCode() == 200 && it.isNotBlank() && it != "[]" }
-    }.getOrNull()
+    }.onFailure { failed.set(true) }.getOrNull()
 
     private fun parse(body: String): LyricsResult {
         val instrumental = Regex(""""instrumental"\s*:\s*true""").containsMatchIn(body)

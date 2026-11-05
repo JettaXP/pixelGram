@@ -2,6 +2,7 @@ package com.pixelgram.desktop.ui.main
 
 import com.pixelgram.desktop.ui.components.ConfirmOnEnter
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.IconButton
 import com.pixelgram.desktop.ui.icons.outlined.ContentPaste
 import com.pixelgram.desktop.ui.icons.outlined.Folder
@@ -62,6 +63,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -81,6 +84,9 @@ import com.pixelgram.desktop.ui.icons.outlined.LockOpen
 import com.pixelgram.desktop.ui.icons.outlined.CleaningServices
 import com.pixelgram.desktop.ui.icons.outlined.CreateNewFolder
 import com.pixelgram.desktop.ui.icons.outlined.Delete
+import com.pixelgram.desktop.ui.icons.outlined.PhoneAndroid
+import com.pixelgram.desktop.ui.icons.outlined.Send
+import com.pixelgram.desktop.ui.icons.outlined.Visibility
 import com.pixelgram.desktop.ui.icons.outlined.Folder
 import com.pixelgram.desktop.ui.icons.outlined.KeyboardDoubleArrowUp
 import com.pixelgram.desktop.ui.icons.outlined.Notifications
@@ -419,7 +425,7 @@ private fun ContactDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> 
             if (file == null) status = if (fromClipboard) "No image in the clipboard" else null else use(file.absolutePath)
         }
     }
-    val report: (String?) -> Unit = { error -> status = error ?: "Done" }
+    val report: (String?) -> Unit = { error -> status = error }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (existing) "Edit contact" else "Add to contacts") },
@@ -439,7 +445,6 @@ private fun ContactDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> 
                     )
                     val note = when {
                         com.pixelgram.desktop.core.LocalPhotos.get(userId) != null -> "Local photo, only on this device"
-                        personal -> "Photo set by you"
                         else -> null
                     }
                     note?.let { Text(com.pixelgram.desktop.core.tr(it), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) }
@@ -454,10 +459,15 @@ private fun ContactDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> 
                         last = originalLast
                     }) { Text("Use original name") }
                 }
-                Text("Photo", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
-                LocalPhotoRow(userId)
+                Text("Photo", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
+                val rows = if (existing) 3 else 2
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                LocalPhotoRow(userId, 0, rows)
                 if (existing) {
                     PhotoSourceRow(
+                        1,
+                        rows,
+                        Icons.Outlined.Visibility,
                         "Set photo for me",
                         "Only you will see it, on all your devices",
                         onFile = { withImage(false) { path -> telegram.setPersonalPhoto(userId, path) { report(it); if (it == null) personal = true } } },
@@ -470,18 +480,31 @@ private fun ContactDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> 
                     )
                 }
                 PhotoSourceRow(
+                    rows - 1,
+                    rows,
+                    Icons.Outlined.Send,
                     "Suggest photo",
-                    "${telegram.chatTitle(chat)} can set it as their photo",
+                    com.pixelgram.desktop.core.tr("{name} can set it as their photo").replace("{name}", telegram.chatTitle(chat)),
                     onFile = { withImage(false) { path -> telegram.suggestPhoto(userId, path, report) } },
                     onPaste = { withImage(true) { path -> telegram.suggestPhoto(userId, path, report) } },
                     onRemove = null,
                 )
+                }
                 status?.let { Text(com.pixelgram.desktop.core.tr(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
                 if (existing) {
-                    TextButton(onClick = {
-                        telegram.removeContact(userId)
-                        onDismiss()
-                    }) { Text("Delete contact", color = MaterialTheme.colorScheme.error) }
+                    androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(
+                        onClick = {
+                            telegram.removeContact(userId)
+                            onDismiss()
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Delete contact")
+                    }
                 }
             }
         },
@@ -496,25 +519,57 @@ private fun ContactDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> 
 }
 
 @Composable
-private fun PhotoSourceRow(title: String, subtitle: String, onFile: () -> Unit, onPaste: () -> Unit, onRemove: (() -> Unit)?) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        IconButton(onClick = onFile) { Icon(Icons.Outlined.Folder, contentDescription = "Choose file") }
-        IconButton(onClick = onPaste) { Icon(Icons.Outlined.ContentPaste, contentDescription = "Paste from clipboard") }
-    }
-    if (onRemove != null) {
-        TextButton(onClick = onRemove) {
-            Icon(Icons.Outlined.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-            Text("Remove photo", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(start = 8.dp))
+private fun PhotoSourceRow(
+    index: Int,
+    count: Int,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    onFile: () -> Unit,
+    onPaste: () -> Unit,
+    onRemove: (() -> Unit)?,
+) {
+    val colors = MaterialTheme.colorScheme
+    androidx.compose.material3.Surface(
+        shape = com.pixelgram.desktop.ui.components.groupShapes(index, count).shape,
+        color = colors.surfaceContainerHighest,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+        ) {
+            Box(
+                Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape).background(colors.secondaryContainer),
+                contentAlignment = Alignment.Center,
+            ) { Icon(icon, contentDescription = null, tint = colors.onSecondaryContainer, modifier = Modifier.size(20.dp)) }
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                com.pixelgram.desktop.ui.components.expressive.FilledTonalIconButton(onClick = onFile) {
+                    Icon(Icons.Outlined.Folder, contentDescription = "Choose file", modifier = Modifier.size(20.dp))
+                }
+                com.pixelgram.desktop.ui.components.expressive.FilledTonalIconButton(onClick = onPaste) {
+                    Icon(Icons.Outlined.ContentPaste, contentDescription = "Paste from clipboard", modifier = Modifier.size(20.dp))
+                }
+                if (onRemove != null) {
+                    com.pixelgram.desktop.ui.components.expressive.FilledTonalIconButton(
+                        onClick = onRemove,
+                        colors = androidx.compose.material3.IconButtonDefaults.filledTonalIconButtonColors(colors.errorContainer, colors.onErrorContainer),
+                    ) {
+                        Icon(Icons.Outlined.Delete, contentDescription = "Remove photo", modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun LocalPhotoRow(key: Long) {
+private fun LocalPhotoRow(key: Long, index: Int = 0, count: Int = 1) {
     val scope = rememberCoroutineScope()
     var missing by remember { mutableStateOf(false) }
     val local = com.pixelgram.desktop.core.LocalPhotos.get(key)
@@ -528,6 +583,9 @@ private fun LocalPhotoRow(key: Long) {
         }
     }
     PhotoSourceRow(
+        index,
+        count,
+        Icons.Outlined.PhoneAndroid,
         "Local photo",
         "Only on this device",
         onFile = { take(false) },
@@ -678,11 +736,8 @@ fun ChatInfoDialog(
                 }
                 if (subtitle.isNotEmpty()) Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (chat.privateUserId != 0L) {
-                    var personalPhoto by remember(chat.privateUserId) { mutableStateOf(false) }
-                    LaunchedEffect(chat.privateUserId) { telegram.userFullInfo(chat.privateUserId) { info -> personalPhoto = info?.personalPhoto != null } }
                     val note = when {
                         com.pixelgram.desktop.core.LocalPhotos.get(chat.privateUserId) != null -> "Local photo, only on this device"
-                        personalPhoto -> "Photo set by you"
                         else -> null
                     }
                     note?.let { Text(com.pixelgram.desktop.core.tr(it), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) }

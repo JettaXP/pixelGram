@@ -3665,7 +3665,7 @@ fun messageText(content: TdApi.MessageContent?): String = when (content) {
 
 fun isService(content: TdApi.MessageContent?): Boolean = when (content) {
     is TdApi.MessageSupergroupChatCreate, is TdApi.MessageBasicGroupChatCreate, is TdApi.MessageChatChangeTitle,
-    is TdApi.MessageChatChangePhoto, is TdApi.MessageChatDeletePhoto, is TdApi.MessageChatAddMembers,
+    is TdApi.MessageChatChangePhoto, is TdApi.MessageChatDeletePhoto, is TdApi.MessageChatAddMembers, is TdApi.MessageSuggestProfilePhoto,
     is TdApi.MessageChatJoinByLink, is TdApi.MessageChatJoinByRequest, is TdApi.MessageChatDeleteMember,
     is TdApi.MessagePinMessage, is TdApi.MessageScreenshotTaken, is TdApi.MessageContactRegistered,
     is TdApi.MessageChatUpgradeTo, is TdApi.MessageChatUpgradeFrom, is TdApi.MessageCustomServiceAction,
@@ -3703,6 +3703,7 @@ fun contentText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageBasicGroupChatCreate -> "Created the group «${content.title}»"
     is TdApi.MessageChatChangeTitle -> "Changed the name to «${content.title}»"
     is TdApi.MessageChatChangePhoto -> "Updated the photo"
+    is TdApi.MessageSuggestProfilePhoto -> "Suggested profile photo"
     is TdApi.MessageChatSetTheme -> when (val theme = content.theme) {
         is TdApi.ChatThemeEmoji -> "Changed the chat theme to ${theme.name}"
         is TdApi.ChatThemeGift -> "Changed the chat theme"
