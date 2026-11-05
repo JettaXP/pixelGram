@@ -148,6 +148,7 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -1511,6 +1512,7 @@ fun MessageBubble(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier
                             .padding(start = if (inset) 8.dp else 12.dp, end = 12.dp, top = if (inset || named) 4.dp else 7.dp, bottom = 4.dp)
+                            .then(if (photo != null || media || album != null) Modifier.widthIn(max = (if (album != null) PhotoMaxWidth else mediaFrameOf(message)?.width ?: PhotoMaxWidth) - 20.dp) else Modifier)
                             .then(
                                 if (reachable) {
                                     Modifier
@@ -1536,6 +1538,7 @@ fun MessageBubble(
                             color = colors.primary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
                         )
                     }
                 }
@@ -2012,17 +2015,32 @@ private fun MessagePhoto(
     val image by produceState(com.pixelgram.desktop.ui.components.cachedImage(path, PhotoPixels), path) {
         path?.let { loadImage(it, maxSize = PhotoPixels) }?.let { value = it }
     }
+    val spoiler = (message.content as? TdApi.MessagePhoto)?.hasSpoiler == true
+    var revealed by remember(message.key) { mutableStateOf(false) }
+    val hidden = spoiler && !revealed
+    val blur by androidx.compose.animation.core.animateDpAsState(if (hidden) SpoilerBlur else 0.dp, tween(SpoilerRevealMs))
     Box(
         Modifier
             .size(mediaFrame(message.photoWidth, message.photoHeight, 4f / 3f))
             .clip(RoundedCornerShape(corner))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            .clickable { PhotoViewer.current = ViewedPhoto(telegram, file, message.fullPhoto ?: file, message.text, message.chatId, message.id) },
+            .clickable {
+                if (hidden) revealed = true
+                else PhotoViewer.current = ViewedPhoto(telegram, file, message.fullPhoto ?: file, message.text, message.chatId, message.id)
+            },
         contentAlignment = Alignment.Center,
     ) {
         val bitmap = image
         if (bitmap != null) {
-            Image(bitmap, contentDescription = "Photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            Image(bitmap, contentDescription = "Photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().blur(blur, androidx.compose.ui.draw.BlurredEdgeTreatment.Rectangle))
+            if (blur > 0.5.dp) {
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = SpoilerScrim * (blur / SpoilerBlur))))
+                if (hidden) {
+                    Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.45f), contentColor = Color.White) {
+                        Text("Spoiler", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+                    }
+                }
+            }
         } else if (!message.sending) {
             TransferRing(telegram.progress(file), MaterialTheme.colorScheme.primary, null, 48.dp)
         }
@@ -2050,6 +2068,9 @@ private fun MessagePhoto(
 }
 
 private const val PhotoPixels = 1024
+private val SpoilerBlur = 28.dp
+private const val SpoilerScrim = 0.25f
+private const val SpoilerRevealMs = 350
 internal val SenderAvatarSlot = 42.dp
 private val SenderAvatarSize = 34.dp
 
