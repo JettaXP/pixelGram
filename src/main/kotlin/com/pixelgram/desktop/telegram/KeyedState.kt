@@ -5,15 +5,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
 
 class KeyedState<K, V : Any> {
     private val slots = HashMap<K, MutableState<V?>>()
     private var count by mutableIntStateOf(0)
 
-    private fun slot(key: K): MutableState<V?> = synchronized(slots) { slots.getOrPut(key) { Snapshot.withMutableSnapshot { mutableStateOf(null) } } }
+    private fun slot(key: K): MutableState<V?> = synchronized(slots) { slots.getOrPut(key) { mutableStateOf(null) } }
 
-    operator fun get(key: K): V? = slot(key).value
+    operator fun get(key: K): V? {
+        val state = slot(key)
+        return try {
+            state.value
+        } catch (_: IllegalStateException) {
+            count
+            null
+        }
+    }
 
     operator fun set(key: K, value: V) {
         val state = slot(key)

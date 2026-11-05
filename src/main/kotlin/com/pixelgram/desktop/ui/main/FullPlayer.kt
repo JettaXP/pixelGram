@@ -895,6 +895,14 @@ private fun QueueView(telegram: Telegram, tracks: List<QueueTrack>, current: Int
         itemsIndexed(tracks, key = { _, track -> track.key }) { position, track ->
             val lifted = track.key == draggingKey
             val playing = position == current
+            val rowColor by androidx.compose.animation.animateColorAsState(
+                when {
+                    lifted -> MaterialTheme.colorScheme.surfaceContainerHighest
+                    playing -> MaterialTheme.colorScheme.secondaryContainer
+                    else -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0f)
+                },
+                MaterialTheme.motionScheme.defaultEffectsSpec(),
+            )
             val elevation by animateFloatAsState(if (lifted) 1f else 0f, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects())
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -912,13 +920,7 @@ private fun QueueView(telegram: Telegram, tracks: List<QueueTrack>, current: Int
                     }
                     .fillMaxWidth()
                     .height(QueueRow)
-                    .background(
-                        when {
-                            lifted -> MaterialTheme.colorScheme.surfaceContainerHighest
-                            playing -> MaterialTheme.colorScheme.secondaryContainer
-                            else -> androidx.compose.ui.graphics.Color.Transparent
-                        },
-                    )
+                    .background(rowColor)
                     .clickable(enabled = draggingKey == null) { AudioQueue.playAt(telegram, track) }
                     .padding(horizontal = 8.dp),
             ) {
