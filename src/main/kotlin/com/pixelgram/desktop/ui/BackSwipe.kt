@@ -43,6 +43,7 @@ class BackSwipeState {
     var dx = 0f
     var dy = 0f
     var locked: Boolean? = null
+    var rangeMin = 0f
     var at by mutableStateOf(Offset.Zero)
     var job: Job? = null
 }
@@ -84,12 +85,17 @@ fun Modifier.backSwipe(state: BackSwipeState, enabled: () -> Boolean, onBack: ()
                 state.dx += -change.scrollDelta.x * step
                 state.dy += change.scrollDelta.y * step
                 if (state.locked == null && abs(state.dx) + abs(state.dy) >= lock) {
-                    state.locked = abs(state.dx) > abs(state.dy) * LockRatio && state.dx > 0f && enabled() && settings?.backSwipe?.value == true
+                    val horizontal = abs(state.dx) - abs(state.dy) > lock / 2f
+                    state.locked = horizontal && state.dx > 0f && enabled() && settings?.backSwipe?.value == true
+                    state.rangeMin = 0f
                 }
                 if (state.locked == null && abs(change.scrollDelta.x) > abs(change.scrollDelta.y)) change.consume()
                 if (state.locked == true) {
                     change.consume()
-                    val raw = (state.dx / threshold).coerceAtLeast(0f)
+                    val value = state.dx / threshold
+                    if (value < state.rangeMin) state.rangeMin = value
+                    if (value > state.rangeMin + RangeSpan) state.rangeMin = value - RangeSpan
+                    val raw = (value - state.rangeMin).coerceIn(0f, RangeSpan)
                     if (!state.reached && raw >= 1f) state.reached = true
                     if (state.reached && raw < Deactivate) state.reached = false
                     state.raw = raw
@@ -124,61 +130,48 @@ fun Modifier.backSwipe(state: BackSwipeState, enabled: () -> Boolean, onBack: ()
 
 private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t.coerceIn(0f, 1f)
 
-private class Dims(
-    val width: Float, val height: Float, val edge: Float, val far: Float,
-    val length: Float, val arrowHeight: Float, val arrowAlpha: Float,
-    val margin: Float, val scale: Float, val alpha: Float,
-)
-
-private class Springs(
-    val width: Pair<Float, Float>, val height: Pair<Float, Float>, val edge: Pair<Float, Float>, val far: Pair<Float, Float>,
-    val arrow: Pair<Float, Float>, val margin: Pair<Float, Float>, val scale: Pair<Float, Float>,
-)
-
-private val PreSprings = Springs(650f to 1f, 1500f to 0.45f, 250f to 0.5f, 300f to 1f, 100f to 0.6f, 6000f to 1f, 120f to 0.8f)
-private val ActiveSprings = Springs(850f to 0.75f, 10000f to 1f, 2600f to 0.855f, 1200f to 0.30f, 1500f to 0.29f, 1000f to 0.8f, 325f to 0.55f)
-private val EndSprings = Springs(10000f to 1f, 10000f to 1f, 10000f to 1f, 10000f to 1f, 1500f to 0.29f, 1000f to 0.8f, 5700f to 1f)
-private val CancelSprings = Springs(450f to 1f, 1500f to 0.45f, 150f to 0.5f, 300f to 0.5f, 600f to 0.4f, 800f to 0.76f, 120f to 0.8f)
-
-@Composable
-private fun springy(target: Float, spec: Pair<Float, Float>, velocity: Float = 0f, delayMs: Long = 0L): Float {
-    val anim = remember { Animatable(target) }
-    androidx.compose.runtime.LaunchedEffect(target, spec, velocity) {
-        if (delayMs > 0) delay(delayMs)
-        anim.animateTo(target, spring(dampingRatio = spec.second, stiffness = spec.first), initialVelocity = if (velocity != 0f) velocity else anim.velocity)
-    }
-    return anim.value
-}
-
 @Composable
 fun BoxScope.BackSwipeIndicator(state: BackSwipeState, followList: Boolean = true) {
     val density = LocalDensity.current
     val dp = density.density
     val phase = state.phase
-    val over = ((state.raw - 1f) / StretchRange).coerceIn(0f, 1f)
-    val pre = state.raw.coerceIn(0f, 1f)
-    val (target, springs) = when {
-        phase == BackPhase.Idle -> Dims(0f, 48f, 6f, 6f, 8.6f, 5f, 0f, 4f, 0.98f, 0f) to CancelSprings
-        phase == BackPhase.Committed -> Dims(lerp(48f, 60f, over), 48f, 24f, 24f, lerp(6.4f, 5.6f, over), lerp(7.2f, 8f, over), 0f, lerp(14f, 18f, over), CommitScale, 0f) to EndSprings
-        phase == BackPhase.Cancelled -> Dims(0f, 48f, 6f, 6f, 8.6f, 5f, 0f, 4f, 0.98f, 0f) to CancelSprings
-        state.reached -> Dims(lerp(48f, 60f, over), 48f, 24f, 24f, lerp(6.4f, 5.6f, over), lerp(7.2f, 8f, over), 1f, lerp(14f, 18f, over), 1f, 1f) to ActiveSprings
-        else -> Dims(lerp(0f, 51f, pre), lerp(48f, 46f, pre), lerp(6f, 16f, pre), lerp(6f, 20f, pre), lerp(8.6f, 8f, pre), lerp(5f, 5.6f, pre), (pre * 4f).coerceAtMost(1f), 4f, 0.98f, 1f) to PreSprings
+    val dragging = phase == BackPhase.Dragging
+    val reach by androidx.compose.animation.core.animateFloatAsState(
+        if (state.reached && dragging || phase == BackPhase.Committed) 1f else 0f,
+        spring(dampingRatio = ReachDamping, stiffness = ReachStiffness),
+    )
+    val end = remember { Animatable(0f) }
+    var frozen by remember { mutableStateOf(0f) }
+    androidx.compose.runtime.LaunchedEffect(phase) {
+        when (phase) {
+            BackPhase.Committed, BackPhase.Cancelled -> {
+                frozen = state.raw
+                end.snapTo(0f)
+                end.animateTo(1f, spring(dampingRatio = 1f, stiffness = if (phase == BackPhase.Committed) EndStiffness else CancelStiffness))
+            }
+            else -> end.snapTo(0f)
+        }
     }
-    val width = springy(target.width, springs.width)
-    val height = springy(target.height, springs.height)
-    val edge = springy(target.edge, springs.edge)
-    val far = springy(target.far, springs.far)
-    val length = springy(target.length, springs.arrow)
-    val arrowHeight = springy(target.arrowHeight, springs.arrow)
-    val arrowAlpha = springy(target.arrowAlpha, if (state.reached) 180f to 0.9f else 2000f to 0.6f, delayMs = if (phase == BackPhase.Committed) CommitArrowDelayMs else 0L)
-    val margin = springy(target.margin, springs.margin)
-    val scale = springy(target.scale, if (phase == BackPhase.Committed) 5700f to 1f else springs.scale, velocity = if (phase == BackPhase.Committed) CommitPopVelocity else 0f)
-    val alpha = springy(target.alpha, when (phase) {
-        BackPhase.Committed -> 1400f to 1f
-        BackPhase.Cancelled -> 450f to 1f
-        else -> 10000f to 1f
-    })
-    if (phase == BackPhase.Idle && width < 0.5f) return
+    val raw = if (dragging) state.raw else frozen
+    val pre = raw.coerceIn(0f, 1f)
+    val over = ((raw - 1f) / StretchRange).coerceIn(0f, 1f)
+    val fade = when (phase) {
+        BackPhase.Committed, BackPhase.Cancelled -> 1f - end.value
+        BackPhase.Idle -> 0f
+        else -> 1f
+    }
+    val shrink = if (phase == BackPhase.Cancelled) 1f - end.value else 1f
+    val width = lerp(lerp(0f, 51f, pre), lerp(48f, 60f, over), reach) * shrink
+    val height = lerp(lerp(48f, 46f, pre), 48f, reach)
+    val edge = lerp(lerp(6f, 16f, pre), 24f, reach)
+    val far = lerp(lerp(6f, 20f, pre), 24f, reach)
+    val length = lerp(lerp(8.6f, 8f, pre), lerp(6.4f, 5.6f, over), reach)
+    val arrowHeight = lerp(lerp(5f, 5.6f, pre), lerp(7.2f, 8f, over), reach)
+    val arrowAlpha = lerp((pre * 4f).coerceAtMost(1f), 1f, reach)
+    val margin = lerp(4f, lerp(14f, 18f, over), reach)
+    val scale = if (phase == BackPhase.Committed) lerp(1f, CommitScale, end.value) else lerp(0.98f, 1f, reach)
+    val alpha = fade
+    if (phase == BackPhase.Idle || width < 0.5f || alpha <= 0f) return
     val colors = MaterialTheme.colorScheme
     val background = colors.secondaryContainer
     val arrow = colors.onSecondaryContainer
@@ -226,17 +219,19 @@ fun BackSwipeBox(onBack: () -> Unit, modifier: Modifier = Modifier, content: @Co
     }
 }
 
-private val BackThreshold = 120.dp
+private val BackThreshold = 80.dp
 private val ScrollStep = 64.dp
-private val LockDistance = 10.dp
-private const val LockRatio = 1.2f
-private const val Deactivate = 0.8f
+private val LockDistance = 4.dp
+private const val Deactivate = 0.95f
 private const val StretchRange = 1.5f
-private const val SettleMs = 140L
+private const val SettleMs = 110L
 private const val FinishMs = 450L
 private const val CommitScale = 0.86f
-private const val CommitPopVelocity = 3f
-private const val CommitArrowDelayMs = 80L
+private const val RangeSpan = 1f + StretchRange
+private const val ReachDamping = 0.55f
+private const val ReachStiffness = 700f
+private const val EndStiffness = 900f
+private const val CancelStiffness = 600f
 private val ArrowThickness = 4.dp
 
 object BackSwipeHolder {
