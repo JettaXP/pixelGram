@@ -607,7 +607,7 @@ private fun ChatViewContent(
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    com.pixelgram.desktop.ui.components.ChatBadges(chat, telegram, 22.dp)
+                    if (!telegram.isSavedMessages(chat.id)) com.pixelgram.desktop.ui.components.ChatBadges(chat, telegram, 22.dp)
                 }
                 val topicName = if (telegram.isForum(chat)) telegram.selectedTopicName(chat.id) else null
                 val status = telegram.activity(chat) ?: telegram.presence(chat)?.let { presence ->
