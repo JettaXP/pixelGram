@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.51.4 Bun
+
+### Fixes
+- Fixed a crash on the newest message while someone is typing.
+- Forwarded photos no longer leave empty space when the sender name is long.
+- The track title and the heart no longer jump after the cover morph.
+- The message field no longer jumps when you insert a premium emoji.
+- Hold to seek works while the track is paused.
+
+### Chats
+- Spoiler photos are blurred until you click them.
+- Comments: the full message menu, replies, forwarding and deleting.
+- Send as: pick your account or a channel in groups.
+- Premium emoji show in the chat list and the pinned bar, and clicking one opens its pack.
+- The slash button in groups moved next to the emoji button and has a frame.
+- `>>` and `<<` turn into » and «.
+- The forward dialog uses the same folder buttons as the chat list.
+
+### Player
+- Lyrics open at the current line right away.
+- Enter always sends the message; Space controls the player only right after you used it.
+
+### Profile and contacts
+- First and last name fields are stacked, the username field fills the dialog.
+- The start page row is gone from your own profile.
+- Edit contact shows the avatar on top with a note when you set the photo; local photos show on message avatars too; the photo viewer marks the photo you set.
+- Emoji pack windows have the emoji menu: send, copy, copy ID.
+
+### Sign in
+- The country code keeps the cursor after +, and jumps to the number once the code is unique.
+
+### Translations
+- Gifts, the backup import dialog and the Rounded icons switch are translated.
+
 ## 0.51.3 Bun
 
 - Hold a premium emoji in the panel to preview it big, like stickers.
