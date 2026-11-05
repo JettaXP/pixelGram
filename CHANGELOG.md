@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.52.3 Puffy Diamond
+
+### Money
+- Your own profile shows your balance pill too. Tap any balance pill to open the card with the public balance, Open My Wallet and How does it work.
+- The card tilts with the mouse and shows stickers of your collectible gifts.
+- Send Money on someone's card opens a transfer to their address in your TON wallet app.
+- No more NEW badge on the Money button.
+
+### Links and credits
+- t.me/pixelSettings links open pixelGram Preferences; add ?s= to highlight a setting.
+- tg://credits rolls the credits.
+
+### Stickers and emoji
+- The pack menu has Refresh to reload the pack from the server.
+- The pack menu has Owner to open the creator's profile, or copy their ID when the profile isn't available.
+- Premium emoji no longer nudge the message field while you type.
+
+### Back swipe
+- Back swipe fires sooner after you lift your fingers.
+- Scrolling sideways over folder tabs, shared media, code blocks and tables no longer starts it.
+
+### Side menu
+- No translucent ring around the side menu avatar.
+- More room between avatars in the rail, and its scrollbar sits further right.
+
 ## 0.52.2 Puffy Diamond
 
 - The wallet card no longer puts the QR button over a long balance: the amount gets smaller and stays next to the button.

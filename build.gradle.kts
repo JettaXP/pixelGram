@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.52.2"
+version = "0.52.3"
 val codename = "Puffy Diamond"
 
 kotlin {
