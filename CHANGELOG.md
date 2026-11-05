@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.51.8 Bun
+
+- Save Power on Low Battery: animations and autoplay pause while Windows battery saver, the Linux power-saver profile or macOS Low Power Mode is on, and come back when it turns off. Find it in Power Saving.
+- A thin scrollbar in the chat itself.
+- Back swipe no longer ends on its own when your fingers pause, doesn't blink, and swipe to reply or scrolling no longer start in the middle of it.
+- The warning before opening a file that can run programs is translated.
+
 ## 0.51.7 Bun
 
 - Back swipe works like Telegram Desktop: it picks the direction at once, fills in a short distance, pulling back cancels right away, and the arrow follows your fingers without lag. It stays in Experimental settings.
