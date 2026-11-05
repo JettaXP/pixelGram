@@ -232,6 +232,7 @@ private fun ChatListBody(
                 if (listState.firstVisibleItemIndex > ScrollJumpItems) listState.scrollToItem(ScrollJumpItems)
                 listState.animateScrollToItem(0)
             }
+            FollowOwnSend(listState, rest)
             val topChat = rest.firstOrNull()?.id
             LaunchedEffect(topChat) {
                 withFrameNanos { }
@@ -380,6 +381,7 @@ private fun CompactChatList(
         }
         val compactState = rememberLazyListState()
         LoadMoreChats(compactState, listKey, chatsFor(listKey).size, telegram)
+        FollowOwnSend(compactState, chatsFor(listKey).filter { it.pinned[listKey] != true })
         LazyColumn(
             state = compactState,
             modifier = Modifier.listScrollbar(compactState, edge = 1f),
@@ -434,6 +436,24 @@ private val CompactItemSize = 64.dp
 private val MarkBadge = 18.dp
 private val PreviewThumb = 18.dp
 private const val ScrollJumpItems = 12
+
+@Composable
+private fun FollowOwnSend(state: androidx.compose.foundation.lazy.LazyListState, rest: List<ChatState>) {
+    val top = rest.firstOrNull()
+    val sent = top?.lastMessage?.takeIf { it.isOutgoing && System.currentTimeMillis() / 1000 - it.date <= OwnSendWindowSec }
+    val mark = sent?.let { top.id to it.date }
+    val seen = remember { arrayOf<Pair<Long, Int>?>(mark) }
+    LaunchedEffect(mark) {
+        if (mark == null || mark == seen[0]) return@LaunchedEffect
+        seen[0] = mark
+        withFrameNanos { }
+        if (state.firstVisibleItemIndex == 0 && state.firstVisibleItemScrollOffset == 0) return@LaunchedEffect
+        if (state.firstVisibleItemIndex > ScrollJumpItems) state.scrollToItem(ScrollJumpItems)
+        state.animateScrollToItem(0)
+    }
+}
+
+private const val OwnSendWindowSec = 30
 
 object ChatListScroll {
     var request by mutableIntStateOf(0)
