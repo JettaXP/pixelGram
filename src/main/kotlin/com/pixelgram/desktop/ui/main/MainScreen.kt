@@ -574,33 +574,58 @@ private fun MainMenu(
             AccountsList(accounts, settings)
         }
         val dark = isDarkTheme(settings)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.width(AccountsWidth).padding(start = 12.dp, end = 4.dp).padding(bottom = 12.dp),
-        ) {
-            QuickTile(if (dark) Icons.Outlined.DarkMode else Icons.Outlined.LightMode, if (dark) "Night" else "Day", dark, Modifier.weight(1f)) {
-                settings.themeMode.value = if (dark) ThemeMode.Light else ThemeMode.Dark
+        val layout = com.pixelgram.desktop.core.SideMenuLayout.read(settings)
+        val moneyReady = telegram.tonWallet?.address?.isNotBlank() == true
+        fun available(item: com.pixelgram.desktop.core.SideItem) = item != com.pixelgram.desktop.core.SideItem.Money || moneyReady
+        val action = { item: com.pixelgram.desktop.core.SideItem ->
+            when (item) {
+                com.pixelgram.desktop.core.SideItem.Theme -> settings.themeMode.value = if (dark) ThemeMode.Light else ThemeMode.Dark
+                com.pixelgram.desktop.core.SideItem.Saved -> onOpenSaved()
+                com.pixelgram.desktop.core.SideItem.Profile -> onNavigate(Screen.Profile)
+                com.pixelgram.desktop.core.SideItem.Contacts -> onNavigate(Screen.Contacts)
+                com.pixelgram.desktop.core.SideItem.Calls -> onNavigate(Screen.Calls)
+                com.pixelgram.desktop.core.SideItem.Money -> WalletWindow.open = telegram
+                com.pixelgram.desktop.core.SideItem.NewGroup -> onNewChat(false)
+                com.pixelgram.desktop.core.SideItem.NewChannel -> onNewChat(true)
+                com.pixelgram.desktop.core.SideItem.Settings -> onNavigate(Screen.Settings())
             }
-            QuickTile(Icons.Outlined.Bookmark, "Saved", false, Modifier.weight(1f), onOpenSaved)
         }
-        val groups = listOf(
-            listOf(
-                Triple(Icons.Outlined.AccountCircle, "My Profile") { onNavigate(Screen.Profile) },
-                Triple(Icons.Outlined.Contacts, "Contacts") { onNavigate(Screen.Contacts) },
-                Triple(Icons.Outlined.Call, "Calls") { onNavigate(Screen.Calls) },
-            ) + listOfNotNull(
-                telegram.tonWallet?.takeIf { it.address.isNotBlank() }?.let {
-                    Triple(com.pixelgram.desktop.ui.icons.Icons.Outlined.Diamond, "Money") { WalletWindow.open = telegram }
-                },
-            ),
-            listOf(
-                Triple(Icons.Outlined.Groups, "New Group") { onNewChat(false) },
-                Triple(Icons.Outlined.Campaign, "New Channel") { onNewChat(true) },
-            ),
-            listOf(
-                Triple(Icons.Outlined.Settings, "Settings") { onNavigate(Screen.Settings()) },
-            ),
-        )
+        val tiles = layout.tiles.filter(::available)
+        if (tiles.isNotEmpty()) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.width(AccountsWidth).padding(start = 12.dp, end = 4.dp).padding(bottom = 12.dp),
+            ) {
+                tiles.chunked(2).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { item ->
+                            val theme = item == com.pixelgram.desktop.core.SideItem.Theme
+                            QuickTile(
+                                sideIcon(item, dark),
+                                if (theme) (if (dark) "Night" else "Day") else item.title,
+                                theme && dark,
+                                Modifier.weight(1f),
+                            ) { action(item) }
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+        val listed = layout.list.filter(::available)
+        val groups = buildList<List<Triple<ImageVector, String, () -> Unit>>> {
+            var current = mutableListOf<Triple<ImageVector, String, () -> Unit>>()
+            var group = -1
+            listed.forEach { item ->
+                if (item.group != group && current.isNotEmpty()) {
+                    add(current)
+                    current = mutableListOf()
+                }
+                group = item.group
+                current += Triple(sideIcon(item, dark), if (item == com.pixelgram.desktop.core.SideItem.Theme) (if (dark) "Night" else "Day") else item.title) { action(item) }
+            }
+            if (current.isNotEmpty()) add(current)
+        }
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.width(AccountsWidth).padding(start = 12.dp, end = 4.dp),
@@ -940,3 +965,15 @@ private fun listTitle(telegram: Telegram, settings: AppSettings): String = when 
 private const val AppTitle = "pixelGram"
 
 private val FullPlayerWidth = 380.dp
+
+internal fun sideIcon(item: com.pixelgram.desktop.core.SideItem, dark: Boolean): ImageVector = when (item) {
+    com.pixelgram.desktop.core.SideItem.Theme -> if (dark) Icons.Outlined.DarkMode else Icons.Outlined.LightMode
+    com.pixelgram.desktop.core.SideItem.Saved -> Icons.Outlined.Bookmark
+    com.pixelgram.desktop.core.SideItem.Profile -> Icons.Outlined.AccountCircle
+    com.pixelgram.desktop.core.SideItem.Contacts -> Icons.Outlined.Contacts
+    com.pixelgram.desktop.core.SideItem.Calls -> Icons.Outlined.Call
+    com.pixelgram.desktop.core.SideItem.Money -> Icons.Outlined.Diamond
+    com.pixelgram.desktop.core.SideItem.NewGroup -> Icons.Outlined.Groups
+    com.pixelgram.desktop.core.SideItem.NewChannel -> Icons.Outlined.Campaign
+    com.pixelgram.desktop.core.SideItem.Settings -> Icons.Outlined.Settings
+}

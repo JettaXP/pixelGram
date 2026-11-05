@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppSettings
@@ -105,8 +106,10 @@ fun BatterySection(settings: AppSettings) {
 
 @Composable
 private fun PowerGroup(icon: ImageVector, title: String, options: List<PowerOption>, shape: RoundedCornerShape) {
+    val locked = com.pixelgram.desktop.core.BatterySaver.saving
+    val dim by animateFloatAsState(if (locked) 0.38f else 1f, MaterialTheme.motionScheme.defaultEffectsSpec())
     var expanded by remember { mutableStateOf(false) }
-    val on = options.count { it.setting.value }
+    val on = if (locked) 0 else options.count { it.setting.value }
     val single = options.size == 1
     val toggleAll = { value: Boolean -> options.forEach { it.setting.value = value } }
     Surface(shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
@@ -116,7 +119,8 @@ private fun PowerGroup(icon: ImageVector, title: String, options: List<PowerOpti
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { if (single) toggleAll(on == 0) else expanded = !expanded }
+                    .graphicsLayer { alpha = dim }
+                    .clickable(enabled = !locked) { if (single) toggleAll(on == 0) else expanded = !expanded }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -131,11 +135,11 @@ private fun PowerGroup(icon: ImageVector, title: String, options: List<PowerOpti
                     )
                 }
                 Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End) {
-                    PixelSwitch(checked = on > 0, onCheckedChange = { toggleAll(it) })
+                    PixelSwitch(checked = on > 0, onCheckedChange = { if (!locked) toggleAll(it) })
                 }
             }
             AnimatedVisibility(
-                visible = expanded && !single,
+                visible = expanded && !single && !locked,
                 enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
                 exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
             ) {

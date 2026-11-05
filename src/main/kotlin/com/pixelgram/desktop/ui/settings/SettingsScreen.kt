@@ -1052,6 +1052,10 @@ private fun NavigationSection(settings: AppSettings) {
         { settings.sideMenuStyle.value = it },
     )
 
+    Header("Side menu items")
+    Description("Drag items by the handle to reorder them or to move them between the tiles at the top and the list. Tap an item to hide it, tap a hidden one to bring it back.")
+    SideMenuEditor(settings)
+
     Header("Settings style")
     Description("Expressive groups the sections into segmented cards. Material You shows a flat list with a highlighted pill, like Android settings.")
     SettingsStyleChoice(settings)
