@@ -146,20 +146,33 @@ private fun WalletCard(state: TdApi.TonWalletState, telegram: Telegram, modifier
             maxLines = 3,
             modifier = Modifier.align(Alignment.TopEnd).padding(16.dp).width(110.dp),
         )
-        Column(Modifier.align(Alignment.CenterStart).padding(start = 20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Outlined.Diamond, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(28.dp))
-                Text(gramText(state.gramAmount), style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Medium), color = colors.onPrimary)
-                Text("GRAM", style = MaterialTheme.typography.headlineSmall, color = colors.onPrimary.copy(alpha = 0.7f))
-            }
-        }
-        Surface(
-            onClick = onQr,
-            shape = RoundedCornerShape(16.dp),
-            color = colors.onPrimary.copy(alpha = 0.2f),
-            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 20.dp).size(56.dp),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(horizontal = 20.dp),
         ) {
-            Box(contentAlignment = Alignment.Center) { Text("QR", style = MaterialTheme.typography.titleMedium, color = colors.onPrimary) }
+            val amount = gramText(state.gramAmount)
+            val big = amount.length <= BigAmountLength
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
+                Icon(Icons.Outlined.Diamond, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(if (big) 28.dp else 22.dp))
+                Text(
+                    amount,
+                    style = (if (big) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium).copy(fontWeight = FontWeight.Medium),
+                    color = colors.onPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Text("GRAM", style = if (big) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleMedium, color = colors.onPrimary.copy(alpha = 0.7f), maxLines = 1)
+            }
+            Surface(
+                onClick = onQr,
+                shape = RoundedCornerShape(16.dp),
+                color = colors.onPrimary.copy(alpha = 0.2f),
+                modifier = Modifier.size(56.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) { Text("QR", style = MaterialTheme.typography.titleMedium, color = colors.onPrimary) }
+            }
         }
         telegram.me?.let { me ->
             EmojiText(
@@ -369,6 +382,7 @@ fun ProfileBalance(userId: Long, telegram: Telegram, modifier: Modifier = Modifi
 
 private const val NanoPerGram = 1_000_000_000L
 private const val CardRatio = 1.75f
+private const val BigAmountLength = 7
 private val DialogWidth = 420.dp
 private val DialogHeight = 760.dp
 private val ListHeight = 320.dp

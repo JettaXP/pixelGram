@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.52.2 Puffy Diamond
+
+- The wallet card no longer puts the QR button over a long balance: the amount gets smaller and stays next to the button.
+- Side menu editor: dragged items move by the distance you drag instead of jumping into the tiles.
+
 ## 0.52.1 Puffy Diamond
 
 - The chat list previews rich posts with their first picture and caption instead of "Rich message".
