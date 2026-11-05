@@ -320,6 +320,13 @@ class Telegram(
 
     var me by mutableStateOf<TdApi.User?>(null)
         internal set
+    var tonWallet by mutableStateOf<TdApi.TonWalletState?>(null)
+
+    fun tonTransactions(offset: String, onResult: (TdApi.TonWalletTransactions?) -> Unit) =
+        send(TdApi.GetTonWalletTransactions(null, offset, TonPage)) { onResult(it as? TdApi.TonWalletTransactions) }
+
+    fun tonNfts(offset: String, onResult: (TdApi.TonNfts?) -> Unit) =
+        send(TdApi.GetTonWalletNfts(offset, TonPage)) { onResult(it as? TdApi.TonNfts) }
 
     fun start() {
         scope.launch(Dispatchers.Main) {
@@ -1254,6 +1261,7 @@ class Telegram(
                 chatActions[update.chatId] = if (update.action is TdApi.ChatActionCancel) others else others + (update.senderId to update.action)
             }
             is TdApi.UpdateAnimatedEmojiMessageClicked -> emojiClicks[update.chatId to update.messageId] = update.sticker
+            is TdApi.UpdateTonWalletState -> tonWallet = update.state
             is TdApi.UpdateUser -> {
                 users[update.user.id] = update.user
                 update.user.status?.let { statuses[update.user.id] = it }
@@ -1417,6 +1425,7 @@ class Telegram(
             ))
             is TdApi.AuthorizationStateWaitPassword -> AuthState.WaitPassword(state.passwordHint ?: "")
             is TdApi.AuthorizationStateReady -> {
+                send(TdApi.LoadTonWalletState())
                 send(TdApi.GetMe()) { result ->
                     if (result is TdApi.User) {
                         val existing = findDuplicate(null, result.id)
@@ -3782,3 +3791,5 @@ private const val PhotoWindow = 100
 private const val DefaultGiftSellPeriod = 7 * 24 * 60 * 60
 private const val StreamStartBytes = 192L * 1024
 private const val ServiceBotCleanupMs = 15_000L
+
+private const val TonPage = 50

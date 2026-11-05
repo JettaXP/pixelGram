@@ -636,6 +636,7 @@ fun ChatInfoDialog(
                     else -> ""
                 }
                 if (subtitle.isNotEmpty()) Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (chat.privateUserId != 0L && !telegram.isBot(chat)) ProfileBalance(chat.privateUserId, telegram, Modifier.padding(top = 4.dp))
                 if (chat.privateUserId != 0L) {
                     val note = when {
                         com.pixelgram.desktop.core.LocalPhotos.get(chat.privateUserId) != null -> "Local photo, only on this device"

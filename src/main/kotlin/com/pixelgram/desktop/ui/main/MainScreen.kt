@@ -15,6 +15,7 @@ import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.OnEscape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.pixelgram.desktop.ui.icons.outlined.Diamond
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -182,6 +183,7 @@ fun MainScreen(
     onOpenChatInside: (Long) -> Unit = onOpenChat,
     onChatBack: (() -> Unit)? = null,
 ) {
+    WalletHost()
     LinkDialogs(settings, onOpenChat)
     val tabs = FolderLayout.tabs(telegram, settings)
     var selectedKey by rememberSaveable { mutableStateOf<ChatListKey>(ChatListKey.Main) }
@@ -586,6 +588,10 @@ private fun MainMenu(
                 Triple(Icons.Outlined.AccountCircle, "My Profile") { onNavigate(Screen.Profile) },
                 Triple(Icons.Outlined.Contacts, "Contacts") { onNavigate(Screen.Contacts) },
                 Triple(Icons.Outlined.Call, "Calls") { onNavigate(Screen.Calls) },
+            ) + listOfNotNull(
+                telegram.tonWallet?.takeIf { it.address.isNotBlank() }?.let {
+                    Triple(com.pixelgram.desktop.ui.icons.Icons.Outlined.Diamond, "Money") { WalletWindow.open = telegram }
+                },
             ),
             listOf(
                 Triple(Icons.Outlined.Groups, "New Group") { onNewChat(false) },
@@ -607,7 +613,16 @@ private fun MainMenu(
                             shapes = groupShapes(index, group.size),
                             colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
                             leadingContent = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                        ) { Text(label, style = MaterialTheme.typography.titleSmall) }
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(label, style = MaterialTheme.typography.titleSmall)
+                                if (label == "Money") {
+                                    androidx.compose.material3.Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primary) {
+                                        Text("NEW", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
