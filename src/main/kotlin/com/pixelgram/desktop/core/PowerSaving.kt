@@ -7,13 +7,13 @@ import androidx.compose.material3.MotionScheme
 object PowerSaving {
     var settings: AppSettings? = null
 
-    val stickersInPanel: Boolean get() = settings?.stickersInPanel?.value ?: true
-    val stickersInChat: Boolean get() = settings?.stickersInChat?.value ?: true
-    val emojiInMessages: Boolean get() = settings?.emojiInMessages?.value ?: true
-    val spoilerEffect: Boolean get() = settings?.spoilerEffect?.value ?: true
-    val messageAnimations: Boolean get() = settings?.messageAnimations?.value ?: true
-    val autoplayGifs: Boolean get() = settings?.autoplayGifs?.value ?: true
-    val autoplayVideos: Boolean get() = settings?.autoplayVideos?.value ?: true
+    val stickersInPanel: Boolean get() = (settings?.stickersInPanel?.value ?: true) && !BatterySaver.saving
+    val stickersInChat: Boolean get() = (settings?.stickersInChat?.value ?: true) && !BatterySaver.saving
+    val emojiInMessages: Boolean get() = (settings?.emojiInMessages?.value ?: true) && !BatterySaver.saving
+    val spoilerEffect: Boolean get() = (settings?.spoilerEffect?.value ?: true) && !BatterySaver.saving
+    val messageAnimations: Boolean get() = (settings?.messageAnimations?.value ?: true) && !BatterySaver.saving
+    val autoplayGifs: Boolean get() = (settings?.autoplayGifs?.value ?: true) && !BatterySaver.saving
+    val autoplayVideos: Boolean get() = (settings?.autoplayVideos?.value ?: true) && !BatterySaver.saving
 }
 
 object InstantMotion : MotionScheme {

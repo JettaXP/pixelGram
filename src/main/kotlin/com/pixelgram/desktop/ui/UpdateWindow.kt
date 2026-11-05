@@ -61,7 +61,7 @@ fun runUpdateWindow(job: ApplyUpdate.Job) {
                 state = rememberWindowState(position = WindowPosition(Alignment.Center), size = DpSize(WindowWidth, WindowHeight)),
             ) {
                 PixelTheme(settings) {
-                    WindowDraggableArea { UpdatingCard(spin = settings.interfaceAnimations.value) }
+                    WindowDraggableArea { UpdatingCard(spin = settings.interfaceAnimations.value && !com.pixelgram.desktop.core.BatterySaver.saving) }
                 }
             }
         }

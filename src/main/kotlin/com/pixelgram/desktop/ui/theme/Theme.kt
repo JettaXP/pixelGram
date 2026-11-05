@@ -72,6 +72,7 @@ val LocalAppSettings = androidx.compose.runtime.staticCompositionLocalOf<AppSett
 @Composable
 fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     PowerSaving.settings = settings
+    com.pixelgram.desktop.core.BatterySaver.start()
     com.pixelgram.desktop.core.I18n.settings = settings
     com.pixelgram.desktop.core.WindowTitle.settings = settings
     com.pixelgram.desktop.core.LocalNames.settings = settings
@@ -81,7 +82,7 @@ fun PixelTheme(settings: AppSettings, content: @Composable () -> Unit) {
     val typography = font.family?.takeIf { font.everywhere }?.let(::typographyWith) ?: PixelTypography
     MaterialExpressiveTheme(
         colorScheme = appColorScheme(settings),
-        motionScheme = (if (settings.interfaceAnimations.value) MotionScheme.expressive() else InstantMotion).also { com.pixelgram.desktop.ui.components.Motion.scheme = it },
+        motionScheme = (if (settings.interfaceAnimations.value && !com.pixelgram.desktop.core.BatterySaver.saving) MotionScheme.expressive() else InstantMotion).also { com.pixelgram.desktop.ui.components.Motion.scheme = it },
         typography = typography,
         shapes = com.pixelgram.desktop.ui.components.cornerShapes(corners),
     ) {

@@ -1662,3 +1662,6 @@ Remove local photo	Убрать локальное фото
 Remove photo for me	Убрать фото для себя
 Use this photo	Куда поставить фото
 {file} has the .{ext} extension. It can run programs on your computer. Open it only if you trust the sender.	У файла {file} расширение .{ext}. Он может запускать программы на компьютере. Открывайте его, только если доверяете отправителю.
+Save Power on Low Battery	Экономия при низком заряде
+Battery saver is on, animations are paused	Включена экономия заряда, анимации на паузе
+Turn off all animations while your laptop is in battery saver mode	Отключать все анимации, пока ноутбук в режиме экономии заряда

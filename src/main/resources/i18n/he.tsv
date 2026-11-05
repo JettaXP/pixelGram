@@ -1654,3 +1654,6 @@ Remove local photo	הסר תמונה מקומית
 Remove photo for me	הסר את התמונה שלי
 Use this photo	היכן להגדיר את התמונה
 {file} has the .{ext} extension. It can run programs on your computer. Open it only if you trust the sender.	לקובץ {file} יש סיומת .{ext}. הוא יכול להפעיל תוכנות במחשב. פתחו אותו רק אם אתם סומכים על השולח.
+Save Power on Low Battery	חיסכון בסוללה חלשה
+Battery saver is on, animations are paused	חיסכון בסוללה פעיל, האנימציות מושהות
+Turn off all animations while your laptop is in battery saver mode	כבה את כל האנימציות כשהמחשב הנייד במצב חיסכון בסוללה

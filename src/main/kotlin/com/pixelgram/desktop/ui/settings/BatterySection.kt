@@ -90,6 +90,17 @@ fun BatterySection(settings: AppSettings) {
             RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 20.dp, bottomEnd = 20.dp),
         )
     }
+    Column(Modifier.padding(top = 12.dp)) {
+        SegmentedGroup {
+            SwitchRow(
+                0,
+                1,
+                "Save Power on Low Battery",
+                if (com.pixelgram.desktop.core.BatterySaver.active) "Battery saver is on, animations are paused" else "Turn off all animations while your laptop is in battery saver mode",
+                settings.saveOnLowBattery.value,
+            ) { settings.saveOnLowBattery.value = it }
+        }
+    }
 }
 
 @Composable
