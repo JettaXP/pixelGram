@@ -139,11 +139,11 @@ private fun WalletDialog(telegram: Telegram, onDismiss: () -> Unit) {
 private fun WalletCard(state: TdApi.TonWalletState, telegram: Telegram, modifier: Modifier, onQr: () -> Unit) {
     val me = telegram.me
     val name = me?.let { listOf(it.firstName, it.lastName).filter(String::isNotBlank).joinToString(" ") }.orEmpty()
-    GramCard(state.address, state.gramAmount, name, modifier, onQr)
+    GramCard(state.address, state.gramAmount, name, modifier, onQr, telegram, own = true)
 }
 
 @Composable
-private fun GramCard(address: String, nano: Long, owner: String, modifier: Modifier, onQr: (() -> Unit)?) {
+private fun GramCard(address: String, nano: Long, owner: String, modifier: Modifier, onQr: (() -> Unit)?, telegram: Telegram, own: Boolean) {
     val colors = MaterialTheme.colorScheme
     val tiltX = remember { androidx.compose.animation.core.Animatable(0f) }
     val tiltY = remember { androidx.compose.animation.core.Animatable(0f) }
@@ -214,6 +214,7 @@ private fun GramCard(address: String, nano: Long, owner: String, modifier: Modif
                 }
             }
         }
+        if (own) CardStickers(telegram, Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 8.dp))
         if (owner.isNotBlank()) {
             EmojiText(
                 owner.uppercase(),
@@ -385,6 +386,27 @@ private fun ReceiveDialog(address: String, onDismiss: () -> Unit) {
     )
 }
 
+object OwnCardStickers {
+    var list by mutableStateOf<List<TdApi.Sticker>?>(null)
+}
+
+@Composable
+private fun CardStickers(telegram: Telegram, modifier: Modifier) {
+    LaunchedEffect(Unit) {
+        if (OwnCardStickers.list != null) return@LaunchedEffect
+        telegram.tonNfts("") { result -> OwnCardStickers.list = result?.nfts.orEmpty().mapNotNull { it.sticker }.take(CardStickerCount) }
+    }
+    val stickers = OwnCardStickers.list.orEmpty()
+    if (stickers.isEmpty()) return
+    Row(horizontalArrangement = Arrangement.spacedBy((-24).dp), verticalAlignment = Alignment.Bottom, modifier = modifier) {
+        stickers.forEachIndexed { index, sticker ->
+            Box(Modifier.graphicsLayer { rotationZ = if (index % 2 == 0) -8f else 8f }) {
+                StickerView(sticker, telegram, CardStickerSize)
+            }
+        }
+    }
+}
+
 class UserWallet(val address: String, val nano: Long)
 
 @Composable
@@ -445,11 +467,19 @@ private fun BalanceCardDialog(userId: Long, wallet: UserWallet, own: Boolean, te
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
-                GramCard(wallet.address, wallet.nano, if (own) name else name, Modifier, null)
+                GramCard(wallet.address, wallet.nano, name, Modifier, null, telegram, own)
                 val mine = telegram.tonWallet?.address?.isNotBlank() == true
                 when {
                     own -> Button(onClick = { onDismiss(); WalletWindow.open = telegram }, modifier = Modifier.height(48.dp)) { Text("Open My Wallet") }
                     !mine -> FilledTonalButton(onClick = { how = true }, modifier = Modifier.height(48.dp)) { Text("How does it work?") }
+                    else -> Button(
+                        onClick = { runCatching { java.awt.Desktop.getDesktop().browse(java.net.URI("ton://transfer/${wallet.address}")) } },
+                        modifier = Modifier.height(48.dp),
+                    ) {
+                        Icon(Icons.Outlined.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Send Money")
+                    }
                 }
             }
         }
@@ -485,6 +515,8 @@ private const val NanoPerGram = 1_000_000_000L
 private const val CardRatio = 1.75f
 private const val BigAmountLength = 7
 private const val TiltPerPx = 0.25f
+private const val CardStickerCount = 2
+private val CardStickerSize = 96.dp
 private const val MaxTilt = 18f
 private val DialogWidth = 420.dp
 private val DialogHeight = 760.dp
