@@ -23,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,17 +59,17 @@ private fun unflatten(entries: List<String>): SideLayout {
 @Composable
 fun SideMenuEditor(settings: AppSettings) {
     var entries by remember { mutableStateOf(flatten(SideMenuLayout.read(settings))) }
-    val latest by rememberUpdatedState(entries)
     var dragging by remember { mutableStateOf<String?>(null) }
     var offset by remember { mutableFloatStateOf(0f) }
     val rowPx = with(LocalDensity.current) { (RowHeight + RowGap).toPx() }
     val placement = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.unit.IntOffset>()
-    fun commit(next: List<String>) {
+    fun commit(next: List<String>): Boolean {
         val hiddenAt = next.indexOf(HiddenMark)
-        if (next.indexOf(SideItem.Settings.name) > hiddenAt) return
-        if (next.first() != TilesMark || next.indexOf(ListMark) > hiddenAt) return
+        if (next.indexOf(SideItem.Settings.name) > hiddenAt) return false
+        if (next.first() != TilesMark || next.indexOf(ListMark) > hiddenAt) return false
         entries = next
         SideMenuLayout.write(settings, unflatten(next))
+        return true
     }
     fun toggle(name: String) {
         val list = entries.toMutableList()
@@ -159,16 +158,14 @@ fun SideMenuEditor(settings: AppSettings) {
                                     ) { change, amount ->
                                         change.consume()
                                         offset += amount.y
-                                        val list = latest
+                                        val list = entries
                                         val from = list.indexOf(key)
                                         val steps = (offset / rowPx).roundToInt()
                                         if (steps == 0 || from < 0) return@detectDragGestures
                                         val target = (from + steps).coerceIn(1, list.lastIndex)
                                         if (target == from) return@detectDragGestures
                                         val next = list.toMutableList().apply { add(target, removeAt(from)) }
-                                        val before = latest
-                                        commit(next)
-                                        if (latest !== before) offset -= (target - from) * rowPx
+                                        if (commit(next)) offset -= (target - from) * rowPx
                                     }
                                 },
                         )
