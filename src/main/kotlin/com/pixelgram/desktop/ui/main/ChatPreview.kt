@@ -105,7 +105,7 @@ fun ChatPreview(chat: ChatState, telegram: Telegram, settings: AppSettings, onOp
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.align(Alignment.End).padding(12.dp)) {
                     if (chat.unreadCount > 0 || chat.markedUnread) {
-                        com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = {
+                        com.pixelgram.desktop.ui.components.expressive.OutlinedButton(onClick = {
                             telegram.markChatRead(chat)
                             onDismiss()
                         }) { Text("Mark as read") }

@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
@@ -131,7 +130,8 @@ fun TextButton(
             val container = if (danger.value) scheme.error else colors.contentColor
             Button(
                 onClick = onClick,
-                modifier = modifier.fillMaxWidth().heightIn(min = DialogButtonHeight),
+                modifier = modifier.heightIn(min = DialogButtonHeight),
+                contentPadding = DialogButtonPadding,
                 enabled = enabled,
                 shape = shape,
                 shapes = shapes,
@@ -144,13 +144,14 @@ fun TextButton(
             val scheme = MaterialTheme.colorScheme
             val danger = remember { mutableStateOf(false) }
             val red = danger.value || colors.contentColor == scheme.error
-            FilledTonalButton(
+            OutlinedButton(
                 onClick = onClick,
-                modifier = modifier.fillMaxWidth().heightIn(min = DialogButtonHeight),
+                modifier = modifier.heightIn(min = DialogButtonHeight),
                 enabled = enabled,
                 shape = shape,
                 shapes = shapes,
-                colors = if (red) ButtonDefaults.filledTonalButtonColors(scheme.errorContainer, scheme.onErrorContainer) else ButtonDefaults.filledTonalButtonColors(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = if (red) scheme.error else colors.contentColor),
+                contentPadding = DialogButtonPadding,
                 interactionSource = interactionSource,
             ) { CompositionLocalProvider(LocalDangerSink provides danger) { content() } }
             return

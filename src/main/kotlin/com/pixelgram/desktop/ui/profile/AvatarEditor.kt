@@ -163,7 +163,7 @@ private fun CameraDialog(onDismiss: () -> Unit, onCaptured: (File) -> Unit) {
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.align(Alignment.End)) {
-                    com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss) { Text("Cancel") }
+                    com.pixelgram.desktop.ui.components.expressive.OutlinedButton(onClick = onDismiss) { Text("Cancel") }
                     Button(onClick = { session?.capture()?.let(onCaptured) }, enabled = frame != null) {
                         Icon(Icons.Outlined.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
                         Text("Take photo", modifier = Modifier.padding(start = 8.dp))

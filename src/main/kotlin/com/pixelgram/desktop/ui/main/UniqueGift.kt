@@ -187,7 +187,7 @@ fun NftDialog(telegram: Telegram, name: String, received: TdApi.ReceivedGift? = 
                             copied = true
                         }) { Text(if (copied) "Link copied" else "Copy link") }
                     }
-                    com.pixelgram.desktop.ui.components.expressive.FilledTonalButton(onClick = onDismiss) { Text("Close") }
+                    com.pixelgram.desktop.ui.components.expressive.OutlinedButton(onClick = onDismiss) { Text("Close") }
                 }
             }
             gift?.let { NftMenu(it, received, telegram, onChanged, onDismiss, Modifier.align(Alignment.TopEnd).padding(8.dp)) }

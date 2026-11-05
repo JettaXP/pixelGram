@@ -1,7 +1,7 @@
 package com.pixelgram.desktop.ui.components.expressive
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,22 +11,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Surface
-import androidx.compose.material3.toShape
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -78,32 +70,25 @@ fun AlertDialog(
 ) {
     val colors = MaterialTheme.colorScheme
     Surface(
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = RoundedCornerShape(DialogCorner),
         color = colors.surfaceContainerHigh,
         modifier = Modifier.widthIn(min = MinWidth, max = MaxWidth),
     ) {
         CompositionLocalProvider(LocalDialogSlot provides DialogSlot.None) {
             Column(Modifier.padding(DialogPadding)) {
                 if (icon != null) {
-                    Box(
-                        Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .size(IconBox)
-                            .clip(MaterialShapes.Cookie9Sided.toShape())
-                            .background(colors.secondaryContainer),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CompositionLocalProvider(LocalContentColor provides colors.onSecondaryContainer) { icon() }
+                    Box(Modifier.align(Alignment.CenterHorizontally)) {
+                        CompositionLocalProvider(LocalContentColor provides colors.secondary) { icon() }
                     }
                     Spacer(Modifier.height(16.dp))
                 }
                 if (title != null) {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = if (icon != null) Alignment.Center else Alignment.CenterStart) {
                         CompositionLocalProvider(LocalContentColor provides colors.onSurface) {
                             ProvideTextStyle(
                                 MaterialTheme.typography.headlineSmall.copy(
-                                    fontWeight = FontWeight.Medium,
-                                    textAlign = TextAlign.Center,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+                                    textAlign = if (icon != null) TextAlign.Center else TextAlign.Start,
                                 ),
                             ) { title() }
                         }
@@ -119,10 +104,10 @@ fun AlertDialog(
                     Spacer(Modifier.height(24.dp))
                 }
                 DialogButtonRow {
-                    CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Confirm) { confirmButton() }
                     if (dismissButton != null) {
                         CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Dismiss) { dismissButton() }
                     }
+                    CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Confirm) { confirmButton() }
                 }
             }
         }
@@ -132,40 +117,19 @@ fun AlertDialog(
 @Composable
 fun DialogActions(dismiss: (@Composable () -> Unit)? = null, confirm: @Composable () -> Unit) {
     DialogButtonRow {
-        CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Confirm) { confirm() }
         if (dismiss != null) CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Dismiss) { dismiss() }
+        CompositionLocalProvider(LocalDialogSlot provides DialogSlot.Confirm) { confirm() }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DialogButtonRow(content: @Composable () -> Unit) {
-    val gap = with(LocalDensity.current) { ButtonGap.roundToPx() }
-    Layout(content, Modifier.fillMaxWidth()) { measurables, constraints ->
-        val width = constraints.maxWidth
-        val count = measurables.size
-        if (count == 0) return@Layout layout(width, 0) {}
-        val share = (width - gap * (count - 1)) / count
-        val fits = measurables.all { it.maxIntrinsicWidth(Constraints.Infinity) <= share }
-        if (fits) {
-            val placeables = measurables.map { it.measure(Constraints.fixedWidth(share)) }
-            val height = placeables.maxOf { it.height }
-            layout(width, height) {
-                placeables.reversed().forEachIndexed { index, placeable ->
-                    placeable.place(index * (share + gap), (height - placeable.height) / 2)
-                }
-            }
-        } else {
-            val placeables = measurables.map { it.measure(Constraints.fixedWidth(width)) }
-            val height = placeables.sumOf { it.height } + gap * (count - 1)
-            layout(width, height) {
-                var y = 0
-                placeables.forEach { placeable ->
-                    placeable.place(0, y)
-                    y += placeable.height + gap
-                }
-            }
-        }
-    }
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(ButtonGap, Alignment.End),
+        verticalArrangement = Arrangement.spacedBy(ButtonGap),
+    ) { content() }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -186,6 +150,7 @@ private const val StartScale = 0.88f
 private val MinWidth = 280.dp
 private val MaxWidth = 560.dp
 private val DialogPadding = 24.dp
-private val IconBox = 56.dp
+private val DialogCorner = 32.dp
 private val ButtonGap = 8.dp
-val DialogButtonHeight = 48.dp
+val DialogButtonHeight = 40.dp
+val DialogButtonPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 24.dp)
