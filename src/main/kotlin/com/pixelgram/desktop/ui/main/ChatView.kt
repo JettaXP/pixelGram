@@ -82,6 +82,7 @@ import com.pixelgram.desktop.telegram.MessageStatus
 import com.pixelgram.desktop.ui.icons.outlined.ErrorOutline
 import com.pixelgram.desktop.ui.icons.outlined.Schedule
 import com.pixelgram.desktop.ui.icons.outlined.NotificationsOff
+import com.pixelgram.desktop.ui.icons.outlined.InsertDriveFile
 import com.pixelgram.desktop.ui.icons.outlined.Alarm
 import com.pixelgram.desktop.ui.icons.outlined.CalendarMonth
 import com.pixelgram.desktop.ui.icons.filled.DoneAll
@@ -1182,8 +1183,8 @@ private fun ChatViewContent(
                     telegram.editMessage(edited, text, entities)
                     editing = null
                 } else if (attachments.isNotEmpty()) {
-                    val photos = !asFiles && attachments.all(Attachments::isMedia)
                     val how = sendWith ?: AttachmentSend()
+                    val photos = !asFiles && !how.asFile && attachments.all(Attachments::isMedia)
                     telegram.sendFiles(
                         chat.id,
                         attachments.toList(),
@@ -3002,6 +3003,7 @@ private fun Composer(
                                             },
                                         )
                                     }
+                                    if (hasAttachments) item("Send as file", Icons.Outlined.InsertDriveFile) { onSendWith(AttachmentSend(asFile = true)) }
                                     if (!saved) item("Send without sound", Icons.Outlined.NotificationsOff) { onSendWith(AttachmentSend(silent = true)) }
                                     item(if (saved) "Set a reminder" else "Schedule message", Icons.Outlined.CalendarMonth) { scheduleFor = true }
                                     if (person) item("Send when online", Icons.Outlined.Alarm) { onSendWith(AttachmentSend(schedule = TdApi.MessageSchedulingStateSendWhenOnline())) }

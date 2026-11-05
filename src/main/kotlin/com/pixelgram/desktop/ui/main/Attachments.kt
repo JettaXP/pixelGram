@@ -271,7 +271,7 @@ object Attachments {
     }
 }
 
-class AttachmentSend(val silent: Boolean = false, val schedule: TdApi.MessageSchedulingState? = null)
+class AttachmentSend(val silent: Boolean = false, val schedule: TdApi.MessageSchedulingState? = null, val asFile: Boolean = false)
 
 @Composable
 fun AttachmentsPanel(

@@ -50,6 +50,12 @@ import com.pixelgram.desktop.ui.components.expressive.BasicAlertDialog
 import com.pixelgram.desktop.ui.components.expressive.Button
 import com.pixelgram.desktop.ui.components.expressive.TextButton
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.graphics.toPixelMap
+import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.Image
+import com.pixelgram.desktop.ui.icons.filled.Close
 
 private class Hsv(val hue: Float, val saturation: Float, val value: Float) {
     val color: Color get() = Color.hsv(hue, saturation, value)
@@ -87,6 +93,8 @@ private val Presets = listOf(
 @Composable
 internal fun ColorPickerDialog(initial: Color, onDismiss: () -> Unit, onPick: (Color) -> Unit) {
     var hsv by remember { mutableStateOf(Hsv.of(initial)) }
+    var photo by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val color = hsv.color
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -100,7 +108,9 @@ internal fun ColorPickerDialog(initial: Color, onDismiss: () -> Unit, onPick: (C
                     Box(Modifier.size(width = 28.dp, height = 28.dp).clip(RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp)).background(initial))
                     Box(Modifier.size(width = 28.dp, height = 28.dp).clip(RoundedCornerShape(topEnd = 14.dp, bottomEnd = 14.dp)).background(color))
                 }
-                SaturationValueSquare(hsv) { hsv = it }
+                val shown = photo
+                if (shown != null) PhotoSampler(shown, color, onClose = { photo = null }) { hsv = Hsv.of(it) }
+                else SaturationValueSquare(hsv) { hsv = it }
                 GradientSlider(
                     value = hsv.hue / 360f,
                     brush = Brush.horizontalGradient((0..6).map { Color.hsv(it * 60f % 360f, 1f, 1f) }),
@@ -130,8 +140,28 @@ internal fun ColorPickerDialog(initial: Color, onDismiss: () -> Unit, onPick: (C
                     NumberField("B", blue, 255, Modifier.weight(1f)) { hsv = Hsv.of(Color(red, green, it)) }
                 }
                 val hex = "%06X".format(color.toArgb() and 0xFFFFFF)
-                CompactField("#", hex, Modifier.fillMaxWidth()) { typed ->
-                    typed.removePrefix("#").takeIf { it.length == 6 }?.toIntOrNull(16)?.let { hsv = Hsv.of(Color(0xFF000000.toInt() or it)) }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CompactField("#", hex, Modifier.weight(1f)) { typed ->
+                        typed.removePrefix("#").takeIf { it.length == 6 }?.toIntOrNull(16)?.let { hsv = Hsv.of(Color(0xFF000000.toInt() or it)) }
+                    }
+                    Surface(
+                        onClick = {
+                            scope.launch {
+                                val file = Attachments.pick().firstOrNull() ?: return@launch
+                                val image = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    runCatching { org.jetbrains.skia.Image.makeFromEncoded(file.readBytes()).toComposeImageBitmap() }.getOrNull()
+                                }
+                                if (image != null) photo = image
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (photo != null) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
+                        modifier = Modifier.size(FieldHeight).focusProperties { canFocus = false },
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            androidx.compose.material3.Icon(Icons.Outlined.Image, contentDescription = "Pick from photo", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                     Presets.forEach { preset ->
@@ -155,6 +185,79 @@ internal fun ColorPickerDialog(initial: Color, onDismiss: () -> Unit, onPick: (C
                     com.pixelgram.desktop.ui.components.expressive.OutlinedButton(onClick = onDismiss, modifier = Modifier.focusProperties { canFocus = false }) { Text("Cancel") }
                     Button(onClick = { onPick(color) }, modifier = Modifier.focusProperties { canFocus = false }) { Text("Done") }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhotoSampler(photo: androidx.compose.ui.graphics.ImageBitmap, color: Color, onClose: () -> Unit, onPick: (Color) -> Unit) {
+    val pixels = remember(photo) { photo.toPixelMap() }
+    var at by remember(photo) { mutableStateOf<Offset?>(null) }
+    BoxWithConstraints(
+        Modifier
+            .fillMaxWidth()
+            .height(SquareHeight)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+    ) {
+        val width = constraints.maxWidth.toFloat()
+        val height = constraints.maxHeight.toFloat()
+        val scale = minOf(width / photo.width, height / photo.height)
+        val shownWidth = photo.width * scale
+        val shownHeight = photo.height * scale
+        val left = (width - shownWidth) / 2
+        val top = (height - shownHeight) / 2
+        val pick = { position: Offset ->
+            val x = position.x.coerceIn(left, left + shownWidth - 1f)
+            val y = position.y.coerceIn(top, top + shownHeight - 1f)
+            at = Offset(x, y)
+            val px = ((x - left) / scale).toInt().coerceIn(0, photo.width - 1)
+            val py = ((y - top) / scale).toInt().coerceIn(0, photo.height - 1)
+            onPick(pixels[px, py].copy(alpha = 1f))
+        }
+        Canvas(
+            Modifier.matchParentSize().pointerInput(photo, width, height) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    pick(down.position)
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull() ?: break
+                        if (!change.pressed) break
+                        pick(change.position)
+                        change.consume()
+                    }
+                }
+            },
+        ) {
+            drawImage(
+                photo,
+                dstOffset = IntOffset(left.roundToInt(), top.roundToInt()),
+                dstSize = androidx.compose.ui.unit.IntSize(shownWidth.roundToInt(), shownHeight.roundToInt()),
+                filterQuality = androidx.compose.ui.graphics.FilterQuality.Medium,
+            )
+        }
+        val density = LocalDensity.current
+        val half = with(density) { (ThumbSize / 2).roundToPx() }
+        at?.let { point ->
+            Box(
+                Modifier
+                    .offset { IntOffset(point.x.roundToInt() - half, point.y.roundToInt() - half) }
+                    .size(ThumbSize)
+                    .shadow(2.dp, CircleShape)
+                    .border(3.dp, Color.White, CircleShape)
+                    .background(color, CircleShape),
+            )
+        }
+        Surface(
+            onClick = onClose,
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
+            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(32.dp).focusProperties { canFocus = false },
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                androidx.compose.material3.Icon(Icons.Filled.Close, contentDescription = "Close", modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -250,7 +353,7 @@ private fun CompactField(label: String, value: String, modifier: Modifier, onVal
     var text by remember(value) { mutableStateOf(value) }
     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = modifier.height(FieldHeight)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
-            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            androidx.compose.material3.Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(8.dp))
             BasicTextField(
                 value = text,
