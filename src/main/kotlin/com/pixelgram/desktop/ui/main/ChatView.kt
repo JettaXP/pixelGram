@@ -36,6 +36,7 @@ import com.pixelgram.desktop.telegram.contentText
 import com.pixelgram.desktop.core.DoubleClickAction
 import androidx.compose.ui.unit.IntSize
 import com.pixelgram.desktop.ui.icons.filled.MoreVert
+import com.pixelgram.desktop.ui.icons.outlined.SideSheet
 import com.pixelgram.desktop.ui.icons.automirrored.outlined.Forward
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.isSecondaryPressed
@@ -54,6 +55,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.AnimatedContent
 import kotlinx.coroutines.delay
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.draw.drawBehind
@@ -638,6 +640,12 @@ private fun ChatViewContent(
             }
             IconButton(onClick = { MessageSearch.start(chat.id) }) {
                 Icon(Icons.Filled.Search, contentDescription = "Search in chat")
+            }
+            IconToggleButton(
+                checked = SidePanel.showing(SideContent.Profile),
+                onCheckedChange = { SidePanel.toggle(SideContent.Profile) },
+            ) {
+                Icon(Icons.Outlined.SideSheet, contentDescription = "Profile panel")
             }
             Box {
                 var headerMenu by remember(chat.id) { mutableStateOf<DpOffset?>(null) }
@@ -2258,6 +2266,7 @@ private fun emDash(before: String, typed: TextFieldValue): TextFieldValue {
     return TextFieldValue(typed.text.substring(0, end - 2) + replacement + typed.text.substring(end), TextRange(end - 1))
 }
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 private fun Composer(
     chatId: Long,
@@ -2881,15 +2890,88 @@ private fun Composer(
                 }
             }
         }
+        val mediaPanel: @Composable (Boolean) -> Unit = { docked ->
+            MediaPanel(
+                telegram = telegram,
+                chatId = chatId,
+                tab = mediaTab,
+                onTab = {
+                    mediaTab = it
+                    mediaSearch = null
+                },
+                search = mediaSearch,
+                onSearch = { query ->
+                    mediaSearch = query
+                    if (query == null) focus.requestFocus()
+                },
+                onEmoji = insert,
+                onCustomEmoji = insertCustom,
+                onSendEmoji = { emoji, id ->
+                    telegram.sendText(chatId, emoji, replyTo?.id ?: 0, id?.let { arrayOf(TdApi.TextEntity(0, emoji.length, TdApi.TextEntityTypeCustomEmoji(it))) } ?: emptyArray())
+                    onCancelReply()
+                    emojiOpen = false
+                },
+                docked = docked,
+            whenOnline = telegram.chats[chatId]?.let { it.privateUserId != 0L && !telegram.isSavedMessages(chatId) && !telegram.isBot(it) } == true,
+                onSticker = { sticker, how ->
+                    telegram.sendSticker(chatId, sticker, replyTo?.id ?: 0, how.silent, how.schedule)
+                    onCancelReply()
+                    emojiOpen = false
+                },
+                onGif = { animation, how, caption ->
+                    telegram.sendAnimation(chatId, animation, replyTo?.id ?: 0, how.silent, how.schedule, caption)
+                    onCancelReply()
+                    emojiOpen = false
+                },
+                onInline = { queryId, resultId ->
+                    telegram.sendInlineResult(chatId, queryId, resultId, replyTo?.id ?: 0)
+                    onCancelReply()
+                    emojiOpen = false
+                },
+            )
+        }
+        val latestPanel = androidx.compose.runtime.rememberUpdatedState(mediaPanel)
+        androidx.compose.runtime.DisposableEffect(Unit) {
+            val slot: @Composable () -> Unit = { latestPanel.value(true) }
+            SidePanel.media = slot
+            onDispose { if (SidePanel.media === slot) SidePanel.media = null }
+        }
         Box {
             var dismissedAt by remember { mutableStateOf(0L) }
+            var overButton by remember { mutableStateOf(false) }
+            var overPanel by remember { mutableStateOf(false) }
+            val docked = SidePanel.showing(SideContent.Media)
+            LaunchedEffect(overButton, overPanel, docked) {
+                when {
+                    docked -> {
+                        emojiOpen = false
+                        overButton = false
+                        overPanel = false
+                    }
+                    overButton || overPanel -> if (!emojiOpen && System.currentTimeMillis() - dismissedAt > PanelReopenGuardMs) {
+                        delay(HoverOpenMs)
+                        emojiOpen = true
+                    }
+                    emojiOpen && mediaSearch == null -> {
+                        delay(HoverCloseMs)
+                        emojiOpen = false
+                    }
+                }
+            }
             IconToggleButton(
-                checked = emojiOpen,
-                onCheckedChange = { open ->
-                    if (!open || System.currentTimeMillis() - dismissedAt > PanelReopenGuardMs) emojiOpen = open
+                checked = emojiOpen || docked,
+                onCheckedChange = {
+                    emojiOpen = false
+                    overButton = false
+                    overPanel = false
+                    dismissedAt = System.currentTimeMillis()
+                    SidePanel.toggle(SideContent.Media)
                     focus.requestFocus()
                 },
-                modifier = Modifier.focusProperties { canFocus = false },
+                modifier = Modifier
+                    .focusProperties { canFocus = false }
+                    .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { overButton = true }
+                    .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Exit) { overButton = false },
             ) {
                 Icon(Icons.Outlined.EmojiEmotions, contentDescription = "Emoji")
             }
@@ -2919,43 +3001,11 @@ private fun Composer(
                         exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
                             scaleOut(MaterialTheme.motionScheme.fastSpatialSpec(), targetScale = PanelScaleFrom, transformOrigin = TransformOrigin(1f, 1f)),
                     ) {
-                    MediaPanel(
-                        telegram = telegram,
-                        chatId = chatId,
-                        tab = mediaTab,
-                        onTab = {
-                            mediaTab = it
-                            mediaSearch = null
-                        },
-                        search = mediaSearch,
-                        onSearch = { query ->
-                            mediaSearch = query
-                            if (query == null) focus.requestFocus()
-                        },
-                        onEmoji = insert,
-                        onCustomEmoji = insertCustom,
-                        onSendEmoji = { emoji, id ->
-                            telegram.sendText(chatId, emoji, replyTo?.id ?: 0, id?.let { arrayOf(TdApi.TextEntity(0, emoji.length, TdApi.TextEntityTypeCustomEmoji(it))) } ?: emptyArray())
-                            onCancelReply()
-                            emojiOpen = false
-                        },
-                        whenOnline = telegram.chats[chatId]?.let { it.privateUserId != 0L && !telegram.isSavedMessages(chatId) && !telegram.isBot(it) } == true,
-                        onSticker = { sticker, how ->
-                            telegram.sendSticker(chatId, sticker, replyTo?.id ?: 0, how.silent, how.schedule)
-                            onCancelReply()
-                            emojiOpen = false
-                        },
-                        onGif = { animation, how, caption ->
-                            telegram.sendAnimation(chatId, animation, replyTo?.id ?: 0, how.silent, how.schedule, caption)
-                            onCancelReply()
-                            emojiOpen = false
-                        },
-                        onInline = { queryId, resultId ->
-                            telegram.sendInlineResult(chatId, queryId, resultId, replyTo?.id ?: 0)
-                            onCancelReply()
-                            emojiOpen = false
-                        },
-                    )
+                    Box(
+                        Modifier
+                            .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { overPanel = true }
+                            .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Exit) { overPanel = false },
+                    ) { mediaPanel(false) }
                     }
                 }
             }
@@ -3164,3 +3214,6 @@ private fun SuggestedPhotoCard(message: UiMessage, photo: TdApi.ChatPhoto, teleg
 
 private val SuggestPhotoSize = 120.dp
 private val SuggestCardWidth = 280.dp
+
+private const val HoverOpenMs = 120L
+private const val HoverCloseMs = 350L

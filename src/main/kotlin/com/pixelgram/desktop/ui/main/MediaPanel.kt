@@ -107,12 +107,13 @@ fun MediaPanel(
     search: String? = null,
     onSearch: (String?) -> Unit = {},
     whenOnline: Boolean = false,
+    docked: Boolean = false,
 ) {
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shadowElevation = 6.dp,
-        modifier = Modifier.size(width = PanelWidth, height = PanelHeight),
+        shadowElevation = if (docked) 0.dp else 6.dp,
+        modifier = if (docked) Modifier.fillMaxSize() else Modifier.size(width = PanelWidth, height = PanelHeight),
     ) {
         Column {
             PrimaryTabRow(selectedTabIndex = tab, containerColor = Color.Transparent) {

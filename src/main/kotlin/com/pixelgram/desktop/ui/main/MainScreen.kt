@@ -229,7 +229,17 @@ fun MainScreen(
 
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            val playerSpace = if (FullPlayer.open && com.pixelgram.desktop.core.AudioPlayer.current != null) FullPlayerWidth else 0.dp
+            val sideChat = openChatId?.let { telegram.chats[it] }
+            val sideKind = when {
+                SidePanel.playerUp -> SideKind.Player
+                sideChat == null -> null
+                SidePanel.content == SideContent.Media && SidePanel.media != null -> SideKind.Media
+                SidePanel.content == SideContent.Profile -> SideKind.Profile
+                else -> null
+            }
+            val sideOpen = sideChat != null && SidePanel.content != null
+            androidx.compose.runtime.SideEffect { SidePanel.shown = sideOpen }
+            val playerSpace = if (sideKind != null) FullPlayerWidth else 0.dp
             val pushedRail = if (settings.sideMenuStyle.value == com.pixelgram.desktop.core.SideMenuStyle.Push) with(density) { railWidthPx.toDp() } else 0.dp
             val room = (maxWidth - MinChatWidth - RailWidth - playerSpace - pushedRail).value
             val maxListWidth = minOf(room, maxWidth.value * MaxListShare).coerceAtLeast(CompactWidth.value)
@@ -420,19 +430,43 @@ fun MainScreen(
                     }
                 }
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = FullPlayer.open && com.pixelgram.desktop.core.AudioPlayer.current != null,
+                    visible = sideKind != null,
                     enter = expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), expandFrom = Alignment.Start) +
                         androidx.compose.animation.slideInVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) { -it / 3 } + fadeIn(fade),
                     exit = shrinkHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), shrinkTowards = Alignment.Start) +
                         androidx.compose.animation.slideOutVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) { -it / 3 } + fadeOut(fade),
                 ) {
-                    FullPlayerPanel(
-                        telegram,
-                        Modifier
+                    var lastKind by remember { mutableStateOf(SideKind.Player) }
+                    if (sideKind != null) lastKind = sideKind
+                    AnimatedContent(
+                        targetState = lastKind,
+                        transitionSpec = { com.pixelgram.desktop.ui.components.Motion.content() },
+                        modifier = Modifier
                             .width(FullPlayerWidth)
                             .fillMaxHeight()
-                            .padding(top = if (AppPaths.isMac) 8.dp else 8.dp, end = 8.dp, bottom = 8.dp),
-                    )
+                            .padding(top = 8.dp, end = 8.dp, bottom = 8.dp),
+                    ) { kind ->
+                        when (kind) {
+                            SideKind.Player -> FullPlayerPanel(telegram, Modifier.fillMaxSize())
+                            SideKind.Media -> Box(Modifier.fillMaxSize()) { SidePanel.media?.invoke() }
+                            SideKind.Profile -> Surface(
+                                shape = MaterialTheme.shapes.extraLarge,
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                val current = sideChat
+                                if (current != null) {
+                                    AnimatedContent(
+                                        targetState = current,
+                                        contentKey = { it.id },
+                                        transitionSpec = { com.pixelgram.desktop.ui.components.Motion.content() },
+                                    ) { profile ->
+                                        ChatInfoContent(profile, telegram, settings, onOpenChatInside, onDismiss = { SidePanel.content = null }, inline = true)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             val scrim by animateFloatAsState(if (menuOpen && !push) RailScrimAlpha else 0f, fade)
@@ -965,6 +999,8 @@ private fun listTitle(telegram: Telegram, settings: AppSettings): String = when 
 private const val AppTitle = "pixelGram"
 
 private val FullPlayerWidth = 380.dp
+
+private enum class SideKind { Player, Media, Profile }
 
 internal fun sideIcon(item: com.pixelgram.desktop.core.SideItem, dark: Boolean): ImageVector = when (item) {
     com.pixelgram.desktop.core.SideItem.Theme -> if (dark) Icons.Outlined.DarkMode else Icons.Outlined.LightMode

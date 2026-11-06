@@ -550,6 +550,27 @@ fun ChatInfoDialog(
         }
         return
     }
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.widthIn(min = 360.dp, max = 460.dp).heightIn(max = DialogMaxHeight),
+        ) {
+            ChatInfoContent(chat, telegram, settings, onOpenChat, onDismiss, inline = false)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChatInfoContent(
+    chat: ChatState,
+    telegram: Telegram,
+    settings: AppSettings,
+    onOpenChat: ((Long) -> Unit)?,
+    onDismiss: () -> Unit,
+    inline: Boolean,
+) {
     val user = telegram.users[chat.privateUserId]
     var bio by remember(chat.id) { mutableStateOf("") }
     var bioEntities by remember(chat.id) { mutableStateOf(emptyList<TdApi.TextEntity>()) }
@@ -569,12 +590,6 @@ fun ChatInfoDialog(
     mentioned?.let { other -> ChatInfoDialog(other, telegram, settings, onOpenChat) { mentioned = null } }
     var managing by remember(chat.id) { mutableStateOf(false) }
     if (managing) ManageChatDialog(chat, telegram, settings = settings, onDismiss = { managing = false })
-    BasicAlertDialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.widthIn(min = 360.dp, max = 460.dp).heightIn(max = DialogMaxHeight),
-        ) {
           val scroll = rememberScrollState()
           com.pixelgram.desktop.ui.BackSwipeBox(onBack = onDismiss) {
             val bannerId = if (chat.privateUserId != 0L) chat.privateUserId else chat.id
@@ -793,10 +808,8 @@ fun ChatInfoDialog(
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
                 }
-                com.pixelgram.desktop.ui.components.expressive.OutlinedButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+                if (!inline) com.pixelgram.desktop.ui.components.expressive.OutlinedButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
             }
-        }
-      }
         }
 }
 

@@ -562,3 +562,6 @@ val Icons.Outlined.WorkspacePremium: ImageVector get() = IconPacks.icon("Outline
 
 private val diamondSymbol by lazy { symbol("Outlined.Diamond", "M480 840 80 360l120-240h560l120 240-400 480Zm-95-520h190l-60-120h-70l-60 120Zm55 347v-267H218l222 267Zm80 0 222-267H520v267Zm144-347h106l-60-120H604l60 120Zm-474 0h106l60-120H250l-60 120Z") }
 val Icons.Outlined.Diamond: ImageVector get() = IconPacks.icon("Outlined.Diamond", diamondSymbol)
+
+private val sideSheetSymbol by lazy { symbol("Outlined.SideSheet", "M200 200H760Q800 200 800 240V720Q800 760 760 760H200Q160 760 160 720V240Q160 200 200 200ZM260 280Q240 280 240 300V660Q240 680 260 680H540Q560 680 560 660V300Q560 280 540 280Z") }
+val Icons.Outlined.SideSheet: ImageVector get() = IconPacks.icon("Outlined.SideSheet", sideSheetSymbol)

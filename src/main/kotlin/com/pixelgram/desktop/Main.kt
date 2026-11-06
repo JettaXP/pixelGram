@@ -440,13 +440,36 @@ private fun ApplicationScope.PixelApp() {
         LaunchedEffect(focused) { FocusedWindows.set("main", focused) }
         LaunchedEffect(FocusedWindows.any) { accounts.list.forEach { it.windowFocused = FocusedWindows.any } }
         val chrome = rememberWindowChrome()
+        var sideGrowth by remember { mutableStateOf(0f) }
+        LaunchedEffect(com.pixelgram.desktop.ui.main.SidePanel.shown) {
+            val shown = com.pixelgram.desktop.ui.main.SidePanel.shown
+            val floating = !chrome.maximized && !chrome.fullscreen && windowState.placement == androidx.compose.ui.window.WindowPlacement.Floating &&
+                window.extendedState and java.awt.Frame.MAXIMIZED_BOTH == 0
+            if (shown && sideGrowth == 0f && floating) {
+                val config = window.graphicsConfiguration
+                val screen = config.bounds
+                val insets = java.awt.Toolkit.getDefaultToolkit().getScreenInsets(config)
+                val left = (screen.x + insets.left).toFloat()
+                val right = (screen.x + screen.width - insets.right).toFloat()
+                val width = window.width.toFloat()
+                val add = minOf(SideGrowthDp, right - left - width).coerceAtLeast(0f)
+                if (add <= 0f) return@LaunchedEffect
+                val x = window.x.toFloat()
+                val newX = if (x + width + add > right) maxOf(left, right - width - add) else x
+                sideGrowth = add
+                window.setBounds(newX.toInt(), window.y, (width + add).toInt(), window.height)
+            } else if (!shown && sideGrowth > 0f) {
+                if (floating) window.setBounds(window.x, window.y, (window.width - sideGrowth).toInt(), window.height)
+                sideGrowth = 0f
+            }
+        }
         LaunchedEffect(Unit) {
             androidx.compose.runtime.snapshotFlow {
                 Triple(windowState.position, windowState.size, chrome.maximized || windowState.placement != androidx.compose.ui.window.WindowPlacement.Floating)
             }.collectLatest { (_, _, maximized) ->
                 delay(BoundsSaveDelayMs)
                 if (maximized || window.extendedState and java.awt.Frame.MAXIMIZED_BOTH != 0) return@collectLatest
-                com.pixelgram.desktop.core.WindowBounds.save(settings, window.x, window.y, window.width, window.height)
+                com.pixelgram.desktop.core.WindowBounds.save(settings, window.x, window.y, window.width - sideGrowth.toInt(), window.height)
             }
         }
         var fullscreenNow by remember { mutableStateOf(false) }
@@ -723,3 +746,5 @@ private object FocusedWindows {
 
 private const val DemoToastStartMs = 20_000L
 private const val DemoToastStepMs = 4_000L
+
+private const val SideGrowthDp = 388f
