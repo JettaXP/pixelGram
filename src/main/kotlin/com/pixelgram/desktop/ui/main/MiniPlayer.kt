@@ -111,7 +111,10 @@ object AudioQueue {
     fun trackTitle(audio: TdApi.Audio): String =
         listOf(audio.performer, audio.title).filter { it.isNotBlank() }.joinToString(" – ").ifBlank { audio.fileName }
 
+    var direction by androidx.compose.runtime.mutableIntStateOf(1)
+
     fun move(telegram: Telegram, key: Long, direction: Int) {
+        this.direction = if (direction < 0) -1 else 1
         val index = playlist.indexOfFirst { it.audio.id.toLong() == key }
         if (index < 0) return step(telegram, key, direction)
         val next = pick(playlist, index, direction) ?: return
@@ -130,11 +133,14 @@ object AudioQueue {
         else -> "Voice message"
     }
 
+    private var lastChatList: List<UiMessage> = emptyList()
+
     private fun chatList(telegram: Telegram, key: Long): List<UiMessage> {
         custom?.takeIf { list -> list.any { it.key == key } }?.let { return it }
         val all = telegram.messages(AudioPlayer.chatId)
-        val kind = all.firstOrNull { it.key == key }?.content?.javaClass ?: return emptyList()
-        return all.filter { it.content?.javaClass == kind && file(it) != null }.reversed()
+        val kind = all.firstOrNull { it.key == key }?.content?.javaClass
+            ?: return lastChatList.takeIf { list -> list.any { it.key == key } } ?: emptyList()
+        return all.filter { it.content?.javaClass == kind && file(it) != null }.reversed().also { lastChatList = it }
     }
 
     fun step(telegram: Telegram, key: Long, direction: Int) {
@@ -157,10 +163,13 @@ object AudioQueue {
         if (playlist.any { it.audio.id.toLong() == key }) {
             return playlist.map { QueueTrack(it.audio.id.toLong(), it, it.title.ifBlank { it.fileName }, it.performer, null) }
         }
-        return chatList(telegram, key).map { message ->
+        val list = chatList(telegram, key).map { message ->
             val audio = (message.content as? TdApi.MessageAudio)?.audio
             QueueTrack(message.key, audio, audio?.let { it.title.ifBlank { it.fileName } } ?: title(message), audio?.performer.orEmpty(), message)
         }
+        if (list.isNotEmpty()) return list
+        val audio = AudioPlayer.audio
+        return listOf(QueueTrack(key, audio, audio?.title?.ifBlank { null } ?: AudioPlayer.title, audio?.performer.orEmpty(), null))
     }
 
     fun reorder(telegram: Telegram, from: Int, to: Int) {

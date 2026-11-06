@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.icons.automirrored.filled.VolumeOff
+import com.pixelgram.desktop.ui.icons.automirrored.filled.VolumeUp
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.slideInHorizontally
@@ -191,7 +193,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                             AnimatedContent(
                                 targetState = index + 1,
                                 transitionSpec = {
-                                    val up = if (targetState > initialState) 1 else -1
+                                    val up = AudioQueue.direction
                                     (slideInVertically(trackSpatial) { it * up } + fadeIn(trackFade)) togetherWith
                                         (slideOutVertically(trackSpatial) { -it * up } + fadeOut(trackFadeOut))
                                 },
@@ -220,7 +222,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                         targetState = TrackSlot(audio, index),
                         contentKey = { it.audio?.audio?.id },
                         transitionSpec = {
-                            val dir = if (targetState.index >= initialState.index) 1 else -1
+                            val dir = AudioQueue.direction
                             (slideInHorizontally(trackSpatial) { it / 3 * dir } + fadeIn(trackFade) + scaleIn(trackScale, initialScale = 0.9f)) togetherWith
                                 (slideOutHorizontally(trackSpatial) { -it / 3 * dir } + fadeOut(trackFadeOut) + scaleOut(trackScale, targetScale = 0.9f))
                         },
@@ -255,7 +257,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                     targetState = TrackText(shownTitle, audio?.performer?.takeIf { it.isNotBlank() }, index),
                     contentKey = { it.title to it.performer },
                     transitionSpec = {
-                        val dir = if (targetState.index >= initialState.index) 1 else -1
+                        val dir = AudioQueue.direction
                         androidx.compose.animation.ContentTransform(
                             slideInHorizontally(trackSpatial) { it / 4 * dir } + fadeIn(trackFade),
                             slideOutHorizontally(trackSpatial) { -it / 4 * dir } + fadeOut(trackFadeOut),
@@ -367,7 +369,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                         ToggleButton(
                             checked = FullPlayer.view == view,
                             onCheckedChange = { FullPlayer.view = if (FullPlayer.view == view) PlayerView.Cover else view },
-                            shapes = if (position == 0) ButtonGroupDefaults.connectedLeadingButtonShapes() else ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                            shapes = if (position == 0) ButtonGroupDefaults.connectedLeadingButtonShapes() else ButtonGroupDefaults.connectedMiddleButtonShapes(),
                             colors = groupColors,
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             modifier = Modifier.height(40.dp),
@@ -375,6 +377,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                             Icon(icon, contentDescription = if (view == PlayerView.Lyrics) "Lyrics" else "Queue", modifier = Modifier.size(20.dp))
                         }
                     }
+                    VolumeButton(groupColors)
                 }
             }
         }
@@ -1192,3 +1195,80 @@ private class TrackSlot(val audio: TdApi.Audio?, val index: Int)
 private class TrackText(val title: String, val performer: String?, val index: Int)
 
 private const val GroupIdleAlpha = 0.55f
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun VolumeButton(colors: androidx.compose.material3.ToggleButtonColors) {
+    var open by remember { mutableStateOf(false) }
+    val shown = remember { androidx.compose.animation.core.MutableTransitionState(false) }
+    shown.targetState = open
+    val level = if (AudioPlayer.muted) 0f else AudioPlayer.volume
+    Box {
+        ToggleButton(
+            checked = open,
+            onCheckedChange = { open = it },
+            shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+            colors = colors,
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            modifier = Modifier.height(40.dp),
+        ) {
+            Icon(
+                when {
+                    level <= 0f -> Icons.AutoMirrored.Filled.VolumeOff
+                    else -> Icons.AutoMirrored.Filled.VolumeUp
+                },
+                contentDescription = "Volume",
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        if (shown.currentState || shown.targetState) {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.ui.window.Popup(
+                alignment = Alignment.BottomCenter,
+                offset = androidx.compose.ui.unit.IntOffset(0, -with(density) { (40.dp + 8.dp).roundToPx() }),
+                onDismissRequest = { open = false },
+                properties = androidx.compose.ui.window.PopupProperties(focusable = false),
+            ) {
+                androidx.compose.animation.AnimatedVisibility(
+                    visibleState = shown,
+                    enter = androidx.compose.animation.expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec(), expandFrom = Alignment.Bottom) +
+                        fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                        scaleIn(MaterialTheme.motionScheme.defaultSpatialSpec(), initialScale = 0.85f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)),
+                    exit = androidx.compose.animation.shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec(), shrinkTowards = Alignment.Bottom) +
+                        fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                        scaleOut(MaterialTheme.motionScheme.fastSpatialSpec(), targetScale = 0.85f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)),
+                ) {
+                    val scheme = MaterialTheme.colorScheme
+                    Surface(
+                        shape = RoundedCornerShape(28.dp),
+                        color = scheme.surfaceContainerHigh,
+                        shadowElevation = 6.dp,
+                    ) {
+                        val state = remember { androidx.compose.material3.SliderState(value = level, valueRange = 0f..1f) }
+                        LaunchedEffect(level) { if (kotlin.math.abs(state.value - level) > 0.001f) state.value = level }
+                        state.onValueChange = { value ->
+                            state.value = value
+                            AudioPlayer.volume = value
+                            AudioPlayer.muted = value == 0f
+                        }
+                        androidx.compose.material3.VerticalSlider(
+                            state = state,
+                            reverseDirection = true,
+                            track = { sliderState ->
+                                androidx.compose.material3.SliderDefaults.Track(
+                                    sliderState = sliderState,
+                                    modifier = Modifier.width(VolumeTrackWidth),
+                                    trackCornerSize = 16.dp,
+                                )
+                            },
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp).height(VolumeSliderHeight),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private val VolumeSliderHeight = 180.dp
+private val VolumeTrackWidth = 40.dp
