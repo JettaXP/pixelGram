@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.1 Soft Boom
+
+- The side panel narrows the chat like the full player does, instead of growing the window.
+- In By window size mode, your messages slide between sides and avatars fade in or out when the chat gets wider or narrower.
+- When the chat header is too narrow, call, video call, search and the profile panel button move into the ⋮ menu and come back when there is room.
+
 ## 0.53.0 Soft Boom
 
 ### Side panel
