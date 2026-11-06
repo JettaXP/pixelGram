@@ -82,7 +82,7 @@ internal fun CapsuleFolders(
     val height = settings.capsuleHeight.value.dp - CapsuleInset * 2
     val spec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val colors = MaterialTheme.colorScheme
-    val mode = settings.folderTitle.value
+    val mode = com.pixelgram.desktop.core.FolderTitle.NamesAndIcons
 
     val bounds = remember { mutableStateMapOf<ChatListKey, Pair<Float, Float>>() }
     val scroll = rememberScrollState()

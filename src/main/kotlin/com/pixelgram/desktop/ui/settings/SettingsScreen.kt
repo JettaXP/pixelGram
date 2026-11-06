@@ -1099,13 +1099,13 @@ private fun FolderStyleSection(settings: AppSettings) {
         },
     )
     AnimatedDescription(
-        if (left) "Left is a Material 3 navigation rail." else "Top is a bar of tabs, a capsule or pills above the chat list."
+        if (left) "Left is a Material 3 navigation rail." else "Top is a bar of tabs, a capsule or chips above the chat list."
     )
     Reveal(!left) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Style on top", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
             ConnectedChoice(
-                options = listOf(0 to "Tabs", 1 to "Capsule", 2 to "Pills"),
+                options = listOf(0 to "Tabs", 1 to "Capsule", 2 to "Chips"),
                 selected = if (settings.capsuleFolders.value) 1 else if (settings.pillFolders.value) 2 else 0,
                 onSelect = {
                     settings.capsuleFolders.value = it == 1
@@ -1114,7 +1114,7 @@ private fun FolderStyleSection(settings: AppSettings) {
             )
         }
     }
-    Reveal(left || settings.capsuleFolders.value || settings.pillFolders.value) {
+    Reveal(!left && settings.pillFolders.value) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Header("Folder title")
             ConnectedChoice(

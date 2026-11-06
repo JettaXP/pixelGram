@@ -293,7 +293,7 @@ fun MainScreen(
                                     listKey = selectedKey,
                                     title = when {
                                         selectedKey == ChatListKey.Archive -> "Archived chats"
-                                        settings.folderTitle.value == com.pixelgram.desktop.core.FolderTitle.Icons && (foldersLeft || settings.capsuleFolders.value || settings.pillFolders.value) && selectedKey != ChatListKey.Main ->
+                                        settings.folderTitle.value == com.pixelgram.desktop.core.FolderTitle.Icons && !foldersLeft && settings.pillFolders.value && selectedKey != ChatListKey.Main ->
                                             tabs.firstOrNull { it.key == selectedKey }?.title ?: listTitle(telegram, settings)
                                         else -> listTitle(telegram, settings)
                                     },
@@ -573,7 +573,7 @@ private fun PixelRail(
                 showFolders -> Column {
                     tabs.forEach { tab ->
                         val isSelected = tab.key == selected
-                        val mode = settings.folderTitle.value
+                        val mode = com.pixelgram.desktop.core.FolderTitle.NamesAndIcons
                         WideNavigationRailItem(
                             selected = isSelected,
                             onClick = { onSelect(tab.key) },
@@ -935,8 +935,13 @@ internal fun PillFolders(
     onSelect: (ChatListKey) -> Unit,
 ) {
     if (tabs.size < 2) return
+    val colors = MaterialTheme.colorScheme
+    val chipColors = androidx.compose.material3.ToggleButtonDefaults.toggleButtonColors(
+        containerColor = colors.secondaryContainer.copy(alpha = ChipIdleAlpha),
+        contentColor = colors.onSecondaryContainer,
+    )
     Row(
-        horizontalArrangement = Arrangement.spacedBy(PillGap),
+        horizontalArrangement = Arrangement.spacedBy(androidx.compose.material3.ButtonGroupDefaults.ConnectedSpaceBetween),
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
@@ -944,7 +949,7 @@ internal fun PillFolders(
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
-        tabs.forEach { tab ->
+        tabs.forEachIndexed { position, tab ->
             val isSelected = tab.key == selected
             val showIcon = mode != com.pixelgram.desktop.core.FolderTitle.Names
             val showName = mode == com.pixelgram.desktop.core.FolderTitle.NamesAndIcons || mode == com.pixelgram.desktop.core.FolderTitle.Names ||
@@ -952,7 +957,12 @@ internal fun PillFolders(
             androidx.compose.material3.ToggleButton(
                 checked = isSelected,
                 onCheckedChange = { onSelect(tab.key) },
-                colors = androidx.compose.material3.ToggleButtonDefaults.tonalToggleButtonColors(),
+                shapes = when (position) {
+                    0 -> androidx.compose.material3.ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    tabs.lastIndex -> androidx.compose.material3.ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    else -> androidx.compose.material3.ButtonGroupDefaults.connectedMiddleButtonShapes()
+                },
+                colors = chipColors,
                 modifier = Modifier.height(PillHeight),
             ) {
                 if (showIcon) {
@@ -974,7 +984,7 @@ internal fun PillFolders(
 }
 
 private val PillHeight = 40.dp
-private val PillGap = 8.dp
+private const val ChipIdleAlpha = 0.55f
 private const val RailFadeOutMs = 70
 private const val RailFadeInMs = 180
 private const val RailResizeMs = 280
