@@ -136,7 +136,7 @@ fun ReactionChips(
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.padding(top = 4.dp),
+        modifier = Modifier.padding(top = 2.dp),
     ) {
         reactions.forEach { reaction ->
             val emoji = (reaction.type as? TdApi.ReactionTypeEmoji)?.emoji ?: return@forEach

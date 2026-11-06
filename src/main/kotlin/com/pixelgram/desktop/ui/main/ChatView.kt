@@ -3350,11 +3350,12 @@ private fun ReactionsWithMeta(reactions: @Composable () -> Unit, meta: @Composab
         val chips = measurables[0].measure(loose)
         val time = measurables[1].measure(loose)
         val gap = ReactionMetaGap.roundToPx()
+        val pull = ReactionPull.roundToPx()
         val inline = chips.width + gap + time.width
         val bounded = constraints.hasBoundedWidth
         if (!bounded || inline <= constraints.maxWidth) {
             val width = inline.coerceAtLeast(constraints.minWidth).let { if (bounded) it.coerceAtMost(constraints.maxWidth) else it }
-            val height = maxOf(chips.height, time.height)
+            val height = (maxOf(chips.height, time.height) - pull).coerceAtLeast(0)
             layout(width, height) {
                 chips.place(0, height - chips.height)
                 time.place(width - time.width, height - time.height)
@@ -3370,3 +3371,4 @@ private fun ReactionsWithMeta(reactions: @Composable () -> Unit, meta: @Composab
 }
 
 private val ReactionMetaGap = 8.dp
+private val ReactionPull = 4.dp

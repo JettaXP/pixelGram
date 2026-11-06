@@ -26,6 +26,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import com.pixelgram.desktop.ui.components.PhoneText
 import com.pixelgram.desktop.telegram.UnreadCount
 import androidx.compose.ui.graphics.Color
@@ -973,10 +974,24 @@ internal fun PillFolders(
                 val unread = tab.unread?.takeIf { it.chats > 0 }
                 if (unread != null) {
                     Spacer(Modifier.width(androidx.compose.material3.ButtonDefaults.IconSpacing))
-                    Badge(
-                        containerColor = if (unread.unmuted > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                        contentColor = if (unread.unmuted > 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.surface,
-                    ) { Text(if (unread.chats > 999) "999+" else unread.chats.toString()) }
+                    Surface(
+                        shape = CircleShape,
+                        color = when {
+                            isSelected -> colors.onPrimary
+                            unread.unmuted > 0 -> colors.primary
+                            else -> colors.outline
+                        },
+                        contentColor = when {
+                            isSelected -> colors.primary
+                            unread.unmuted > 0 -> colors.onPrimary
+                            else -> colors.surface
+                        },
+                        modifier = Modifier.defaultMinSize(minWidth = ChipBadgeHeight, minHeight = ChipBadgeHeight),
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 6.dp)) {
+                            Text(if (unread.chats > 999) "999+" else unread.chats.toString(), style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
                 }
             }
         }
@@ -985,6 +1000,7 @@ internal fun PillFolders(
 
 private val PillHeight = 40.dp
 private const val ChipIdleAlpha = 0.55f
+private val ChipBadgeHeight = 20.dp
 private const val RailFadeOutMs = 70
 private const val RailFadeInMs = 180
 private const val RailResizeMs = 280
