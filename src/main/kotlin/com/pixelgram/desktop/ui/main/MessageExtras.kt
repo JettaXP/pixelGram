@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.unit.sp
 import com.pixelgram.desktop.ui.theme.EmojiText
 import it.tdlight.jni.TdApi
@@ -60,22 +61,26 @@ import it.tdlight.jni.TdApi
 val DefaultReactions = listOf("❤", "👍", "🙏", "❤‍🔥", "😭", "🤔", "👎")
 
 @Composable
-fun ReactionPicker(available: List<String>, onPick: (String) -> Unit) {
+fun ReactionPicker(available: List<String>, width: androidx.compose.ui.unit.Dp = PickerWidth, onPick: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val all = available.ifEmpty { DefaultReactions }
-    Column(Modifier.width(PickerWidth).animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())) {
+    val fits = ((width - 12.dp) / CellSize).toInt().coerceAtLeast(2)
+    val quick = if (all.size <= fits) all.size else fits - 1
+    Column(Modifier.width(width).animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
-            all.take(QuickCount).forEach { emoji -> ReactionCell(emoji, onPick) }
-            IconButton(onClick = { expanded = !expanded }, modifier = Modifier.size(CellSize)) {
-                Icon(if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, contentDescription = "More reactions")
+            all.take(quick).forEach { emoji -> ReactionCell(emoji, onPick) }
+            if (all.size > quick) {
+                IconButton(onClick = { expanded = !expanded }, modifier = Modifier.size(CellSize)) {
+                    Icon(if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, contentDescription = "More reactions")
+                }
             }
         }
         if (expanded) {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(GridColumns),
+                columns = GridCells.Fixed(((width - 12.dp) / CellSize).toInt().coerceAtLeast(1)),
                 modifier = Modifier.height(GridHeight).padding(horizontal = 6.dp),
             ) {
-                items(all.drop(QuickCount)) { emoji -> ReactionCell(emoji, onPick) }
+                items(all.drop(quick)) { emoji -> ReactionCell(emoji, onPick) }
             }
         }
     }
@@ -350,8 +355,6 @@ fun InlineKeyboard(rows: List<List<TdApi.InlineKeyboardButton>>, onPress: (TdApi
     }
 }
 
-private const val QuickCount = 7
-private const val GridColumns = 8
 private val CellSize = 40.dp
 private val PickerWidth = 340.dp
 private val GridHeight = 200.dp

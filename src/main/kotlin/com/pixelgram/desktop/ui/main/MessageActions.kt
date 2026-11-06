@@ -432,7 +432,7 @@ private fun MessageMenu(
                 var available by remember(message.key) { mutableStateOf(emptyList<String>()) }
                 androidx.compose.runtime.LaunchedEffect(message.key) { actions.loadReactions(message) { available = it } }
                 val scope = androidx.compose.runtime.rememberCoroutineScope()
-                ReactionPicker(available) { emoji ->
+                ReactionPicker(available, ReactionMenuWidth - 4.dp) { emoji ->
                     scope.launch {
                         onDismiss()
                         actions.onReact(message, emoji)
@@ -472,6 +472,7 @@ private fun MessageMenu(
         val seenChat = client?.chats?.get(message.chatId)
         MenuGroups(
             listOf(retry, reply, copies, manage).filter { it.isNotEmpty() },
+            width = if (reactions != null && !pending) ReactionMenuWidth else 240.dp,
             leading = reactions.takeIf { !pending },
             trailing = packs,
             footer = if (client != null && !pending) {
@@ -635,3 +636,5 @@ private const val BouncePart = 0.25f
 private const val BounceScale = 0.6f
 private const val OverswipeLogA = 16f
 private const val OverswipeLogB = 10f
+
+private val ReactionMenuWidth = 300.dp
