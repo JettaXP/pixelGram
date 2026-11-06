@@ -27,7 +27,11 @@ object IconPacks {
         }
         val id = "$name:$key"
         built[id]?.let { return it }
-        val glyph = table(name)[key] ?: return fallback
+        val glyphs = table(name)
+        val base = key.substringAfterLast('.')
+        val glyph = glyphs[key]
+            ?: listOf("Outlined", "Filled", "Rounded", "AutoMirrored.Outlined", "AutoMirrored.Filled").firstNotNullOfOrNull { glyphs["$it.$base"] }
+            ?: return fallback
         val pad = if (pack == IconPack.Solar && key.substringAfter('.') in MediaKeys) glyph.viewport * MediaPadding else 0f
         return build(key, glyph, fallback.autoMirror, pad).also { built[id] = it }
     }
