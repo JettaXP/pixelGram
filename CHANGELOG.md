@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.53.3 Soft Boom
+
+- Smooth scrolling follows the wheel or touchpad while you scroll instead of catching up all at once when you stop.
+
 ## 0.53.2 Soft Boom
 
 - Apple and Noto 3D emoji download in the background, so the emoji panel shows them right away instead of one by one as you scroll.
