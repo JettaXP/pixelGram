@@ -1642,6 +1642,7 @@ fun MessageBubble(
                 if (hasText || (photo == null && album == null)) {
                     Column(
                         Modifier
+                            .animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())
                             .padding(horizontal = 12.dp, vertical = 7.dp)
                             .then(if (photo != null || media || album != null) Modifier.width((if (album != null) PhotoMaxWidth else mediaFrameOf(message)?.width ?: PhotoMaxWidth) - 24.dp) else Modifier),
                     ) {
@@ -3349,14 +3350,17 @@ private fun ReactionsWithMeta(reactions: @Composable () -> Unit, meta: @Composab
         val chips = measurables[0].measure(loose)
         val time = measurables[1].measure(loose)
         val gap = ReactionMetaGap.roundToPx()
-        val width = constraints.maxWidth
-        if (chips.width + gap + time.width <= width) {
+        val inline = chips.width + gap + time.width
+        val bounded = constraints.hasBoundedWidth
+        if (!bounded || inline <= constraints.maxWidth) {
+            val width = inline.coerceAtLeast(constraints.minWidth).let { if (bounded) it.coerceAtMost(constraints.maxWidth) else it }
             val height = maxOf(chips.height, time.height)
             layout(width, height) {
                 chips.place(0, height - chips.height)
                 time.place(width - time.width, height - time.height)
             }
         } else {
+            val width = maxOf(chips.width, time.width).coerceIn(constraints.minWidth, constraints.maxWidth)
             layout(width, chips.height + time.height) {
                 chips.place(0, 0)
                 time.place(width - time.width, chips.height)
