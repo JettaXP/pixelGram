@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.54.1 Very Sunny
+
+- The player starts the next track even when it isn't downloaded yet: next, taps in the queue and auto-advance no longer get stuck or close the player.
+- Scrolling back to the bottom of a chat hides the scroll down button instead of sending you to an older message.
+- Folder title is offered only for chips on top; the rail, tabs and capsule always show names with icons.
+- Folder chips are a connected button group with larger, clearer unread counters.
+- Reactions sit closer to the text.
+- Settings links scroll the setting to the middle of the screen with an even highlight.
+- The volume slider closes on a second click instead of reopening.
+- The attach menu sits the same distance above its button as the new chat menu.
+- A new badge.
+
 ## 0.54.0 Very Sunny
 
 ### Player
