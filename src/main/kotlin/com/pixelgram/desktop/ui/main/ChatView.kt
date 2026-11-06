@@ -156,6 +156,10 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import kotlin.math.roundToInt
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
@@ -1909,6 +1913,53 @@ private val CodeMinWidth = 220.dp
 
 @Composable
 private fun TextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @Composable () -> Unit) {
+    val long = text.length > LongTextChars || text.count { it == '\n' } > LongTextLines
+    if (!long) {
+        FullTextWithMeta(text, entities, meta)
+        return
+    }
+    var expanded by remember(text) { mutableStateOf(false) }
+    Column(Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())) {
+        Box(
+            if (expanded) {
+                Modifier
+            } else {
+                Modifier
+                    .heightIn(max = CollapsedTextHeight)
+                    .clipToBounds()
+                    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        val fade = CollapsedFade.toPx()
+                        drawRect(
+                            Brush.verticalGradient(0f to Color.Black, 1f to Color.Transparent, startY = size.height - fade, endY = size.height),
+                            topLeft = Offset(0f, size.height - fade),
+                            size = Size(size.width, fade),
+                            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                        )
+                    }
+            },
+        ) {
+            FullTextWithMeta(text, entities, if (expanded) meta else { { Box(Modifier) } })
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                if (expanded) "Show less" else "Read more",
+                style = MaterialTheme.typography.labelLarge,
+                color = LocalContentColor.current,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { expanded = !expanded }
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
+            )
+            Spacer(Modifier.weight(1f))
+            if (!expanded) meta()
+        }
+    }
+}
+
+@Composable
+private fun FullTextWithMeta(text: String, entities: List<TdApi.TextEntity>, meta: @Composable () -> Unit) {
     if (entities.any { it.type is TdApi.TextEntityTypePre || it.type is TdApi.TextEntityTypePreCode }) {
         TextWithCode(text, entities, meta)
         return
@@ -3279,3 +3330,8 @@ private const val HoverCloseMs = 350L
 private val HeaderTitleMin = 160.dp
 private val HeaderButton = 48.dp
 private val HeaderAvatar = 40.dp
+
+private const val LongTextChars = 1000
+private const val LongTextLines = 20
+private val CollapsedTextHeight = 320.dp
+private val CollapsedFade = 72.dp
