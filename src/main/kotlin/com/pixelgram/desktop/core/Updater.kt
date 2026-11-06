@@ -26,6 +26,8 @@ sealed interface UpdateState {
 }
 
 object Updater {
+    private const val SpaceReserve = 200L * 1024 * 1024
+
     private const val Repository = "JettaXP/pixelGram"
     private const val LatestUrl = "https://api.github.com/repos/$Repository/releases/latest"
     private const val LatestPage = "https://github.com/$Repository/releases/latest"
@@ -162,11 +164,26 @@ object Updater {
         }.apply { isDaemon = true }.start()
     }
 
+    fun clearDownloads() {
+        File(AppPaths.dataDir, "updates").listFiles()?.forEach { it.delete() }
+    }
+
     private fun save(asset: UpdateAsset): UpdateState {
         val dir = File(AppPaths.dataDir, "updates").apply { mkdirs() }
         dir.listFiles()?.forEach { it.delete() }
         val target = File(dir, asset.name)
         val part = File(dir, asset.name + ".part")
+        if (asset.size > 0 && dir.usableSpace < asset.size + SpaceReserve) error(tr("Not enough free disk space to download the update."))
+        return try {
+            fetch(asset, part, target)
+        } catch (e: Throwable) {
+            part.delete()
+            if (e.diskFull()) error(tr("Not enough free disk space to download the update."))
+            throw e
+        }
+    }
+
+    private fun fetch(asset: UpdateAsset, part: File, target: File): UpdateState {
         val uri = URI(asset.url)
         require(uri.scheme == "https" && uri.host == "github.com") { "Unexpected download address" }
         val connection = uri.toURL().openConnection() as HttpURLConnection

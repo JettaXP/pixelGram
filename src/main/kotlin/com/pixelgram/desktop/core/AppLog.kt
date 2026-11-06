@@ -162,3 +162,14 @@ fun Throwable.describe(): String = generateSequence(this) { it.cause }
     .mapNotNull { it.message?.takeIf(String::isNotBlank) ?: it.javaClass.simpleName }
     .distinct()
     .joinToString(" → ")
+
+fun Throwable.diskFull(): Boolean {
+    val seen = HashSet<Throwable>()
+    fun check(error: Throwable?): Boolean {
+        if (error == null || !seen.add(error)) return false
+        val message = error.message.orEmpty().lowercase()
+        if (error is java.io.IOException && ("not enough space" in message || "no space left" in message || "disk full" in message)) return true
+        return check(error.cause) || error.suppressed.any { check(it) }
+    }
+    return check(this)
+}

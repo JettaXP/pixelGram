@@ -18,6 +18,7 @@ import com.pixelgram.desktop.core.AppPaths
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.core.Sounds
 import com.pixelgram.desktop.core.describe
+import com.pixelgram.desktop.core.diskFull
 import it.tdlight.ClientFactory
 import it.tdlight.ExceptionHandler
 import it.tdlight.Init
@@ -249,6 +250,12 @@ private object Tdlib {
             ClientFactory.create()
         }.onSuccess { factory = it }.onFailure { error = it }
     }
+
+    @Synchronized
+    fun retry(): Result<ClientFactory> {
+        error = null
+        return factory()
+    }
 }
 
 class Telegram(
@@ -330,7 +337,13 @@ class Telegram(
 
     fun start() {
         scope.launch(Dispatchers.Main) {
-            withContext(Dispatchers.IO) { Tdlib.factory() }
+            withContext(Dispatchers.IO) {
+                Tdlib.factory().recoverCatching { error ->
+                    if (!error.diskFull()) throw error
+                    com.pixelgram.desktop.core.Updater.clearDownloads()
+                    Tdlib.retry().getOrThrow()
+                }
+            }
                 .onSuccess {
                     factory = it
                     createClient()
@@ -338,7 +351,8 @@ class Telegram(
                 .onFailure { e ->
                     AppLog.write("TDLib native library failed to load", e)
                     authState = AuthState.Failed(
-                        "TDLib native library failed to load: ${e.describe()}\n\nLog: ${AppLog.file.absolutePath}"
+                        if (e.diskFull()) com.pixelgram.desktop.core.tr("There isn't enough free space on the disk for pixelGram to start. Free up some space and open pixelGram again.")
+                        else "TDLib native library failed to load: ${e.describe()}\n\nLog: ${AppLog.file.absolutePath}"
                     )
                 }
         }
