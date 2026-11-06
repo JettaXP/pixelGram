@@ -89,7 +89,8 @@ enum class UserBadge(val userId: Long, val notice: String) {
     Sponsor(1602207467L, "Main sponsor of pixelGram"),
     Tester(7820526891L, "pixelGram tester, hunts bugs in the client"),
     SecondTester(1635698970L, "pixelGram tester, hunts bugs in the client"),
-    Menorah(8315838128L, "Friend of pixelGram");
+    Menorah(8315838128L, "Friend of pixelGram"),
+    Poop(7826361017L, "удали маргит");
 
     val icon: ImageVector
         get() = when (this) {
@@ -98,6 +99,7 @@ enum class UserBadge(val userId: Long, val notice: String) {
             Sponsor -> com.pixelgram.desktop.ui.icons.Icons.Filled.AttachMoney
             Tester, SecondTester -> BugNet
             Menorah -> MenorahIcon
+            Poop -> PoopIcon
         }
 
     companion object {
@@ -177,6 +179,12 @@ private val CodeSlash: ImageVector by lazy {
             strokeLineCap = StrokeCap.Round,
             strokeLineJoin = StrokeJoin.Round,
         )
+        .build()
+}
+
+private val PoopIcon: ImageVector by lazy {
+    ImageVector.Builder("Poop", 24.dp, 24.dp, 960f, 960f)
+        .addPath(androidx.compose.ui.graphics.vector.addPathNodes("M230.0 600H730.0A100.0 100.0 0 0 1 730.0 800H230.0A100.0 100.0 0 0 1 230.0 600ZM315.0 430H645.0A95.0 95.0 0 0 1 645.0 620H315.0A95.0 95.0 0 0 1 315.0 430ZM395.0 280H565.0A85.0 85.0 0 0 1 565.0 450H395.0A85.0 85.0 0 0 1 395.0 280ZM440 290Q430 190 540 140Q520 210 590 290Z"), fill = SolidColor(Color.Black))
         .build()
 }
 
