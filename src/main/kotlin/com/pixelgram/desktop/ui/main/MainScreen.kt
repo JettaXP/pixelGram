@@ -529,7 +529,7 @@ private fun PixelRail(
                 }
             },
             contentAlignment = Alignment.TopStart,
-            modifier = Modifier.clipToBounds(),
+            modifier = Modifier.fillMaxHeight().clipToBounds(),
         ) { showMenu ->
             when {
                 showMenu -> MainMenu(accounts, telegram, settings, onNavigate, onOpenSaved, onNewChat)
