@@ -440,27 +440,50 @@ private fun ApplicationScope.PixelApp() {
         LaunchedEffect(focused) { FocusedWindows.set("main", focused) }
         LaunchedEffect(FocusedWindows.any) { accounts.list.forEach { it.windowFocused = FocusedWindows.any } }
         val chrome = rememberWindowChrome()
-        var sideGrowth by remember { mutableStateOf(0f) }
+        var sideBase by remember { mutableStateOf(0) }
+        var sideBaseX by remember { mutableStateOf(0) }
+        var sideGrownX by remember { mutableStateOf(0) }
         LaunchedEffect(com.pixelgram.desktop.ui.main.SidePanel.shown) {
             val shown = com.pixelgram.desktop.ui.main.SidePanel.shown
             val floating = !chrome.maximized && !chrome.fullscreen && windowState.placement == androidx.compose.ui.window.WindowPlacement.Floating &&
                 window.extendedState and java.awt.Frame.MAXIMIZED_BOTH == 0
-            if (shown && sideGrowth == 0f && floating) {
+            suspend fun slide(toX: Int, toWidth: Int) {
+                val fromX = window.x
+                val fromWidth = window.width
+                val progress = androidx.compose.animation.core.Animatable(0f)
+                progress.animateTo(1f, androidx.compose.animation.core.tween(SideSlideMs, easing = androidx.compose.animation.core.FastOutSlowInEasing)) {
+                    val t = value
+                    window.setBounds(
+                        (fromX + (toX - fromX) * t).toInt(),
+                        window.y,
+                        (fromWidth + (toWidth - fromWidth) * t).toInt(),
+                        window.height,
+                    )
+                }
+                window.setBounds(toX, window.y, toWidth, window.height)
+            }
+            if (!floating) {
+                if (!shown) sideBase = 0
+                return@LaunchedEffect
+            }
+            if (shown) {
+                val base = if (sideBase > 0) sideBase else window.width
+                if (sideBase == 0) sideBaseX = window.x
                 val config = window.graphicsConfiguration
                 val screen = config.bounds
                 val insets = java.awt.Toolkit.getDefaultToolkit().getScreenInsets(config)
-                val left = (screen.x + insets.left).toFloat()
-                val right = (screen.x + screen.width - insets.right).toFloat()
-                val width = window.width.toFloat()
-                val add = minOf(SideGrowthDp, right - left - width).coerceAtLeast(0f)
-                if (add <= 0f) return@LaunchedEffect
-                val x = window.x.toFloat()
-                val newX = if (x + width + add > right) maxOf(left, right - width - add) else x
-                sideGrowth = add
-                window.setBounds(newX.toInt(), window.y, (width + add).toInt(), window.height)
-            } else if (!shown && sideGrowth > 0f) {
-                if (floating) window.setBounds(window.x, window.y, (window.width - sideGrowth).toInt(), window.height)
-                sideGrowth = 0f
+                val left = screen.x + insets.left
+                val right = screen.x + screen.width - insets.right
+                val add = minOf(SideGrowthDp.toInt(), right - left - base).coerceAtLeast(0)
+                if (add <= 0) return@LaunchedEffect
+                sideBase = base
+                val target = base + add
+                val x = if (sideBaseX + target > right) maxOf(left, right - target) else sideBaseX
+                sideGrownX = x
+                slide(x, target)
+            } else if (sideBase > 0) {
+                slide(if (window.x == sideGrownX) sideBaseX else window.x, sideBase)
+                sideBase = 0
             }
         }
         LaunchedEffect(Unit) {
@@ -469,7 +492,7 @@ private fun ApplicationScope.PixelApp() {
             }.collectLatest { (_, _, maximized) ->
                 delay(BoundsSaveDelayMs)
                 if (maximized || window.extendedState and java.awt.Frame.MAXIMIZED_BOTH != 0) return@collectLatest
-                com.pixelgram.desktop.core.WindowBounds.save(settings, window.x, window.y, window.width - sideGrowth.toInt(), window.height)
+                com.pixelgram.desktop.core.WindowBounds.save(settings, window.x, window.y, if (sideBase > 0) sideBase else window.width, window.height)
             }
         }
         var fullscreenNow by remember { mutableStateOf(false) }
@@ -748,3 +771,4 @@ private const val DemoToastStartMs = 20_000L
 private const val DemoToastStepMs = 4_000L
 
 private const val SideGrowthDp = 388f
+private const val SideSlideMs = 300
