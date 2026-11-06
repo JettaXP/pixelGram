@@ -13,6 +13,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,9 +29,13 @@ private fun Modifier.highlightIf(text: String): Modifier {
     val requester = androidx.compose.runtime.remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
     val glow = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
     val color = androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
+    val window = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize
+    val size = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     androidx.compose.runtime.LaunchedEffect(Unit) {
         androidx.compose.runtime.withFrameNanos { }
-        requester.bringIntoView()
+        val margin = window.height * HighlightCenterShare
+        val item = size.value
+        requester.bringIntoView(androidx.compose.ui.geometry.Rect(0f, -margin, item.width.toFloat(), item.height + margin))
         repeat(HighlightPulses) {
             glow.animateTo(1f, androidx.compose.animation.core.tween(HighlightPulseMs))
             glow.animateTo(0.35f, androidx.compose.animation.core.tween(HighlightPulseMs))
@@ -39,14 +44,17 @@ private fun Modifier.highlightIf(text: String): Modifier {
     }
     return this
         .bringIntoViewRequester(requester)
+        .onSizeChanged { size.value = it }
         .drawBehind {
             if (glow.value > 0f) {
-                val pad = HighlightPad.toPx()
+                val padX = HighlightPad.toPx()
+                val padY = HighlightPad.toPx() / 2
+                val corner = HighlightCorner.toPx()
                 drawRoundRect(
                     color.copy(alpha = glow.value),
-                    topLeft = androidx.compose.ui.geometry.Offset(-pad, -pad / 2),
-                    size = androidx.compose.ui.geometry.Size(size.width + pad * 2, size.height + pad),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height),
+                    topLeft = androidx.compose.ui.geometry.Offset(-padX, -padY),
+                    size = androidx.compose.ui.geometry.Size(this.size.width + padX * 2, this.size.height + padY * 2),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(corner),
                 )
             }
         }
@@ -55,6 +63,8 @@ private fun Modifier.highlightIf(text: String): Modifier {
 private const val HighlightPulses = 2
 private const val HighlightPulseMs = 350
 private val HighlightPad = androidx.compose.ui.unit.Dp(8f)
+private val HighlightCorner = androidx.compose.ui.unit.Dp(10f)
+private const val HighlightCenterShare = 0.35f
 
 @Composable
 fun Text(
