@@ -338,6 +338,10 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                     }
                 }
             }
+            val groupColors = androidx.compose.material3.ToggleButtonDefaults.toggleButtonColors(
+                containerColor = colors.secondaryContainer.copy(alpha = GroupIdleAlpha),
+                contentColor = colors.onSecondaryContainer,
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
                     Speeds.forEachIndexed { position, speed ->
@@ -349,6 +353,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                                 Speeds.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
                                 else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                             },
+                            colors = groupColors,
                             contentPadding = PaddingValues(horizontal = 12.dp),
                             modifier = Modifier.height(40.dp),
                         ) {
@@ -363,6 +368,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                             checked = FullPlayer.view == view,
                             onCheckedChange = { FullPlayer.view = if (FullPlayer.view == view) PlayerView.Cover else view },
                             shapes = if (position == 0) ButtonGroupDefaults.connectedLeadingButtonShapes() else ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                            colors = groupColors,
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             modifier = Modifier.height(40.dp),
                         ) {
@@ -1184,3 +1190,5 @@ object PlayerKeys {
 private class TrackSlot(val audio: TdApi.Audio?, val index: Int)
 
 private class TrackText(val title: String, val performer: String?, val index: Int)
+
+private const val GroupIdleAlpha = 0.55f
