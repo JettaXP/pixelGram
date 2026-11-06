@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.53.2 Soft Boom
+
+- Apple and Noto 3D emoji download in the background, so the emoji panel shows them right away instead of one by one as you scroll.
+- The reaction row in the message menu always has the button that opens every reaction.
+- Long messages fold with a fade and a Read more button.
+- Links and link previews in your own messages use the bubble's text color, so they no longer blend in.
+- Audio, voice and file messages keep the time on the same line instead of an empty strip below.
+- The taskbar icon updates when you pin pixelGram while it runs.
+- The full player uses iTunes covers for the big cover and its colors.
+- The mini player shows the cover, and the time shows elapsed and total; click it to see the time left.
+
 ## 0.53.1 Soft Boom
 
 - The side panel narrows the chat like the full player does, instead of growing the window.

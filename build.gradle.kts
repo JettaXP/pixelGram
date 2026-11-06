@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.53.1"
+version = "0.53.2"
 val codename = "Soft Boom"
 
 kotlin {
