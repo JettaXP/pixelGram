@@ -1084,42 +1084,53 @@ private fun NavigationSection(settings: AppSettings) {
 
 @Composable
 private fun FolderStyleSection(settings: AppSettings) {
-    Header("Folder title")
-    ConnectedChoice(
-        listOf(
-            com.pixelgram.desktop.core.FolderTitle.NamesAndIcons to "Names with icons",
-            com.pixelgram.desktop.core.FolderTitle.Names to "Names only",
-            com.pixelgram.desktop.core.FolderTitle.Icons to "Icons only",
-            com.pixelgram.desktop.core.FolderTitle.ActiveName to "Name on active",
-        ),
-        settings.folderTitle.value,
-        { settings.folderTitle.value = it },
-    )
-    Reveal(settings.folderTitle.value == com.pixelgram.desktop.core.FolderTitle.Icons) {
-        Description("The title above the chat list shows the name of the open folder.")
-    }
     Header("Chat folders")
     Text("Position", style = MaterialTheme.typography.bodyLarge)
-    val capsule = settings.capsuleFolders.value
+    val left = settings.materialFolders.value && !settings.capsuleFolders.value
     ConnectedChoice(
         options = listOf(true to "Left", false to "Top"),
-        selected = settings.materialFolders.value && !capsule,
-        onSelect = { settings.materialFolders.value = it },
-        enabled = { !(it && capsule) },
-    )
-    AnimatedDescription(
-        if (capsule) "The capsule is always on top." else
-            "Left is a Material 3 navigation rail, top is a bar above the chat list."
-    )
-    Text("Style on top", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
-    ConnectedChoice(
-        options = listOf(false to "Tabs", true to "Capsule"),
-        selected = settings.capsuleFolders.value,
+        selected = left,
         onSelect = {
-            settings.capsuleFolders.value = it
-            if (it) settings.materialFolders.value = false
+            settings.materialFolders.value = it
+            if (it) settings.capsuleFolders.value = false
         },
     )
+    AnimatedDescription(
+        if (left) "Left is a Material 3 navigation rail or a capsule beside the chat list." else
+            "Top is a bar of tabs or a capsule above the chat list."
+    )
+    Text(if (left) "Style on the left" else "Style on top", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+    if (left) {
+        ConnectedChoice(
+            options = listOf(false to "Rail", true to "Capsule"),
+            selected = settings.leftCapsule.value,
+            onSelect = { settings.leftCapsule.value = it },
+        )
+    } else {
+        ConnectedChoice(
+            options = listOf(false to "Tabs", true to "Capsule"),
+            selected = settings.capsuleFolders.value,
+            onSelect = { settings.capsuleFolders.value = it },
+        )
+    }
+    Reveal(left || settings.capsuleFolders.value) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Header("Folder title")
+            ConnectedChoice(
+                listOf(
+                    com.pixelgram.desktop.core.FolderTitle.NamesAndIcons to "Names with icons",
+                    com.pixelgram.desktop.core.FolderTitle.Names to "Names only",
+                    com.pixelgram.desktop.core.FolderTitle.Icons to "Icons only",
+                    com.pixelgram.desktop.core.FolderTitle.ActiveName to "Name on active",
+                ),
+                settings.folderTitle.value,
+                { settings.folderTitle.value = it },
+            )
+            Reveal(settings.folderTitle.value == com.pixelgram.desktop.core.FolderTitle.Icons) {
+                Description("The title above the chat list shows the name of the open folder.")
+            }
+        }
+    }
 
     Header("Capsules")
     Text("Spacing", style = MaterialTheme.typography.bodyLarge)

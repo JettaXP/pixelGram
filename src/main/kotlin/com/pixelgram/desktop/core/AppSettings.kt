@@ -116,6 +116,7 @@ class AppSettings private constructor(private val props: Properties, private val
     val materialFolders = bool("materialFolders", true)
     val hideAllChats = bool("hideAllChats", false)
     val capsuleFolders = bool("capsuleFolders", false)
+    val leftCapsule = bool("leftCapsule", false)
     val folderOrder = string("folderOrder", "")
     val folderIcons = string("folderIcons", "")
     val unreadFolder = bool("unreadFolder", false)
@@ -254,7 +255,7 @@ class AppSettings private constructor(private val props: Properties, private val
         notifyAllAccounts, flashTaskbar, notifyShowName, notifyShowText, badgeIncludeMuted, folderIncludeMuted, badgeCountMessages, respectFocus,
         materialFolders, hideAllChats, folderOrder, folderIcons,
         unreadFolder, unreadFolderName, unreadFolderIcon, mentionsFolder, mentionsFolderName, mentionsFolderIcon,
-        capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, exactNumbers, zalgoFilter, pythonMessages, inlineMath, titleText, titleCustom, folderTitle, iconPack, roundedIcons, scrollbars, backSwipe, saveOnLowBattery, sideMenuLayout, checkUpdates,
+        capsuleFolders, leftCapsule, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, exactNumbers, zalgoFilter, pythonMessages, inlineMath, titleText, titleCustom, folderTitle, iconPack, roundedIcons, scrollbars, backSwipe, saveOnLowBattery, sideMenuLayout, checkUpdates,
         listAvatarSize, fullscreen, windowsToasts, defaultScale, interfaceScale, secondaryBadges, messageSides,
         doubleClickOwn, doubleClickOther, doubleClickEmoji, swipeLeft, swipeRight, typingBubble, autoCapitalize, settingsStyle, sideMenuStyle,
         avatarShape, avatarCorner,

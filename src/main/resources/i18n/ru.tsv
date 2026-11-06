@@ -1729,3 +1729,7 @@ Repeat: all	Повтор: все
 Repeat: one	Повтор: один трек
 Speed	Скорость
 Close full player	Свернуть плеер
+Rail	Рейл
+Style on the left	Стиль слева
+Left is a Material 3 navigation rail or a capsule beside the chat list.	Слева: панель навигации Material 3 или капсула рядом со списком чатов.
+Top is a bar of tabs or a capsule above the chat list.	Сверху: вкладки или капсула над списком чатов.
