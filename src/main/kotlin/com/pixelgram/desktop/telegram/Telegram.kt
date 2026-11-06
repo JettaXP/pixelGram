@@ -3578,6 +3578,12 @@ class Telegram(
 
     fun isDownloaded(file: TdApi.File?): Boolean = localPath(file) != null
 
+    fun retryDownload(file: TdApi.File) {
+        if (localPath(file) != null) return
+        requestedFiles.remove(file.id)
+        download(file)
+    }
+
     fun download(file: TdApi.File?) {
         file ?: return
         if (localPath(file) != null || !requestedFiles.add(file.id)) return

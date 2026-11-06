@@ -196,21 +196,21 @@ object AudioQueue {
 @Composable
 fun AudioQueueEffects(telegram: Telegram) {
     val pending = AudioQueue.pending
-    val path = pending?.let { telegram.streamPath(AudioQueue.file(it)) }
-    LaunchedEffect(pending?.key, path) {
-        if (pending != null && path != null) {
-            AudioQueue.pending = null
-            val file = AudioQueue.file(pending)
-            AudioPlayer.play(pending.key, path, AudioQueue.title(pending), pending.chatId, (pending.content as? TdApi.MessageAudio)?.audio) { telegram.isDownloaded(file) }
-        }
+    LaunchedEffect(pending?.key) {
+        val message = pending ?: return@LaunchedEffect
+        val file = AudioQueue.file(message)
+        val path = awaitStream(telegram, file) ?: return@LaunchedEffect
+        if (AudioQueue.pending?.key != message.key) return@LaunchedEffect
+        AudioQueue.pending = null
+        AudioPlayer.play(message.key, path, AudioQueue.title(message), message.chatId, (message.content as? TdApi.MessageAudio)?.audio) { telegram.isDownloaded(file) }
     }
     val track = AudioQueue.pendingTrack
-    val trackPath = track?.let { telegram.streamPath(it.audio) }
-    LaunchedEffect(track?.audio?.id, trackPath) {
-        if (track != null && trackPath != null) {
-            AudioQueue.pendingTrack = null
-            AudioPlayer.play(track.audio.id.toLong(), trackPath, AudioQueue.trackTitle(track), 0L, track) { telegram.isDownloaded(track.audio) }
-        }
+    LaunchedEffect(track?.audio?.id) {
+        val next = track ?: return@LaunchedEffect
+        val path = awaitStream(telegram, next.audio) ?: return@LaunchedEffect
+        if (AudioQueue.pendingTrack?.audio?.id != next.audio.id) return@LaunchedEffect
+        AudioQueue.pendingTrack = null
+        AudioPlayer.play(next.audio.id.toLong(), path, AudioQueue.trackTitle(next), 0L, next) { telegram.isDownloaded(next.audio) }
     }
     DisposableEffect(telegram) {
         AudioPlayer.onFinished = { key -> AudioQueue.move(telegram, key, 1) }
@@ -699,3 +699,18 @@ private fun MiniOverflow(telegram: Telegram) {
 }
 
 private val MiniCompactWidth = 820.dp
+
+private suspend fun awaitStream(telegram: Telegram, file: TdApi.File?): String? {
+    file ?: return null
+    telegram.download(file)
+    var waited = 0L
+    while (true) {
+        telegram.streamPath(file)?.let { return it }
+        kotlinx.coroutines.delay(StreamPollMs)
+        waited += StreamPollMs
+        if (waited % StreamRetryMs == 0L && telegram.progress(file) == null) telegram.retryDownload(file)
+    }
+}
+
+private const val StreamPollMs = 150L
+private const val StreamRetryMs = 3_000L
