@@ -440,6 +440,11 @@ private fun ApplicationScope.PixelApp() {
         LaunchedEffect(focused) { FocusedWindows.set("main", focused) }
         LaunchedEffect(FocusedWindows.any) { accounts.list.forEach { it.windowFocused = FocusedWindows.any } }
         val chrome = rememberWindowChrome()
+        LaunchedEffect(settings.emojiStyle.value) {
+            if (!EmojiFonts.use3D) return@LaunchedEffect
+            delay(EmojiPrefetchDelayMs)
+            EmojiFonts.images.prefetch(com.pixelgram.desktop.ui.main.EmojiGroups.flatMap { it.emoji })
+        }
         LaunchedEffect(Unit) {
             androidx.compose.runtime.snapshotFlow {
                 Triple(windowState.position, windowState.size, chrome.maximized || windowState.placement != androidx.compose.ui.window.WindowPlacement.Floating)
@@ -724,3 +729,4 @@ private object FocusedWindows {
 private const val DemoToastStartMs = 20_000L
 private const val DemoToastStepMs = 4_000L
 
+private const val EmojiPrefetchDelayMs = 3_000L

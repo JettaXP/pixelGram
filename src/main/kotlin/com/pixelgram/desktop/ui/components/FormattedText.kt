@@ -210,7 +210,9 @@ fun FormattedText(
     val text = folded.text
     val entities = folded.entities
     val scheme = MaterialTheme.colorScheme
-    val colors = FormatColors(scheme.primary, scheme.onSurface.copy(alpha = 0.1f), scheme.primary)
+    val ownBubble = androidx.compose.material3.LocalContentColor.current == scheme.onPrimaryContainer
+    val accent = if (ownBubble) scheme.onPrimaryContainer else scheme.primary
+    val colors = FormatColors(accent, (if (ownBubble) scheme.onPrimaryContainer else scheme.onSurface).copy(alpha = 0.1f), accent)
     val (annotated, inline) = remember(text, entities, colors) { withEmoji(formattedString(text, entities, colors), openPack = true) }
     if (entities.isEmpty()) {
         Text(annotated, modifier = modifier, style = style, color = color, inlineContent = inline, onTextLayout = onTextLayout)

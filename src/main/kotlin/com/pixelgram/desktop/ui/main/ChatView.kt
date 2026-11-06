@@ -1641,7 +1641,15 @@ fun MessageBubble(
                             .padding(horizontal = 12.dp, vertical = 7.dp)
                             .then(if (photo != null || media || album != null) Modifier.width((if (album != null) PhotoMaxWidth else mediaFrameOf(message)?.width ?: PhotoMaxWidth) - 24.dp) else Modifier),
                     ) {
-                        if (block && telegram != null) {
+                        val compactMeta = block && telegram != null && !hasText && files == null && linkPreviewOf(message.content) == null &&
+                            !(message.reactions.isNotEmpty() && onReact != null) &&
+                            (content is TdApi.MessageAudio || content is TdApi.MessageVoiceNote || content is TdApi.MessageDocument)
+                        if (compactMeta && telegram != null) {
+                            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                BlockContent(message, telegram, onPlugin = { PluginViewer.path = it })
+                                MessageMeta(message, status, settings.messageSeconds.value, metaColor, readColor)
+                            }
+                        } else if (block && telegram != null) {
                             BlockContent(message, telegram, onPlugin = { PluginViewer.path = it })
                             Spacer(Modifier.height(4.dp))
                         }
@@ -1660,7 +1668,7 @@ fun MessageBubble(
                             if (!reacted) Box(Modifier.align(Alignment.End).padding(top = 4.dp)) { meta() }
                         } else if (reacted) {
                             TextWithMeta(text = message.text, entities = message.entities, meta = { Box(Modifier) })
-                        } else {
+                        } else if (!compactMeta) {
                             TextWithMeta(text = message.text, entities = message.entities, meta = meta)
                         }
                         if (reacted && onReact != null) {

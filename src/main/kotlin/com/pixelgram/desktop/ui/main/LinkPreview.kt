@@ -120,7 +120,8 @@ fun LinkPreviewCard(preview: TdApi.LinkPreview, telegram: Telegram, outgoing: Bo
     }
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = if (outgoing) colors.primary.copy(alpha = 0.16f) else colors.surfaceContainerHighest,
+        color = if (outgoing) colors.onPrimaryContainer.copy(alpha = 0.08f) else colors.surfaceContainerHighest,
+        contentColor = if (outgoing) colors.onPrimaryContainer else colors.onSurface,
         modifier = Modifier.padding(top = 6.dp).fillMaxWidth().widthIn(max = maxWidth),
     ) {
         Column(Modifier.clickable(onClick = open).padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -131,7 +132,7 @@ fun LinkPreviewCard(preview: TdApi.LinkPreview, telegram: Telegram, outgoing: Bo
                         Text(
                             preview.siteName,
                             style = MaterialTheme.typography.labelLarge,
-                            color = colors.primary,
+                            color = if (outgoing) colors.onPrimaryContainer else colors.primary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )

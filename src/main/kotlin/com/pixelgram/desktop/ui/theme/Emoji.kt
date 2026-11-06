@@ -49,6 +49,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
@@ -86,6 +87,29 @@ class ImageEmoji(
         }.await()?.also { onDisk[emoji] = it }
     }
 
+    private val prefetchGate = Semaphore(MaxPrefetch)
+    private var prefetching: kotlinx.coroutines.Job? = null
+
+    fun prefetch(all: List<String>) {
+        if (prefetching?.isActive == true) return
+        prefetching = scope.launch {
+            all.filter { cached(it) == null }.map { emoji ->
+                async {
+                    prefetchGate.withPermit {
+                        if (cached(emoji) != null) return@withPermit
+                        val first = candidates(emoji).firstOrNull() ?: return@withPermit
+                        pending.getOrPut(first) {
+                            scope.async {
+                                candidates(emoji).firstNotNullOfOrNull { name -> if (name in missing) null else download(name) }
+                                    .also { pending.remove(first) }
+                            }
+                        }.await()?.also { onDisk[emoji] = it }
+                    }
+                }
+            }.forEach { it.await() }
+        }
+    }
+
     private fun download(name: String): File? = try {
         val connection = URI(url(name)).toURL().openConnection() as HttpURLConnection
         if (connection.responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
@@ -105,6 +129,7 @@ class ImageEmoji(
 
     private companion object {
         const val MaxDownloads = 6
+        const val MaxPrefetch = 8
     }
 }
 

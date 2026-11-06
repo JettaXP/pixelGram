@@ -86,7 +86,44 @@ object AppIcons {
         }
     }
 
+    @Volatile private var lastWindowsScheme: ColorScheme? = null
+    private var pinWatcher: Thread? = null
+
+    private fun watchPins() {
+        if (pinWatcher != null) return
+        val appData = System.getenv("APPDATA") ?: return
+        val pinned = File(appData, "Microsoft\\Internet Explorer\\Quick Launch\\User Pinned\\TaskBar")
+        if (!pinned.isDirectory) return
+        pinWatcher = Thread {
+            runCatching {
+                java.nio.file.FileSystems.getDefault().newWatchService().use { watcher ->
+                    pinned.toPath().register(watcher, java.nio.file.StandardWatchEventKinds.ENTRY_CREATE, java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY)
+                    while (true) {
+                        val key = watcher.take()
+                        val linked = key.pollEvents().any { it.context().toString().endsWith(".lnk", ignoreCase = true) }
+                        key.reset()
+                        if (!linked) continue
+                        Thread.sleep(PinSettleMs)
+                        lastWindowsScheme?.let(::installForWindows)
+                        Thread.sleep(PinSettleMs)
+                        while (true) {
+                            val more = watcher.poll() ?: break
+                            more.pollEvents()
+                            more.reset()
+                        }
+                    }
+                }
+            }.onFailure { com.pixelgram.desktop.core.AppLog.write("Taskbar pin watcher stopped", it) }
+        }.apply {
+            isDaemon = true
+            name = "pixelgram-pin-watcher"
+            start()
+        }
+    }
+
     private fun installForWindows(scheme: ColorScheme) {
+        lastWindowsScheme = scheme
+        watchPins()
         val exe = System.getProperty("jpackage.app-path")?.let { File(it).absoluteFile } ?: return
         val image = themed(scheme) ?: return
         val key = if (EasterEgg.israel) "israel" else "%08x-%08x".format(scheme.primaryContainer.toArgb(), scheme.onPrimaryContainer.toArgb())
@@ -174,6 +211,7 @@ object AppIcons {
         Start-Process -FilePath "${'$'}env:SystemRoot\System32\ie4uinit.exe" -ArgumentList '-show' -WindowStyle Hidden -ErrorAction SilentlyContinue
     """.trimIndent()
     private const val MaskBackground = 74f
+    private const val PinSettleMs = 1_500L
 }
 
 @Composable
