@@ -166,6 +166,7 @@ fun ChatActions(
     onSearch: (() -> Unit)? = null,
     onToBeginning: (() -> Unit)? = null,
     showProfile: Boolean = true,
+    overflow: List<MenuEntry> = emptyList(),
 ) {
     var confirm by remember(chat.id) { mutableStateOf<Confirm?>(null) }
     var profile by remember(chat.id) { mutableStateOf(false) }
@@ -337,7 +338,8 @@ fun ChatActions(
                                 },
                             )
                         }
-                        MenuGroups(groups)
+                        val hidden = overflow.map { entry -> MenuEntry(entry.icon, entry.label, entry.color, entry.trailing, entry.enabled, act(entry.onClick)) }
+                        MenuGroups(if (hidden.isEmpty()) groups else listOf(hidden) + groups)
                     }
                 }
             }

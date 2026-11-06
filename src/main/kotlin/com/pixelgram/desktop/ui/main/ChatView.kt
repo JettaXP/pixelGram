@@ -574,9 +574,17 @@ private fun ChatViewContent(
     if (forumSidebar && telegram.isForum(chat)) ForumSidebar(chat, telegram, Modifier.fillMaxHeight())
     Column(Modifier.weight(1f).fillMaxHeight()) {
         MiniPlayer(telegram)
+        var headerWidth by remember { mutableStateOf(Int.MAX_VALUE) }
+        val canCall = chat.privateUserId != 0L && com.pixelgram.desktop.calls.Calls.canCall(telegram, chat.privateUserId)
+        val headerButtons = if (canCall) 4 else 2
+        val headerNeeded = with(LocalDensity.current) {
+            (HeaderTitleMin + HeaderButton * (headerButtons + 1) + HeaderAvatar + 12.dp * (headerButtons + 2) + 32.dp + if (onBack != null) HeaderButton + 12.dp else 0.dp).roundToPx()
+        }
+        val collapsed = headerWidth < headerNeeded
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .onSizeChanged { headerWidth = it.width }
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -630,7 +638,13 @@ private fun ChatViewContent(
                 }
             }
             }
-            if (chat.privateUserId != 0L && com.pixelgram.desktop.calls.Calls.canCall(telegram, chat.privateUserId)) {
+            AnimatedVisibility(
+                visible = !collapsed,
+                enter = expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
+                exit = shrinkHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
+            ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (canCall) {
                 IconButton(onClick = { com.pixelgram.desktop.calls.Calls.start(telegram, chat.privateUserId, video = false) }) {
                     Icon(Icons.Filled.Call, contentDescription = "Call")
                 }
@@ -647,6 +661,8 @@ private fun ChatViewContent(
             ) {
                 Icon(Icons.Outlined.SideSheet, contentDescription = "Profile panel")
             }
+            }
+            }
             Box {
                 var headerMenu by remember(chat.id) { mutableStateOf<DpOffset?>(null) }
                 IconButton(onClick = { headerMenu = DpOffset(0.dp, 0.dp) }) {
@@ -660,6 +676,14 @@ private fun ChatViewContent(
                     onDismiss = { headerMenu = null },
                     onOpenChat = onOpenChat,
                     onSearch = { MessageSearch.start(chat.id) },
+                    overflow = if (!collapsed) emptyList() else buildList {
+                        if (canCall) {
+                            add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Filled.Call, "Call") { com.pixelgram.desktop.calls.Calls.start(telegram, chat.privateUserId, video = false) })
+                            add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Filled.Videocam, "Video call") { com.pixelgram.desktop.calls.Calls.start(telegram, chat.privateUserId, video = true) })
+                        }
+                        add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Filled.Search, "Search in chat") { MessageSearch.start(chat.id) })
+                        add(com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.SideSheet, if (SidePanel.showing(SideContent.Profile)) "Hide profile panel" else "Profile panel") { SidePanel.toggle(SideContent.Profile) })
+                    },
                     onToBeginning = {
                         jumping = true
                         telegram.jumpToStart(chat.id) {
@@ -3217,3 +3241,7 @@ private val SuggestCardWidth = 280.dp
 
 private const val HoverOpenMs = 120L
 private const val HoverCloseMs = 350L
+
+private val HeaderTitleMin = 160.dp
+private val HeaderButton = 48.dp
+private val HeaderAvatar = 40.dp
