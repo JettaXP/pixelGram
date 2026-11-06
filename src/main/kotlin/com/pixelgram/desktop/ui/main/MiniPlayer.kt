@@ -55,6 +55,10 @@ import com.pixelgram.desktop.ui.icons.OpenInFull
 import com.pixelgram.desktop.ui.icons.automirrored.filled.VolumeOff
 import com.pixelgram.desktop.ui.icons.automirrored.filled.VolumeUp
 import com.pixelgram.desktop.ui.icons.filled.Close
+import com.pixelgram.desktop.ui.icons.filled.MoreVert
+import com.pixelgram.desktop.ui.icons.outlined.Timer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import com.pixelgram.desktop.ui.icons.rounded.Pause
 import com.pixelgram.desktop.ui.icons.rounded.PlayArrow
 import com.pixelgram.desktop.ui.icons.filled.Repeat
@@ -238,7 +242,9 @@ fun MiniPlayer(telegram: Telegram) {
                 },
         ) {
             Column {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp).height(BarHeight)) {
+                var barWidth by remember { mutableStateOf(Int.MAX_VALUE) }
+                val compact = with(LocalDensity.current) { barWidth < MiniCompactWidth.roundToPx() }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().onSizeChanged { barWidth = it.width }.padding(horizontal = 8.dp).height(BarHeight)) {
                     MiniCover(telegram, Modifier.padding(end = 8.dp))
                     MorphControls(
                         playing = AudioPlayer.playing,
@@ -274,6 +280,7 @@ fun MiniPlayer(telegram: Telegram) {
                                     .clickable { MiniTime.remaining = !MiniTime.remaining }
                                     .padding(horizontal = 4.dp, vertical = 2.dp),
                             )
+                            if (!compact) {
                             IconButton(onClick = { AudioPlayer.muted = !AudioPlayer.muted }) {
                                 Icon(
                                     if (AudioPlayer.muted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
@@ -302,8 +309,12 @@ fun MiniPlayer(telegram: Telegram) {
                             TextButton(onClick = AudioPlayer::nextSpeed) {
                                 Text(speedLabel(AudioPlayer.speed), style = MaterialTheme.typography.labelLarge)
                             }
+                            }
                         }
                     }
+                    if (compact) {
+                        MiniOverflow(telegram)
+                    } else {
                     AudioPlayer.audio?.let { track ->
                         val saved = telegram.isInProfile(track)
                         val scale by animateFloatAsState(if (saved) 1f else 0.9f, spring(dampingRatio = 0.4f, stiffness = 600f))
@@ -329,6 +340,7 @@ fun MiniPlayer(telegram: Telegram) {
                         AudioPlayer.stop()
                     }) {
                         Icon(Icons.Filled.Close, contentDescription = "Close player")
+                    }
                     }
                 }
                 WavySeekBar(
@@ -632,3 +644,49 @@ private fun MiniCover(telegram: Telegram, modifier: Modifier = Modifier) {
 }
 
 private val MiniCoverSize = 36.dp
+
+@Composable
+private fun MiniOverflow(telegram: Telegram) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "More") }
+        androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }, shape = RoundedCornerShape(16.dp)) {
+            val item = @Composable { label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, tint: androidx.compose.ui.graphics.Color, action: () -> Unit ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(label) },
+                    leadingIcon = { Icon(icon, contentDescription = null, tint = tint) },
+                    onClick = {
+                        open = false
+                        action()
+                    },
+                )
+            }
+            val plain = androidx.compose.material3.LocalContentColor.current
+            val accent = MaterialTheme.colorScheme.primary
+            item(
+                when (AudioQueue.repeatMode) {
+                    RepeatMode.Off -> "Repeat: off"
+                    RepeatMode.All -> "Repeat: all"
+                    RepeatMode.One -> "Repeat: one"
+                },
+                if (AudioQueue.repeatMode == RepeatMode.One) Icons.Rounded.RepeatOne else Icons.Filled.Repeat,
+                if (AudioQueue.repeatMode != RepeatMode.Off) accent else plain,
+            ) { AudioQueue.cycleRepeat() }
+            item(com.pixelgram.desktop.core.tr("Speed") + " " + speedLabel(AudioPlayer.speed), Icons.Outlined.Timer, plain) { AudioPlayer.nextSpeed() }
+            AudioPlayer.audio?.let { track ->
+                val saved = telegram.isInProfile(track)
+                item(if (saved) "Remove from profile" else "Add to profile", if (saved) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder, if (saved) accent else plain) {
+                    telegram.toggleProfileAudio(track)
+                }
+            }
+            item(if (FullPlayer.open) "Close full player" else "Full player", Icons.Rounded.OpenInFull, plain) { FullPlayer.open = !FullPlayer.open }
+            item("Close player", Icons.Filled.Close, plain) {
+                AudioQueue.pending = null
+                FullPlayer.open = false
+                AudioPlayer.stop()
+            }
+        }
+    }
+}
+
+private val MiniCompactWidth = 820.dp

@@ -1676,8 +1676,8 @@ fun MessageBubble(
                             TextWithMeta(text = message.text, entities = message.entities, meta = meta)
                         }
                         if (reacted && onReact != null) {
-                            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
-                                Box(Modifier.weight(1f)) {
+                            ReactionsWithMeta(
+                                reactions = {
                                     ReactionChips(
                                         message.chatId to message.id,
                                         message.reactions,
@@ -1687,9 +1687,9 @@ fun MessageBubble(
                                         settings,
                                         avatars = telegram?.chats?.get(message.chatId)?.isChannel == false,
                                     )
-                                }
-                                Box(Modifier.padding(start = 8.dp, bottom = 2.dp)) { meta() }
-                            }
+                                },
+                                meta = { Box(Modifier.padding(bottom = 2.dp)) { meta() } },
+                            )
                         }
                     }
                 } else if (message.reactions.isNotEmpty() && onReact != null) {
@@ -3335,3 +3335,34 @@ private const val LongTextChars = 1000
 private const val LongTextLines = 20
 private val CollapsedTextHeight = 320.dp
 private val CollapsedFade = 72.dp
+
+@Composable
+private fun ReactionsWithMeta(reactions: @Composable () -> Unit, meta: @Composable () -> Unit) {
+    Layout(
+        content = {
+            Box { reactions() }
+            Box { meta() }
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val chips = measurables[0].measure(loose)
+        val time = measurables[1].measure(loose)
+        val gap = ReactionMetaGap.roundToPx()
+        val width = constraints.maxWidth
+        if (chips.width + gap + time.width <= width) {
+            val height = maxOf(chips.height, time.height)
+            layout(width, height) {
+                chips.place(0, height - chips.height)
+                time.place(width - time.width, height - time.height)
+            }
+        } else {
+            layout(width, chips.height + time.height) {
+                chips.place(0, 0)
+                time.place(width - time.width, chips.height)
+            }
+        }
+    }
+}
+
+private val ReactionMetaGap = 8.dp
