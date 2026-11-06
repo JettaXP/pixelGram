@@ -155,6 +155,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.layout
+import kotlin.math.roundToInt
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.focus.FocusRequester
@@ -831,7 +833,11 @@ private fun ChatViewContent(
                 com.pixelgram.desktop.core.MessageSides.BothSides -> false
                 com.pixelgram.desktop.core.MessageSides.Auto -> with(androidx.compose.ui.platform.LocalDensity.current) { listWidth.toDp() } >= WideChatWidth
             }
-            androidx.compose.runtime.CompositionLocalProvider(LocalWideChat provides wide) {
+            val wideAnim = remember { androidx.compose.animation.core.Animatable(if (wide) 1f else 0f) }
+            val wideSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+            LaunchedEffect(wide) { wideAnim.animateTo(if (wide) 1f else 0f, wideSpec) }
+            val wideProgress = remember(wideAnim) { { wideAnim.value } }
+            androidx.compose.runtime.CompositionLocalProvider(LocalWideChat provides wide, LocalWideProgress provides wideProgress) {
             LazyColumn(
                 state = listState,
                 reverseLayout = true,
@@ -947,8 +953,8 @@ private fun ChatViewContent(
                                 chat.isChannel && message.senderUserId != 0L
                             MessageGestures(message, actions, itemModifier) {
                               Row(verticalAlignment = Alignment.Bottom) {
-                                if (groupChat || (wide && !chat.isChannel)) {
-                                    Box(Modifier.width(SenderAvatarSlot)) {
+                                if (groupChat || !chat.isChannel) {
+                                    Box(if (groupChat) Modifier.width(SenderAvatarSlot) else Modifier.wideSlot(wideProgress)) {
                                         if (lastInRun) {
                                             SenderAvatar(message, telegram, settings) {
                                                 if (message.senderUserId != 0L) {
@@ -1466,6 +1472,7 @@ fun MessageBubble(
     val colors = MaterialTheme.colorScheme
     val outgoing = message.isOutgoing
     val endSide = outgoing && !LocalWideChat.current
+    val wideProgress = LocalWideProgress.current
     val grouped = message.album.takeIf { it.size > 1 && telegram != null }
     val album = grouped?.takeIf { members -> members.all { it.content is TdApi.MessagePhoto || isMediaContent(it.content) } }
     val files = grouped?.takeIf { album == null }
@@ -1474,7 +1481,6 @@ fun MessageBubble(
     val block = grouped == null && telegram != null && isRich(content) && !media
     Box(
         modifier = modifier.fillMaxWidth(),
-        contentAlignment = if (endSide) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
         val pulseNow = LocalBubblePulse.current
         Surface(
@@ -1486,7 +1492,7 @@ fun MessageBubble(
             ),
             color = if (outgoing) colors.primaryContainer else colors.surfaceContainerHigh,
             contentColor = if (outgoing) colors.onPrimaryContainer else colors.onSurface,
-            modifier = Modifier.widthIn(max = 520.dp).graphicsLayer {
+            modifier = Modifier.sideShift { if (outgoing) 1f - wideProgress() else 0f }.widthIn(max = 520.dp).graphicsLayer {
                 val pop = pulseNow()
                 scaleX = 1f + pop * HighlightPop
                 scaleY = 1f + pop * HighlightPop
@@ -1742,8 +1748,10 @@ private fun BareMessage(
     remember(message.chatId, message.id) { ReactionMemory.note(message) }
     if (message.reactions.isEmpty()) ReactionMemory.forget(message.chatId to message.id)
     val endSide = message.isOutgoing && !LocalWideChat.current
-    Box(modifier.fillMaxWidth(), contentAlignment = if (endSide) Alignment.CenterEnd else Alignment.CenterStart) {
+    val wideProgress = LocalWideProgress.current
+    Box(modifier.fillMaxWidth()) {
         Column(
+            modifier = Modifier.sideShift { if (message.isOutgoing) 1f - wideProgress() else 0f },
             horizontalAlignment = if (endSide) Alignment.End else Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -2248,6 +2256,24 @@ private const val CommandLimit = 30
 private const val JumpCloserItems = 20
 
 val LocalWideChat = androidx.compose.runtime.staticCompositionLocalOf { false }
+val LocalWideProgress = androidx.compose.runtime.staticCompositionLocalOf<() -> Float> { { 0f } }
+
+private fun Modifier.sideShift(end: () -> Float): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints.copy(minWidth = 0))
+    val width = if (constraints.hasBoundedWidth) constraints.maxWidth else placeable.width
+    layout(width, placeable.height) {
+        placeable.place(((width - placeable.width) * end().coerceIn(0f, 1f)).roundToInt(), 0)
+    }
+}
+
+private fun Modifier.wideSlot(progress: () -> Float): Modifier = graphicsLayer {
+    alpha = progress().coerceIn(0f, 1f)
+    clip = true
+}.layout { measurable, constraints ->
+    val full = SenderAvatarSlot.roundToPx()
+    val placeable = measurable.measure(constraints.copy(minWidth = full, maxWidth = full))
+    layout((full * progress().coerceIn(0f, 1f)).roundToInt(), placeable.height) { placeable.place(0, 0) }
+}
 private val WideChatWidth = 700.dp
 
 private suspend fun revealMessage(listState: LazyListState, index: Int) {

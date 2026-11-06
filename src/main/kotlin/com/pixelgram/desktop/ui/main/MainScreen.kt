@@ -237,8 +237,6 @@ fun MainScreen(
                 SidePanel.content == SideContent.Profile -> SideKind.Profile
                 else -> null
             }
-            val sideOpen = sideChat != null && SidePanel.content != null
-            androidx.compose.runtime.SideEffect { SidePanel.shown = sideOpen }
             val playerSpace = if (sideKind != null) FullPlayerWidth else 0.dp
             val pushedRail = if (settings.sideMenuStyle.value == com.pixelgram.desktop.core.SideMenuStyle.Push) with(density) { railWidthPx.toDp() } else 0.dp
             val room = (maxWidth - MinChatWidth - RailWidth - playerSpace - pushedRail).value
