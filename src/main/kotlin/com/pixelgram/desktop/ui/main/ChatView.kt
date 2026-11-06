@@ -366,6 +366,17 @@ private fun ChatViewContent(
     }
     var highlight by remember(chat.id) { mutableStateOf<Pair<Long, Long>?>(null) }
     val returnStack = remember(chat.id) { androidx.compose.runtime.mutableStateListOf<Long>() }
+    LaunchedEffect(chat.id, listState) {
+        var wasAway = false
+        androidx.compose.runtime.snapshotFlow { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset <= BottomSlackPx }
+            .collect { bottom ->
+                if (!bottom) wasAway = true
+                else if (wasAway && telegram.detached[chat.id] != true) {
+                    returnStack.clear()
+                    wasAway = false
+                }
+            }
+    }
     var pinning by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var commentsFor by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     val selected = remember(chat.id) { mutableStateListOf<Long>() }
@@ -3372,3 +3383,5 @@ private fun ReactionsWithMeta(reactions: @Composable () -> Unit, meta: @Composab
 
 private val ReactionMetaGap = 8.dp
 private val ReactionPull = 4.dp
+
+private const val BottomSlackPx = 4
