@@ -1,5 +1,11 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.SizeTransform
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode as AnimationRepeat
@@ -136,7 +142,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
     }
     val dark = base.surface.luminance() < 0.5f
     val style = com.pixelgram.desktop.ui.theme.LocalAppSettings.current?.colorStyle?.value ?: com.pixelgram.desktop.ui.theme.ColorStyle.TonalSpot
-    val seed = palette?.getOrNull(1)
+    val seed = palette?.getOrNull(3) ?: palette?.getOrNull(1)
     val themed = remember(seed, dark, style) { seed?.let { com.pixelgram.desktop.ui.theme.schemeFromSeed(it.toArgb(), dark, style) } } ?: base
     MaterialTheme(colorScheme = animatedScheme(themed)) {
     val tracks = AudioQueue.tracks(telegram)
@@ -155,8 +161,12 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
         },
     ) {
         Box(Modifier.fillMaxSize()) {
-        AmbientBackdrop(palette, Modifier.matchParentSize())
+        AmbientBackdrop(palette?.take(3), Modifier.matchParentSize())
         androidx.compose.animation.SharedTransitionLayout(Modifier.fillMaxSize()) {
+        val trackSpatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+        val trackScale = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+        val trackFade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+        val trackFadeOut = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { FullPlayer.open = false }) {
@@ -176,11 +186,20 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                         overflow = TextOverflow.Ellipsis,
                     )
                     if (index >= 0 && tracks.size > 1) {
-                        Text(
-                            "${com.pixelgram.desktop.core.tr("Track")} ${index + 1} ${com.pixelgram.desktop.core.tr("of")} ${tracks.size}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = colors.primary,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("${com.pixelgram.desktop.core.tr("Track")} ", style = MaterialTheme.typography.labelMedium, color = colors.primary)
+                            AnimatedContent(
+                                targetState = index + 1,
+                                transitionSpec = {
+                                    val up = if (targetState > initialState) 1 else -1
+                                    (slideInVertically(trackSpatial) { it * up } + fadeIn(trackFade)) togetherWith
+                                        (slideOutVertically(trackSpatial) { -it * up } + fadeOut(trackFadeOut))
+                                },
+                            ) { number ->
+                                Text("$number", style = MaterialTheme.typography.labelMedium, color = colors.primary)
+                            }
+                            Text(" ${com.pixelgram.desktop.core.tr("of")} ${tracks.size}", style = MaterialTheme.typography.labelMedium, color = colors.primary)
+                        }
                     }
                 }
                 PlayerMenu(telegram)
@@ -197,11 +216,17 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                 contentAlignment = Alignment.Center,
             ) { view ->
                 when (view) {
-                    PlayerView.Cover -> BigCover(
-                        audio,
-                        telegram,
-                        Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedContent, boundsTransform = { _, _ -> spring(dampingRatio = CoverSpringDamping, stiffness = CoverSpringStiffness) }, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.RemeasureToBounds),
-                    )
+                    PlayerView.Cover -> AnimatedContent(
+                        targetState = TrackSlot(audio, index),
+                        contentKey = { it.audio?.audio?.id },
+                        transitionSpec = {
+                            val dir = if (targetState.index >= initialState.index) 1 else -1
+                            (slideInHorizontally(trackSpatial) { it / 3 * dir } + fadeIn(trackFade) + scaleIn(trackScale, initialScale = 0.9f)) togetherWith
+                                (slideOutHorizontally(trackSpatial) { -it / 3 * dir } + fadeOut(trackFadeOut) + scaleOut(trackScale, targetScale = 0.9f))
+                        },
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedContent, boundsTransform = { _, _ -> spring(dampingRatio = CoverSpringDamping, stiffness = CoverSpringStiffness) }, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.RemeasureToBounds),
+                    ) { slot -> BigCover(slot.audio, telegram) }
                     PlayerView.Lyrics -> LyricsView(audio)
                     PlayerView.Queue -> QueueView(telegram, tracks, index)
                 }
@@ -225,15 +250,30 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                     )
                 }
                 }
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        audio?.title?.ifBlank { null } ?: AudioPlayer.title,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    audio?.performer?.takeIf { it.isNotBlank() }?.let { performer ->
-                        Text(performer, style = MaterialTheme.typography.titleSmall, color = colors.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val shownTitle = audio?.title?.ifBlank { null } ?: AudioPlayer.title
+                AnimatedContent(
+                    targetState = TrackText(shownTitle, audio?.performer?.takeIf { it.isNotBlank() }, index),
+                    contentKey = { it.title to it.performer },
+                    transitionSpec = {
+                        val dir = if (targetState.index >= initialState.index) 1 else -1
+                        androidx.compose.animation.ContentTransform(
+                            slideInHorizontally(trackSpatial) { it / 4 * dir } + fadeIn(trackFade),
+                            slideOutHorizontally(trackSpatial) { -it / 4 * dir } + fadeOut(trackFadeOut),
+                            sizeTransform = SizeTransform(clip = false),
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                ) { text ->
+                    Column {
+                        Text(
+                            text.title,
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        text.performer?.let { performer ->
+                            Text(performer, style = MaterialTheme.typography.titleSmall, color = colors.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
                 }
                 if (audio != null) {
@@ -442,31 +482,61 @@ private val BlobSpots = listOf(
 private const val DriftMs = 42_000
 
 private suspend fun coverPalette(path: String): List<androidx.compose.ui.graphics.Color>? {
-    val image = com.pixelgram.desktop.ui.components.loadImage(path, 48) ?: return null
+    val image = com.pixelgram.desktop.ui.components.loadImage(path, PaletteSize) ?: return null
     val width = image.width
     val height = image.height
     if (width == 0 || height == 0) return null
     val pixels = IntArray(width * height)
     image.readPixels(pixels)
     val bands = listOf(0 until height / 3, height / 3 until height * 2 / 3, height * 2 / 3 until height)
-    return bands.map { rows ->
-        var r = 0L
-        var g = 0L
-        var b = 0L
-        var n = 0
-        for (y in rows) for (x in 0 until width) {
-            val p = pixels[y * width + x]
-            r += (p shr 16) and 0xFF
-            g += (p shr 8) and 0xFF
-            b += p and 0xFF
-            n++
-        }
-        if (n == 0) return null
-        val hsb = java.awt.Color.RGBtoHSB((r / n).toInt(), (g / n).toInt(), (b / n).toInt(), null)
-        val vivid = java.awt.Color.HSBtoRGB(hsb[0], (hsb[1] * 1.4f).coerceIn(0.35f, 1f), hsb[2].coerceIn(0.45f, 0.9f))
-        androidx.compose.ui.graphics.Color(vivid or (0xFF shl 24))
-    }
+    val all = vividColor(pixels, 0 until height, width) ?: return null
+    return bands.map { rows -> vividColor(pixels, rows, width) ?: all } + all
 }
+
+private fun vividColor(pixels: IntArray, rows: IntRange, width: Int): androidx.compose.ui.graphics.Color? {
+    val weight = FloatArray(HueBuckets)
+    val r = FloatArray(HueBuckets)
+    val g = FloatArray(HueBuckets)
+    val b = FloatArray(HueBuckets)
+    var sumR = 0L
+    var sumG = 0L
+    var sumB = 0L
+    var count = 0
+    val hsb = FloatArray(3)
+    for (y in rows) for (x in 0 until width) {
+        val p = pixels[y * width + x]
+        val pr = (p shr 16) and 0xFF
+        val pg = (p shr 8) and 0xFF
+        val pb = p and 0xFF
+        sumR += pr
+        sumG += pg
+        sumB += pb
+        count++
+        java.awt.Color.RGBtoHSB(pr, pg, pb, hsb)
+        val w = hsb[1] * hsb[1] * hsb[2]
+        if (w < MinVivid) continue
+        val bucket = (hsb[0] * HueBuckets).toInt().coerceIn(0, HueBuckets - 1)
+        weight[bucket] += w
+        r[bucket] += pr * w
+        g[bucket] += pg * w
+        b[bucket] += pb * w
+    }
+    if (count == 0) return null
+    val best = weight.indices.maxByOrNull { weight[it] } ?: return null
+    val (cr, cg, cb) = if (weight[best] > count * MinShare) {
+        Triple(r[best] / weight[best], g[best] / weight[best], b[best] / weight[best])
+    } else {
+        Triple(sumR.toFloat() / count, sumG.toFloat() / count, sumB.toFloat() / count)
+    }
+    java.awt.Color.RGBtoHSB(cr.toInt(), cg.toInt(), cb.toInt(), hsb)
+    val vivid = java.awt.Color.HSBtoRGB(hsb[0], (hsb[1] * 1.2f).coerceIn(0.35f, 1f), hsb[2].coerceIn(0.5f, 0.95f))
+    return androidx.compose.ui.graphics.Color(vivid or (0xFF shl 24))
+}
+
+private const val HueBuckets = 24
+private const val MinVivid = 0.04f
+private const val MinShare = 0.002f
+private const val PaletteSize = 96
 
 private fun coverFile(audio: TdApi.Audio?): Pair<TdApi.File?, TdApi.Minithumbnail?> =
     (audio?.albumCoverThumbnail?.file ?: audio?.externalAlbumCovers?.maxByOrNull { it.width }?.file) to audio?.albumCoverMinithumbnail
@@ -1110,3 +1180,7 @@ private fun saveToMusic(source: java.io.File, name: String) {
 object PlayerKeys {
     var armed by mutableStateOf(false)
 }
+
+private class TrackSlot(val audio: TdApi.Audio?, val index: Int)
+
+private class TrackText(val title: String, val performer: String?, val index: Int)

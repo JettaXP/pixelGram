@@ -70,11 +70,11 @@ object WindowsMedia {
         call(smtc, PutPlaybackStatus, if (current == null) StatusClosed else if (playing) StatusPlaying else StatusPaused)
         val updaterOut = PointerByReference()
         if (call(smtc, GetDisplayUpdater, updaterOut) != 0) return
-        val updater = updaterOut.value
+        val updater: Pointer = updaterOut.value ?: return
         call(updater, PutType, TypeMusic)
         val musicOut = PointerByReference()
-        if (call(updater, GetMusicProperties, musicOut) == 0) {
-            val music = musicOut.value
+        val music: Pointer? = if (call(updater, GetMusicProperties, musicOut) == 0) musicOut.value else null
+        if (music != null) {
             val name = audio?.title?.ifBlank { null } ?: title
             val artist = audio?.performer.orEmpty()
             withString(combase, name) { call(music, PutTitle, it) }
