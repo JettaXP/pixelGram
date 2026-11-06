@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.54.0 Very Sunny
+
+### Player
+- A volume button in the full player opens an Expressive vertical slider.
+- Track changes animate in the direction of next or previous, also when shuffling.
+- The queue keeps its list after you leave the chat and always shows the current track.
+- Speed and view buttons read as one connected group.
+- When the mini player is narrow, repeat, speed, profile, full player and close move into a ⋮ menu.
+- The video player's play button morphs and its icon animates.
+
+### Chats
+- Folders on top can be pills, with a folder title option; top tabs always show names with icons.
+- Mentions are underlined and open the profile; the chat opens from its Message button.
+- The chat list shows animated typing dots.
+- Reactions sit on the same line as the time when they fit, and the bubble grows smoothly when they appear.
+- The message menu keeps its width, and only the reaction bar slides wider with the more button when you hover it.
+- The message field grows smoothly to new lines.
+
+### Side panel
+- Saved Messages shows its overview instead of your own profile.
+- Opening the side panel no longer stutters.
+- Stories and gifts tabs appear together once both have loaded.
+
+### Settings and fixes
+- Interface scale and a few other settings are now saved between launches, and the scale slider moves in clean steps of 5.
+- The side menu no longer cuts its content while it opens or closes.
+- Telegram icons stay in one style, including the settings gear.
+- Clearer Russian text about public wallet balances.
+
 ## 0.53.4 Soft Boom
 
 - In the full player, the cover, title and track number animate when the track changes.
