@@ -162,7 +162,7 @@ fun InfoGroup(rows: List<InfoRow>) {
                             val handler = remember(mention, fallback) {
                                 object : UriHandler {
                                     override fun openUri(uri: String) {
-                                        if (mention != null && uri.startsWith(ResolvePrefix)) mention(uri.removePrefix(ResolvePrefix)) else fallback.openUri(uri)
+                                        if (mention != null && uri.startsWith(ResolvePrefix)) mention(uri.removePrefix(ResolvePrefix).substringBefore('&')) else fallback.openUri(uri)
                                     }
                                 }
                             }

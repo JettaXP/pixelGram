@@ -112,9 +112,9 @@ fun formattedString(text: String, entities: List<TdApi.TextEntity>, colors: Form
             is TdApi.TextEntityTypeEmailAddress -> builder.addLink(link("mailto:" + text.substring(start, end), colors), start, end)
             is TdApi.TextEntityTypePhoneNumber -> builder.addLink(link("tel:" + text.substring(start, end), colors), start, end)
             is TdApi.TextEntityTypeMention ->
-                builder.addLink(link("tg://resolve?domain=" + text.substring(start, end).removePrefix("@"), colors, underline = false), start, end)
+                builder.addLink(link("tg://resolve?domain=" + text.substring(start, end).removePrefix("@") + "&profile=1", colors), start, end)
             is TdApi.TextEntityTypeMentionName ->
-                builder.addLink(link("tg://user?id=${type.userId}", colors, underline = false), start, end)
+                builder.addLink(link("tg://user?id=${type.userId}&profile=1", colors), start, end)
             is TdApi.TextEntityTypeCustomEmoji ->
                 builder.addStringAnnotation(CustomEmojiTag, type.customEmojiId.toString(), start, end)
             is TdApi.TextEntityTypeHashtag,

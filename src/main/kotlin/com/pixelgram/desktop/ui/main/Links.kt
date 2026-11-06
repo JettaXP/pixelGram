@@ -99,6 +99,10 @@ object Links : UriHandler {
         handle(telegram, url)
     }
 
+    private fun showProfile(telegram: Telegram, chatId: Long) = SwingUtilities.invokeLater {
+        telegram.chats[chatId]?.let { ProfileRequest.chat = it } ?: go(telegram, chatId)
+    }
+
     private fun go(telegram: Telegram, chatId: Long, messageId: Long = 0) = SwingUtilities.invokeLater {
         navigate?.invoke(telegram, chatId)
         if (messageId != 0L) MessageSearch.jump = chatId to messageId
@@ -106,10 +110,18 @@ object Links : UriHandler {
 
     private fun handle(telegram: Telegram, url: String) {
         val uri = runCatching { URI(url.trim()) }.getOrNull()
+        val profile = uri?.scheme.equals("tg", ignoreCase = true) && uri?.query.orEmpty().split('&').contains("profile=1")
         if (uri?.scheme.equals("tg", ignoreCase = true) && uri?.host == "user") {
             val id = uri.query.orEmpty().substringAfter("id=", "").substringBefore('&').toLongOrNull()
-            if (id != null) telegram.openPrivateChat(id) { go(telegram, it) }
+            if (id != null) telegram.openPrivateChat(id) { chatId -> if (profile) showProfile(telegram, chatId) else go(telegram, chatId) }
             return
+        }
+        if (profile && uri?.host.equals("resolve", ignoreCase = true)) {
+            val name = uri?.query.orEmpty().split('&').firstOrNull { it.startsWith("domain=") }?.substringAfter('=').orEmpty()
+            if (name.isNotEmpty()) {
+                telegram.openPublicChat(name, { chatId -> showProfile(telegram, chatId) }, { SwingUtilities.invokeLater { notFound = name } })
+                return
+            }
         }
         telegram.internalLinkType(url) { type ->
             when (type) {
