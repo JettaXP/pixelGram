@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.52.6 Puffy Diamond
+
+- A Restart button on the startup error screen relaunches pixelGram, no trip to the tray needed.
+- When the disk is full, pixelGram says so in plain words, clears its own leftover update files and tries again.
+- Updates check for free disk space before downloading and never leave a half-downloaded file behind.
+- The wave in file and photo transfer rings moves while they load.
+- The side menu is no longer cut off at the bottom while it slides out.
+- The update panel is translated, including the line with the new version.
+
 ## 0.52.5 Puffy Diamond
 
 - The color picker can take a color from a photo: tap the picture button next to the hex field, then click or drag on the photo.
