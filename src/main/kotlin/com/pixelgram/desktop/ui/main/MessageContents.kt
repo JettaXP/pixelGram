@@ -1174,7 +1174,6 @@ fun TransferRing(progress: Float?, color: Color, onCancel: (() -> Unit)?, size: 
             color = color,
             trackColor = color.copy(alpha = 0.25f),
             amplitude = { value -> if (value < RingFlattenFrom) 1f else ((1f - value) / (1f - RingFlattenFrom)).coerceIn(0f, 1f) },
-            waveSpeed = 0.dp,
         )
         if (onCancel != null) {
             Icon(Icons.Rounded.Close, contentDescription = "Cancel", tint = color, modifier = Modifier.size(size * 0.42f))
