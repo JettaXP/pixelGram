@@ -1,7 +1,14 @@
 # Changelog
 
-## 0.52.6 Puffy Diamond
+## 0.53.0 Soft Boom
 
+### Side panel
+- Hover the emoji button to peek at emoji, stickers and GIFs; the panel stays while you move onto it and hides when you leave.
+- Click the emoji button to dock emoji, stickers and GIFs in a tall panel on the right. The window grows to make room instead of squeezing the chat.
+- The new panel button next to ⋮ shows the profile of the current chat or group on the right, and it follows you to other chats.
+- The full player opens over the side panel. Pressing the emoji or profile button while it's open shrinks the player to the mini player, and closing the full player brings back what the panel showed before.
+
+### Fixes
 - A Restart button on the startup error screen relaunches pixelGram, no trip to the tray needed.
 - When the disk is full, pixelGram says so in plain words, clears its own leftover update files and tries again.
 - Updates check for free disk space before downloading and never leave a half-downloaded file behind.
