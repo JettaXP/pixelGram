@@ -1,8 +1,5 @@
 package com.pixelgram.desktop.ui.components
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -19,6 +16,8 @@ import androidx.compose.ui.graphics.addOutline
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.exp
+import androidx.compose.runtime.withFrameNanos
 
 private class WheelGlide {
     var remaining = 0f
@@ -48,17 +47,20 @@ fun Modifier.smoothWheel(state: ScrollableState, reverse: Boolean = false): Modi
                     continue
                 }
                 glide.remaining += delta.y * step * sign
-                glide.job?.cancel()
+                if (glide.job?.isActive == true) continue
                 glide.job = scope.launch {
-                    val target = glide.remaining
-                    var applied = 0f
-                    animate(0f, target, animationSpec = tween(GlideMs, easing = FastOutSlowInEasing)) { value, _ ->
-                        val piece = value - applied
-                        applied = value
+                    var last = withFrameNanos { it }
+                    while (abs(glide.remaining) >= MinPiece) {
+                        val now = withFrameNanos { it }
+                        val elapsed = ((now - last) / 1_000_000f).coerceIn(0f, MaxFrameMs)
+                        last = now
+                        val piece = glide.remaining * (1f - exp(-elapsed / GlideTauMs))
+                        if (piece == 0f) continue
                         glide.remaining -= piece
                         val used = state.dispatchRawDelta(piece)
                         if (abs(used) < abs(piece) * 0.5f) glide.remaining = 0f
                     }
+                    if (glide.remaining != 0f) state.dispatchRawDelta(glide.remaining)
                     glide.remaining = 0f
                 }
             }
@@ -71,7 +73,9 @@ object SmoothWheelScope {
 }
 
 private val WheelStep = 72.dp
-private const val GlideMs = 280
+private const val GlideTauMs = 55f
+private const val MaxFrameMs = 50f
+private const val MinPiece = 0.5f
 private const val NotchTolerance = 0.001f
 private const val TouchpadFactor = 1f
 
