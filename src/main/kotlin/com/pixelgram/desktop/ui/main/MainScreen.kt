@@ -926,6 +926,7 @@ internal fun TopFolders(
 
 private val TopFolderWidth = 80.dp
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun PillFolders(
     tabs: List<FolderTab>,
@@ -934,7 +935,6 @@ internal fun PillFolders(
     onSelect: (ChatListKey) -> Unit,
 ) {
     if (tabs.size < 2) return
-    val colors = MaterialTheme.colorScheme
     Row(
         horizontalArrangement = Arrangement.spacedBy(PillGap),
         verticalAlignment = Alignment.CenterVertically,
@@ -946,40 +946,27 @@ internal fun PillFolders(
     ) {
         tabs.forEach { tab ->
             val isSelected = tab.key == selected
-            val corner by animateDpAsState(if (isSelected) PillHeight / 2 else PillCorner, MaterialTheme.motionScheme.defaultSpatialSpec())
-            val fill by animateColorAsState(if (isSelected) colors.primaryContainer else colors.surfaceContainerHigh, MaterialTheme.motionScheme.defaultEffectsSpec())
-            val tint by animateColorAsState(if (isSelected) colors.onPrimaryContainer else colors.onSurfaceVariant, MaterialTheme.motionScheme.defaultEffectsSpec())
             val showIcon = mode != com.pixelgram.desktop.core.FolderTitle.Names
             val showName = mode == com.pixelgram.desktop.core.FolderTitle.NamesAndIcons || mode == com.pixelgram.desktop.core.FolderTitle.Names ||
                 mode == com.pixelgram.desktop.core.FolderTitle.ActiveName && isSelected
-            Surface(
-                onClick = { onSelect(tab.key) },
-                shape = RoundedCornerShape(corner),
-                color = fill,
-                contentColor = tint,
+            androidx.compose.material3.ToggleButton(
+                checked = isSelected,
+                onCheckedChange = { onSelect(tab.key) },
+                colors = androidx.compose.material3.ToggleButtonDefaults.tonalToggleButtonColors(),
                 modifier = Modifier.height(PillHeight),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(horizontal = 14.dp).animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()),
-                ) {
-                    if (showIcon) Icon(folderIcon(tab.icon, isSelected), contentDescription = tab.title, tint = tint, modifier = Modifier.size(20.dp))
-                    if (showName) EmojiText(tab.title, color = tint, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-                    val unread = tab.unread?.takeIf { it.chats > 0 }
-                    if (unread != null) {
-                        Surface(
-                            shape = CircleShape,
-                            color = if (isSelected) colors.onPrimaryContainer else if (unread.unmuted > 0) colors.primary else colors.outline,
-                            contentColor = if (isSelected) colors.primaryContainer else if (unread.unmuted > 0) colors.onPrimary else colors.surface,
-                        ) {
-                            Text(
-                                if (unread.chats > 999) "999+" else unread.chats.toString(),
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
-                            )
-                        }
-                    }
+                if (showIcon) {
+                    Icon(folderIcon(tab.icon, isSelected), contentDescription = tab.title, modifier = Modifier.size(androidx.compose.material3.ButtonDefaults.IconSize))
+                }
+                if (showIcon && showName) Spacer(Modifier.width(androidx.compose.material3.ButtonDefaults.IconSpacing))
+                if (showName) EmojiText(tab.title, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                val unread = tab.unread?.takeIf { it.chats > 0 }
+                if (unread != null) {
+                    Spacer(Modifier.width(androidx.compose.material3.ButtonDefaults.IconSpacing))
+                    Badge(
+                        containerColor = if (unread.unmuted > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                        contentColor = if (unread.unmuted > 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.surface,
+                    ) { Text(if (unread.chats > 999) "999+" else unread.chats.toString()) }
                 }
             }
         }
@@ -987,7 +974,6 @@ internal fun PillFolders(
 }
 
 private val PillHeight = 40.dp
-private val PillCorner = 12.dp
 private val PillGap = 8.dp
 private const val RailFadeOutMs = 70
 private const val RailFadeInMs = 180

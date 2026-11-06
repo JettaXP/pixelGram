@@ -1200,13 +1200,20 @@ private const val GroupIdleAlpha = 0.55f
 @Composable
 private fun VolumeButton(colors: androidx.compose.material3.ToggleButtonColors) {
     var open by remember { mutableStateOf(false) }
+    var closedAt by remember { mutableStateOf(0L) }
     val shown = remember { androidx.compose.animation.core.MutableTransitionState(false) }
     shown.targetState = open
     val level = if (AudioPlayer.muted) 0f else AudioPlayer.volume
     Box {
         ToggleButton(
             checked = open,
-            onCheckedChange = { open = it },
+            onCheckedChange = {
+                if (open) {
+                    open = false
+                } else if (System.currentTimeMillis() - closedAt > ReopenGuardMs) {
+                    open = true
+                }
+            },
             shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
             colors = colors,
             contentPadding = PaddingValues(horizontal = 16.dp),
@@ -1226,7 +1233,10 @@ private fun VolumeButton(colors: androidx.compose.material3.ToggleButtonColors) 
             androidx.compose.ui.window.Popup(
                 alignment = Alignment.BottomCenter,
                 offset = androidx.compose.ui.unit.IntOffset(0, -with(density) { (40.dp + 8.dp).roundToPx() }),
-                onDismissRequest = { open = false },
+                onDismissRequest = {
+                    open = false
+                    closedAt = System.currentTimeMillis()
+                },
                 properties = androidx.compose.ui.window.PopupProperties(focusable = false),
             ) {
                 androidx.compose.animation.AnimatedVisibility(
@@ -1271,4 +1281,5 @@ private fun VolumeButton(colors: androidx.compose.material3.ToggleButtonColors) 
 }
 
 private val VolumeSliderHeight = 180.dp
+private const val ReopenGuardMs = 300L
 private val VolumeTrackWidth = 40.dp
