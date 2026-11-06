@@ -22,7 +22,6 @@ permissions:
   contents: write
 
 jobs:
-  # Creates an empty release first; the build jobs upload their files into it, so no Actions storage is used.
   prepare:
     name: Release
     if: github.event_name == 'push'
@@ -90,7 +89,6 @@ jobs:
       - name: Build.
         run: ./gradlew --no-daemon :createDistributable
 
-      # The jpackage launcher crashes in setenv on some distros (CachyOS), so start the bundled JVM from a script.
       - name: Script launcher.
         run: |
           app=build/compose/binaries/main/app/pixelGram
@@ -99,7 +97,6 @@ jobs:
           install -Dm755 "$JAVA_HOME/bin/java" "$app/lib/runtime/bin/java"
           test "$(sed -n 's/^JAVA_VERSION=//p' "$app/lib/runtime/release")" = "$(sed -n 's/^JAVA_VERSION=//p' "$JAVA_HOME/release")"
 
-      # The pixelgram-data folder turns on portable mode (data next to the app).
       - name: Portable archive.
         run: |
           cp -a build/compose/binaries/main/app/pixelGram portable
@@ -177,7 +174,6 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      # TDLib needs the Visual C++ runtime, ship it with the app.
       - name: Bundle Visual C++ runtime.
         shell: bash
         run: |
@@ -195,11 +191,9 @@ jobs:
         shell: bash
         run: |
           mkdir dist
-          # The pixelgram-data folder turns on portable mode (data next to the app).
           mkdir -p build/compose/binaries/main/app/pixelGram/pixelgram-data
           7z a "dist/pixelGram-$APP_VERSION-windows-x64-portable.zip" ./build/compose/binaries/main/app/pixelGram
 
-      # A single Setup.exe: IExpress (part of Windows) unpacks the MD3 installer and the .msi, which the installer runs.
       - name: Setup.exe.
         shell: pwsh
         run: |
@@ -262,8 +256,6 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      # Info.plist usage strings, the tg:// scheme and ad-hoc signing are
-      # applied by the createDistributable hook in build.gradle.kts.
       - name: Build.
         run: ./gradlew --no-daemon :packageDmg
 
