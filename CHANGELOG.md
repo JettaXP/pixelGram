@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.4 Soft Boom
+
+- In the full player, the cover, title and track number animate when the track changes.
+- The full player picks its colors from the cover's most vivid color instead of a muddy average.
+- Windows media controls no longer fail when Windows returns no music properties.
+
 ## 0.53.3 Soft Boom
 
 - Smooth scrolling follows the wheel or touchpad while you scroll instead of catching up all at once when you stop.
