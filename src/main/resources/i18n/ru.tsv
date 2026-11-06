@@ -1736,3 +1736,25 @@ Top is a bar of tabs or a capsule above the chat list.	Сверху: вклад�
 Left is a Material 3 navigation rail.	Слева: панель навигации Material 3.
 Pills	Пилюли
 Top is a bar of tabs, a capsule or pills above the chat list.	Сверху: вкладки, капсула или пилюли над списком чатов.
+Video message	Видеосообщение
+Contact	Контакт
+Created «{title}»	Создан чат «{title}»
+Created the group «{title}»	Создана группа «{title}»
+Changed the name to «{title}»	Название изменено на «{title}»
+Updated the photo	Фото обновлено
+Changed the chat theme to {name}	Тема чата изменена на {name}
+Changed the chat theme	Тема чата изменена
+Disabled the chat theme	Тема чата отключена
+Removed the photo	Фото удалено
+Added new members	Добавлены новые участники
+Joined via invite link	Вступление по ссылке-приглашению
+Joined the chat	Вступление в чат
+Left the chat	Выход из чата
+Pinned a message	Закреплено сообщение
+Took a screenshot	Сделан скриншот
+Joined Telegram	Теперь в Telegram
+The group was upgraded to a supergroup	Группа преобразована в супергруппу
+Disabled auto-delete	Автоудаление выключено
+Enabled auto-delete	Автоудаление включено
+Created the topic «{name}»	Создана тема «{name}»
+Started a video chat	Начат видеочат

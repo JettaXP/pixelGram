@@ -534,7 +534,7 @@ private fun ChatRow(
                 } else {
                     val sender = last?.takeIf { chat.isGroup && !chat.isChannel && !isService(it.content) }?.let { message ->
                         val id = (message.senderId as? TdApi.MessageSenderUser)?.userId
-                        if (message.isOutgoing) "You" else id?.let { telegram.users[it]?.firstName?.ifBlank { null } } ?: telegram.senderTitle(message.senderId)
+                        if (message.isOutgoing) com.pixelgram.desktop.core.tr("You") else id?.let { telegram.users[it]?.firstName?.ifBlank { null } } ?: telegram.senderTitle(message.senderId)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (!sender.isNullOrBlank()) EmojiText("$sender: ", color = colors.primary, maxLines = 1)

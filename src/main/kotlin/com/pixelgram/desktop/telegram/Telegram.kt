@@ -3715,46 +3715,46 @@ private fun mediaPreview(emoji: String, label: String, caption: String?): String
 fun contentText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageText -> content.text?.text ?: ""
     is TdApi.MessageRichMessage -> com.pixelgram.desktop.ui.main.richPreviewText(content.message)
-    is TdApi.MessagePhoto -> mediaPreview("🖼", "Photo", content.caption?.text)
-    is TdApi.MessagePaidMedia -> mediaPreview("⭐", "Paid media", content.caption?.text)
-    is TdApi.MessageVideo -> mediaPreview("🎬", "Video", content.caption?.text)
-    is TdApi.MessageDocument -> listOf("📄 ${content.document?.fileName ?: "File"}", content.caption?.text).filterNotBlank()
-    is TdApi.MessageAudio -> "🎵 ${content.audio?.title ?: "Audio"}"
-    is TdApi.MessageVoiceNote -> "🎤 Voice message"
-    is TdApi.MessageVideoNote -> "⏺ Video message"
-    is TdApi.MessageSticker -> "${content.sticker?.emoji ?: ""} Sticker".trim()
-    is TdApi.MessageAnimation -> mediaPreview("🎞", "GIF", content.caption?.text)
-    is TdApi.MessageContact -> "👤 Contact"
-    is TdApi.MessageLiveLocation -> "📍 Live location"
-    is TdApi.MessageLocation -> "📍 Location"
-    is TdApi.MessagePoll -> "📊 Poll"
-    is TdApi.MessageSupergroupChatCreate -> "Created «${content.title}»"
-    is TdApi.MessageBasicGroupChatCreate -> "Created the group «${content.title}»"
-    is TdApi.MessageChatChangeTitle -> "Changed the name to «${content.title}»"
-    is TdApi.MessageChatChangePhoto -> "Updated the photo"
-    is TdApi.MessageSuggestProfilePhoto -> "Suggested profile photo"
+    is TdApi.MessagePhoto -> mediaPreview("🖼", com.pixelgram.desktop.core.tr("Photo"), content.caption?.text)
+    is TdApi.MessagePaidMedia -> mediaPreview("⭐", com.pixelgram.desktop.core.tr("Paid media"), content.caption?.text)
+    is TdApi.MessageVideo -> mediaPreview("🎬", com.pixelgram.desktop.core.tr("Video"), content.caption?.text)
+    is TdApi.MessageDocument -> listOf("📄 ${content.document?.fileName ?: com.pixelgram.desktop.core.tr("File")}", content.caption?.text).filterNotBlank()
+    is TdApi.MessageAudio -> "🎵 ${content.audio?.title ?: com.pixelgram.desktop.core.tr("Audio")}"
+    is TdApi.MessageVoiceNote -> "🎤 " + com.pixelgram.desktop.core.tr("Voice message")
+    is TdApi.MessageVideoNote -> "⏺ " + com.pixelgram.desktop.core.tr("Video message")
+    is TdApi.MessageSticker -> "${content.sticker?.emoji ?: ""} ${com.pixelgram.desktop.core.tr("Sticker")}".trim()
+    is TdApi.MessageAnimation -> mediaPreview("🎞", com.pixelgram.desktop.core.tr("GIF"), content.caption?.text)
+    is TdApi.MessageContact -> "👤 " + com.pixelgram.desktop.core.tr("Contact")
+    is TdApi.MessageLiveLocation -> "📍 " + com.pixelgram.desktop.core.tr("Live location")
+    is TdApi.MessageLocation -> "📍 " + com.pixelgram.desktop.core.tr("Location")
+    is TdApi.MessagePoll -> "📊 " + com.pixelgram.desktop.core.tr("Poll")
+    is TdApi.MessageSupergroupChatCreate -> com.pixelgram.desktop.core.tr("Created «{title}»").replace("{title}", content.title)
+    is TdApi.MessageBasicGroupChatCreate -> com.pixelgram.desktop.core.tr("Created the group «{title}»").replace("{title}", content.title)
+    is TdApi.MessageChatChangeTitle -> com.pixelgram.desktop.core.tr("Changed the name to «{title}»").replace("{title}", content.title)
+    is TdApi.MessageChatChangePhoto -> com.pixelgram.desktop.core.tr("Updated the photo")
+    is TdApi.MessageSuggestProfilePhoto -> com.pixelgram.desktop.core.tr("Suggested profile photo")
     is TdApi.MessageChatSetTheme -> when (val theme = content.theme) {
-        is TdApi.ChatThemeEmoji -> "Changed the chat theme to ${theme.name}"
-        is TdApi.ChatThemeGift -> "Changed the chat theme"
-        else -> "Disabled the chat theme"
+        is TdApi.ChatThemeEmoji -> com.pixelgram.desktop.core.tr("Changed the chat theme to {name}").replace("{name}", theme.name)
+        is TdApi.ChatThemeGift -> com.pixelgram.desktop.core.tr("Changed the chat theme")
+        else -> com.pixelgram.desktop.core.tr("Disabled the chat theme")
     }
-    is TdApi.MessageChatDeletePhoto -> "Removed the photo"
-    is TdApi.MessageChatAddMembers -> "Added new members"
-    is TdApi.MessageChatJoinByLink -> "Joined via invite link"
-    is TdApi.MessageChatJoinByRequest -> "Joined the chat"
-    is TdApi.MessageChatDeleteMember -> "Left the chat"
-    is TdApi.MessagePinMessage -> "📌 Pinned a message"
-    is TdApi.MessageScreenshotTaken -> "Took a screenshot"
-    is TdApi.MessageContactRegistered -> "Joined Telegram"
-    is TdApi.MessageChatUpgradeTo, is TdApi.MessageChatUpgradeFrom -> "The group was upgraded to a supergroup"
+    is TdApi.MessageChatDeletePhoto -> com.pixelgram.desktop.core.tr("Removed the photo")
+    is TdApi.MessageChatAddMembers -> com.pixelgram.desktop.core.tr("Added new members")
+    is TdApi.MessageChatJoinByLink -> com.pixelgram.desktop.core.tr("Joined via invite link")
+    is TdApi.MessageChatJoinByRequest -> com.pixelgram.desktop.core.tr("Joined the chat")
+    is TdApi.MessageChatDeleteMember -> com.pixelgram.desktop.core.tr("Left the chat")
+    is TdApi.MessagePinMessage -> "📌 " + com.pixelgram.desktop.core.tr("Pinned a message")
+    is TdApi.MessageScreenshotTaken -> com.pixelgram.desktop.core.tr("Took a screenshot")
+    is TdApi.MessageContactRegistered -> com.pixelgram.desktop.core.tr("Joined Telegram")
+    is TdApi.MessageChatUpgradeTo, is TdApi.MessageChatUpgradeFrom -> com.pixelgram.desktop.core.tr("The group was upgraded to a supergroup")
     is TdApi.MessageCustomServiceAction -> content.text
     is TdApi.MessageChatSetMessageAutoDeleteTime ->
-        if (content.messageAutoDeleteTime == 0) "Disabled auto-delete" else "Enabled auto-delete"
-    is TdApi.MessageForumTopicCreated -> "Created the topic «${content.name}»"
-    is TdApi.MessageVideoChatStarted -> "Started a video chat"
-    is TdApi.MessageVideoChatEnded -> "Video chat ended"
-    is TdApi.MessageCall -> if (content.isVideo) "📹 Video call" else "📞 Call"
-    is TdApi.MessageGift -> "🎁 Gift"
+        if (content.messageAutoDeleteTime == 0) com.pixelgram.desktop.core.tr("Disabled auto-delete") else com.pixelgram.desktop.core.tr("Enabled auto-delete")
+    is TdApi.MessageForumTopicCreated -> com.pixelgram.desktop.core.tr("Created the topic «{name}»").replace("{name}", content.name)
+    is TdApi.MessageVideoChatStarted -> com.pixelgram.desktop.core.tr("Started a video chat")
+    is TdApi.MessageVideoChatEnded -> com.pixelgram.desktop.core.tr("Video chat ended")
+    is TdApi.MessageCall -> if (content.isVideo) "📹 " + com.pixelgram.desktop.core.tr("Video call") else "📞 " + com.pixelgram.desktop.core.tr("Call")
+    is TdApi.MessageGift -> "🎁 " + com.pixelgram.desktop.core.tr("Gift")
     is TdApi.MessageUpgradedGift -> "🎁 ${content.gift.title}"
     is TdApi.MessageGiftedStars -> "⭐ ${content.starCount} Stars"
     is TdApi.MessageGiftedPremium -> "⭐ Telegram Premium"
