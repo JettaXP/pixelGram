@@ -429,10 +429,8 @@ fun MainScreen(
                 }
                 androidx.compose.animation.AnimatedVisibility(
                     visible = sideKind != null,
-                    enter = expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), expandFrom = Alignment.Start) +
-                        androidx.compose.animation.slideInVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) { -it / 3 } + fadeIn(fade),
-                    exit = shrinkHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec(), shrinkTowards = Alignment.Start) +
-                        androidx.compose.animation.slideOutVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) { -it / 3 } + fadeOut(fade),
+                    enter = androidx.compose.animation.slideInHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { it / 3 } + fadeIn(fade),
+                    exit = androidx.compose.animation.slideOutHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) { it / 3 } + fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
                 ) {
                     var lastKind by remember { mutableStateOf(SideKind.Player) }
                     if (sideKind != null) lastKind = sideKind
