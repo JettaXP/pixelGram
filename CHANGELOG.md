@@ -28,6 +28,7 @@
 - The side menu no longer cuts its content while it opens or closes.
 - Telegram icons stay in one style, including the settings gear.
 - Clearer Russian text about public wallet balances.
+- Message previews and "You" in the chat list are translated.
 
 ## 0.53.4 Soft Boom
 
