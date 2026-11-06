@@ -1329,7 +1329,7 @@ private fun TypingBubble(chat: ChatState, telegram: Telegram) {
 }
 
 @Composable
-private fun TypingDots(color: Color, modifier: Modifier) {
+internal fun TypingDots(color: Color, modifier: Modifier) {
     val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
     val phase = if (focused) {
         val transition = rememberInfiniteTransition()

@@ -519,7 +519,14 @@ private fun ChatRow(
             },
             supportingContent = {
                 val draft = chat.draft.takeIf { it.isNotBlank() && !selected }
-                if (draft != null) {
+                val activity = telegram.activity(chat)
+                androidx.compose.animation.Crossfade(activity, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects()) { typing ->
+                if (typing != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TypingDots(colors.primary, Modifier)
+                        EmojiText(typing.label.removeSuffix("…"), color = colors.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                } else if (draft != null) {
                     Row {
                         Text("Draft: ", color = colors.error, maxLines = 1)
                         EmojiText(draft.replace('\n', ' '), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -570,6 +577,7 @@ private fun ChatRow(
                             )
                         }
                     }
+                }
                 }
             },
             trailingContent = {
