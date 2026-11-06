@@ -21,9 +21,9 @@ object CoverArt {
     private val client by lazy { HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).followRedirects(HttpClient.Redirect.NORMAL).build() }
     private val dir by lazy { File(AppPaths.dataDir, "covers").apply { mkdirs() } }
 
-    fun path(audio: TdApi.Audio?): String? {
+    fun path(audio: TdApi.Audio?, large: Boolean = false): String? {
         audio ?: return null
-        if (audio.albumCoverThumbnail != null) return null
+        if (audio.albumCoverThumbnail != null && !(large && audio.externalAlbumCovers.isNullOrEmpty())) return null
         val title = audio.title.trim()
         if (title.isEmpty()) return null
         val artist = audio.performer.trim()

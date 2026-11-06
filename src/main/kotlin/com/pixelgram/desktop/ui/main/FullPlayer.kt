@@ -129,7 +129,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
     val audio = AudioPlayer.audio
     val (cover, _) = coverFile(audio)
     LaunchedEffect(cover?.id) { telegram.download(cover) }
-    val coverPath = telegram.localPath(cover)
+    val coverPath = com.pixelgram.desktop.core.CoverArt.path(audio, large = true) ?: telegram.localPath(cover)
     val base = MaterialTheme.colorScheme
     val palette by produceState<List<androidx.compose.ui.graphics.Color>?>(null, coverPath) {
         value = coverPath?.let { withContext(Dispatchers.IO) { coverPalette(it) } }
@@ -506,7 +506,7 @@ private fun BigCover(audio: TdApi.Audio?, telegram: Telegram, modifier: Modifier
     val angle = spin.value
     Box(Modifier.aspectRatio(1f).then(modifier), contentAlignment = Alignment.Center) {
         LaunchedEffect(file?.id) { telegram.download(file) }
-        val found = com.pixelgram.desktop.core.CoverArt.path(audio)
+        val found = com.pixelgram.desktop.core.CoverArt.path(audio, large = true)
         val hasImage = found != null || mini != null || (file != null && telegram.localPath(file) != null)
         if (hasImage) {
             Box(
