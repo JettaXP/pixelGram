@@ -20,6 +20,8 @@ import androidx.compose.material3.ripple
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import com.pixelgram.desktop.ui.icons.TrackNote
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.Arrangement
@@ -237,6 +239,7 @@ fun MiniPlayer(telegram: Telegram) {
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp).height(BarHeight)) {
+                    MiniCover(telegram, Modifier.padding(end = 8.dp))
                     MorphControls(
                         playing = AudioPlayer.playing,
                         onPrevious = { key?.let { AudioQueue.move(telegram, it, -1) } },
@@ -256,10 +259,20 @@ fun MiniPlayer(telegram: Telegram) {
                         exit = shrinkHorizontally(shrinkTowards = Alignment.End) + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            val total = AudioPlayer.duration.toInt()
+                            val now = AudioPlayer.position.toInt().coerceIn(0, maxOf(total, 0))
                             Text(
-                                formatDuration(AudioPlayer.position.toInt()),
-                                style = MaterialTheme.typography.labelLarge,
-                                modifier = Modifier.padding(horizontal = 8.dp),
+                                when {
+                                    total <= 0 -> formatDuration(now)
+                                    MiniTime.remaining -> "-" + formatDuration(total - now) + " / " + formatDuration(total)
+                                    else -> formatDuration(now) + " / " + formatDuration(total)
+                                },
+                                style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = "tnum"),
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { MiniTime.remaining = !MiniTime.remaining }
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
                             )
                             IconButton(onClick = { AudioPlayer.muted = !AudioPlayer.muted }) {
                                 Icon(
@@ -595,3 +608,27 @@ fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = M
 
 private val FilletRadius = 24.dp
 private const val WaveCyclesPerSecond = 0.45f
+
+object MiniTime {
+    var remaining by androidx.compose.runtime.mutableStateOf(false)
+}
+
+@Composable
+private fun MiniCover(telegram: Telegram, modifier: Modifier = Modifier) {
+    val audio = AudioPlayer.audio
+    val file = audio?.albumCoverThumbnail?.file ?: audio?.externalAlbumCovers?.minByOrNull { it.width }?.file
+    val mini = audio?.albumCoverMinithumbnail
+    androidx.compose.runtime.LaunchedEffect(file?.id) { telegram.download(file) }
+    val local = file?.let { telegram.localPath(it) }
+    val found = if (local == null) com.pixelgram.desktop.core.CoverArt.path(audio, large = true) else null
+    val hasImage = found != null || mini != null || local != null
+    Box(
+        modifier.size(MiniCoverSize).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Rounded.TrackNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(18.dp))
+        if (hasImage) ThumbImage(file, mini, telegram, Modifier.fillMaxSize(), localPath = found)
+    }
+}
+
+private val MiniCoverSize = 36.dp
