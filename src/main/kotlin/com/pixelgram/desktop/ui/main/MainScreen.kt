@@ -459,7 +459,11 @@ fun MainScreen(
                                         contentKey = { it.id },
                                         transitionSpec = { com.pixelgram.desktop.ui.components.Motion.content() },
                                     ) { profile ->
-                                        ChatInfoContent(profile, telegram, settings, onOpenChatInside, onDismiss = { SidePanel.content = null }, inline = true)
+                                        if (telegram.isSavedMessages(profile.id)) {
+                                            SavedMessagesContent(profile, telegram, settings, onOpenChatInside, onDismiss = { SidePanel.content = null })
+                                        } else {
+                                            ChatInfoContent(profile, telegram, settings, onOpenChatInside, onDismiss = { SidePanel.content = null }, inline = true)
+                                        }
                                     }
                                 }
                             }

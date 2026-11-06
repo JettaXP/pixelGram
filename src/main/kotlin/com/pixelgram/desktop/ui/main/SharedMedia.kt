@@ -515,49 +515,61 @@ fun SavedMessagesDialog(
     onOpenChat: ((Long) -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
-    LaunchedEffect(Unit) { telegram.loadSavedTopics() }
-    val actions = rememberMediaActions(telegram, settings, onOpenChat, onClose = onDismiss)
-    var topic by remember { mutableStateOf<TdApi.SavedMessagesTopic?>(null) }
-    var selected by remember { mutableIntStateOf(0) }
-    val topics = telegram.savedTopics.values.filter { it.order != 0L }.sortedWith(compareByDescending<TdApi.SavedMessagesTopic> { it.isPinned }.thenByDescending { it.order })
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier.widthIn(min = 360.dp, max = 480.dp).height(DialogHeight),
         ) {
-            AnimatedContent(
-                targetState = topic,
-                transitionSpec = {
-                    val forward = targetState != null
-                    (slideInHorizontally { if (forward) it / 4 else -it / 4 } + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects())) togetherWith
-                        (slideOutHorizontally { if (forward) -it / 4 else it / 4 } + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()))
-                },
-            ) { opened ->
-                if (opened != null) {
-                    SavedTopicView(chat, opened, telegram, settings, onBack = { topic = null })
-                    return@AnimatedContent
+            SavedMessagesContent(chat, telegram, settings, onOpenChat, onDismiss)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun SavedMessagesContent(
+    chat: com.pixelgram.desktop.telegram.ChatState,
+    telegram: Telegram,
+    settings: AppSettings,
+    onOpenChat: ((Long) -> Unit)?,
+    onDismiss: () -> Unit,
+) {
+    LaunchedEffect(Unit) { telegram.loadSavedTopics() }
+    val actions = rememberMediaActions(telegram, settings, onOpenChat, onClose = onDismiss)
+    var topic by remember { mutableStateOf<TdApi.SavedMessagesTopic?>(null) }
+    var selected by remember { mutableIntStateOf(0) }
+    val topics = telegram.savedTopics.values.filter { it.order != 0L }.sortedWith(compareByDescending<TdApi.SavedMessagesTopic> { it.isPinned }.thenByDescending { it.order })
+    AnimatedContent(
+        targetState = topic,
+        transitionSpec = {
+            val forward = targetState != null
+            (slideInHorizontally { if (forward) it / 4 else -it / 4 } + fadeIn(com.pixelgram.desktop.ui.components.Motion.effects())) togetherWith
+                (slideOutHorizontally { if (forward) -it / 4 else it / 4 } + fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()))
+        },
+    ) { opened ->
+        if (opened != null) {
+            SavedTopicView(chat, opened, telegram, settings, onBack = { topic = null })
+            return@AnimatedContent
+        }
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                    Text("Saved Messages", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+                    Text("${topics.size} chats", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f).padding(start = 8.dp)) {
-                            Text("Saved Messages", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
-                            Text("${topics.size} chats", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                        }
-                        IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, contentDescription = "Close") }
-                    }
-                    PillTabs(listOf("Chats") + MediaTab.entries.map { it.title }, selected, { selected = it })
-                    TabContent(selected, Modifier.weight(1f)) { shownTab ->
-                        if (shownTab == 0) {
-                            LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxSize()) {
-                                itemsIndexed(topics, key = { _, item -> item.id }) { index, item ->
-                                    Box(itemMotion()) { SavedTopicRow(item, telegram, settings, groupShape(index, topics.size)) { topic = item } }
-                                }
-                            }
-                        } else {
-                            SharedMediaPane(chat.id, MediaTab.entries[shownTab - 1], telegram, Modifier.fillMaxSize(), actions = actions)
+                IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, contentDescription = "Close") }
+            }
+            PillTabs(listOf("Chats") + MediaTab.entries.map { it.title }, selected, { selected = it })
+            TabContent(selected, Modifier.weight(1f)) { shownTab ->
+                if (shownTab == 0) {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxSize()) {
+                        itemsIndexed(topics, key = { _, item -> item.id }) { index, item ->
+                            Box(itemMotion()) { SavedTopicRow(item, telegram, settings, groupShape(index, topics.size)) { topic = item } }
                         }
                     }
+                } else {
+                    SharedMediaPane(chat.id, MediaTab.entries[shownTab - 1], telegram, Modifier.fillMaxSize(), actions = actions)
                 }
             }
         }
