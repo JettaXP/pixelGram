@@ -60,16 +60,39 @@ import it.tdlight.jni.TdApi
 
 val DefaultReactions = listOf("❤", "👍", "🙏", "❤‍🔥", "😭", "🤔", "👎")
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-fun ReactionPicker(available: List<String>, width: androidx.compose.ui.unit.Dp = PickerWidth, onPick: (String) -> Unit) {
+fun ReactionPicker(
+    available: List<String>,
+    width: androidx.compose.ui.unit.Dp = PickerWidth,
+    showMore: Boolean = true,
+    onHover: (Boolean) -> Unit = {},
+    onExpanded: (Boolean) -> Unit = {},
+    onPick: (String) -> Unit,
+) {
     var expanded by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(expanded) { onExpanded(expanded) }
     val all = available.ifEmpty { DefaultReactions }
     val fits = ((width - 12.dp) / CellSize).toInt().coerceAtLeast(2)
-    val quick = if (all.size <= fits) all.size else fits - 1
-    Column(Modifier.width(width).animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())) {
+    val quick = when {
+        all.size <= fits -> all.size
+        showMore || expanded -> fits - 1
+        else -> fits
+    }
+    Column(
+        Modifier
+            .width(width)
+            .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { onHover(true) }
+            .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Exit) { onHover(false) }
+            .animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
             all.take(quick).forEach { emoji -> ReactionCell(emoji, onPick) }
-            if (all.size > quick) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = all.size > quick && (showMore || expanded),
+                enter = androidx.compose.animation.fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) + androidx.compose.animation.scaleIn(MaterialTheme.motionScheme.defaultSpatialSpec()),
+                exit = androidx.compose.animation.fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) + androidx.compose.animation.scaleOut(MaterialTheme.motionScheme.fastSpatialSpec()),
+            ) {
                 IconButton(onClick = { expanded = !expanded }, modifier = Modifier.size(CellSize)) {
                     Icon(if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, contentDescription = "More reactions")
                 }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
@@ -64,22 +65,23 @@ fun MenuGroups(
     leading: (@Composable ColumnScope.() -> Unit)? = null,
     trailing: (@Composable ColumnScope.() -> Unit)? = null,
     footer: (@Composable () -> Unit)? = null,
+    leadingWidth: androidx.compose.ui.unit.Dp = width,
 ) {
     val shown = groups.filter { it.isNotEmpty() }
     val scope = rememberCoroutineScope()
-    Column(Modifier.width(width).padding(MenuShadow), verticalArrangement = Arrangement.spacedBy(GroupGap)) {
+    Column(Modifier.padding(MenuShadow), verticalArrangement = Arrangement.spacedBy(GroupGap)) {
         if (leading != null) {
             Surface(
                 shape = groupShapes(0, 1).shape,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shadowElevation = MenuShadow,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.width(leadingWidth - MenuShadow * 2),
             ) {
                 Column(content = leading)
             }
         }
         shown.forEach { entries ->
-            Column(verticalArrangement = Arrangement.spacedBy(ItemGap)) {
+            Column(Modifier.width(width - MenuShadow * 2), verticalArrangement = Arrangement.spacedBy(ItemGap)) {
                 entries.forEachIndexed { index, entry ->
                     val base = if (entry.color == Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else entry.color
                     val tint = if (entry.enabled) base else base.copy(alpha = DisabledAlpha)
@@ -111,13 +113,13 @@ fun MenuGroups(
                 }
             }
         }
-        footer?.invoke()
+        if (footer != null) Box(Modifier.width(width - MenuShadow * 2)) { footer() }
         if (trailing != null) {
             Surface(
                 shape = groupShapes(0, 1).shape,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shadowElevation = MenuShadow,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.width(width - MenuShadow * 2),
             ) {
                 Column(content = trailing)
             }

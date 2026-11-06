@@ -427,12 +427,18 @@ private fun MessageMenu(
         if (canDelete && !pending) add(MenuEntry(Icons.Outlined.Delete, "Delete", color = MaterialTheme.colorScheme.error, onClick = act { actions.onDelete(message) }))
     }
     GroupedMenu(expanded = expanded, onDismiss = onDismiss) {
+        var reactHover by remember { mutableStateOf(false) }
+        var reactExpanded by remember { mutableStateOf(false) }
+        val menuWidth by androidx.compose.animation.core.animateDpAsState(
+            if (reactHover || reactExpanded) ReactionMenuWidth else 240.dp,
+            MaterialTheme.motionScheme.defaultSpatialSpec(),
+        )
         val reactions: (@Composable ColumnScope.() -> Unit)? = if (!message.service && actions.canReact) {
             {
                 var available by remember(message.key) { mutableStateOf(emptyList<String>()) }
                 androidx.compose.runtime.LaunchedEffect(message.key) { actions.loadReactions(message) { available = it } }
                 val scope = androidx.compose.runtime.rememberCoroutineScope()
-                ReactionPicker(available, ReactionMenuWidth - 4.dp) { emoji ->
+                ReactionPicker(available, menuWidth - 4.dp, showMore = reactHover, onHover = { reactHover = it }, onExpanded = { reactExpanded = it }) { emoji ->
                     scope.launch {
                         onDismiss()
                         actions.onReact(message, emoji)
@@ -472,7 +478,7 @@ private fun MessageMenu(
         val seenChat = client?.chats?.get(message.chatId)
         MenuGroups(
             listOf(retry, reply, copies, manage).filter { it.isNotEmpty() },
-            width = if (reactions != null && !pending) ReactionMenuWidth else 240.dp,
+            leadingWidth = menuWidth,
             leading = reactions.takeIf { !pending },
             trailing = packs,
             footer = if (client != null && !pending) {

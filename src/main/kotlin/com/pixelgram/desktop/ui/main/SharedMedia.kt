@@ -463,17 +463,30 @@ fun SharedMediaSection(chat: com.pixelgram.desktop.telegram.ChatState, telegram:
     val owner = remember(chat.id) { if (chat.privateUserId != 0L) TdApi.MessageSenderUser(chat.privateUserId) else TdApi.MessageSenderChat(chat.id) }
     var hasStories by remember(chat.id) { mutableStateOf(false) }
     var gifts by remember(chat.id) { mutableStateOf<List<TdApi.ReceivedGift>>(emptyList()) }
+    var storiesReady by remember(chat.id) { mutableStateOf(!profile) }
+    var giftsReady by remember(chat.id) { mutableStateOf(!profile) }
     LaunchedEffect(chat.id) {
         if (!profile) return@LaunchedEffect
-        telegram.postedStories(chat.id) { hasStories = it.isNotEmpty() }
-        telegram.profileGifts(owner) { _, list -> gifts = list }
+        telegram.postedStories(chat.id) {
+            hasStories = it.isNotEmpty()
+            storiesReady = true
+        }
+        telegram.profileGifts(owner) { _, list ->
+            gifts = list
+            giftsReady = true
+        }
+        kotlinx.coroutines.delay(ExtraTabsWaitMs)
+        storiesReady = true
+        giftsReady = true
     }
-    val extra = buildList {
+    val ready = storiesReady && giftsReady
+    val extra = if (!ready) emptyList() else buildList {
         if (hasStories) add("Stories")
         if (gifts.isNotEmpty()) add("Gifts")
     }
     val titles = extra + MediaTab.entries.map { it.title } + if (user) listOf("Groups") else emptyList()
-    var selected by remember(chat.id) { mutableIntStateOf(0) }
+    var picked by remember(chat.id) { mutableStateOf<String?>(null) }
+    val selected = picked?.let { titles.indexOf(it) }?.takeIf { it >= 0 } ?: 0
     val giftsIndex = extra.indexOf("Gifts")
     val decorations: Map<Int, @Composable () -> Unit> = if (giftsIndex >= 0) {
         mapOf(giftsIndex to { GiftPreviews(gifts, telegram) })
@@ -481,7 +494,7 @@ fun SharedMediaSection(chat: com.pixelgram.desktop.telegram.ChatState, telegram:
         emptyMap()
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        PillTabs(titles.map(::tr), selected, { selected = it }, decorations = decorations)
+        PillTabs(titles.map(::tr), selected, { picked = titles.getOrNull(it) }, decorations = decorations)
         TabContent(selected, Modifier.fillMaxWidth().height(SectionHeight)) { position ->
             when (extra.getOrNull(position)) {
                 "Stories" -> {
@@ -699,3 +712,5 @@ private val CellCorner = 6.dp
 private val RowIcon = 44.dp
 private val SectionHeight = 360.dp
 private val DialogHeight = 640.dp
+
+private const val ExtraTabsWaitMs = 2_500L
