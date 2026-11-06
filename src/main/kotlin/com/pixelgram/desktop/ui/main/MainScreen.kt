@@ -266,6 +266,8 @@ fun MainScreen(
                         if (!foldersLeft && selectedKey != ChatListKey.Archive) {
                             if (settings.capsuleFolders.value) {
                                 CapsuleFolders(tabs, selectedKey, settings, onSelect = { if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
+                            } else if (settings.pillFolders.value) {
+                                PillFolders(tabs, selectedKey, settings.folderTitle.value, onSelect = { if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
                             } else {
                                 TopFolders(tabs, selectedKey, com.pixelgram.desktop.core.FolderTitle.NamesAndIcons, onSelect = { if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
                             }
@@ -291,7 +293,7 @@ fun MainScreen(
                                     listKey = selectedKey,
                                     title = when {
                                         selectedKey == ChatListKey.Archive -> "Archived chats"
-                                        settings.folderTitle.value == com.pixelgram.desktop.core.FolderTitle.Icons && (foldersLeft || settings.capsuleFolders.value) && selectedKey != ChatListKey.Main ->
+                                        settings.folderTitle.value == com.pixelgram.desktop.core.FolderTitle.Icons && (foldersLeft || settings.capsuleFolders.value || settings.pillFolders.value) && selectedKey != ChatListKey.Main ->
                                             tabs.firstOrNull { it.key == selectedKey }?.title ?: listTitle(telegram, settings)
                                         else -> listTitle(telegram, settings)
                                     },
@@ -923,6 +925,70 @@ internal fun TopFolders(
 }
 
 private val TopFolderWidth = 80.dp
+
+@Composable
+internal fun PillFolders(
+    tabs: List<FolderTab>,
+    selected: ChatListKey,
+    mode: com.pixelgram.desktop.core.FolderTitle,
+    onSelect: (ChatListKey) -> Unit,
+) {
+    if (tabs.size < 2) return
+    val colors = MaterialTheme.colorScheme
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(PillGap),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .noBackSwipe()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        tabs.forEach { tab ->
+            val isSelected = tab.key == selected
+            val corner by animateDpAsState(if (isSelected) PillHeight / 2 else PillCorner, MaterialTheme.motionScheme.defaultSpatialSpec())
+            val fill by animateColorAsState(if (isSelected) colors.primaryContainer else colors.surfaceContainerHigh, MaterialTheme.motionScheme.defaultEffectsSpec())
+            val tint by animateColorAsState(if (isSelected) colors.onPrimaryContainer else colors.onSurfaceVariant, MaterialTheme.motionScheme.defaultEffectsSpec())
+            val showIcon = mode != com.pixelgram.desktop.core.FolderTitle.Names
+            val showName = mode == com.pixelgram.desktop.core.FolderTitle.NamesAndIcons || mode == com.pixelgram.desktop.core.FolderTitle.Names ||
+                mode == com.pixelgram.desktop.core.FolderTitle.ActiveName && isSelected
+            Surface(
+                onClick = { onSelect(tab.key) },
+                shape = RoundedCornerShape(corner),
+                color = fill,
+                contentColor = tint,
+                modifier = Modifier.height(PillHeight),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp).animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()),
+                ) {
+                    if (showIcon) Icon(folderIcon(tab.icon, isSelected), contentDescription = tab.title, tint = tint, modifier = Modifier.size(20.dp))
+                    if (showName) EmojiText(tab.title, color = tint, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                    val unread = tab.unread?.takeIf { it.chats > 0 }
+                    if (unread != null) {
+                        Surface(
+                            shape = CircleShape,
+                            color = if (isSelected) colors.onPrimaryContainer else if (unread.unmuted > 0) colors.primary else colors.outline,
+                            contentColor = if (isSelected) colors.primaryContainer else if (unread.unmuted > 0) colors.onPrimary else colors.surface,
+                        ) {
+                            Text(
+                                if (unread.chats > 999) "999+" else unread.chats.toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private val PillHeight = 40.dp
+private val PillCorner = 12.dp
+private val PillGap = 8.dp
 private const val RailFadeOutMs = 70
 private const val RailFadeInMs = 180
 private const val RailResizeMs = 280

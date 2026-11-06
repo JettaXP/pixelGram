@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -95,7 +96,7 @@ fun ComposerField(
         val end = value.selection.end.coerceIn(0, current.layoutInput.text.length)
         requester.bringIntoView(current.getCursorRect(end))
     }
-    Surface(shape = shape, color = color, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = shape, color = color, modifier = Modifier.fillMaxWidth().animateContentSize(MaterialTheme.motionScheme.fastSpatialSpec())) {
         Box(
             Modifier
                 .fillMaxWidth()
