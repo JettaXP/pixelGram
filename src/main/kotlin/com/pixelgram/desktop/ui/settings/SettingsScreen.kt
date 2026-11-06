@@ -1096,22 +1096,17 @@ private fun FolderStyleSection(settings: AppSettings) {
         },
     )
     AnimatedDescription(
-        if (left) "Left is a Material 3 navigation rail or a capsule beside the chat list." else
-            "Top is a bar of tabs or a capsule above the chat list."
+        if (left) "Left is a Material 3 navigation rail." else "Top is a bar of tabs or a capsule above the chat list."
     )
-    Text(if (left) "Style on the left" else "Style on top", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
-    if (left) {
-        ConnectedChoice(
-            options = listOf(false to "Rail", true to "Capsule"),
-            selected = settings.leftCapsule.value,
-            onSelect = { settings.leftCapsule.value = it },
-        )
-    } else {
-        ConnectedChoice(
-            options = listOf(false to "Tabs", true to "Capsule"),
-            selected = settings.capsuleFolders.value,
-            onSelect = { settings.capsuleFolders.value = it },
-        )
+    Reveal(!left) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Style on top", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+            ConnectedChoice(
+                options = listOf(false to "Tabs", true to "Capsule"),
+                selected = settings.capsuleFolders.value,
+                onSelect = { settings.capsuleFolders.value = it },
+            )
+        }
     }
     Reveal(left || settings.capsuleFolders.value) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

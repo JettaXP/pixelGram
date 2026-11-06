@@ -68,7 +68,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.wrapContentHeight
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.automirrored.filled.MenuOpen
 import com.pixelgram.desktop.ui.icons.filled.Check
@@ -292,7 +291,7 @@ fun MainScreen(
                                     listKey = selectedKey,
                                     title = when {
                                         selectedKey == ChatListKey.Archive -> "Archived chats"
-                                        settings.folderTitle.value == com.pixelgram.desktop.core.FolderTitle.Icons && selectedKey != ChatListKey.Main ->
+                                        settings.folderTitle.value == com.pixelgram.desktop.core.FolderTitle.Icons && (foldersLeft || settings.capsuleFolders.value) && selectedKey != ChatListKey.Main ->
                                             tabs.firstOrNull { it.key == selectedKey }?.title ?: listTitle(telegram, settings)
                                         else -> listTitle(telegram, settings)
                                     },
@@ -569,7 +568,6 @@ private fun PixelRail(
         ) { showMenu ->
             when {
                 showMenu -> MainMenu(accounts, telegram, settings, onNavigate, onOpenSaved, onNewChat)
-                showFolders && settings.leftCapsule.value -> LeftCapsule(tabs, selected, settings.folderTitle.value, onSelect)
                 showFolders -> Column {
                     tabs.forEach { tab ->
                         val isSelected = tab.key == selected
@@ -1017,59 +1015,3 @@ internal fun sideIcon(item: com.pixelgram.desktop.core.SideItem, dark: Boolean):
     com.pixelgram.desktop.core.SideItem.Settings -> Icons.Outlined.Settings
     com.pixelgram.desktop.core.SideItem.PixelSettings -> Icons.Outlined.Star
 }
-
-@Composable
-private fun LeftCapsule(
-    tabs: List<FolderTab>,
-    selected: ChatListKey,
-    mode: com.pixelgram.desktop.core.FolderTitle,
-    onSelect: (ChatListKey) -> Unit,
-) {
-    val colors = MaterialTheme.colorScheme
-    Surface(
-        shape = RoundedCornerShape(LeftCapsuleCorner),
-        color = colors.surfaceContainerHigh,
-        modifier = Modifier.padding(start = 16.dp, top = 8.dp).width(if (mode == com.pixelgram.desktop.core.FolderTitle.Icons) LeftCapsuleWidth else LeftCapsuleWideWidth).wrapContentHeight(Alignment.Top, unbounded = false).noBackSwipe(),
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.padding(vertical = 8.dp).verticalScroll(rememberScrollState()),
-        ) {
-            tabs.forEach { tab ->
-                val isSelected = tab.key == selected
-                val fill by animateColorAsState(if (isSelected) colors.secondaryContainer else Color.Transparent, MaterialTheme.motionScheme.defaultEffectsSpec())
-                val tint by animateColorAsState(if (isSelected) colors.onSecondaryContainer else colors.onSurfaceVariant, MaterialTheme.motionScheme.defaultEffectsSpec())
-                val showLabel = mode == com.pixelgram.desktop.core.FolderTitle.NamesAndIcons || mode == com.pixelgram.desktop.core.FolderTitle.ActiveName && isSelected
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .padding(horizontal = 6.dp)
-                        .clip(RoundedCornerShape(LeftCapsuleItemCorner))
-                        .background(fill)
-                        .clickable { onSelect(tab.key) }
-                        .padding(vertical = 10.dp)
-                        .fillMaxWidth()
-                        .animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()),
-                ) {
-                    if (mode == com.pixelgram.desktop.core.FolderTitle.Names) FolderName(tab, tint) else FolderIcon(tab, isSelected, tint)
-                    if (showLabel) {
-                        EmojiText(
-                            tab.title,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = tint,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-private val LeftCapsuleWidth = 64.dp
-private val LeftCapsuleWideWidth = 80.dp
-private val LeftCapsuleCorner = 32.dp
-private val LeftCapsuleItemCorner = 20.dp

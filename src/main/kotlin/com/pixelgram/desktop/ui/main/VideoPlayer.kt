@@ -575,19 +575,40 @@ private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                val corner by androidx.compose.animation.core.animateDpAsState(
+                    if (engine.playing) PlayingCorner else 24.dp,
+                    MaterialTheme.motionScheme.defaultSpatialSpec(),
+                )
                 FilledIconButton(
                     onClick = engine::toggle,
-                    shapes = IconButtonDefaults.shapes(),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(corner),
                     modifier = Modifier.size(48.dp),
                 ) {
-                    Icon(
-                        when {
-                            engine.ended -> Icons.Rounded.Replay
-                            engine.playing -> Icons.Rounded.Pause
-                            else -> Icons.Rounded.PlayArrow
+                    val state = when {
+                        engine.ended -> 2
+                        engine.playing -> 1
+                        else -> 0
+                    }
+                    val iconScale = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+                    val iconFade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = state,
+                        transitionSpec = {
+                            androidx.compose.animation.ContentTransform(
+                                androidx.compose.animation.scaleIn(iconScale, initialScale = 0.6f) + androidx.compose.animation.fadeIn(iconFade),
+                                androidx.compose.animation.scaleOut(iconScale, targetScale = 0.6f) + androidx.compose.animation.fadeOut(iconFade),
+                            )
                         },
-                        contentDescription = if (engine.playing) "Pause" else "Play",
-                    )
+                    ) { shown ->
+                        Icon(
+                            when (shown) {
+                                2 -> Icons.Rounded.Replay
+                                1 -> Icons.Rounded.Pause
+                                else -> Icons.Rounded.PlayArrow
+                            },
+                            contentDescription = if (shown == 1) "Pause" else "Play",
+                        )
+                    }
                 }
                 Text(formatDuration((engine.position / 1000).toInt()), style = MaterialTheme.typography.labelLarge)
                 val total = engine.duration.takeIf { it > 0 } ?: (request.duration * 1000L)
@@ -685,3 +706,5 @@ internal fun VideoFrame(engine: VideoEngine, modifier: Modifier) {
 }
 
 private const val InlineDecodeWidth = 640
+
+private val PlayingCorner = 14.dp
