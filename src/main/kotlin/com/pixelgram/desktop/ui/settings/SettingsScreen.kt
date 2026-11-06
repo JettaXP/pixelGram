@@ -235,6 +235,8 @@ private val Section.shownAs: Section get() = if (inline) parent ?: this else thi
 private val QrAvatarSize = 80.dp
 private const val DisabledAlpha = 0.38f
 
+private const val ScaleStep = 5f
+
 private const val PixelPreferencesTitle = "pixelGram Preferences"
 private const val HighlightHoldMs = 2_500L
 private val SettingsMenuWidth = 220.dp
@@ -1522,13 +1524,13 @@ private fun ChatsSection(settings: AppSettings, onOpen: (Section) -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Slider(
                 value = draft,
-                onValueChange = { draft = it },
-                onValueChangeFinished = { settings.interfaceScale.value = draft.toInt() },
+                onValueChange = { draft = (kotlin.math.round(it / ScaleStep) * ScaleStep) },
+                onValueChangeFinished = { settings.interfaceScale.value = kotlin.math.round(draft).toInt() },
                 valueRange = com.pixelgram.desktop.ui.theme.MinScale.toFloat()..com.pixelgram.desktop.ui.theme.MaxScale.toFloat(),
                 steps = (com.pixelgram.desktop.ui.theme.MaxScale - com.pixelgram.desktop.ui.theme.MinScale) / 5 - 1,
                 modifier = Modifier.weight(1f),
             )
-            Text("${draft.toInt()}%", modifier = Modifier.width(64.dp).padding(start = 12.dp))
+            Text("${kotlin.math.round(draft).toInt()}%", modifier = Modifier.width(64.dp).padding(start = 12.dp))
         }
     }
     SubsectionLinks(Section.Chats, onOpen)

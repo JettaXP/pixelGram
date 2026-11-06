@@ -255,6 +255,7 @@ class AppSettings private constructor(private val props: Properties, private val
         materialFolders, hideAllChats, folderOrder, folderIcons,
         unreadFolder, unreadFolderName, unreadFolderIcon, mentionsFolder, mentionsFolderName, mentionsFolderIcon,
         capsuleFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, exactNumbers, zalgoFilter, pythonMessages, inlineMath, titleText, titleCustom, folderTitle, iconPack, roundedIcons, scrollbars, backSwipe, saveOnLowBattery, sideMenuLayout, checkUpdates,
+        listAvatarSize, fullscreen, windowsToasts, defaultScale, interfaceScale, secondaryBadges, messageSides,
         doubleClickOwn, doubleClickOther, doubleClickEmoji, swipeLeft, swipeRight, typingBubble, autoCapitalize, settingsStyle, sideMenuStyle,
         avatarShape, avatarCorner,
         bubbleRadius, bubbleTailRadius, cornerLists, cornerCards, cornerDialogs, cornerMenus,

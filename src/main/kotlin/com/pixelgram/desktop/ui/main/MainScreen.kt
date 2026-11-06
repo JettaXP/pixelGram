@@ -555,7 +555,7 @@ private fun PixelRail(
         AnimatedContent(
             targetState = expanded,
             transitionSpec = {
-                fadeIn(tween(RailFadeInMs, delayMillis = RailFadeOutMs)) togetherWith
+                fadeIn(tween(RailFadeInMs, delayMillis = RailResizeMs)) togetherWith
                     fadeOut(tween(RailFadeOutMs)) using SizeTransform(clip = true) { _, _ ->
                     tween(RailResizeMs, easing = FastOutSlowInEasing)
                 }
@@ -920,7 +920,7 @@ internal fun TopFolders(
 }
 
 private val TopFolderWidth = 80.dp
-private const val RailFadeOutMs = 110
+private const val RailFadeOutMs = 70
 private const val RailFadeInMs = 180
 private const val RailResizeMs = 280
 private val MinChatWidth = 380.dp
