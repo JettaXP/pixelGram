@@ -1718,4 +1718,5 @@ New nightly {commit} is out	Вышла новая ночная сборка {com
 Downloading {name}… {percent}%	Загрузка {name}… {percent}%
 Downloaded {file}.	Загружено: {file}.
 Not enough free disk space to download the update.	Недостаточно места на диске, чтобы скачать обновление.
-There isn't enough free space on the disk for pixelGram to start. Free up some space and open pixelGram again.	На диске недостаточно места для запуска pixelGram. Освободите место и откройте pixelGram снова.
+There isn't enough free space on the disk for pixelGram to start. Free up some space and restart pixelGram.	На диске недостаточно места для запуска pixelGram. Освободите место и перезапустите pixelGram.
+Restart	Перезапустить

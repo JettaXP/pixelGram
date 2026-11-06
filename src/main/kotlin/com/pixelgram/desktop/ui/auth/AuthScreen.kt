@@ -1,6 +1,7 @@
 package com.pixelgram.desktop.ui.auth
 
 import com.pixelgram.desktop.ui.icons.outlined.VpnKey
+import com.pixelgram.desktop.ui.icons.outlined.Refresh
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import kotlinx.coroutines.delay
@@ -120,7 +121,16 @@ fun AuthScreen(telegram: Telegram, onCancel: (() -> Unit)? = null) {
                                     com.pixelgram.desktop.core.tr("This sign-in step is not supported yet. Finish it in another Telegram app.") +
                                         " (${state.name})"
                                 )
-                                is AuthState.Failed -> Hint(state.reason)
+                                is AuthState.Failed -> {
+                                    Hint(state.reason)
+                                    if (com.pixelgram.desktop.core.AppRestart.available) {
+                                        Button(onClick = { com.pixelgram.desktop.core.AppRestart.restart() }) {
+                                            Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                                            Text("Restart")
+                                        }
+                                    }
+                                }
                                 AuthState.Ready -> Unit
                                 }
                             }

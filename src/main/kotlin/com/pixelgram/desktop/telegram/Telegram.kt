@@ -351,7 +351,7 @@ class Telegram(
                 .onFailure { e ->
                     AppLog.write("TDLib native library failed to load", e)
                     authState = AuthState.Failed(
-                        if (e.diskFull()) com.pixelgram.desktop.core.tr("There isn't enough free space on the disk for pixelGram to start. Free up some space and open pixelGram again.")
+                        if (e.diskFull()) com.pixelgram.desktop.core.tr("There isn't enough free space on the disk for pixelGram to start. Free up some space and restart pixelGram.")
                         else "TDLib native library failed to load: ${e.describe()}\n\nLog: ${AppLog.file.absolutePath}"
                     )
                 }

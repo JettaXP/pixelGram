@@ -1710,4 +1710,5 @@ New nightly {commit} is out	גרסה לילית חדשה {commit} זמינה
 Downloading {name}… {percent}%	מוריד את {name}… {percent}%
 Downloaded {file}.	הורד: {file}.
 Not enough free disk space to download the update.	אין מספיק מקום פנוי בדיסק כדי להוריד את העדכון.
-There isn't enough free space on the disk for pixelGram to start. Free up some space and open pixelGram again.	אין מספיק מקום פנוי בדיסק כדי להפעיל את pixelGram. פנו מקום ופתחו את pixelGram שוב.
+There isn't enough free space on the disk for pixelGram to start. Free up some space and restart pixelGram.	אין מספיק מקום פנוי בדיסק כדי להפעיל את pixelGram. פנו מקום והפעילו את pixelGram מחדש.
+Restart	הפעלה מחדש
