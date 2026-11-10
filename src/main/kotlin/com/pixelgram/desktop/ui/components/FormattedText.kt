@@ -76,6 +76,13 @@ object HoverTarget {
     var link: String? = null
     var button: TdApi.InlineKeyboardButton? = null
     var buttonSeenAt = 0L
+    var text = false
+}
+
+private fun TextLayoutResult.onGlyphs(position: androidx.compose.ui.geometry.Offset): Boolean {
+    if (layoutInput.text.isEmpty() || position.y < 0f || position.y > size.height) return false
+    val line = getLineForVerticalPosition(position.y)
+    return position.x in getLineLeft(line)..getLineRight(line)
 }
 
 data class FormatColors(val accent: Color, val code: Color, val quote: Color)
@@ -215,7 +222,25 @@ fun FormattedText(
     val colors = FormatColors(accent, (if (ownBubble) scheme.onPrimaryContainer else scheme.onSurface).copy(alpha = 0.1f), accent)
     val (annotated, inline) = remember(text, entities, colors) { withEmoji(formattedString(text, entities, colors), openPack = true) }
     if (entities.isEmpty()) {
-        Text(annotated, modifier = modifier, style = style, color = color, inlineContent = inline, onTextLayout = onTextLayout)
+        var plain by remember { mutableStateOf<TextLayoutResult?>(null) }
+        Text(
+            annotated,
+            modifier = modifier.pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        HoverTarget.text = event.type != PointerEventType.Exit && plain?.onGlyphs(event.changes.first().position) == true
+                    }
+                }
+            },
+            style = style,
+            color = color,
+            inlineContent = inline,
+            onTextLayout = {
+                plain = it
+                onTextLayout(it)
+            },
+        )
         return
     }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -259,6 +284,7 @@ fun FormattedText(
                         val onText = event.type != PointerEventType.Exit && laidOut > 0 && current.getBoundingBox(index.coerceIn(0, laidOut - 1)).let {
                             change.position.y in it.top..it.bottom
                         }
+                        HoverTarget.text = event.type != PointerEventType.Exit && current.onGlyphs(change.position)
                         HoverTarget.link = if (onText) {
                             (annotated.getLinkAnnotations(index.coerceIn(0, annotated.length), (index + 1).coerceAtMost(annotated.length)).firstOrNull()?.item as? LinkAnnotation.Url)?.url
                         } else {

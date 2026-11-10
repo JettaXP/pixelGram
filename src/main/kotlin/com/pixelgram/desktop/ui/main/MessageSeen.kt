@@ -58,14 +58,21 @@ fun SeenFooter(message: UiMessage, telegram: Telegram, chat: ChatState?) {
 }
 
 @Composable
-private fun FooterCard(content: @Composable () -> Unit) {
-    Surface(
-        shape = com.pixelgram.desktop.ui.components.groupShapes(0, 1).shape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shadowElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-        content = content,
-    )
+private fun FooterCard(visible: Boolean, content: @Composable () -> Unit) {
+    val motion = MaterialTheme.motionScheme
+    androidx.compose.animation.AnimatedVisibility(
+        visible = visible,
+        enter = androidx.compose.animation.expandVertically(motion.fastSpatialSpec()) + androidx.compose.animation.fadeIn(motion.fastEffectsSpec()),
+        exit = androidx.compose.animation.ExitTransition.None,
+    ) {
+        Surface(
+            shape = com.pixelgram.desktop.ui.components.groupShapes(0, 1).shape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shadowElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth(),
+            content = content,
+        )
+    }
 }
 
 @Composable
@@ -76,8 +83,8 @@ private fun ReadDate(message: UiMessage, telegram: Telegram) {
             read = (result as? TdApi.MessageReadDateRead)?.readDate
         }
     }
-    val date = read ?: return
-    FooterCard {
+    FooterCard(read != null) {
+    val date = read ?: return@FooterCard
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -106,7 +113,7 @@ private fun GroupSeen(message: UiMessage, telegram: Telegram) {
             }
         }
     }
-    if (viewers.isEmpty() && reacted.isEmpty()) return
+    FooterCard(viewers.isNotEmpty() || reacted.isNotEmpty()) {
     val entries = remember(viewers, reacted) {
         val byUser = reacted.associateBy { (it.senderId as? TdApi.MessageSenderUser)?.userId }
         val fromReactions = reacted.map { SeenEntry(it.senderId, it.type, it.date) }
@@ -129,7 +136,6 @@ private fun GroupSeen(message: UiMessage, telegram: Telegram) {
         }
     }
     var width by remember { mutableStateOf(0) }
-    FooterCard {
     Box {
         Row(
             verticalAlignment = Alignment.CenterVertically,

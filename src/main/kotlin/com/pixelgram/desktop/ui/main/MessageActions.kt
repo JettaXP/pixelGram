@@ -237,7 +237,7 @@ fun MessageGestures(
                             val now = change.uptimeMillis
                             if (now - time < DoubleClickMs && (change.position - at).getDistance() < slop) {
                                 lastPress = 0L to Offset.Zero
-                                actions.onDoubleClick(message)
+                                if (!HoverTarget.text) actions.onDoubleClick(message)
                             } else {
                                 lastPress = now to change.position
                             }
