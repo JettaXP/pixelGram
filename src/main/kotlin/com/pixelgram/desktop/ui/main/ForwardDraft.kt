@@ -84,7 +84,7 @@ object PendingForward {
 private fun senderOf(telegram: Telegram, message: UiMessage): String =
     message.forwardOrigin?.let(telegram::forwardName)?.takeIf { it.isNotBlank() }
         ?: telegram.senderName(message).takeIf { it.isNotBlank() && !message.isOutgoing }
-        ?: if (message.isOutgoing) "You" else "Unknown"
+        ?: if (message.isOutgoing) com.pixelgram.desktop.core.tr("You") else com.pixelgram.desktop.core.tr("Unknown")
 
 private fun mediaThumb(message: UiMessage): Pair<TdApi.File?, TdApi.Minithumbnail?>? = when (val content = message.content) {
     is TdApi.MessageVideo -> content.video.thumbnail?.file to content.video.minithumbnail

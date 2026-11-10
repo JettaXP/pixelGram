@@ -889,7 +889,7 @@ private fun ChatViewContent(
                                 name = when {
                                     gone -> "Deleted message"
                                     replied == null -> "Message"
-                                    replied.isOutgoing -> telegram.senderName(replied).ifBlank { "You" }
+                                    replied.isOutgoing -> telegram.senderName(replied).ifBlank { com.pixelgram.desktop.core.tr("You") }
                                     else -> telegram.senderName(replied)
                                 },
                                 text = if (gone) "" else replied?.text?.takeIf { it.isNotEmpty() } ?: if (replied?.photo != null) "Photo" else replied?.let { contentText(it.content) }?.ifBlank { null } ?: "…",
@@ -914,7 +914,7 @@ private fun ChatViewContent(
                             val pin = message.content as? TdApi.MessagePinMessage
                             if (pin != null) {
                                 val target = telegram.replyPreview(chat.id, pin.messageId)
-                                val who = if (message.isOutgoing) "You" else telegram.senderName(message)
+                                val who = if (message.isOutgoing) com.pixelgram.desktop.core.tr("You") else telegram.senderName(message)
                                 val what = target?.let { "\"${pinPreview(it)}\"" } ?: "a message"
                                 MessageBubble(
                                     message = message.copy(text = "$who pinned $what"),
@@ -1779,8 +1779,56 @@ private fun BareMessage(
             horizontalAlignment = if (endSide) Alignment.End else Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            if (quote != null) Box(Modifier.widthIn(min = QuoteMinWidth, max = 280.dp)) { quote() }
-            body()
+            val sticker: @Composable () -> Unit = {
+                androidx.compose.ui.layout.Layout(
+                    content = {
+                        body()
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = BareMetaAlpha),
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ) {
+                            Box(Modifier.padding(horizontal = 8.dp, vertical = 2.dp)) {
+                                MessageMeta(message, status, seconds, MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    },
+                ) { measurables, constraints ->
+                    val loose = constraints.copy(minWidth = 0, minHeight = 0)
+                    val content = measurables.first().measure(loose)
+                    val meta = measurables.last().measure(loose)
+                    val overlay = content.height >= BareOverlayMin.roundToPx() && content.width >= meta.width * 2
+                    val gap = if (overlay) 0 else BareMetaGap.roundToPx()
+                    val width = maxOf(content.width, meta.width)
+                    val height = if (overlay) content.height else content.height + gap + meta.height
+                    layout(width, height) {
+                        content.place(if (endSide) width - content.width else 0, 0)
+                        meta.place(if (overlay || endSide) width - meta.width else 0, height - meta.height)
+                    }
+                }
+            }
+            if (quote == null) {
+                sticker()
+            } else {
+                val side: @Composable () -> Unit = {
+                    Surface(
+                        shape = RoundedCornerShape(BareQuoteCorner),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.widthIn(min = QuoteMinWidth, max = BareQuoteWidth),
+                    ) {
+                        Box(Modifier.padding(4.dp)) { quote() }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+                    if (endSide) {
+                        side()
+                        sticker()
+                    } else {
+                        sticker()
+                        side()
+                    }
+                }
+            }
             if (message.reactions.isNotEmpty() && onReact != null) {
                 ReactionChips(
                     message.chatId to message.id,
@@ -1792,18 +1840,15 @@ private fun BareMessage(
                     avatars = telegram.chats[message.chatId]?.isChannel == false,
                 )
             }
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ) {
-                Box(Modifier.padding(horizontal = 8.dp, vertical = 2.dp)) {
-                    MessageMeta(message, status, seconds, MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.primary)
-                }
-            }
         }
     }
 }
+
+private const val BareMetaAlpha = 0.85f
+private val BareOverlayMin = 96.dp
+private val BareMetaGap = 4.dp
+private val BareQuoteCorner = 14.dp
+private val BareQuoteWidth = 220.dp
 
 private fun bigCustomEmoji(message: UiMessage): List<Pair<String, Long>>? {
     if (message.content !is TdApi.MessageText) return null

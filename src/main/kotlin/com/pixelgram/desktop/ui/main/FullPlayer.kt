@@ -175,14 +175,17 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                     Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Collapse player", modifier = Modifier.rotate(-90f))
                 }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    val source = when {
+                        AudioQueue.playlist.any { it.audio.id.toLong() == AudioPlayer.current } ->
+                            telegram.chats[AudioQueue.playlistOwner]?.let(telegram::chatTitle)
+                                ?: telegram.users[AudioQueue.playlistOwner]?.fullName()
+                                ?: com.pixelgram.desktop.core.tr("Profile music")
+                        else -> telegram.chats[AudioPlayer.chatId]?.let(telegram::chatTitle)
+                    }
+                    var lastSource by remember { mutableStateOf<String?>(null) }
+                    if (source != null) lastSource = source
                     Text(
-                        when {
-                            AudioQueue.playlist.any { it.audio.id.toLong() == AudioPlayer.current } ->
-                                telegram.chats[AudioQueue.playlistOwner]?.let(telegram::chatTitle)
-                                    ?: telegram.users[AudioQueue.playlistOwner]?.fullName()
-                                    ?: com.pixelgram.desktop.core.tr("Profile music")
-                            else -> telegram.chats[AudioPlayer.chatId]?.let(telegram::chatTitle) ?: com.pixelgram.desktop.core.tr("Music")
-                        },
+                        source ?: lastSource ?: com.pixelgram.desktop.core.tr("Music"),
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
