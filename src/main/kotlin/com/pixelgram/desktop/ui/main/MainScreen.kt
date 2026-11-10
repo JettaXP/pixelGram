@@ -59,6 +59,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -251,9 +252,42 @@ fun MainScreen(
             )
             val expandedWidth = maxOf(listWidth, maxOf(dragWidth.coerceAtMost(maxListWidth), CompactThreshold.value).dp)
             val push = settings.sideMenuStyle.value == com.pixelgram.desktop.core.SideMenuStyle.Push
+            AnimatedVisibility(
+                visible = foldersLeft || menuOpen,
+                modifier = Modifier.zIndex(1f).onSizeChanged { railWidthPx = it.width },
+                enter = expandHorizontally(railSpec) + fadeIn(fade),
+                exit = shrinkHorizontally(railSpec) + fadeOut(fade),
+            ) {
+                PixelRail(
+                    accounts = accounts,
+                    state = railState,
+                    expanded = menuOpen,
+                    showFolders = foldersLeft,
+                    showMenuButton = foldersLeft,
+                    telegram = telegram,
+                    settings = settings,
+                    tabs = tabs,
+                    selected = selectedKey,
+                    onToggleMenu = toggleMenu,
+                    onSelect = { key -> closeMenuAnd { if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
+                    onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
+                    onOpenSaved = {
+                        closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
+                    },
+                    onNewChat = { channel -> closeMenuAnd { newChat = channel } },
+                )
+            }
             Row(Modifier.fillMaxSize()) {
                 when {
-                    push -> Spacer(Modifier.width((with(density) { railWidthPx.toDp() } - if (menuOpen) RailEndTrim else 0.dp).coerceAtLeast(if (foldersLeft) RailWidth else 0.dp)))
+                    push -> Spacer(
+                        Modifier.layout { measurable, _ ->
+                            val base = if (foldersLeft) RailWidth.roundToPx() else 0
+                            val trim = minOf(RailEndTrim.roundToPx(), (railWidthPx - base).coerceAtLeast(0))
+                            val width = (railWidthPx - trim).coerceAtLeast(base)
+                            val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(width, 0))
+                            layout(width, 0) { placeable.place(0, 0) }
+                        },
+                    )
                     foldersLeft -> Spacer(Modifier.width(RailWidth))
                 }
                 Column(
@@ -477,35 +511,11 @@ fun MainScreen(
             if (scrim > 0f) {
                 Box(
                     Modifier
+                        .zIndex(ScrimZ)
                         .fillMaxSize()
                         .graphicsLayer { alpha = scrim }
                         .background(Color.Black)
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { scope.launch { railState.collapse() } },
-                )
-            }
-            AnimatedVisibility(
-                visible = foldersLeft || menuOpen,
-                modifier = Modifier.zIndex(1f).onSizeChanged { railWidthPx = it.width },
-                enter = expandHorizontally(railSpec) + fadeIn(fade),
-                exit = shrinkHorizontally(railSpec) + fadeOut(fade),
-            ) {
-                PixelRail(
-                    accounts = accounts,
-                    state = railState,
-                    expanded = menuOpen,
-                    showFolders = foldersLeft,
-                    showMenuButton = foldersLeft,
-                    telegram = telegram,
-                    settings = settings,
-                    tabs = tabs,
-                    selected = selectedKey,
-                    onToggleMenu = toggleMenu,
-                    onSelect = { key -> closeMenuAnd { if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
-                    onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
-                    onOpenSaved = {
-                        closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
-                    },
-                    onNewChat = { channel -> closeMenuAnd { newChat = channel } },
                 )
             }
         }
@@ -1006,6 +1016,7 @@ private const val RailFadeInMs = 180
 private const val RailResizeMs = 280
 private val MinChatWidth = 380.dp
 private val RailEndTrim = 16.dp
+private const val ScrimZ = 0.5f
 private val RailWidth = 96.dp
 private const val RailScrimAlpha = 0.32f
 private val CompactWidth = 88.dp
