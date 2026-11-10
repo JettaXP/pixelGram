@@ -6,6 +6,8 @@ import java.util.Properties
 object Backup {
     private const val Extension = "backup"
     private const val CodeLength = 4
+    private const val OsKey = "os"
+    private const val MobileOs = "android"
     private val CodeChars = ('a'..'z') + ('0'..'9')
 
     fun isBackup(name: String) = name.endsWith(".$Extension", ignoreCase = true)
@@ -17,6 +19,12 @@ object Backup {
             file.outputStream().use { settings.snapshot().store(it, "pixelGram settings backup") }
         }
     }.onFailure { AppLog.write("Backup export failed", it) }.getOrNull()
+
+    fun isMobile(file: File): Boolean = runCatching {
+        val props = Properties()
+        file.inputStream().use(props::load)
+        props.getProperty(OsKey).equals(MobileOs, ignoreCase = true)
+    }.getOrDefault(false)
 
     fun import(settings: AppSettings, file: File): Boolean = runCatching {
         val props = Properties()

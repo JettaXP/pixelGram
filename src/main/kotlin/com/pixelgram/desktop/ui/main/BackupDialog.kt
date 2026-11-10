@@ -2,6 +2,7 @@ package com.pixelgram.desktop.ui.main
 
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.outlined.Settings
+import com.pixelgram.desktop.ui.icons.outlined.PhoneAndroid
 import com.pixelgram.desktop.ui.components.expressive.AlertDialog
 import androidx.compose.material3.Icon
 import com.pixelgram.desktop.ui.components.Text
@@ -20,6 +21,17 @@ object BackupViewer {
 
 @Composable
 fun BackupImportDialog(file: File, settings: AppSettings, onDone: (Boolean?) -> Unit) {
+    val mobile = androidx.compose.runtime.remember(file) { Backup.isMobile(file) }
+    if (mobile) {
+        AlertDialog(
+            onDismissRequest = { onDone(null) },
+            icon = { Icon(Icons.Outlined.PhoneAndroid, contentDescription = null) },
+            title = { Text("Mobile backup") },
+            text = { Text("This backup was made in pixelGram for Android. Mobile and desktop settings are different, so it can't be applied here.") },
+            confirmButton = { TextButton(onClick = { onDone(null) }) { Text("OK") } },
+        )
+        return
+    }
     AlertDialog(
         onDismissRequest = { onDone(null) },
         icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
