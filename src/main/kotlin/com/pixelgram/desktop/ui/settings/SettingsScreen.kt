@@ -5,6 +5,7 @@ import kotlin.math.roundToInt
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.focusRequester
 import com.pixelgram.desktop.ui.icons.outlined.Edit
+import com.pixelgram.desktop.ui.icons.outlined.Payments
 import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
 import com.pixelgram.desktop.ui.icons.outlined.PushPin
 import com.pixelgram.desktop.ui.icons.outlined.Delete
@@ -2082,6 +2083,12 @@ private fun openUrl(url: String) {
 @Composable
 private fun AboutSection(telegram: Telegram, onOpenChat: (Long) -> Unit) {
     Description("pixelGram ${BuildConfig.VERSION}. " + com.pixelgram.desktop.core.tr("A Telegram client with Material 3 Expressive, built on TDLib."))
+    Header("Support")
+    SegmentedGroup {
+        LinkItem(0, 1, Icons.Outlined.Payments, "Support development", "Donate TON or USDT and get a unique badge", trailing = false) {
+            com.pixelgram.desktop.ui.SupportProject.open = true
+        }
+    }
     Header("Links")
     SegmentedGroup {
         LinkItem(0, 3, Icons.Outlined.Campaign, "Channel", "@$ChannelUsername") {

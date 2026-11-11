@@ -139,6 +139,7 @@ fun ProfileContent(
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             EmojiText(name, style = MaterialTheme.typography.headlineMediumEmphasized)
             com.pixelgram.desktop.ui.components.UserBadge.of(me.id)?.let { com.pixelgram.desktop.ui.components.UserBadgeView(it, telegram, 30.dp) }
+                ?: com.pixelgram.desktop.ui.components.SupporterBadge(me.id, name, telegram, 30.dp, label = true)
         }
         com.pixelgram.desktop.ui.main.ProfileBalance(me.id, telegram)
         val rows = buildList {

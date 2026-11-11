@@ -130,6 +130,11 @@ fun formattedString(text: String, entities: List<TdApi.TextEntity>, colors: Form
             else -> Unit
         }
     }
+    PixelLinkPattern.findAll(text).forEach { match ->
+        if (entities.none { it.offset < match.range.last + 1 && it.offset + it.length > match.range.first && (it.type is TdApi.TextEntityTypeUrl || it.type is TdApi.TextEntityTypeTextUrl) }) {
+            builder.addLink(link(match.value, colors), match.range.first, match.range.last + 1)
+        }
+    }
     return builder.toAnnotatedString()
 }
 
@@ -533,3 +538,5 @@ fun endsWithQuote(text: String, entities: List<TdApi.TextEntity>): Boolean = ent
     (it.type is TdApi.TextEntityTypeBlockQuote || it.type is TdApi.TextEntityTypeExpandableBlockQuote) &&
         it.offset + it.length >= text.trimEnd().length
 }
+
+private val PixelLinkPattern = Regex("pg://[A-Za-z]+")

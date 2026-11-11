@@ -111,7 +111,7 @@ enum class UserBadge(val userId: Long, val notice: String) {
 fun UserBadgeView(badge: UserBadge, telegram: com.pixelgram.desktop.telegram.Telegram?, size: Dp = 18.dp, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val custom = com.pixelgram.desktop.core.CustomBadges.of(badge.userId)
-    val editable = badge.userId in com.pixelgram.desktop.core.CustomBadges.Owners && telegram?.me?.id == badge.userId
+    val editable = com.pixelgram.desktop.core.CustomBadges.allowed(badge.userId) && telegram?.me?.id == badge.userId
     var tip by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf(false) }
     Box(
@@ -165,8 +165,104 @@ fun VerifiedBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
 fun ChatBadges(chat: com.pixelgram.desktop.telegram.ChatState, telegram: com.pixelgram.desktop.telegram.Telegram, size: Dp) {
     if (telegram.isOfficial(chat)) OfficialBadge(size)
     if (telegram.isVerified(chat)) VerifiedBadge(size)
-    UserBadge.of(chat.privateUserId)?.let { UserBadgeView(it, telegram, size) }
+    val official = UserBadge.of(chat.privateUserId)
+    if (official != null) UserBadgeView(official, telegram, size) else if (chat.privateUserId != 0L) SupporterBadge(chat.privateUserId, chat.title, telegram, size)
 }
+
+@Composable
+fun ProfileBadges(chat: com.pixelgram.desktop.telegram.ChatState, telegram: com.pixelgram.desktop.telegram.Telegram, size: Dp) {
+    if (telegram.isOfficial(chat)) OfficialBadge(size)
+    if (telegram.isVerified(chat)) VerifiedBadge(size)
+    val official = UserBadge.of(chat.privateUserId)
+    if (official != null) UserBadgeView(official, telegram, size) else if (chat.privateUserId != 0L) SupporterBadge(chat.privateUserId, chat.title, telegram, size, label = true)
+}
+
+@Composable
+fun SupporterBadge(userId: Long, name: String, telegram: com.pixelgram.desktop.telegram.Telegram?, size: Dp = 18.dp, modifier: Modifier = Modifier, label: Boolean = false) {
+    val number = com.pixelgram.desktop.core.Supporters.number(userId)
+    val custom = com.pixelgram.desktop.core.CustomBadges.of(userId)
+    if (number == null && custom == null) return
+    val logo = rememberPixelgramLogo()
+    val scheme = MaterialTheme.colorScheme
+    val editable = custom != null || com.pixelgram.desktop.core.CustomBadges.allowed(userId)
+    var tip by remember { mutableStateOf<String?>(null) }
+    var editing by remember { mutableStateOf(false) }
+    var shownLabel by remember(userId) { mutableStateOf(label && number != null) }
+    val notice = custom?.text?.takeIf { it.isNotBlank() }
+        ?: com.pixelgram.desktop.core.tr("{name} supported pixelGram and earned unique supporter badge #{n}!").replace("{name}", name.ifBlank { "User" }).replace("{n}", number?.toString().orEmpty())
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(size)
+            .then(if (custom == null) Modifier.clip(MaterialShapes.Cookie12Sided.toShape()).background(scheme.tertiary) else Modifier)
+            .then(if (editable && telegram?.me?.id == userId) Modifier.onSecondaryPress { editing = true } else Modifier)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(interactionSource = null, indication = null) { tip = notice },
+    ) {
+        BadgeTip(tip) { tip = null }
+        if (shownLabel && number != null) BadgeLabel(com.pixelgram.desktop.core.tr("Supporter Badge #{n}").replace("{n}", number.toString())) { shownLabel = false }
+        when {
+            custom != null -> com.pixelgram.desktop.ui.main.BadgeEmoji(custom, size)
+            logo != null -> Icon(logo, contentDescription = "Supporter badge", tint = scheme.onTertiary, modifier = Modifier.size(size * LogoScale))
+        }
+        if (editing && telegram != null) {
+            com.pixelgram.desktop.ui.main.BadgeEditor(telegram, userId, custom) { editing = false }
+        }
+    }
+}
+
+@Composable
+fun BadgeLabel(text: String, onDone: () -> Unit) {
+    val shown = remember(text) { androidx.compose.animation.core.MutableTransitionState(false).apply { targetState = true } }
+    LaunchedEffect(text) {
+        kotlinx.coroutines.delay(LabelMs)
+        shown.targetState = false
+    }
+    LaunchedEffect(shown.currentState, shown.isIdle) {
+        if (shown.isIdle && !shown.currentState) onDone()
+    }
+    val density = LocalDensity.current
+    val gap = with(density) { 6.dp.roundToPx() }
+    androidx.compose.ui.window.Popup(
+        popupPositionProvider = remember {
+            object : androidx.compose.ui.window.PopupPositionProvider {
+                override fun calculatePosition(
+                    anchorBounds: androidx.compose.ui.unit.IntRect,
+                    windowSize: androidx.compose.ui.unit.IntSize,
+                    layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                    popupContentSize: androidx.compose.ui.unit.IntSize,
+                ) = androidx.compose.ui.unit.IntOffset(
+                    (anchorBounds.center.x - popupContentSize.width / 2).coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0)),
+                    (anchorBounds.top - popupContentSize.height - gap).coerceAtLeast(0),
+                )
+            }
+        },
+    ) {
+        val motion = MaterialTheme.motionScheme
+        androidx.compose.animation.AnimatedVisibility(
+            visibleState = shown,
+            enter = androidx.compose.animation.fadeIn(motion.fastEffectsSpec()) +
+                androidx.compose.animation.scaleIn(motion.defaultSpatialSpec(), initialScale = TipScaleFrom, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)),
+            exit = androidx.compose.animation.fadeOut(motion.fastEffectsSpec()) +
+                androidx.compose.animation.scaleOut(motion.fastSpatialSpec(), targetScale = TipScaleFrom, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)),
+        ) {
+            androidx.compose.material3.Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.inverseSurface,
+                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                shadowElevation = 4.dp,
+            ) {
+                com.pixelgram.desktop.ui.components.Text(
+                    text,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            }
+        }
+    }
+}
+
+private const val LabelMs = 5_000L
 
 private val CodeSlash: ImageVector by lazy {
     ImageVector.Builder("CodeSlash", 24.dp, 24.dp, 960f, 960f)

@@ -26,8 +26,10 @@ object CustomBadges {
     private var lastRefresh = 0L
     private var started = false
 
+    fun allowed(userId: Long): Boolean = userId in Owners || Supporters.canCustomize(userId)
+
     fun of(userId: Long): CustomBadge? {
-        if (userId !in Owners) return null
+        if (!allowed(userId)) return null
         if (!started) start()
         if (own.containsKey(userId)) return own[userId]
         return remote[userId]
@@ -64,7 +66,7 @@ object CustomBadges {
     }
 
     private fun apply(text: String) {
-        val entries = parse(text).filterValues { it != null }.mapValues { it.value!! }.filterKeys { it in Owners }
+        val entries = parse(text).filterValues { it != null }.mapValues { it.value!! }
         remote.keys.retainAll(entries.keys)
         remote.putAll(entries)
     }

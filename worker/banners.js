@@ -27,6 +27,7 @@ export default {
 async function handle(message, env) {
   const userId = String(message.from.id);
   const command = (message.caption || message.text || "").trim().split(/\s+/)[0];
+  if (command === "/support" || command === "/custom" || command === "/unsupport") return grant(message, env, userId, command);
   if (command === "/badge") return badge(message, env, userId);
   if (command !== "/banner" && command !== "/remove") return;
   if ((env.BANNED || "").split(",").map((id) => id.trim()).includes(userId)) {
@@ -49,8 +50,59 @@ async function handle(message, env) {
   return reply(env, message.chat.id, "Banner updated.");
 }
 
+const BADGES_PATH = "docs/api/badges.json";
+
+function owners(env) {
+  return (env.OWNERS || "").split(",").map((id) => id.trim()).filter(Boolean);
+}
+
+async function readBadges(env) {
+  const response = await fetch(`https://api.github.com/repos/${env.REPO}/contents/${BADGES_PATH}?ref=${env.BRANCH}`, {
+    headers: headers(env, "application/vnd.github.raw"),
+  });
+  if (response.status === 404) return { next: 0, supporters: {}, custom: [] };
+  if (!response.ok) throw new Error(`badges: ${response.status}`);
+  return JSON.parse(await response.text());
+}
+
+async function grant(message, env, userId, command) {
+  if (!owners(env).includes(userId)) return;
+  const match = (message.text || "").trim().match(/^\/(?:support|custom|unsupport)(?:@\w+)?\s+(\d{1,20})$/);
+  if (!match) return reply(env, message.chat.id, `Send ${command} <user_id>.`);
+  const target = match[1];
+  let result = "";
+  await commitText(env, BADGES_PATH, (text) => {
+    const data = text ? JSON.parse(text) : { next: 0, supporters: {}, custom: [] };
+    data.supporters = data.supporters || {};
+    data.custom = data.custom || [];
+    data.next = data.next || 0;
+    if (command === "/support") {
+      if (!(target in data.supporters)) data.supporters[target] = data.next++;
+      result = `Supporter badge #${data.supporters[target]} for ${target}.`;
+    } else if (command === "/custom") {
+      if (!data.custom.includes(target)) data.custom.push(target);
+      result = `${target} can now set a custom badge with /badge.`;
+    } else {
+      delete data.supporters[target];
+      data.custom = data.custom.filter((id) => id !== target);
+      result = `Badges removed for ${target}.`;
+    }
+    data.updated = new Date().toISOString();
+    return JSON.stringify(data, null, 1) + "\n";
+  }, `Badges: ${command.slice(1)} ${target}`);
+  await reply(env, message.chat.id, result);
+  if (command === "/support") {
+    const number = result.match(/#(\d+)/)[1];
+    await reply(env, target, `Thank you for supporting pixelGram! Your supporter badge #${number} will appear next to your name in pixelGram within a few minutes.`);
+  } else if (command === "/custom") {
+    await reply(env, target, "Thank you for supporting pixelGram! You can now set your own badge: send /badge <custom emoji id or 0> <emoji> <text>. Send /badge again any time to change it, or /badge alone to reset.");
+  }
+}
+
 async function badge(message, env, userId) {
-  if (!(env.BADGE_OWNERS || "").split(",").map((id) => id.trim()).includes(userId)) return;
+  const allowed = (env.BADGE_OWNERS || "").split(",").map((id) => id.trim()).includes(userId) ||
+    (await readBadges(env)).custom?.includes(userId);
+  if (!allowed) return;
   const last = recent.get(`badge${userId}`) || 0;
   if (Date.now() - last < BADGE_COOLDOWN_MS) return reply(env, message.chat.id, "Too fast, wait a few seconds.");
   recent.set(`badge${userId}`, Date.now());

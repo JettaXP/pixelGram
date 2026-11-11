@@ -190,6 +190,7 @@ fun MainScreen(
 ) {
     WalletHost()
     com.pixelgram.desktop.ui.CreditsOverlay()
+    com.pixelgram.desktop.ui.SupportOverlay { telegram.openPublicChat(com.pixelgram.desktop.ui.SupportProject.Contact, onOpenChat) { Links.openBrowser("https://t.me/" + com.pixelgram.desktop.ui.SupportProject.Contact) } }
     LinkDialogs(settings, onOpenChat)
     val tabs = FolderLayout.tabs(telegram, settings)
     var selectedKey by rememberSaveable { mutableStateOf<ChatListKey>(ChatListKey.Main) }
@@ -888,6 +889,7 @@ private fun AccountHeader(
                     )
                     telegram.chats[me.id]?.let { own -> com.pixelgram.desktop.ui.components.ChatBadges(own, telegram, 22.dp) }
                         ?: com.pixelgram.desktop.ui.components.UserBadge.of(me.id)?.let { com.pixelgram.desktop.ui.components.UserBadgeView(it, telegram, 22.dp) }
+                        ?: com.pixelgram.desktop.ui.components.SupporterBadge(me.id, "", telegram, 22.dp)
                 }
                 me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
                     PhoneText(

@@ -645,7 +645,7 @@ fun ChatInfoContent(
                     ) { original ->
                         EmojiText(if (original) originalName.orEmpty() else custom, style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
                     }
-                    com.pixelgram.desktop.ui.components.ChatBadges(chat, telegram, 30.dp)
+                    com.pixelgram.desktop.ui.components.ProfileBadges(chat, telegram, 30.dp)
                 }
                 val subtitle = telegram.presence(chat)?.label ?: when {
                     chat.isChannel -> "channel"

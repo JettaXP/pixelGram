@@ -34,6 +34,10 @@ object Links : UriHandler {
     private fun special(url: String): Boolean {
         val uri = runCatching { URI(url.trim()) }.getOrNull() ?: return false
         val scheme = uri.scheme?.lowercase()
+        if (scheme == "pg" && (uri.host ?: uri.schemeSpecificPart.removePrefix("//").substringBefore('?').trimEnd('/')).equals("support", ignoreCase = true)) {
+            SwingUtilities.invokeLater { com.pixelgram.desktop.ui.SupportProject.open = true }
+            return true
+        }
         if (scheme == "tg" && (uri.host ?: uri.schemeSpecificPart.removePrefix("//").substringBefore('?')).equals("credits", ignoreCase = true)) {
             SwingUtilities.invokeLater { com.pixelgram.desktop.ui.Credits.open = true }
             return true

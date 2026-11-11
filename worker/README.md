@@ -3,6 +3,7 @@
 A Cloudflare Worker behind @pixelGramCI_bot. pixelGram sends the bot a JPEG with `/banner` in the caption, or `/remove`.
 The worker checks the file and commits `Banners/<userId>.jpg` and `Banners/index.json` in one commit marked `[skip ci]`.
 `/badge <custom emoji id or 0> <emoji> <text>` from a user listed in `BADGE_OWNERS` writes their custom badge to `Banners/badges.tsv`; `/badge` alone removes it.
+`/support <user_id>` and `/custom <user_id>` from a user listed in `OWNERS` grant a numbered supporter badge (numbers start at 0) or the right to set a custom badge. `/unsupport <user_id>` removes both. They are kept in `docs/api/badges.json`, which the site serves at `https://pixelgram.jettax.xyz/api/badges.json`. These commands are not registered with BotFather, so they stay out of the command list.
 The build workflow also ignores `Banners/**`, so banner commits never start a build.
 
 ## Setup
