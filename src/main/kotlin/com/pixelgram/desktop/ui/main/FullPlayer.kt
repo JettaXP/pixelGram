@@ -348,6 +348,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                 contentColor = colors.onSecondaryContainer,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalMinimumInteractiveComponentSize provides 0.dp) {
                 Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
                     Speeds.forEachIndexed { position, speed ->
                         ToggleButton(
@@ -365,6 +366,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                             Text(if (speed == 1.5f) "1.5x" else "${speed.toInt()}x", style = MaterialTheme.typography.labelLarge)
                         }
                     }
+                }
                 }
                 Spacer(Modifier.weight(1f))
                 Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
@@ -1204,6 +1206,7 @@ private const val GroupIdleAlpha = 0.55f
 private fun VolumeButton(colors: androidx.compose.material3.ToggleButtonColors) {
     var open by remember { mutableStateOf(false) }
     var closedAt by remember { mutableStateOf(0L) }
+    var pressedAt by remember { mutableStateOf(0L) }
     val shown = remember { androidx.compose.animation.core.MutableTransitionState(false) }
     shown.targetState = open
     val level = if (AudioPlayer.muted) 0f else AudioPlayer.volume
@@ -1213,14 +1216,21 @@ private fun VolumeButton(colors: androidx.compose.material3.ToggleButtonColors) 
             onCheckedChange = {
                 if (open) {
                     open = false
-                } else if (System.currentTimeMillis() - closedAt > ReopenGuardMs) {
+                } else if (kotlin.math.abs(closedAt - pressedAt) > ReopenGuardMs) {
                     open = true
                 }
             },
             shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
             colors = colors,
             contentPadding = PaddingValues(horizontal = 16.dp),
-            modifier = Modifier.height(40.dp),
+            modifier = Modifier.height(40.dp).pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Press) pressedAt = System.currentTimeMillis()
+                    }
+                }
+            },
         ) {
             Icon(
                 when {
