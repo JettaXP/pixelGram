@@ -424,13 +424,31 @@ private fun MonthHeader(month: String) {
 
 @Composable
 fun CommonGroupsPane(userId: Long, telegram: Telegram, settings: AppSettings, onOpenChat: ((Long) -> Unit)?, modifier: Modifier = Modifier) {
-    var groups by remember(userId) { mutableStateOf<List<Long>?>(null) }
-    LaunchedEffect(userId) { telegram.groupsInCommon(userId) { groups = it } }
+    ChatsPane(userId, "No groups in common", telegram, settings, onOpenChat, modifier) { done -> telegram.groupsInCommon(userId, done) }
+}
+
+@Composable
+fun SimilarChannelsPane(chatId: Long, telegram: Telegram, settings: AppSettings, onOpenChat: ((Long) -> Unit)?, modifier: Modifier = Modifier) {
+    ChatsPane(chatId, "No similar channels", telegram, settings, onOpenChat, modifier) { done -> telegram.similarChats(chatId, done) }
+}
+
+@Composable
+private fun ChatsPane(
+    key: Long,
+    empty: String,
+    telegram: Telegram,
+    settings: AppSettings,
+    onOpenChat: ((Long) -> Unit)?,
+    modifier: Modifier,
+    load: ((List<Long>) -> Unit) -> Unit,
+) {
+    var groups by remember(key) { mutableStateOf<List<Long>?>(null) }
+    LaunchedEffect(key) { load { groups = it } }
     Box(modifier) {
         val list = groups
         when {
             list == null -> LoadingIndicator(Modifier.align(Alignment.Center))
-            list.isEmpty() -> Text("No groups in common", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.Center))
+            list.isEmpty() -> Text(empty, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.Center))
             else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxSize()) {
                 itemsIndexed(list) { index, id ->
                     val chat = telegram.chats[id] ?: return@itemsIndexed
@@ -484,7 +502,11 @@ fun SharedMediaSection(chat: com.pixelgram.desktop.telegram.ChatState, telegram:
         if (hasStories) add("Stories")
         if (gifts.isNotEmpty()) add("Gifts")
     }
-    val titles = extra + MediaTab.entries.map { it.title } + if (user) listOf("Groups") else emptyList()
+    val titles = extra + MediaTab.entries.map { it.title } + when {
+        user -> listOf("Groups")
+        chat.isChannel -> listOf("Similar")
+        else -> emptyList()
+    }
     var picked by remember(chat.id) { mutableStateOf<String?>(null) }
     val selected = picked?.let { titles.indexOf(it) }?.takeIf { it >= 0 } ?: 0
     val giftsIndex = extra.indexOf("Gifts")
@@ -512,8 +534,10 @@ fun SharedMediaSection(chat: com.pixelgram.desktop.telegram.ChatState, telegram:
             val tab = MediaTab.entries.getOrNull(index)
             if (tab != null) {
                 SharedMediaPane(chat.id, tab, telegram, Modifier.fillMaxSize(), actions = actions)
-            } else {
+            } else if (user) {
                 CommonGroupsPane(chat.privateUserId, telegram, settings, onOpenChat, Modifier.fillMaxSize())
+            } else {
+                SimilarChannelsPane(chat.id, telegram, settings, onOpenChat, Modifier.fillMaxSize())
             }
         }
     }

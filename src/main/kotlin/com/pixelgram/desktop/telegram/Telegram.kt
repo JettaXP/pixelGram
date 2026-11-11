@@ -2496,6 +2496,14 @@ class Telegram(
         }
     }
 
+    fun similarChats(chatId: Long, done: (List<Long>) -> Unit) {
+        send(TdApi.GetChatSimilarChats(chatId)) { result ->
+            val ids = (result as? TdApi.Chats)?.chatIds?.toList().orEmpty()
+            ids.forEach(::loadChat)
+            done(ids)
+        }
+    }
+
     fun isLeft(chat: ChatState): Boolean {
         val status = supergroupInfo[chat.supergroupId]?.status ?: return false
         return status is TdApi.ChatMemberStatusLeft
@@ -2674,10 +2682,18 @@ class Telegram(
                 disableNotification = silent
                 schedulingState = schedule
             }
-            inputMessageContent = TdApi.InputMessageText().apply {
-                this.text = TdApi.FormattedText(text, outgoingEntities(chatId, entities))
+            inputMessageContent = if (entities.isEmpty() && text.trim() in DiceEmoji) {
+                TdApi.InputMessageDice(text.trim(), true)
+            } else {
+                TdApi.InputMessageText().apply {
+                    this.text = TdApi.FormattedText(text, outgoingEntities(chatId, entities))
+                }
             }
         })
+    }
+
+    fun stopPoll(message: UiMessage) {
+        send(TdApi.StopPoll(message.chatId, message.id, null))
     }
 
     fun outgoingEntities(chatId: Long, entities: Array<TdApi.TextEntity>): Array<TdApi.TextEntity> =
@@ -3819,3 +3835,5 @@ private const val StreamStartBytes = 192L * 1024
 private const val ServiceBotCleanupMs = 15_000L
 
 private const val TonPage = 50
+
+private val DiceEmoji = setOf("🎲", "🎯", "🏀", "⚽", "⚽️", "🎳", "🎰")

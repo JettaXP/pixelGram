@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import com.pixelgram.desktop.ui.components.GroupedMenu
 import com.pixelgram.desktop.ui.components.MenuEntry
 import com.pixelgram.desktop.ui.components.MenuGroups
+import com.pixelgram.desktop.ui.icons.outlined.Lock
 import com.pixelgram.desktop.ui.icons.outlined.PushPin
 import com.pixelgram.desktop.ui.icons.outlined.AddReaction
 import com.pixelgram.desktop.ui.icons.outlined.Block
@@ -393,6 +394,10 @@ private fun MessageMenu(
         if (canEdit) add(MenuEntry(Icons.Outlined.Edit, "Edit", onClick = act { actions.onEdit(message) }))
         actions.onPin?.takeIf { !message.service && canPin }?.let { pin ->
             add(MenuEntry(Icons.Outlined.PushPin, if (message.pinned) "Unpin" else "Pin", onClick = act { pin(message) }))
+        }
+        val poll = (message.content as? TdApi.MessagePoll)?.poll
+        if (poll != null && !poll.isClosed && (known?.canBeEdited ?: message.isOutgoing)) {
+            Links.active?.invoke()?.let { owner -> add(MenuEntry(Icons.Outlined.Lock, "Stop poll", onClick = act { owner.stopPoll(message) })) }
         }
     }
     val copies = buildList {
