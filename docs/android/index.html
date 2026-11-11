@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pixelGram for Android</title>
+  <meta name="description" content="pixelGram for Android is a Telegram client in Material 3 Expressive, built with Kotlin, Jetpack Compose and TDLib. Free and open source, now in alpha.">
+  <meta name="theme-color" content="#141218" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#fef7ff" media="(prefers-color-scheme: light)">
+  <meta property="og:title" content="pixelGram for Android">
+  <meta property="og:description" content="Telegram for Android in Material 3 Expressive. Free and open source, now in alpha.">
+  <meta property="og:image" content="https://pixelgram.jettax.xyz/assets/img/og.png">
+  <meta property="og:url" content="https://pixelgram.jettax.xyz/android/">
+  <meta property="og:site_name" content="pixelGram">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://pixelgram.jettax.xyz/android/">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"pixelGram for Android","applicationCategory":"CommunicationApplication","operatingSystem":"Android 8.0+","description":"A Telegram client for Android in Material 3 Expressive, built with Kotlin, Jetpack Compose and TDLib.","url":"https://pixelgram.jettax.xyz/android/","downloadUrl":"https://github.com/JettaXP/pixelGram-android/releases/download/alpha/pixelGram-android-arm64.apk","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"sameAs":["https://github.com/JettaXP/pixelGram-android","https://t.me/pixelgramclient"]}</script>
+  <link rel="icon" type="image/png" sizes="256x256" href="../assets/img/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,300..800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0&display=block">
+  <style>
+    :root {
+      --primary: #6750a4; --on-primary: #ffffff; --primary-container: #eaddff; --on-primary-container: #21005d;
+      --secondary-container: #e8def8; --on-secondary-container: #1d192b;
+      --tertiary-container: #ffd8e4; --on-tertiary-container: #31111d;
+      --surface: #fef7ff; --on-surface: #1d1b20; --on-surface-variant: #49454f;
+      --surface-low: #f7f2fa; --surface-high: #ece6f0; --surface-highest: #e6e0e9; --outline: #79747e;
+      --error-container: #f9dedc; --on-error-container: #410e0b;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --primary: #d0bcff; --on-primary: #381e72; --primary-container: #4f378b; --on-primary-container: #eaddff;
+        --secondary-container: #4a4458; --on-secondary-container: #e8def8;
+        --tertiary-container: #633b48; --on-tertiary-container: #ffd8e4;
+        --surface: #141218; --on-surface: #e6e0e9; --on-surface-variant: #cac4d0;
+        --surface-low: #1d1b20; --surface-high: #2b2930; --surface-highest: #36343b; --outline: #938f99;
+        --error-container: #8c1d18; --on-error-container: #f9dedc;
+      }
+    }
+    :root[data-theme="dark"] {
+      --primary: #d0bcff; --on-primary: #381e72; --primary-container: #4f378b; --on-primary-container: #eaddff;
+      --secondary-container: #4a4458; --on-secondary-container: #e8def8;
+      --tertiary-container: #633b48; --on-tertiary-container: #ffd8e4;
+      --surface: #141218; --on-surface: #e6e0e9; --on-surface-variant: #cac4d0;
+      --surface-low: #1d1b20; --surface-high: #2b2930; --surface-highest: #36343b; --outline: #938f99;
+      --error-container: #8c1d18; --on-error-container: #f9dedc;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--surface); color: var(--on-surface); font-family: "Google Sans Flex", "Google Sans", Roboto, system-ui, sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: var(--primary); }
+    .icon { font-family: "Material Symbols Rounded"; font-weight: normal; font-style: normal; font-size: 22px; line-height: 1; display: inline-block; font-feature-settings: "liga"; -webkit-font-smoothing: antialiased; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+    header { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(16px); }
+    header .wrap { display: flex; align-items: center; gap: 12px; height: 64px; }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--on-surface); font-weight: 600; font-size: 20px; }
+    .brand img { width: 36px; height: 36px; border-radius: 12px; }
+    nav { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+    nav a { text-decoration: none; color: var(--on-surface-variant); padding: 8px 12px; border-radius: 20px; font-weight: 500; font-size: 15px; }
+    nav a:hover { background: var(--surface-high); color: var(--on-surface); }
+    .icon-btn { border: 0; background: transparent; color: var(--on-surface-variant); width: 40px; height: 40px; border-radius: 20px; cursor: pointer; display: grid; place-items: center; font: inherit; }
+    .icon-btn:hover { background: var(--surface-high); }
+    .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; padding: 56px 0 40px; }
+    .chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 10px; background: var(--tertiary-container); color: var(--on-tertiary-container); font-weight: 600; font-size: 14px; }
+    h1 { font-size: clamp(40px, 6vw, 64px); line-height: 1.05; letter-spacing: -0.02em; margin: 18px 0 16px; font-weight: 600; }
+    h1 em { font-style: normal; color: var(--primary); }
+    .lead { font-size: 19px; color: var(--on-surface-variant); margin: 0 0 28px; max-width: 560px; }
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; }
+    .btn { display: inline-flex; align-items: center; gap: 10px; height: 56px; padding: 0 26px; border-radius: 28px; text-decoration: none; font-weight: 600; font-size: 16px; transition: border-radius .25s cubic-bezier(.2,0,0,1), transform .2s; }
+    .btn:hover { border-radius: 16px; }
+    .btn:active { transform: scale(.97); }
+    .btn.filled { background: var(--primary); color: var(--on-primary); }
+    .btn.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+    .btn.outlined { border: 1px solid var(--outline); color: var(--primary); }
+    .btn small { font-weight: 500; opacity: .75; }
+    .note { margin-top: 18px; font-size: 14px; color: var(--on-surface-variant); }
+    .phones { display: flex; justify-content: center; gap: 18px; }
+    .phone { width: 230px; border-radius: 32px; overflow: hidden; background: var(--surface-highest); box-shadow: 0 18px 48px rgb(0 0 0 / .25); border: 6px solid var(--surface-highest); }
+    .phone img { display: block; width: 100%; height: auto; border-radius: 26px; }
+    .phone.back { transform: translateY(36px) rotate(4deg); width: 210px; opacity: .95; }
+    .alert { display: flex; gap: 16px; padding: 20px 24px; border-radius: 28px; background: var(--error-container); color: var(--on-error-container); margin: 16px 0 8px; }
+    .alert .icon { font-size: 28px; }
+    .alert h3 { margin: 0 0 4px; font-size: 18px; }
+    .alert p { margin: 0; }
+    section { padding: 48px 0; }
+    h2 { font-size: clamp(28px, 4vw, 40px); margin: 0 0 8px; font-weight: 600; letter-spacing: -0.01em; }
+    .section-lead { color: var(--on-surface-variant); margin: 0 0 28px; font-size: 17px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .card { background: var(--surface-low); border-radius: 28px; padding: 24px; transition: border-radius .3s cubic-bezier(.2,0,0,1), background .2s; }
+    .card:hover { border-radius: 40px; background: var(--surface-high); }
+    .card.wide { grid-column: span 2; }
+    .badge { width: 52px; height: 52px; display: grid; place-items: center; background: var(--primary-container); color: var(--on-primary-container); margin-bottom: 14px; }
+    .badge.t { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+    .badge.s { background: var(--secondary-container); color: var(--on-secondary-container); }
+    .badge .icon { font-size: 26px; }
+    .shape-a { border-radius: 42% 58% 50% 50% / 50% 45% 55% 50%; }
+    .shape-b { border-radius: 16px; }
+    .shape-c { border-radius: 50%; }
+    .card h3 { margin: 0 0 6px; font-size: 19px; }
+    .card p { margin: 0; color: var(--on-surface-variant); }
+    .shots { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 12px; scroll-snap-type: x mandatory; }
+    .shots figure { margin: 0; flex: 0 0 240px; scroll-snap-align: start; }
+    .shots img { width: 100%; border-radius: 24px; display: block; background: var(--surface-highest); }
+    .shots figcaption { text-align: center; color: var(--on-surface-variant); font-size: 14px; margin-top: 8px; }
+    .steps { counter-reset: step; display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+    .steps li { counter-increment: step; display: flex; gap: 16px; align-items: flex-start; background: var(--surface-low); border-radius: 20px; padding: 18px 20px; }
+    .steps li::before { content: counter(step); flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; font-weight: 700; }
+    .steps b { display: block; }
+    .steps span { color: var(--on-surface-variant); }
+    .wallets { display: grid; gap: 8px; margin-top: 16px; }
+    .wallet { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 18px; background: var(--surface-high); cursor: pointer; border: 0; text-align: left; color: inherit; font: inherit; width: 100%; }
+    .wallet:hover { background: var(--surface-highest); }
+    .wallet b { display: block; color: var(--primary); font-size: 14px; }
+    .wallet code { font-size: 13px; color: var(--on-surface-variant); word-break: break-all; }
+    .wallet .icon { margin-left: auto; color: var(--on-surface-variant); }
+    footer { padding: 32px 0 48px; color: var(--on-surface-variant); font-size: 14px; }
+    footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; }
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; padding-top: 32px; }
+      .phones { order: -1; }
+      .phone { width: 180px; } .phone.back { width: 160px; }
+      .grid { grid-template-columns: 1fr; }
+      .card.wide { grid-column: auto; }
+      nav a.hide-sm { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <a class="brand" href="#top"><img src="../assets/img/icon.png" alt="" width="36" height="36">pixelGram</a>
+      <nav aria-label="Sections">
+        <a class="hide-sm" href="#features" data-ru="Возможности">Features</a>
+        <a class="hide-sm" href="#download" data-ru="Скачать">Download</a>
+        <a href="../" data-ru="Для компьютера">Desktop</a>
+        <button class="icon-btn" id="lang" aria-label="Language"><span class="icon">translate</span></button>
+        <button class="icon-btn" id="theme" aria-label="Theme"><span class="icon">brightness_auto</span></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap" id="top">
+    <section class="hero">
+      <div>
+        <span class="chip"><span class="icon">science</span><span data-ru="Альфа-версия">Alpha</span></span>
+        <h1 data-ru="pixelGram для <em>Android</em>">pixelGram for <em>Android</em></h1>
+        <p class="lead" data-ru="Telegram-клиент в Material 3 Expressive, теперь и на телефоне. Kotlin, Jetpack Compose и TDLib внутри, дизайн Google снаружи. Бесплатно и с открытым кодом.">A Telegram client in Material 3 Expressive, now on your phone. Kotlin, Jetpack Compose and TDLib inside, Google's design outside. Free and open source.</p>
+        <div class="cta">
+          <a class="btn filled" href="https://github.com/JettaXP/pixelGram-android/releases/download/alpha/pixelGram-android-arm64.apk"><span class="icon">download</span><span data-ru="Скачать APK">Download APK</span> <small>arm64</small></a>
+          <a class="btn tonal" href="https://t.me/pixelgramclient" target="_blank" rel="noopener"><span class="icon">send</span><span data-ru="Канал в Telegram">Telegram channel</span></a>
+        </div>
+        <p class="note"><span data-ru="Android 8.0 и новее. Для старых или 32-битных телефонов есть">Android 8.0 or newer. For older or 32-bit phones there is a</span> <a href="https://github.com/JettaXP/pixelGram-android/releases/download/alpha/pixelGram-android.apk" data-ru="универсальный APK">universal APK</a>.</p>
+      </div>
+      <div class="phones" aria-hidden="true">
+        <div class="phone back"><img src="img/player_lyrics.webp" alt="" width="540" height="1200" loading="lazy"></div>
+        <div class="phone"><img src="img/chats.webp" alt="" width="540" height="1200"></div>
+      </div>
+    </section>
+
+    <div class="alert" role="note">
+      <span class="icon">construction</span>
+      <div>
+        <h3 data-ru="Это альфа-версия">This is an alpha</h3>
+        <p data-ru="pixelGram для Android появился совсем недавно. Многое уже работает, но будут ошибки и недоделки, а обновления выходят почти каждый день. Нашли баг — напишите в канал или в Issues на GitHub.">pixelGram for Android is brand new. A lot already works, but expect bugs and rough edges, and updates almost every day. Found a bug? Tell us in the channel or in GitHub Issues.</p>
+      </div>
+    </div>
+
+    <section id="features">
+      <h2 data-ru="Что уже есть">What's already there</h2>
+      <p class="section-lead" data-ru="Многое перенесено из pixelGram для компьютера, кое-что сделано специально для телефона.">Much of it comes from pixelGram for desktop, some of it is made just for the phone.</p>
+      <div class="grid">
+        <article class="card wide"><div class="badge shape-a"><span class="icon">palette</span></div><h3 data-ru="Material 3 Expressive">Material 3 Expressive</h3><p data-ru="Цвета Material You из обоев, фигуры Material, пружинные анимации, сегментированные списки и меню.">Material You colors from your wallpaper, Material shapes, spring animations, segmented lists and menus.</p></article>
+        <article class="card"><div class="badge t shape-c"><span class="icon">music_note</span></div><h3 data-ru="Музыкальный плеер">Music player</h3><p data-ru="Полноэкранный плеер с текстами песен по словам, очередью и обложками.">A full screen player with word by word lyrics, a queue and cover art.</p></article>
+        <article class="card"><div class="badge s shape-b"><span class="icon">cast</span></div><h3>Chromecast</h3><p data-ru="Отправьте музыку на телевизор или колонку прямо из плеера.">Send music to your TV or speaker right from the player.</p></article>
+        <article class="card"><div class="badge shape-c"><span class="icon">auto_stories</span></div><h3 data-ru="Истории">Stories</h3><p data-ru="Смотрите и публикуйте истории, ставьте реакции.">Watch and post stories, react to them.</p></article>
+        <article class="card"><div class="badge t shape-a"><span class="icon">format_bold</span></div><h3 data-ru="Форматирование">Formatting</h3><p data-ru="Жирный, курсив, моноширинный, ссылки, цитаты и спойлеры с размытием прямо из меню выделения.">Bold, italic, monospace, links, quotes and blurred spoilers right from the selection menu.</p></article>
+        <article class="card"><div class="badge s shape-c"><span class="icon">add_reaction</span></div><h3 data-ru="Реакции и эмодзи">Reactions and emoji</h3><p data-ru="Быстрые реакции, аватарки тех, кто их поставил, анимированные премиум-эмодзи.">Quick reactions, avatars of who reacted, animated premium emoji.</p></article>
+        <article class="card"><div class="badge shape-b"><span class="icon">interests</span></div><h3 data-ru="Иконки и формы">Icons and shapes</h3><p data-ru="Наборы иконок, формы аватарок, свой порядок вкладок, боковое меню или нижняя панель.">Icon packs, avatar shapes, your own tab order, a side menu or a bottom bar.</p></article>
+        <article class="card"><div class="badge t shape-c"><span class="icon">manage_accounts</span></div><h3 data-ru="Несколько аккаунтов">Multiple accounts</h3><p data-ru="Переключайтесь между аккаунтами из бокового меню.">Switch between accounts from the side menu.</p></article>
+        <article class="card wide"><div class="badge s shape-a"><span class="icon">workspace_premium</span></div><h3 data-ru="Значки pixelGram">pixelGram badges</h3><p data-ru="Поддержите проект и получите уникальный номерной значок, который видят все пользователи pixelGram на телефоне и компьютере.">Support the project and get a unique numbered badge that everyone using pixelGram sees, on phone and desktop.</p></article>
+      </div>
+    </section>
+
+    <section id="screens">
+      <h2 data-ru="Скриншоты">Screenshots</h2>
+      <p class="section-lead" data-ru="Сняты прямо из pixelGram.">Taken from pixelGram itself.</p>
+      <div class="shots">
+        <figure><img src="img/chats.webp" alt="" width="540" height="1200" loading="lazy"><figcaption data-ru="Чаты">Chats</figcaption></figure>
+        <figure><img src="img/player_lyrics.webp" alt="" width="540" height="1200" loading="lazy"><figcaption data-ru="Текст песни">Lyrics</figcaption></figure>
+        <figure><img src="img/player.webp" alt="" width="540" height="1200" loading="lazy"><figcaption data-ru="Плеер">Player</figcaption></figure>
+        <figure><img src="img/profile.webp" alt="" width="540" height="1200" loading="lazy"><figcaption data-ru="Профиль">Profile</figcaption></figure>
+        <figure><img src="img/pixel_settings.webp" alt="" width="540" height="1200" loading="lazy"><figcaption data-ru="Настройки pixelGram">pixelGram settings</figcaption></figure>
+      </div>
+    </section>
+
+    <section id="download">
+      <h2 data-ru="Как установить">How to install</h2>
+      <p class="section-lead" data-ru="Пока pixelGram нет в магазинах, APK ставится вручную.">pixelGram isn't in app stores yet, so you install the APK yourself.</p>
+      <ol class="steps">
+        <li><div><b data-ru="Скачайте APK">Download the APK</b><span data-ru="Подходит почти всем современным телефонам (arm64).">Fits almost every modern phone (arm64).</span> <a href="https://github.com/JettaXP/pixelGram-android/releases/download/alpha/pixelGram-android-arm64.apk" data-ru="Скачать">Download</a></div></li>
+        <li><div><b data-ru="Разрешите установку">Allow the install</b><span data-ru="Android спросит разрешение на установку из браузера или файлового менеджера. Разрешите его один раз.">Android will ask to allow installs from your browser or file manager. Allow it once.</span></div></li>
+        <li><div><b data-ru="Войдите в Telegram">Sign in to Telegram</b><span data-ru="По номеру телефона или по QR-коду с другого устройства. Обновления ставятся поверх, данные сохраняются.">With your phone number or a QR code from another device. Updates install over the old version and keep your data.</span></div></li>
+      </ol>
+      <p class="note"><a href="https://github.com/JettaXP/pixelGram-android/releases/tag/alpha" target="_blank" rel="noopener" data-ru="Все файлы альфа-версии">All alpha files</a> · <a href="https://github.com/JettaXP/pixelGram-android" target="_blank" rel="noopener" data-ru="Исходный код">Source code</a></p>
+    </section>
+
+    <section id="support">
+      <h2 data-ru="Поддержать разработку">Support development</h2>
+      <p class="section-lead" data-ru="pixelGram делает один человек в свободное время. За 2 TON или 2 USDT вы получите номерной значок, за 5 — свой значок с любым эмодзи. После перевода пришлите скриншот @jettaxp.">pixelGram is made by one person in their free time. Donate 2 TON or 2 USDT for a numbered badge, or 5 for a custom badge with any emoji. After the transfer, send a screenshot to @jettaxp.</p>
+      <div class="wallets">
+        <button class="wallet" data-copy="UQCDaQUP33fPSuaAVDlyHk2ayYzcz8mDST9GvdFFAMJdlAvs"><div><b>USDT · TON</b><code>UQCDaQUP33fPSuaAVDlyHk2ayYzcz8mDST9GvdFFAMJdlAvs</code></div><span class="icon">content_copy</span></button>
+        <button class="wallet" data-copy="TUMktFcyp7WtBnVfYP9gYPY92rdnFXUzgx"><div><b>USDT · TRC20</b><code>TUMktFcyp7WtBnVfYP9gYPY92rdnFXUzgx</code></div><span class="icon">content_copy</span></button>
+        <button class="wallet" data-copy="UQCDaQUP33fPSuaAVDlyHk2ayYzcz8mDST9GvdFFAMJdlAvs"><div><b>TON</b><code>UQCDaQUP33fPSuaAVDlyHk2ayYzcz8mDST9GvdFFAMJdlAvs</code></div><span class="icon">content_copy</span></button>
+      </div>
+      <div class="cta" style="margin-top:20px"><a class="btn outlined" href="https://t.me/jettaxp" target="_blank" rel="noopener"><span class="icon">favorite</span><span data-ru="Написать @jettaxp">Message @jettaxp</span></a></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span data-ru="Сделал jettax. Свободное ПО под GPLv3. Не связано с Telegram и Google.">Made by jettax. Free software under the GPLv3. Not affiliated with Telegram or Google.</span>
+      <span><a href="../">pixelGram Desktop</a> · <a href="https://github.com/JettaXP/pixelGram-android">GitHub</a> · <a href="https://t.me/pixelgramclient">@pixelgramclient</a></span>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var store = {
+        get: function (k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } },
+        set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+      };
+      var nodes = Array.prototype.slice.call(document.querySelectorAll('[data-ru]'));
+      nodes.forEach(function (n) { n.dataset.en = n.innerHTML; });
+      var lang = store.get('lang', (navigator.language || '').toLowerCase().indexOf('ru') === 0 ? 'ru' : 'en');
+      function apply() {
+        document.documentElement.lang = lang;
+        nodes.forEach(function (n) { n.innerHTML = lang === 'ru' ? n.dataset.ru : n.dataset.en; });
+        document.title = lang === 'ru' ? 'pixelGram для Android' : 'pixelGram for Android';
+      }
+      apply();
+      document.getElementById('lang').addEventListener('click', function () {
+        lang = lang === 'ru' ? 'en' : 'ru';
+        store.set('lang', lang);
+        apply();
+      });
+      var modes = ['auto', 'light', 'dark'];
+      var icons = { auto: 'brightness_auto', light: 'light_mode', dark: 'dark_mode' };
+      var mode = store.get('mode', 'auto');
+      var themeButton = document.getElementById('theme');
+      function applyMode() {
+        if (mode === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = mode;
+        themeButton.querySelector('.icon').textContent = icons[mode] || icons.auto;
+      }
+      applyMode();
+      themeButton.addEventListener('click', function () {
+        mode = modes[(modes.indexOf(mode) + 1) % modes.length];
+        store.set('mode', mode);
+        applyMode();
+      });
+      document.querySelectorAll('[data-copy]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var done = function () { var i = b.querySelector('.icon'); i.textContent = 'check'; setTimeout(function () { i.textContent = 'content_copy'; }, 1500); };
+          if (navigator.clipboard) navigator.clipboard.writeText(b.dataset.copy).then(done, function () {}); else done();
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
