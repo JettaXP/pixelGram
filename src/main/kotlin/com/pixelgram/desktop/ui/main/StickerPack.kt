@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.Add
 import com.pixelgram.desktop.ui.icons.automirrored.outlined.Forward
 import com.pixelgram.desktop.ui.icons.filled.Close
 import com.pixelgram.desktop.ui.icons.filled.MoreVert
@@ -137,6 +138,17 @@ fun StickerPackDialog(request: StickerPackRequest, settings: AppSettings, onDism
                                     link?.let { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(it), null) }
                                 },
                             )
+                            if (loaded?.isOwned == true && loaded.stickerType is TdApi.StickerTypeRegular) {
+                                DropdownMenuItem(
+                                    text = { Text("Add stickers") },
+                                    leadingIcon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+                                    onClick = {
+                                        menu = false
+                                        onDismiss()
+                                        StickerCreate.current = StickerCreateRequest(telegram, request.chatId, loaded)
+                                    },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("Refresh") },
                                 leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null) },

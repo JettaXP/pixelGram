@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.icons.outlined.Add
 import com.pixelgram.desktop.ui.icons.outlined.Schedule
 import com.pixelgram.desktop.ui.icons.outlined.Search
 import androidx.compose.material3.Icon
@@ -77,6 +78,8 @@ private val PanelWidth = 380.dp
 private val PanelHeight = 440.dp
 private val StickerCell = 68.dp
 private const val GifPanelSearchDelayMs = 400L
+private const val SetCovers = 5
+private val SetCoverSize = 44.dp
 private const val GifBot = "gif"
 private const val FavoritesId = -1L
 
@@ -295,6 +298,13 @@ private fun StickersTab(
                     Icon(Icons.Outlined.Search, contentDescription = "Search stickers")
                 }
             }
+            if (menu) {
+                item(key = "create") {
+                    IconButton(onClick = { StickerCreate.current = StickerCreateRequest(telegram, chatId) }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Outlined.Add, contentDescription = "New sticker set")
+                    }
+                }
+            }
             itemsIndexed(sections, key = { _, (section, _) -> section.id }) { index, (section, _) ->
                 IconToggleButton(
                     checked = index == current,
@@ -401,40 +411,99 @@ private fun StickerSearch(
     modifier: Modifier,
 ) {
     var found by remember { mutableStateOf<List<TdApi.Sticker>?>(emptyList()) }
+    var sets by remember { mutableStateOf<List<TdApi.StickerSetInfo>?>(null) }
+    val added = remember { androidx.compose.runtime.mutableStateMapOf<Long, Boolean>() }
     LaunchedEffect(query) {
         if (query.isBlank()) {
             found = emptyList()
+            sets = null
+            telegram.trendingStickerSets { sets = it }
             return@LaunchedEffect
         }
         found = null
+        sets = null
         delay(PanelSearchDelayMs)
+        telegram.searchStickerSets(query.trim()) { sets = it }
         telegram.searchStickers(query.trim(), chatId) { found = it }
     }
     Column(modifier) {
         PanelSearchField(query, "Search stickers", onQuery)
         val results = found
+        val packs = sets.orEmpty()
         when {
-            results == null -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
-            query.isNotBlank() && results.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            query.isBlank() && sets == null || results == null -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
+            query.isNotBlank() && results.isEmpty() && packs.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text("Nothing found", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             else -> LazyVerticalGrid(
                 columns = GridCells.Adaptive(StickerCell),
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
             ) {
-                items(results.distinctBy { it.sticker.id }, key = { it.sticker.id }) { sticker ->
-                    Box(
-                        Modifier
-                            .size(StickerCell)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onSticker(sticker, StickerSend()) }
-                            .padding(4.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        StickerThumb(sticker, telegram)
+                if (packs.isNotEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }, key = "sets-title") {
+                        SearchSectionTitle(if (query.isBlank()) "Trending sticker sets" else "Sticker sets")
+                    }
+                    items(packs, key = { "set${it.id}" }, span = { GridItemSpan(maxLineSpan) }) { info ->
+                        StickerSetRow(info, added[info.id] ?: info.isInstalled, telegram, chatId) { install ->
+                            added[info.id] = install
+                            telegram.setStickerSetInstalled(info.id, install) {}
+                        }
+                    }
+                }
+                if (results.isNotEmpty()) {
+                    if (packs.isNotEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "stickers-title") { SearchSectionTitle("Stickers") }
+                    items(results.distinctBy { it.sticker.id }, key = { it.sticker.id }) { sticker ->
+                        Box(
+                            Modifier
+                                .size(StickerCell)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onSticker(sticker, StickerSend()) }
+                                .padding(4.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            StickerThumb(sticker, telegram)
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SearchSectionTitle(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp),
+    )
+}
+
+@Composable
+private fun StickerSetRow(info: TdApi.StickerSetInfo, installed: Boolean, telegram: Telegram, chatId: Long, onInstall: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { StickerPack.current = StickerPackRequest(telegram, chatId, info.id) }
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            EmojiText(info.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text("${info.size} stickers", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.padding(top = 4.dp)) {
+                info.covers.orEmpty().take(SetCovers).forEach { cover ->
+                    Box(Modifier.size(SetCoverSize)) { StickerView(cover, telegram, SetCoverSize, animate = false) }
+                }
+            }
+        }
+        if (installed) {
+            com.pixelgram.desktop.ui.components.expressive.OutlinedButton(onClick = { onInstall(false) }) { Text("Remove") }
+        } else {
+            com.pixelgram.desktop.ui.components.expressive.Button(onClick = { onInstall(true) }) { Text("Add") }
         }
     }
 }

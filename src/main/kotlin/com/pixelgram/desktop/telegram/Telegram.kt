@@ -201,6 +201,9 @@ private const val JumpPageSize = 60
 private const val ChatSearchLimit = 20
 private const val PreviewPage = 40
 private const val StickerSearchLimit = 100
+private const val TrendingStickerSetLimit = 30
+
+enum class StickerSetNameState { Checking, Ok, Occupied, Invalid }
 private val StreamingExtensions = setOf("mp4", "m4v", "mov")
 private const val ProfileGiftsLimit = 100
 private const val StoryPage = 100
@@ -2978,6 +2981,48 @@ class Telegram(
 
     fun setStickerSetInstalled(setId: Long, installed: Boolean, done: () -> Unit) {
         send(TdApi.ChangeStickerSet(setId, installed, false)) { done() }
+    }
+
+    fun searchStickerSets(query: String, onResult: (List<TdApi.StickerSetInfo>) -> Unit) {
+        send(TdApi.SearchStickerSets(TdApi.StickerTypeRegular(), query)) { result ->
+            onResult((result as? TdApi.StickerSets)?.sets?.toList().orEmpty())
+        }
+    }
+
+    fun trendingStickerSets(onResult: (List<TdApi.StickerSetInfo>) -> Unit) {
+        send(TdApi.GetTrendingStickerSets(TdApi.StickerTypeRegular(), 0, TrendingStickerSetLimit)) { result ->
+            onResult((result as? TdApi.TrendingStickerSets)?.sets?.toList().orEmpty())
+        }
+    }
+
+    fun suggestedStickerSetName(title: String, onResult: (String?) -> Unit) {
+        send(TdApi.GetSuggestedStickerSetName(title)) { result -> onResult((result as? TdApi.Text)?.text) }
+    }
+
+    fun checkStickerSetName(name: String, onResult: (StickerSetNameState) -> Unit) {
+        send(TdApi.CheckStickerSetName(name)) { result ->
+            onResult(
+                when (result) {
+                    is TdApi.CheckStickerSetNameResultOk -> StickerSetNameState.Ok
+                    is TdApi.CheckStickerSetNameResultNameOccupied -> StickerSetNameState.Occupied
+                    else -> StickerSetNameState.Invalid
+                },
+            )
+        }
+    }
+
+    fun createStickerSet(title: String, name: String, stickers: List<TdApi.NewSticker>, onResult: (TdApi.StickerSet?, String?) -> Unit) {
+        send(TdApi.CreateNewStickerSet(myUserId, title, name, TdApi.StickerTypeRegular(), false, stickers.toTypedArray(), "pixelGram")) { result ->
+            when (result) {
+                is TdApi.StickerSet -> onResult(result, null)
+                is TdApi.Error -> onResult(null, result.message)
+                else -> onResult(null, null)
+            }
+        }
+    }
+
+    fun addStickerToSet(name: String, sticker: TdApi.NewSticker, onResult: (String?) -> Unit) {
+        send(TdApi.AddStickerToSet(myUserId, name, sticker)) { result -> onResult((result as? TdApi.Error)?.message) }
     }
 
     fun userTitle(userId: Long): String = if (userId == 0L) "Anonymous" else senderTitle(TdApi.MessageSenderUser(userId))

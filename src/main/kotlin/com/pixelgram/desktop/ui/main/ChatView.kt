@@ -1020,6 +1020,9 @@ private fun ChatViewContent(
             StickerPack.current?.takeIf { it.chatId == chat.id && it.telegram == telegram }?.let { request ->
                 StickerPackDialog(request, settings) { StickerPack.current = null }
             }
+            StickerCreate.current?.takeIf { it.chatId == chat.id && it.telegram == telegram }?.let { request ->
+                StickerCreateDialog(request) { StickerCreate.current = null }
+            }
             BotAnswer(botAnswer, onDismiss = { botAnswer = null }, modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
             FloatingDate(
                 listState = listState,
