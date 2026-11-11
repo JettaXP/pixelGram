@@ -387,8 +387,8 @@ private fun ApplicationScope.PixelApp() {
     val macNativeWindow = AppPaths.isMac
     val savedBounds = remember { com.pixelgram.desktop.core.WindowBounds.load(settings) }
     val windowState = rememberWindowState(
-        size = savedBounds?.size ?: DpSize(1180.dp, 760.dp),
-        position = savedBounds?.position ?: androidx.compose.ui.window.WindowPosition.PlatformDefault,
+        size = savedBounds?.size ?: defaultWindowSize(),
+        position = savedBounds?.position ?: androidx.compose.ui.window.WindowPosition.Aligned(androidx.compose.ui.Alignment.Center),
     )
     Window(
         onCloseRequest = close,
@@ -730,3 +730,19 @@ private const val DemoToastStartMs = 20_000L
 private const val DemoToastStepMs = 4_000L
 
 private const val EmojiPrefetchDelayMs = 3_000L
+
+private fun defaultWindowSize(): DpSize {
+    val screen = runCatching {
+        val env = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment()
+        val bounds = env.maximumWindowBounds
+        val scale = env.defaultScreenDevice.defaultConfiguration.defaultTransform.scaleX.toFloat().coerceAtLeast(1f)
+        bounds.width / scale to bounds.height / scale
+    }.getOrNull()
+    val width = screen?.let { minOf(DefaultWindowWidth, it.first * ScreenShare) } ?: DefaultWindowWidth
+    val height = screen?.let { minOf(DefaultWindowHeight, it.second * ScreenShare) } ?: DefaultWindowHeight
+    return DpSize(width.dp, height.dp)
+}
+
+private const val DefaultWindowWidth = 1180f
+private const val DefaultWindowHeight = 760f
+private const val ScreenShare = 0.92f
