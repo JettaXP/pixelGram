@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.54.2 Very Sunny
+
+- Supporter badges: numbered badges for people who support pixelGram, custom emoji badges for supporters, a Support Development dialog and pg://support links.
+- Sticker sets can be searched, with trending sets, and you can create your own sets and add stickers to them.
+- Similar channels, stopping polls and dice messages.
+- The reply button sits beside stickers.
+- Double-clicking message text selects a word; the seen footer animates.
+- The chat list moves in step with the side menu while it opens.
+- Lyric highlighting spreads across the whole line.
+- The player keeps its source while tracks change; the speed buttons are tighter and the volume popup closes on every click.
+- The first window fits small screens and opens centered.
+- Backups made in pixelGram for Android are recognized and explained instead of failing to import.
+- "You" in quotes is translated.
+
 ## 0.54.1 Very Sunny
 
 - The player starts the next track even when it isn't downloaded yet: next, taps in the queue and auto-advance no longer get stuck or close the player.
