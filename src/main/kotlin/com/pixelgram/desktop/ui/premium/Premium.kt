@@ -360,14 +360,15 @@ private fun describe(tx: TdApi.StarTransaction, telegram: Telegram): Pair<String
 private fun TopUpDialog(telegram: Telegram, onDismiss: () -> Unit) {
     var options by remember { mutableStateOf<List<TdApi.StarPaymentOption>?>(null) }
     var chosen by remember { mutableStateOf<TdApi.StarPaymentOption?>(null) }
-    LaunchedEffect(Unit) { telegram.send(TdApi.GetStarPaymentOptions()) { options = (it as? TdApi.StarPaymentOptions)?.options?.filter { o -> !o.isAdditional }.orEmpty() } }
+    LaunchedEffect(Unit) { telegram.send(TdApi.GetStarPaymentOptions()) { options = (it as? TdApi.StarPaymentOptions)?.options?.sortedBy { o -> o.starCount }.orEmpty() } }
+    var more by remember { mutableStateOf(false) }
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.width(420.dp)) {
             Column(Modifier.padding(24.dp).heightIn(max = 560.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Top up", style = MaterialTheme.typography.headlineSmall)
                 val list = options
                 if (list == null) Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { LoadingIndicator() }
-                list?.forEach { option ->
+                list?.filter { more || !it.isAdditional }?.forEach { option ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -378,6 +379,7 @@ private fun TopUpDialog(telegram: Telegram, onDismiss: () -> Unit) {
                         Text(price(option.amount, option.currency), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                if (!more && list?.any { it.isAdditional } == true) TextButton(onClick = { more = true }, modifier = Modifier.fillMaxWidth()) { Text("More options") }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { TextButton(onClick = onDismiss) { Text("Close") } }
             }
         }
@@ -422,8 +424,8 @@ fun PaymentOverlay() {
     }
     val close = { PaymentRequest.current = null }
     BasicAlertDialog(onDismissRequest = close) {
-        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.width(400.dp)) {
-            Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.width(440.dp)) {
+            Column(Modifier.heightIn(max = 640.dp).verticalScroll(rememberScrollState()).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 val loaded = form
                 when {
                     error != null -> Text(error.orEmpty(), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
@@ -461,32 +463,41 @@ fun PaymentOverlay() {
                                 if (!enough) Text("Not enough Stars. Top up your balance in Settings → Telegram Stars.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
                             }
                             is TdApi.PaymentFormTypeRegular -> {
-                                Text(price(type.invoice.priceParts.sumOf { it.amount }, type.invoice.currency), style = MaterialTheme.typography.headlineSmall)
-                                Button(
-                                    onClick = {
-                                        val url = (type.paymentProvider as? TdApi.PaymentProviderOther)?.url
-                                        if (url != null) {
-                                            Links.openBrowser(url)
-                                            close()
-                                        } else {
-                                            val fallback: TdApi.Function<*>? = when (invoice) {
-                                                is TdApi.InputInvoiceName -> TdApi.GetInternalLink(TdApi.InternalLinkTypeInvoice(invoice.name), true)
-                                                is TdApi.InputInvoiceMessage -> TdApi.GetMessageLink().apply { chatId = invoice.chatId; messageId = invoice.messageId }
-                                                else -> null
+                                val native = (type.paymentProvider is TdApi.PaymentProviderStripe || type.paymentProvider is TdApi.PaymentProviderSmartGlocal) && !type.invoice.needShippingAddress && !type.invoice.isFlexible
+                                if (native) {
+                                    CardForm(telegram, invoice, loaded, type) { url ->
+                                        if (url != null) Links.openBrowser(url)
+                                        PaymentRequest.completed++
+                                        close()
+                                    }
+                                } else {
+                                    Text(price(type.invoice.priceParts.sumOf { it.amount }, type.invoice.currency), style = MaterialTheme.typography.headlineSmall)
+                                    Button(
+                                        onClick = {
+                                            val url = (type.paymentProvider as? TdApi.PaymentProviderOther)?.url
+                                            if (url != null) {
+                                                Links.openBrowser(url)
+                                                close()
+                                            } else {
+                                                val fallback: TdApi.Function<*>? = when (invoice) {
+                                                    is TdApi.InputInvoiceName -> TdApi.GetInternalLink(TdApi.InternalLinkTypeInvoice(invoice.name), true)
+                                                    is TdApi.InputInvoiceMessage -> TdApi.GetMessageLink().apply { chatId = invoice.chatId; messageId = invoice.messageId }
+                                                    else -> null
+                                                }
+                                                if (fallback == null) error = "This payment can't be completed in pixelGram yet."
+                                                else telegram.send(fallback) { result ->
+                                                    val link = (result as? TdApi.HttpUrl)?.url ?: (result as? TdApi.MessageLink)?.link
+                                                    if (link != null) {
+                                                        Links.openBrowser(link)
+                                                        close()
+                                                    } else error = "This payment can't be completed in pixelGram yet."
+                                                }
                                             }
-                                            if (fallback == null) error = "This payment can't be completed in pixelGram yet."
-                                            else telegram.send(fallback) { result ->
-                                                val link = (result as? TdApi.HttpUrl)?.url ?: (result as? TdApi.MessageLink)?.link
-                                                if (link != null) {
-                                                    Links.openBrowser(link)
-                                                    close()
-                                                } else error = "This payment can't be completed in pixelGram yet."
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                                ) { Text("Continue to payment", style = MaterialTheme.typography.titleMedium) }
-                                Text("The payment page opens in your browser.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        },
+                                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                                    ) { Text("Continue to payment", style = MaterialTheme.typography.titleMedium) }
+                                    Text("The payment page opens in your browser.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
                             else -> Text("This payment can't be completed in pixelGram yet.", textAlign = TextAlign.Center)
                         }

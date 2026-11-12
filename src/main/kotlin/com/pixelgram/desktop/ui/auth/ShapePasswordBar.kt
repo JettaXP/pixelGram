@@ -182,7 +182,7 @@ fun ShapePasswordBar(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun PasswordChars(length: Int, selection: TextRange, cursorVisible: Boolean, modifier: Modifier) {
+internal fun PasswordChars(length: Int, selection: TextRange, cursorVisible: Boolean, modifier: Modifier) {
     val ids = remember { mutableStateListOf<Int>() }
     var nextId by remember { mutableIntStateOf(0) }
     while (ids.size < length) ids.add(nextId++)

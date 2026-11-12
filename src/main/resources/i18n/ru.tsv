@@ -1861,3 +1861,16 @@ Emoji statuses are a premium feature. Other features included in Telegram Premiu
 Learn about Telegram Premium	Подробнее о Telegram Premium
 Copy selected text	Копировать выделенное
 Copy all text	Копировать весь текст
+Card number	Номер карты
+Invalid card number	Неверный номер карты
+MM	ММ
+YY	ГГ
+Invalid expiry date	Неверный срок действия
+Cardholder name	Имя владельца
+Country	Страна
+Postal code	Почтовый индекс
+Email	Почта
+Pay {sum}	Оплатить {sum}
+Card details go straight to {provider} and are never stored in pixelGram.	Данные карты уходят напрямую в {provider} и не сохраняются в pixelGram.
+Couldn't verify the card. Check the details and try again.	Не удалось проверить карту. Проверьте данные и попробуйте снова.
+More options	Другие варианты
