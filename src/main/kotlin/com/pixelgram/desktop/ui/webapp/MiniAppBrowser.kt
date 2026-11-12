@@ -58,10 +58,25 @@ class MiniAppBrowser(private val onEvent: (String, Map<String, Any?>) -> Unit) {
 
     fun reload() = Platform.runLater { engine?.reload() }
 
+    fun copyText(all: Boolean, done: (Boolean) -> Unit) = Platform.runLater {
+        val text = runCatching {
+            engine?.executeScript(if (all) "document.body ? document.body.innerText : ''" else "window.getSelection ? String(window.getSelection()) : ''") as? String
+        }.getOrNull().orEmpty()
+        SwingUtilities.invokeLater {
+            if (text.isNotBlank()) copyToClipboard(text)
+            done(text.isNotBlank())
+        }
+    }
+
     fun dispose() = Platform.runLater {
         engine?.load("about:blank")
         engine = null
         panel.scene = null
+    }
+
+    private fun copyToClipboard(text: String) {
+        runCatching { java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(java.awt.datatransfer.StringSelection(text), null) }
+            .onFailure { AppLog.write("Mini app copy failed", it) }
     }
 
     private companion object {
@@ -75,6 +90,11 @@ class MiniAppBrowser(private val onEvent: (String, Map<String, Any?>) -> Unit) {
             "var pgOpen = window.open; window.open = function (u) { var s = String(u || '');" +
             " if (pgTg(s)) { window.pixelgramBridge.postEvent('pixelgram_tg_link', JSON.stringify({ url: s })); return null; }" +
             " if (s) { window.pixelgramBridge.postEvent('web_app_open_link', JSON.stringify({ url: s })); return null; }" +
-            " return pgOpen ? pgOpen.apply(window, arguments) : null; }; }"
+            " return pgOpen ? pgOpen.apply(window, arguments) : null; }; }" +
+            "if (!window.__pgCopy) { window.__pgCopy = true;" +
+            "var pgStyle = document.createElement('style'); pgStyle.textContent = '*:not(input):not(textarea){-webkit-user-select:text !important;user-select:text !important;}';" +
+            "(document.head || document.documentElement).appendChild(pgStyle);" +
+            "document.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) { var t = String(window.getSelection ? window.getSelection() : '');" +
+            " if (t) window.pixelgramBridge.postEvent('pixelgram_copy', JSON.stringify({ text: t })); } }, true); }"
     }
 }

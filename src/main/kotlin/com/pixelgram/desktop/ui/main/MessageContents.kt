@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.icons.filled.Star
 import com.pixelgram.desktop.core.tr
 import com.pixelgram.desktop.telegram.stopLiveLocation
 import com.pixelgram.desktop.telegram.recognizeSpeech
@@ -683,7 +684,14 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
         is TdApi.MessageCall -> CallContent(content, message.isOutgoing, message.date)
         is TdApi.MessagePoll -> PollContent(message, content, telegram)
         is TdApi.MessageChecklist -> ChecklistContent(message, content.list, telegram)
-        is TdApi.MessagePaidMedia -> PaidMediaContent(content, telegram)
+        is TdApi.MessagePaidMedia -> Box(Modifier.clickable { com.pixelgram.desktop.ui.premium.PaymentRequest.current = telegram to TdApi.InputInvoiceMessage(message.chatId, message.id) }) { PaidMediaContent(content, telegram) }
+        is TdApi.MessageInvoice -> FileRow(
+            Icons.Filled.Star,
+            content.productInfo.title,
+            (if (content.currency == "XTR") "⭐ ${content.totalAmount}" else com.pixelgram.desktop.ui.premium.price(content.totalAmount, content.currency)) + " · " + content.productInfo.description.text,
+            busy = false,
+            onClick = { if (content.receiptMessageId == 0L) com.pixelgram.desktop.ui.premium.PaymentRequest.current = telegram to TdApi.InputInvoiceMessage(message.chatId, message.id) },
+        )
         is TdApi.MessageRichMessage -> RichMessageContent(message, content.message, telegram)
         is TdApi.MessageContact -> {
             val contact = content.contact

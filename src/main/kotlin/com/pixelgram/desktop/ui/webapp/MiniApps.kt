@@ -49,6 +49,7 @@ import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
 import com.pixelgram.desktop.ui.icons.filled.Close
 import com.pixelgram.desktop.ui.icons.filled.MoreVert
+import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
 import com.pixelgram.desktop.ui.icons.outlined.Refresh
 import com.pixelgram.desktop.ui.icons.outlined.Settings
 import com.pixelgram.desktop.ui.main.Links
@@ -212,6 +213,9 @@ private fun MiniAppWindow(session: MiniAppSession, settings: AppSettings, icon: 
                                 id to text
                             }.ifEmpty { listOf("" to "Close") },
                         )
+                        "pixelgram_copy" -> (data["text"] as? String)?.takeIf { it.isNotEmpty() }?.let { text ->
+                            runCatching { java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(java.awt.datatransfer.StringSelection(text), null) }
+                        }
                         "web_app_read_text_from_clipboard" -> {
                             val text = runCatching { Toolkit.getDefaultToolkit().systemClipboard.getData(DataFlavor.stringFlavor) as? String }.getOrNull()
                             self.send("clipboard_text_received", mapOf("req_id" to data["req_id"], "data" to text))
@@ -264,6 +268,14 @@ private fun MiniAppWindow(session: MiniAppSession, settings: AppSettings, icon: 
                                         if (settingsButton) add(MenuEntry(Icons.Outlined.Settings, "Settings") {
                                             menu = false
                                             browser.send("settings_button_pressed")
+                                        })
+                                        add(MenuEntry(Icons.Outlined.ContentCopy, "Copy selected text") {
+                                            menu = false
+                                            browser.copyText(all = false) { copied -> if (!copied) browser.copyText(all = true) {} }
+                                        })
+                                        add(MenuEntry(Icons.Outlined.ContentCopy, "Copy all text") {
+                                            menu = false
+                                            browser.copyText(all = true) {}
                                         })
                                         add(MenuEntry(Icons.Outlined.Refresh, "Reload page") {
                                             menu = false

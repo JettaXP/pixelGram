@@ -5,6 +5,8 @@ import kotlin.math.roundToInt
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.focusRequester
 import com.pixelgram.desktop.ui.icons.outlined.Edit
+import com.pixelgram.desktop.ui.icons.outlined.Star
+import com.pixelgram.desktop.ui.icons.outlined.WorkspacePremium
 import com.pixelgram.desktop.ui.icons.outlined.Payments
 import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
 import com.pixelgram.desktop.ui.icons.outlined.PushPin
@@ -212,6 +214,8 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
     SpeakersCamera("Speakers and Camera", Icons.Outlined.Headphones),
     Battery("Battery and Animations", Icons.Outlined.BatterySaver),
     Language("Language", Icons.Outlined.Translate),
+    Premium("Telegram Premium", Icons.Outlined.WorkspacePremium),
+    Stars("Telegram Stars", Icons.Outlined.Star),
     General("General", Icons.Outlined.Settings, pixel = true),
     Appearance("Appearance", Icons.Outlined.Palette, pixel = true),
     Chats("Chats", Icons.AutoMirrored.Outlined.Chat, pixel = true),
@@ -567,6 +571,8 @@ fun SettingsScreen(
                         Section.Advanced -> AdvancedSection(telegram, settings)
                         Section.Proxy -> ProxySection(telegram, settings)
                         Section.Language -> LanguageSection(settings)
+                        Section.Premium -> com.pixelgram.desktop.ui.premium.PremiumSection(telegram)
+                        Section.Stars -> com.pixelgram.desktop.ui.premium.StarsSection(telegram)
                         Section.Profile -> com.pixelgram.desktop.ui.profile.ProfileContent(telegram, settings, onOpenChat)
                         Section.Notifications -> NotificationsSection(telegram, settings)
                         Section.Battery -> BatterySection(settings)

@@ -163,6 +163,7 @@ fun VerifiedBadge(size: Dp = 18.dp, modifier: Modifier = Modifier) {
 
 @Composable
 fun ChatBadges(chat: com.pixelgram.desktop.telegram.ChatState, telegram: com.pixelgram.desktop.telegram.Telegram, size: Dp) {
+    if (chat.privateUserId != 0L) com.pixelgram.desktop.ui.premium.EmojiStatusBadge(chat.privateUserId, telegram, size)
     if (telegram.isOfficial(chat)) OfficialBadge(size)
     if (telegram.isVerified(chat)) VerifiedBadge(size)
     val official = UserBadge.of(chat.privateUserId)
@@ -171,6 +172,7 @@ fun ChatBadges(chat: com.pixelgram.desktop.telegram.ChatState, telegram: com.pix
 
 @Composable
 fun ProfileBadges(chat: com.pixelgram.desktop.telegram.ChatState, telegram: com.pixelgram.desktop.telegram.Telegram, size: Dp) {
+    if (chat.privateUserId != 0L) com.pixelgram.desktop.ui.premium.EmojiStatusBadge(chat.privateUserId, telegram, size)
     if (telegram.isOfficial(chat)) OfficialBadge(size)
     if (telegram.isVerified(chat)) VerifiedBadge(size)
     val official = UserBadge.of(chat.privateUserId)

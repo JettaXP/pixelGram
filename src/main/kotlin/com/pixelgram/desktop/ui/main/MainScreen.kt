@@ -190,6 +190,9 @@ fun MainScreen(
 ) {
     WalletHost()
     com.pixelgram.desktop.ui.CreditsOverlay()
+    com.pixelgram.desktop.ui.premium.PaymentOverlay()
+    com.pixelgram.desktop.ui.premium.EmojiStatusOverlay()
+    com.pixelgram.desktop.ui.premium.PremiumOverlay()
     com.pixelgram.desktop.ui.SupportOverlay { telegram.openPublicChat(com.pixelgram.desktop.ui.SupportProject.Contact, onOpenChat) { Links.openBrowser("https://t.me/" + com.pixelgram.desktop.ui.SupportProject.Contact) } }
     LinkDialogs(settings, onOpenChat)
     val tabs = FolderLayout.tabs(telegram, settings)
