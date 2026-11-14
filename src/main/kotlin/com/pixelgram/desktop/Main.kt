@@ -691,6 +691,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
                 }
             }
         }
+        if (ready) com.pixelgram.desktop.ui.SupportOverlay { telegram.openPublicChat(com.pixelgram.desktop.ui.SupportProject.Contact, openChat) { com.pixelgram.desktop.ui.main.Links.openBrowser("https://t.me/" + com.pixelgram.desktop.ui.SupportProject.Contact) } }
         androidx.compose.animation.AnimatedVisibility(
             visible = AppLock.locked,
             enter = androidx.compose.animation.fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
