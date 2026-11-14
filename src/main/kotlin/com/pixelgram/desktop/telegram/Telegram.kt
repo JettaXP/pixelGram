@@ -1279,6 +1279,7 @@ class Telegram(
             }
             is TdApi.UpdateAnimatedEmojiMessageClicked -> emojiClicks[update.chatId to update.messageId] = update.sticker
             is TdApi.UpdateTonWalletState -> tonWallet = update.state
+            is TdApi.UpdateAccentColors -> AccentColors.update(update.colors)
             is TdApi.UpdateUser -> {
                 users[update.user.id] = update.user
                 update.user.status?.let { statuses[update.user.id] = it }

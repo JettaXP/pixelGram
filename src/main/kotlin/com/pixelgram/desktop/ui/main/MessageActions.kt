@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.wrapContentHeight
 
@@ -541,35 +543,61 @@ fun ReplyQuote(
 ) {
     val colors = MaterialTheme.colorScheme
     val inOutgoing = androidx.compose.material3.LocalContentColor.current == colors.onPrimaryContainer
-    val tint = accent?.takeUnless { inOutgoing && colors.outgoingAccent != colors.primary } ?: if (inOutgoing) colors.outgoingAccent else colors.primary
+    val dark = colors.surface.luminance() < 0.5f
+    val sender = replied?.senderUserId?.takeIf { it != 0L }?.let { telegram?.users?.get(it) }
+    val palette = sender?.let { com.pixelgram.desktop.telegram.AccentColors.colors(it.accentColorId, dark) }
+    val pattern = sender?.backgroundCustomEmojiId ?: 0L
+    val tint = accent?.takeUnless { inOutgoing && colors.outgoingAccent != colors.primary } ?: palette?.first() ?: if (inOutgoing) colors.outgoingAccent else colors.primary
+    val stripes = palette?.takeIf { it.size > 1 }
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(LocalQuoteCorner.current),
-        color = tint.copy(alpha = 0.12f),
+        color = tint.copy(alpha = 0.14f),
         modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min),
     ) {
-        Row {
-            Box(Modifier.width(3.dp).fillMaxHeight().background(tint))
-            if (telegram != null && replied?.let(::replyThumb) != null) {
-                Box(Modifier.padding(start = 6.dp).align(Alignment.CenterVertically)) {
-                    ReplyThumb(replied, telegram, ReplyThumbSize)
+        Box {
+            if (pattern != 0L) {
+                Row(Modifier.align(Alignment.CenterEnd).padding(end = 6.dp).graphicsLayer { alpha = 0.22f }, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Box(Modifier.size(14.dp)) { CustomEmojiView(pattern, "") }
+                    Box(Modifier.size(18.dp)) { CustomEmojiView(pattern, "") }
                 }
             }
-            Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                EmojiText(
-                    name,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = tint,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+            Row {
+                Box(
+                    Modifier.width(3.dp).fillMaxHeight().drawBehind {
+                        if (stripes == null) drawRect(tint) else {
+                            val step = 6.dp.toPx()
+                            var y = 0f
+                            var i = 0
+                            while (y < size.height) {
+                                drawRect(stripes[i % stripes.size], topLeft = Offset(0f, y), size = androidx.compose.ui.geometry.Size(size.width, minOf(step, size.height - y)))
+                                y += step
+                                i++
+                            }
+                        }
+                    },
                 )
-                if (text.isNotEmpty()) {
+                if (telegram != null && replied?.let(::replyThumb) != null) {
+                    Box(Modifier.padding(start = 6.dp).align(Alignment.CenterVertically)) {
+                        ReplyThumb(replied, telegram, ReplyThumbSize)
+                    }
+                }
+                Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                     EmojiText(
-                        text.replace('\n', ' '),
-                        style = MaterialTheme.typography.bodySmall,
+                        name,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = tint,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    if (text.isNotEmpty()) {
+                        EmojiText(
+                            text.replace('\n', ' '),
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }
