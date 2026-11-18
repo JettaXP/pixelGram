@@ -285,13 +285,12 @@ fun MainScreen(
                     push -> Spacer(
                         Modifier.layout { measurable, _ ->
                             val base = if (foldersLeft) RailWidth.roundToPx() else 0
-                            val trim = minOf(RailEndTrim.roundToPx(), (railWidthPx - base).coerceAtLeast(0))
-                            val width = (railWidthPx - trim).coerceAtLeast(base)
+                            val width = railWidthPx.coerceAtLeast(base)
                             val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(width, 0))
                             layout(width, 0) { placeable.place(0, 0) }
                         },
                     )
-                    foldersLeft -> Spacer(Modifier.width(RailWidth))
+                    foldersLeft -> Spacer(Modifier.width(maxOf(RailWidth, with(density) { if (menuOpen) 0.dp else railWidthPx.toDp() })))
                 }
                 Column(
                     Modifier
@@ -1019,7 +1018,6 @@ private const val RailFadeOutMs = 70
 private const val RailFadeInMs = 180
 private const val RailResizeMs = 280
 private val MinChatWidth = 380.dp
-private val RailEndTrim = 16.dp
 private const val ScrimZ = 0.5f
 private val RailWidth = 96.dp
 private const val RailScrimAlpha = 0.32f
