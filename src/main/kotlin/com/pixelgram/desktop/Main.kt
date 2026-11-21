@@ -435,6 +435,7 @@ private fun ApplicationScope.PixelApp() {
             window.requestFocus()
             delay(RaiseHoldMs)
             window.isAlwaysOnTop = false
+            if (raise > 0 && !window.isFocused) com.pixelgram.desktop.core.CompositorFocus.focus(window.title)
             if (raise > 0 && !window.isFocused) {
                 window.extendedState = window.extendedState or java.awt.Frame.ICONIFIED
                 delay(RaiseRetryMs)
