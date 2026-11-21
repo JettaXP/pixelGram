@@ -1523,7 +1523,7 @@ fun MessageBubble(
             Column(
                 Modifier
                     .padding(if (inset) PhotoInset else 0.dp)
-                    .then(if (inset) Modifier.widthIn(max = PhotoMaxWidth) else Modifier)
+                    .then(if (inset) Modifier.widthIn(max = if (album != null) PhotoMaxWidth else (mediaFrameOf(message)?.width?.coerceAtLeast(MediaBubbleMin) ?: PhotoMaxWidth)) else Modifier)
                     .width(IntrinsicSize.Max),
             ) {
                 val via = if (message.viaBot != 0L && telegram != null) telegram.botName(message.viaBot) else ""
@@ -1875,6 +1875,7 @@ private fun BigEmojiRow(emoji: List<Pair<String, Long>>) {
 }
 
 private const val BigEmojiMax = 7
+private val MediaBubbleMin = 240.dp
 private val BigEmojiSizes = listOf(112.dp, 88.dp, 72.dp, 60.dp, 52.dp, 46.dp, 40.dp)
 
 @Composable
