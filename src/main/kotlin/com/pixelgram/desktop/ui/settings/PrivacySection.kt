@@ -152,6 +152,7 @@ fun PrivacySection(telegram: Telegram, settings: AppSettings) {
 @Composable
 private fun ValueRow(index: Int, count: Int, icon: ImageVector?, title: String, value: String?, star: Boolean = false, onClick: () -> Unit) {
     SegmentedListItem(
+        colors = androidx.compose.material3.ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceBright),
         onClick = onClick,
         shapes = groupShapes(index, count),
         leadingContent = icon?.let { { Icon(it, contentDescription = null) } },
@@ -630,6 +631,7 @@ private fun BlockedPage(telegram: Telegram, settings: AppSettings, onBack: () ->
             senders.forEachIndexed { index, sender ->
                 val title = telegram.senderTitle(sender)
                 SegmentedListItem(
+        colors = androidx.compose.material3.ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceBright),
                     onClick = {},
                     shapes = groupShapes(index, senders.size),
                     leadingContent = { Avatar(title, telegram.senderPhoto(sender), telegram, settings, 40.dp) },
@@ -710,6 +712,7 @@ private fun SessionsPage(
     }
     currentSession?.let { session ->
         SegmentedListItem(
+        colors = androidx.compose.material3.ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceBright),
             onClick = { details = session },
             shapes = groupShapes(0, 1),
             leadingContent = { SessionIcon(session, 44.dp) },
@@ -718,6 +721,7 @@ private fun SessionsPage(
     }
     if (others.isNotEmpty()) {
         SegmentedListItem(
+        colors = androidx.compose.material3.ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceBright),
             onClick = { terminateAll = true },
             shapes = groupShapes(0, 1),
             leadingContent = { Icon(Icons.Outlined.PanTool, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
@@ -727,6 +731,7 @@ private fun SessionsPage(
         SegmentedGroup {
             others.forEachIndexed { index, session ->
                 SegmentedListItem(
+        colors = androidx.compose.material3.ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceBright),
                     onClick = { details = session },
                     shapes = groupShapes(index, others.size),
                     leadingContent = { SessionIcon(session, 44.dp) },

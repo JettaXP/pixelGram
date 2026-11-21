@@ -1890,11 +1890,11 @@ private fun MessageMeta(
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         if (message.signature.isNotBlank()) {
-            Text(message.signature, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1)
+            Text(message.signature, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
         }
         if (message.views > 0) {
             Icon(Icons.Outlined.Visibility, contentDescription = "Views", tint = color, modifier = Modifier.size(14.dp))
-            Text(formatViews(message.views), style = MaterialTheme.typography.labelSmall, color = color)
+            Text(formatViews(message.views), style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
         }
         if (message.pinned) {
             Icon(Icons.Outlined.PushPin, contentDescription = "Pinned", tint = color, modifier = Modifier.size(13.dp))
@@ -1902,7 +1902,7 @@ private fun MessageMeta(
         if (message.edited) {
             Icon(Icons.Outlined.Edit, contentDescription = "Edited", tint = color, modifier = Modifier.size(13.dp))
         }
-        Text(formatMessageTime(message.date, seconds), style = MaterialTheme.typography.labelSmall, color = color)
+        Text(formatMessageTime(message.date, seconds), style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
         if (status != null) {
             MessageStatusIcon(status, color = if (status == MessageStatus.Read) readColor else color, size = 16.dp)
         }
