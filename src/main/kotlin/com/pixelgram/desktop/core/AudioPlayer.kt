@@ -205,7 +205,7 @@ object AudioPlayer {
                 }
                 val back = scrub < 0f
                 val step = if (scrub > 0f) scrub else speed
-                val gain = if (muted) 0f else volume
+                val gain = if (muted) 0f else perceivedGain(volume)
                 if (back) {
                     stretch.reset()
                     val count = minOf(chunk, index)
@@ -318,7 +318,7 @@ object AudioPlayer {
                         val count = minOf(piece.size / channels, (rate * RewindStep).toInt())
                         val reversed = ShortArray(count * channels)
                         for (f in 0 until count) for (c in 0 until channels) reversed[f * channels + c] = piece[(count - 1 - f) * channels + c]
-                        bytes = pack(reversed, if (muted) 0f else volume, bytes)
+                        bytes = pack(reversed, if (muted) 0f else perceivedGain(volume), bytes)
                         sink.write(bytes, reversed.size * 2)
                     } else {
                         Thread.sleep(25)
@@ -366,7 +366,7 @@ object AudioPlayer {
                 val samples = interleaved(frame) ?: continue
                 val count = samples.size / channels
                 val step = if (scrub > 0f) scrub else speed
-                val gain = if (muted) 0f else volume
+                val gain = if (muted) 0f else perceivedGain(volume)
                 val out = if (step == 1f) {
                     stretch.reset()
                     samples
@@ -575,3 +575,8 @@ private const val EndSlackSeconds = 1.5f
 private const val StallLimitMs = 8_000L
 private const val OpenWaitMs = 20_000L
 private const val MaxReopens = 3
+
+fun perceivedGain(level: Float): Float {
+    val v = level.coerceIn(0f, 1f)
+    return v * v * v
+}

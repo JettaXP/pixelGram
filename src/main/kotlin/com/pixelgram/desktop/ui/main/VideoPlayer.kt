@@ -390,7 +390,7 @@ internal class VideoEngine(private val path: String, private val loop: Boolean, 
         val count = samples.remaining()
         val bytes = ByteArray(count * 2)
         val start = samples.position()
-        val gain = if (muted) 0f else volume
+        val gain = if (muted) 0f else com.pixelgram.desktop.core.perceivedGain(volume)
         for (i in 0 until count) {
             val value = (samples.get(start + i) * gain).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
             bytes[i * 2] = value.toByte()
