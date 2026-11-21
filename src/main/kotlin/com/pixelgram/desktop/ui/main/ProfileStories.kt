@@ -385,7 +385,10 @@ fun StoryViewer(stories: List<TdApi.Story>, start: Int, telegram: Telegram, onDi
                     }
                     Column(Modifier.fillMaxWidth().background(TopShade).padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            stories.indices.forEach { i ->
+                            val zone = java.time.ZoneId.systemDefault()
+                            val day = { s: TdApi.Story -> java.time.Instant.ofEpochSecond(s.date.toLong()).atZone(zone).toLocalDate() }
+                            val today = day(story)
+                            stories.indices.filter { day(stories[it]) == today }.forEach { i ->
                                 LinearProgressIndicator(
                                     progress = { if (i < index) 1f else if (i > index) 0f else progress },
                                     color = Color.White,
