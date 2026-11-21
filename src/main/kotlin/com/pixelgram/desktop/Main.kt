@@ -435,6 +435,13 @@ private fun ApplicationScope.PixelApp() {
             window.requestFocus()
             delay(RaiseHoldMs)
             window.isAlwaysOnTop = false
+            if (raise > 0 && !window.isFocused) {
+                window.extendedState = window.extendedState or java.awt.Frame.ICONIFIED
+                delay(RaiseRetryMs)
+                window.extendedState = window.extendedState and java.awt.Frame.ICONIFIED.inv()
+                window.toFront()
+                window.requestFocus()
+            }
         }
         val focused = LocalWindowInfo.current.isWindowFocused
         LaunchedEffect(focused) { FocusedWindows.set("main", focused) }
@@ -710,6 +717,7 @@ private fun App(accounts: Accounts, telegram: Telegram, settings: AppSettings) {
 }
 
 private const val BoundsSaveDelayMs = 600L
+private const val RaiseRetryMs = 120L
 private const val RaiseHoldMs = 150L
 private const val RenderApiLogDelayMs = 3_000L
 private const val UpdatedNoticeDelayMs = 1500L

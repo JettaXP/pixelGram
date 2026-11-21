@@ -16,7 +16,7 @@ object SystemNotifications {
         }
 
     fun enabled(settings: AppSettings): Boolean =
-        available && (settings.notificationStyle.value == NotificationStyle.System || !AppPaths.translucentWindows) &&
+        available && settings.notificationStyle.value == NotificationStyle.System &&
             (!AppPaths.isWindows || settings.windowsToasts.value)
 
     @Volatile
