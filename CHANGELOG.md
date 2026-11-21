@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.54.3 Very Sunny
+
+- Telegram Premium and Stars in settings, Stars payments for bots and paid media, and a native card payment form.
+- Premium reply colors with stripes and patterns; emoji statuses sit before badges; text in mini apps can be copied.
+- The volume slider follows how loud it sounds instead of changing linearly, so half really is half.
+- Clicking a notification brings the window back on Wayland, including niri, Hyprland and Sway.
+- The switch between system and pixelGram notifications works on Wayland.
+- The side menu no longer covers folders and avatars.
+- Photo, video and GIF messages are only as wide as the media.
+- Long post signatures no longer squeeze the time into a column.
+- Rows in Privacy and Security are visible without hovering.
+- The story viewer shows one segment per story posted that day.
+- The Support Development dialog opens on top of settings.
+
 ## 0.54.2 Very Sunny
 
 - Supporter badges: numbered badges for people who support pixelGram, custom emoji badges for supporters, a Support Development dialog and pg://support links.

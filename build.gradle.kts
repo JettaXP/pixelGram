@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.54.2"
+version = "0.54.3"
 description = "Material 3 Expressive Telegram desktop client"
 val codename = "Very Sunny"
 
