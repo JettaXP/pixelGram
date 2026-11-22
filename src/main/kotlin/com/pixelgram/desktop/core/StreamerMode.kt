@@ -17,6 +17,7 @@ object StreamerMode {
     var obsLive by mutableStateOf(false)
         private set
     private var suppressed = false
+    private var autoEnabled = false
     private var lastTrigger = false
 
     val active: Boolean get() = settings?.streamerMode?.value == true
@@ -30,6 +31,7 @@ object StreamerMode {
     fun toggle(on: Boolean) {
         val s = settings ?: return
         s.streamerMode.value = on
+        autoEnabled = false
         if (!on && trigger()) suppressed = true
     }
 
@@ -40,7 +42,7 @@ object StreamerMode {
 
     fun start(settings: AppSettings) {
         this.settings = settings
-        if (settings.streamerOnStartup.value) settings.streamerMode.value = true
+        if (settings.streamerOnStartup.value) settings.streamerMode.value = true else if (settings.streamerMode.value) autoEnabled = true
         Thread({ loop() }, "streamer-watch").apply { isDaemon = true }.start()
     }
 
@@ -60,7 +62,14 @@ object StreamerMode {
                 }
                 val now = trigger()
                 if (!now) suppressed = false
-                if (now && !lastTrigger && !suppressed) s.streamerMode.value = true
+                if (now && !lastTrigger && !suppressed && !s.streamerMode.value) {
+                    s.streamerMode.value = true
+                    autoEnabled = true
+                }
+                if (!now && lastTrigger && autoEnabled) {
+                    s.streamerMode.value = false
+                    autoEnabled = false
+                }
                 lastTrigger = now
             }
             Thread.sleep(PollMs)

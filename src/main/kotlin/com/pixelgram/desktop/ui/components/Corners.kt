@@ -52,3 +52,6 @@ fun groupShapes(index: Int, count: Int): ListItemShapes {
 
 private val InnerMax = 6.dp
 private val HoverGrow = 2.dp
+
+@androidx.compose.runtime.Composable
+fun rowColors() = androidx.compose.material3.ListItemDefaults.segmentedColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh)

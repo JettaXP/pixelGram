@@ -292,7 +292,24 @@ private fun TransactionRow(transaction: TdApi.TonWalletTransaction, telegram: Te
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).padding(horizontal = 8.dp, vertical = 8.dp),
     ) {
-        Box(
+        val peerUser = transaction.peerUserId.takeIf { it != 0L }?.let { telegram.users[it] }
+        if (peerUser != null) {
+            Box(Modifier.size(40.dp)) {
+                com.pixelgram.desktop.ui.components.AvatarImage(peer, peerUser.profilePhoto?.small, telegram, CircleShape, 40.dp)
+                Box(
+                    Modifier.align(Alignment.BottomEnd).size(18.dp).clip(CircleShape).background(colors.surfaceContainerHigh).padding(2.dp).clip(CircleShape)
+                        .background(if (incoming) colors.primaryContainer else colors.secondaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        if (incoming) Icons.Filled.ArrowDownward else Icons.Outlined.Send,
+                        contentDescription = null,
+                        tint = if (incoming) colors.onPrimaryContainer else colors.onSecondaryContainer,
+                        modifier = Modifier.size(10.dp),
+                    )
+                }
+            }
+        } else Box(
             Modifier.size(40.dp).clip(CircleShape).background(if (incoming) colors.primaryContainer else colors.secondaryContainer),
             contentAlignment = Alignment.Center,
         ) {

@@ -39,6 +39,7 @@ fun PersonalChannelCard(
     LaunchedEffect(chatId) { telegram.loadChat(chatId) }
     val channel = telegram.chats[chatId] ?: return
     SegmentedListItem(
+        colors = com.pixelgram.desktop.ui.components.rowColors(),
         onClick = { onOpen(chatId) },
         shapes = groupShapes(0, 1),
         modifier = modifier,
@@ -87,6 +88,7 @@ fun PersonalChannelPicker(
                     LazyColumn(Modifier.heightIn(max = 360.dp).fillMaxWidth()) {
                         itemsIndexed(channels, key = { _, it -> it.id }) { index, channel ->
                             SegmentedListItem(
+                                colors = com.pixelgram.desktop.ui.components.rowColors(),
                                 onClick = { onPicked(channel.id) },
                                 shapes = groupShapes(index, channels.size),
                                 leadingContent = { ChatAvatar(channel, telegram, settings, size = 40.dp) },

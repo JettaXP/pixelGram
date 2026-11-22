@@ -173,6 +173,7 @@ internal fun NotificationsSection(telegram: Telegram, settings: AppSettings) {
                 val options = listOf("" to "Default") + screens
                 options.forEachIndexed { index, (id, label) ->
                     SegmentedListItem(
+                        colors = com.pixelgram.desktop.ui.components.rowColors(),
                         selected = settings.notificationScreen.value == id,
                         onClick = { settings.notificationScreen.value = id },
                         shapes = groupShapes(index, options.size),

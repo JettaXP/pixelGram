@@ -19,6 +19,6 @@ fun Modifier.streamerBlur(clickable: Boolean = true): Modifier {
     if (!StreamerMode.hideNames) return this
     var revealed by remember { mutableStateOf(false) }
     val radius by animateDpAsState(if (revealed) 0.dp else 8.dp, Motion.fastSpatial())
-    val blurred = this.blur(radius, BlurredEdgeTreatment.Unbounded)
+    val blurred = this.blur(radius, BlurredEdgeTreatment.Rectangle)
     return if (clickable) blurred.pointerInput(Unit) { detectTapGestures { revealed = !revealed } } else blurred
 }

@@ -1874,3 +1874,30 @@ Pay {sum}	Оплатить {sum}
 Card details go straight to {provider} and are never stored in pixelGram.	Данные карты уходят напрямую в {provider} и не сохраняются в pixelGram.
 Couldn't verify the card. Check the details and try again.	Не удалось проверить карту. Проверьте данные и попробуйте снова.
 More options	Другие варианты
+Streamer mode	Режим стримера
+Hides private details while you stream or record your screen. Names, usernames and profile info turn into a blur you can click to peek; phone numbers are covered with Material shapes. Messages stay readable.	Скрывает личные данные, пока вы стримите или записываете экран. Имена, юзернеймы и данные профиля размываются — нажмите, чтобы подсмотреть; номера телефонов закрываются фигурами Material. Сообщения остаются видны.
+OBS is running	OBS запущен
+Switch in the side menu	Переключатель в боковом меню
+Turn streamer mode on and off right from the main menu.	Включайте и выключайте режим стримера прямо из главного меню.
+Turn on automatically	Включать автоматически
+When pixelGram starts	При запуске pixelGram
+When OBS is open	Когда открыт OBS
+If you turn it off by hand, it stays off until OBS is closed and opened again.	Если выключить вручную, режим не включится, пока OBS не закроют и не откроют снова.
+When OBS records or streams	Когда OBS пишет или стримит
+Uses the OBS WebSocket server (Tools → WebSocket Server Settings).	Использует сервер OBS WebSocket (Инструменты → Настройки сервера WebSocket).
+Password	Пароль
+What to hide	Что скрывать
+Blur names and profile info	Размывать имена и данные профиля
+Chat titles, senders, usernames, bio and other profile rows. Click a blur to peek.	Названия чатов, отправители, юзернеймы, описание и другие строки профиля. Нажмите на размытие, чтобы подсмотреть.
+Cover phone numbers	Закрывать номера телефонов
+Yours and other people's numbers are replaced with Material shapes.	Ваш номер и номера других людей заменяются фигурами Material.
+Blur message previews	Размывать превью сообщений
+Last messages in the chat list.	Последние сообщения в списке чатов.
+Collapse the chat list	Сворачивать список чатов
+Show only avatars while streaming.	Во время стрима показывать только аватарки.
+Solid color	Сплошной цвет
+Initials	Инициалы
+Keep photos	Оставить фото
+Solid color hides photos completely, Initials keeps the first letter (or two for longer names) on a solid background.	Сплошной цвет полностью скрывает фото, «Инициалы» оставляют первую букву (или две для длинных имён) на однотонном фоне.
+Streamer mode switch	Переключатель режима стримера
+Turn streamer mode on and off right from the side menu.	Включайте и выключайте режим стримера прямо из бокового меню.

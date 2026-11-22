@@ -104,6 +104,7 @@ fun DevicesSection(settings: AppSettings) {
     SegmentedGroup {
         ToggleRow("Accept calls on this device", settings.acceptCalls, 0, 2)
         SegmentedListItem(
+            colors = com.pixelgram.desktop.ui.components.rowColors(),
             onClick = ::openSoundSettings,
             shapes = groupShapes(1, 2),
             leadingContent = { Icon(Icons.Outlined.Settings, contentDescription = null) },
@@ -116,6 +117,7 @@ private fun DeviceRow(icon: ImageVector, title: String, setting: Setting<String>
     var open by remember { mutableStateOf(false) }
     Box {
         SegmentedListItem(
+            colors = com.pixelgram.desktop.ui.components.rowColors(),
             onClick = { open = true },
             shapes = groupShapes(index, count),
             leadingContent = { Icon(icon, contentDescription = null) },
@@ -164,6 +166,7 @@ private fun DeviceRow(icon: ImageVector, title: String, setting: Setting<String>
 @Composable
 private fun ToggleRow(title: String, setting: Setting<Boolean>, index: Int, count: Int) {
     SegmentedListItem(
+        colors = com.pixelgram.desktop.ui.components.rowColors(),
         onClick = { setting.value = !setting.value },
         shapes = groupShapes(index, count),
         trailingContent = { PixelSwitch(checked = setting.value, onCheckedChange = { setting.value = it }) },

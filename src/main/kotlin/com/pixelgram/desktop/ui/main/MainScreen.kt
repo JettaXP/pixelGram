@@ -707,12 +707,11 @@ private fun MainMenu(
             }
             if (settings.streamerRailToggle.value) {
                 SegmentedListItem(
-                    checked = settings.streamerMode.value,
-                    onCheckedChange = { com.pixelgram.desktop.core.StreamerMode.toggle(it) },
+                    onClick = { com.pixelgram.desktop.core.StreamerMode.toggle(!settings.streamerMode.value) },
                     shapes = groupShapes(0, 1),
                     colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
                     leadingContent = { Icon(Icons.Outlined.Videocam, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    trailingContent = { Switch(checked = settings.streamerMode.value, onCheckedChange = null) },
+                    trailingContent = { com.pixelgram.desktop.ui.settings.PixelSwitch(checked = settings.streamerMode.value, onCheckedChange = null) },
                 ) { Text("Streamer mode", style = MaterialTheme.typography.titleSmall) }
             }
         }

@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -167,13 +169,17 @@ fun NftDialog(telegram: Telegram, name: String, received: TdApi.ReceivedGift? = 
     val clipboard = LocalClipboardManager.current
     var copied by remember { mutableStateOf(false) }
     BasicAlertDialog(onDismissRequest = onDismiss) {
-        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.widthIn(min = 340.dp, max = 440.dp)) {
+        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.widthIn(min = 340.dp, max = 420.dp).heightIn(max = 680.dp)) {
             Box {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
             ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.weight(1f))
+                    gift?.let { NftMenu(it, received, telegram, onChanged, onDismiss, Modifier) }
+                }
                 val current = gift
                 when {
                     current != null -> NftContent(current, telegram)
@@ -190,7 +196,6 @@ fun NftDialog(telegram: Telegram, name: String, received: TdApi.ReceivedGift? = 
                     com.pixelgram.desktop.ui.components.expressive.OutlinedButton(onClick = onDismiss) { Text("Close") }
                 }
             }
-            gift?.let { NftMenu(it, received, telegram, onChanged, onDismiss, Modifier.align(Alignment.TopEnd).padding(8.dp)) }
             }
         }
     }
@@ -198,7 +203,7 @@ fun NftDialog(telegram: Telegram, name: String, received: TdApi.ReceivedGift? = 
 
 @Composable
 private fun NftContent(gift: TdApi.UpgradedGift, telegram: Telegram) {
-    UniqueGiftArt(gift, telegram, Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge)
+    UniqueGiftArt(gift, telegram, Modifier.fillMaxWidth().heightIn(max = 220.dp), shape = MaterialTheme.shapes.extraLarge)
     EmojiText(gift.title, style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
     Text(
         "Collectible #%,d".format(gift.number),

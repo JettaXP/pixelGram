@@ -271,6 +271,7 @@ private fun SearchResultRow(index: Int, count: Int, target: Section, title: Stri
         if (title != null) add(com.pixelgram.desktop.core.tr(target.title))
     }.joinToString(" › ")
     androidx.compose.material3.SegmentedListItem(
+        colors = com.pixelgram.desktop.ui.components.rowColors(),
         onClick = onClick,
         shapes = com.pixelgram.desktop.ui.components.groupShapes(index, count),
         leadingContent = { Icon(target.icon, contentDescription = null) },
@@ -296,6 +297,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onAddAccount: (() -> Unit)? = null,
 ) {
+    com.pixelgram.desktop.ui.main.WalletHost()
     var section by rememberSaveable {
         val initial = System.getProperty("pixelgram.section")
         mutableStateOf(
@@ -373,12 +375,16 @@ fun SettingsScreen(
                     val titleFx = effects<Float>()
                     AnimatedContent(
                         targetState = inPreferences,
-                        transitionSpec = { fadeIn(titleFx) togetherWith fadeOut(titleFx) },
+                        transitionSpec = { (fadeIn(titleFx) togetherWith fadeOut(titleFx)).using(null) },
+                        contentAlignment = Alignment.CenterStart,
                         modifier = Modifier.weight(1f),
                     ) { preferences ->
                         Text(
                             if (preferences) PixelPreferencesTitle else "Settings",
                             style = MaterialTheme.typography.titleLarge,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         )
                     }
                     AnimatedVisibility(
@@ -706,6 +712,7 @@ private fun NavItem(
 ) {
     if (!flat) {
         SegmentedListItem(
+            colors = com.pixelgram.desktop.ui.components.rowColors(),
             selected = selected,
             onClick = onClick,
             shapes = groupShapes(index, count),
@@ -852,8 +859,8 @@ internal fun SwitchRow(
 ) {
     val interaction = remember { MutableInteractionSource() }
     SegmentedListItem(
-        checked = checked,
-        onCheckedChange = onChange,
+        colors = com.pixelgram.desktop.ui.components.rowColors(),
+        onClick = { onChange(!checked) },
         shapes = groupShapes(index, count),
         supportingContent = subtitle?.let { { Text(it) } },
         trailingContent = {
@@ -1083,6 +1090,10 @@ private fun NavigationSection(settings: AppSettings) {
         { settings.sideMenuStyle.value = it },
     )
 
+    SegmentedGroup {
+        SwitchRow(0, 1, "Streamer mode switch", "Turn streamer mode on and off right from the side menu.", settings.streamerRailToggle.value) { settings.streamerRailToggle.value = it }
+    }
+
     Header("Side menu items")
     Description("Drag items by the handle to reorder them or to move them between the tiles at the top and the list. Tap an item to hide it, tap a hidden one to bring it back.")
     SideMenuEditor(settings)
@@ -1199,6 +1210,7 @@ private fun SubsectionLinks(parent: Section, onOpen: (Section) -> Unit) {
     SegmentedGroup {
         items.forEachIndexed { index, item ->
             SegmentedListItem(
+                colors = com.pixelgram.desktop.ui.components.rowColors(),
                 onClick = { onOpen(item) },
                 shapes = groupShapes(index, items.size),
                 leadingContent = { Icon(item.icon, contentDescription = null) },
@@ -1608,6 +1620,7 @@ private fun SwipeActionRow(
     var open by remember { mutableStateOf(false) }
     Box {
         SegmentedListItem(
+            colors = com.pixelgram.desktop.ui.components.rowColors(),
             onClick = { open = true },
             shapes = groupShapes(index, count),
             leadingContent = { Icon(icon, contentDescription = null) },
@@ -1879,6 +1892,7 @@ private fun FontPickerDialog(settings: AppSettings, onDismiss: () -> Unit) {
                         val value = shown[index]
                         val selected = settings.messageFont.value == value
                         SegmentedListItem(
+                            colors = com.pixelgram.desktop.ui.components.rowColors(),
                             onClick = {
                                 settings.messageFont.value = value
                                 onDismiss()
@@ -1998,12 +2012,15 @@ private fun WindowSection(settings: AppSettings) {
 private fun StreamerSection(settings: AppSettings) {
     val streamer = com.pixelgram.desktop.core.StreamerMode
     Description("Hides private details while you stream or record your screen. Names, usernames and profile info turn into a blur you can click to peek; phone numbers are covered with Material shapes. Messages stay readable.")
-    SwitchRow(0, 2, "Streamer mode", if (streamer.obsRunning) "OBS is running" else null, settings.streamerMode.value) { streamer.toggle(it) }
-    SwitchRow(1, 2, "Switch in the side menu", "Turn streamer mode on and off right from the main menu.", settings.streamerRailToggle.value) { settings.streamerRailToggle.value = it }
+    SegmentedGroup {
+        SwitchRow(0, 1, "Streamer mode", if (streamer.obsRunning) "OBS is running" else null, settings.streamerMode.value) { streamer.toggle(it) }
+    }
     Header("Turn on automatically")
-    SwitchRow(0, 3, "When pixelGram starts", null, settings.streamerOnStartup.value) { settings.streamerOnStartup.value = it }
-    SwitchRow(1, 3, "When OBS is open", "If you turn it off by hand, it stays off until OBS is closed and opened again.", settings.streamerWithObs.value) { settings.streamerWithObs.value = it }
-    SwitchRow(2, 3, "When OBS records or streams", "Uses the OBS WebSocket server (Tools → WebSocket Server Settings).", settings.streamerWithObsOutput.value) { settings.streamerWithObsOutput.value = it }
+    SegmentedGroup {
+        SwitchRow(0, 3, "When pixelGram starts", null, settings.streamerOnStartup.value) { settings.streamerOnStartup.value = it }
+        SwitchRow(1, 3, "When OBS is open", "If you turn it off by hand, it stays off until OBS is closed and opened again.", settings.streamerWithObs.value) { settings.streamerWithObs.value = it }
+        SwitchRow(2, 3, "When OBS records or streams", "Uses the OBS WebSocket server (Tools → WebSocket Server Settings).", settings.streamerWithObsOutput.value) { settings.streamerWithObsOutput.value = it }
+    }
     androidx.compose.animation.AnimatedVisibility(settings.streamerWithObsOutput.value) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
             OutlinedTextField(
@@ -2024,10 +2041,12 @@ private fun StreamerSection(settings: AppSettings) {
         }
     }
     Header("What to hide")
-    SwitchRow(0, 4, "Blur names and profile info", "Chat titles, senders, usernames, bio and other profile rows. Click a blur to peek.", settings.streamerHideNames.value) { settings.streamerHideNames.value = it }
-    SwitchRow(1, 4, "Cover phone numbers", "Yours and other people's numbers are replaced with Material shapes.", settings.streamerHidePhones.value) { settings.streamerHidePhones.value = it }
-    SwitchRow(2, 4, "Blur message previews", "Last messages in the chat list.", settings.streamerHidePreviews.value) { settings.streamerHidePreviews.value = it }
-    SwitchRow(3, 4, "Collapse the chat list", "Show only avatars while streaming.", settings.streamerCompactList.value) { settings.streamerCompactList.value = it }
+    SegmentedGroup {
+        SwitchRow(0, 4, "Blur names and profile info", "Chat titles, senders, usernames, bio and other profile rows. Click a blur to peek.", settings.streamerHideNames.value) { settings.streamerHideNames.value = it }
+        SwitchRow(1, 4, "Cover phone numbers", "Yours and other people's numbers are replaced with Material shapes.", settings.streamerHidePhones.value) { settings.streamerHidePhones.value = it }
+        SwitchRow(2, 4, "Blur message previews", "Last messages in the chat list.", settings.streamerHidePreviews.value) { settings.streamerHidePreviews.value = it }
+        SwitchRow(3, 4, "Collapse the chat list", "Show only avatars while streaming.", settings.streamerCompactList.value) { settings.streamerCompactList.value = it }
+    }
     Header("Avatars")
     ConnectedChoice(
         com.pixelgram.desktop.core.StreamerAvatars.entries.map { it to it.title },
@@ -2243,6 +2262,7 @@ private fun LinkItem(
     onClick: () -> Unit,
 ) {
     SegmentedListItem(
+        colors = com.pixelgram.desktop.ui.components.rowColors(),
         onClick = onClick,
         shapes = groupShapes(index, count),
         leadingContent = { Icon(icon, contentDescription = null) },
@@ -2289,9 +2309,10 @@ private fun SettingsLinkHost(content: @Composable () -> Unit) {
                 val reach = 72.dp.toPx()
                 awaitPointerEventScope {
                     while (true) {
-                        val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Main)
                         if (event.type != androidx.compose.ui.input.pointer.PointerEventType.Press || !event.buttons.isSecondaryPressed) continue
                         val change = event.changes.firstOrNull() ?: continue
+                        if (change.isConsumed) continue
                         val at = change.position + origin
                         val link = targets.find(at.x, at.y, band, reach) ?: continue
                         change.consume()
@@ -2301,9 +2322,11 @@ private fun SettingsLinkHost(content: @Composable () -> Unit) {
             },
     ) {
         androidx.compose.runtime.CompositionLocalProvider(com.pixelgram.desktop.ui.components.LocalLinkTargets provides targets) { content() }
-        menu?.let { (at, link) ->
+        var shown by remember { mutableStateOf<Pair<androidx.compose.ui.geometry.Offset, String>?>(null) }
+        if (menu != null) shown = menu
+        shown?.let { (at, link) ->
             Box(Modifier.offset { androidx.compose.ui.unit.IntOffset(at.x.toInt(), at.y.toInt()) }) {
-                DropdownMenu(expanded = true, onDismissRequest = { menu = null }) {
+                DropdownMenu(expanded = menu != null, onDismissRequest = { menu = null }) {
                     DropdownMenuItem(
                         text = { Text("Copy link") },
                         leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) },

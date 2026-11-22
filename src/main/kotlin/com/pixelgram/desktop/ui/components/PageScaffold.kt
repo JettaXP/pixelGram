@@ -125,6 +125,7 @@ fun InfoGroup(rows: List<InfoRow>) {
                 },
             ) {
                 SegmentedListItem(
+                    colors = com.pixelgram.desktop.ui.components.rowColors(),
                     onClick = { row.onClick?.invoke() ?: copy() },
                     shapes = groupShapes(index, rows.size),
                     leadingContent = row.leading ?: { Icon(row.icon, contentDescription = null) },
@@ -173,10 +174,12 @@ fun InfoGroup(rows: List<InfoRow>) {
                         else -> EmojiText(row.value, modifier = Modifier.streamerBlur())
                     }
                 }
-                menuAt?.let { at ->
+                var shownAt by remember { mutableStateOf<DpOffset?>(null) }
+                if (menuAt != null) shownAt = menuAt
+                shownAt?.let { at ->
                     Box(Modifier.offset(at.x, at.y)) {
                         DropdownMenu(
-                            expanded = true,
+                            expanded = menuAt != null,
                             onDismissRequest = { menuAt = null },
                             shape = RoundedCornerShape(16.dp),
                             containerColor = MaterialTheme.colorScheme.surfaceContainer,

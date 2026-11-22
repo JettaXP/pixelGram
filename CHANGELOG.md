@@ -2,6 +2,14 @@
 
 ## 0.55.1 Slanted
 
+- Settings and profile rows sit in segmented Material 3 Expressive containers again; switches show a check and a cross, like Android 16.
+- Streamer mode is translated, can be found in settings search, and its side menu switch moved to Appearance › Side menu and settings.
+- Streamer mode turns off again when OBS closes, if it was turned on by OBS.
+- Blurred names are no longer cut off at the top.
+- Right-clicking a row in your profile opens one menu instead of two, and menus fade out when they close.
+- Open My Wallet works from settings, and wallet transactions show the avatars of people you sent to and received from.
+- The collectible gift window is smaller and its menu sits above the picture.
+- The pixelGram Preferences title no longer jumps when you open it.
 - The Windows media flyout shows the album cover, including covers that finish downloading after the track starts.
 
 ## 0.55.0 Slanted
