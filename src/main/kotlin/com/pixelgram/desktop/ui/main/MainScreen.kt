@@ -226,7 +226,8 @@ fun MainScreen(
     LaunchedEffect(selectedKey) { telegram.loadChats(selectedKey) }
     LaunchedEffect(Unit) { telegram.loadChats(ChatListKey.Archive) }
 
-    val foldersLeft = settings.materialFolders.value && !settings.capsuleFolders.value && tabs.size > 1
+    val foldersLeftPref = settings.materialFolders.value && !settings.capsuleFolders.value && tabs.size > 1
+    val compactWidth = (maxOf(64, settings.listAvatarSize.value + 16) + 16).dp
     val railSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
     val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val density = LocalDensity.current
@@ -246,11 +247,12 @@ fun MainScreen(
             val playerSpace = if (sideKind != null) FullPlayerWidth else 0.dp
             val pushedRail = if (settings.sideMenuStyle.value == com.pixelgram.desktop.core.SideMenuStyle.Push) with(density) { railWidthPx.toDp() } else 0.dp
             val room = (maxWidth - MinChatWidth - RailWidth - playerSpace - pushedRail).value
-            val maxListWidth = minOf(room, maxWidth.value * MaxListShare).coerceAtLeast(CompactWidth.value)
+            val maxListWidth = minOf(room, maxWidth.value * MaxListShare).coerceAtLeast(compactWidth.value)
             val forum = openChatId?.let { telegram.chats[it] }?.takeIf { telegram.isForum(it) }
-            val compact = forum != null || dragWidth < CompactThreshold.value || room < CompactThreshold.value
+            val compact = forum != null || ((dragWidth < CompactThreshold.value || room < CompactThreshold.value) && !MessageSearch.open)
+            val foldersLeft = foldersLeftPref || (compact && tabs.size > 1)
             val listWidth by androidx.compose.animation.core.animateDpAsState(
-                if (compact) CompactWidth else dragWidth.coerceAtMost(maxListWidth).dp,
+                if (compact) compactWidth else dragWidth.coerceAtMost(maxListWidth).coerceAtLeast(if (MessageSearch.open) CompactThreshold.value else 0f).dp,
                 MaterialTheme.motionScheme.defaultSpatialSpec(),
             )
             val expandedWidth = maxOf(listWidth, maxOf(dragWidth.coerceAtMost(maxListWidth), CompactThreshold.value).dp)
@@ -348,7 +350,7 @@ fun MainScreen(
                                     onSearch = { MessageSearch.start(null) },
                                     menuOpen = menuOpen,
                                     belowHeader = topFolders,
-                                    compactWidth = CompactWidth,
+                                    compactWidth = compactWidth,
                                     expandedWidth = expandedWidth,
                                     archiveOn = if (tabs.any { it.key == ChatListKey.Main }) ChatListKey.Main else tabs.firstOrNull()?.key ?: ChatListKey.Main,
                                     onBack = if (selectedKey == ChatListKey.Archive) {
@@ -383,10 +385,10 @@ fun MainScreen(
                             orientation = Orientation.Horizontal,
                             state = rememberDraggableState { delta ->
                                 dragWidth = (dragWidth + with(density) { delta.toDp() }.value)
-                                    .coerceIn(CompactWidth.value, maxListWidth)
+                                    .coerceIn(compactWidth.value, maxListWidth)
                             },
                             onDragStopped = {
-                                if (dragWidth < CompactThreshold.value) dragWidth = CompactWidth.value
+                                if (dragWidth < CompactThreshold.value) dragWidth = compactWidth.value
                                 settings.chatListWidth.value = dragWidth.roundToInt()
                             },
                         ),
@@ -1021,7 +1023,6 @@ private val MinChatWidth = 380.dp
 private const val ScrimZ = 0.5f
 private val RailWidth = 96.dp
 private const val RailScrimAlpha = 0.32f
-private val CompactWidth = 88.dp
 private val CompactThreshold = 220.dp
 private val DividerWidth = 8.dp
 

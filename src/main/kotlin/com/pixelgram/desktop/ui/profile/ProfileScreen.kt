@@ -164,6 +164,8 @@ fun ProfileContent(
                     "Bio",
                     fullInfo?.bio?.text?.takeIf { it.isNotBlank() } ?: "Not set",
                     onEdit = { editing = ProfileField.Bio },
+                    entities = fullInfo?.bio?.takeIf { it.text.isNotBlank() }?.entities?.toList().orEmpty(),
+                    onMention = { username -> telegram.openPublicChat(username, { id -> onOpenChat(id) }, { com.pixelgram.desktop.ui.main.Links.notFound = username }) },
                 )
             )
             add(

@@ -136,7 +136,7 @@ fun ChatList(
         AnimatedVisibility(compact, Modifier.width(compactWidth).fillMaxHeight(), enter, exit) {
             CompactChatList(
                 listKey, chatsFor, selectedChatId, telegram, settings,
-                onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen, archiveOn,
+                onOpen, archivedCount, onOpenArchive, onMenu, onBack, menuOpen, archiveOn, onSearch,
             )
         }
         val expanded = if (expandedWidth.isSpecified) Modifier.wrapContentWidth(Alignment.Start, unbounded = true).width(expandedWidth) else Modifier
@@ -368,9 +368,11 @@ private fun CompactChatList(
     onBack: (() -> Unit)?,
     menuOpen: Boolean,
     archiveOn: ChatListKey,
+    onSearch: (() -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     val shape = settings.avatarShape.value.toShape(settings.avatarCorner.value)
+    val item = maxOf(CompactItemSize, settings.listAvatarSize.value.dp + 16.dp)
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         when {
             onBack != null -> IconButton(onClick = onBack, modifier = Modifier.padding(top = 8.dp)) {
@@ -380,27 +382,30 @@ private fun CompactChatList(
                 Icon(menuIcon(menuOpen), contentDescription = "Menu")
             }
         }
+        if (onSearch != null) IconButton(onClick = onSearch, modifier = Modifier.padding(top = if (onBack == null && onMenu == null) 8.dp else 0.dp)) {
+            Icon(Icons.Filled.Search, contentDescription = "Search")
+        }
         val compactState = rememberLazyListState()
         LoadMoreChats(compactState, listKey, chatsFor(listKey).size, telegram)
         FollowOwnSend(compactState, chatsFor(listKey).filter { it.pinned[listKey] != true })
         LazyColumn(
             state = compactState,
-            modifier = Modifier.listScrollbar(compactState, edge = -4f),
+            modifier = Modifier.fillMaxWidth().listScrollbar(compactState, edge = -4f),
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = PaddingValues(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             if (archivedCount > 0 && listKey == archiveOn) {
                 item(key = "archive") {
                     Box(
                         Modifier
-                            .size(CompactItemSize)
-                            .clip(CircleShape)
+                            .size(item)
+                            .clip(shape)
                             .clickable(onClick = onOpenArchive),
                         contentAlignment = Alignment.Center,
                     ) {
                         Box(
-                            Modifier.size(48.dp).clip(shape).background(colors.secondaryContainer),
+                            Modifier.size(settings.listAvatarSize.value.dp).clip(shape).background(colors.secondaryContainer),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(Icons.Outlined.Archive, contentDescription = "Archived chats", tint = colors.onSecondaryContainer)
@@ -409,7 +414,7 @@ private fun CompactChatList(
                 }
             }
             items(chatsFor(listKey), key = { it.id }) { chat ->
-                Box(itemMotion().size(maxOf(CompactItemSize, settings.listAvatarSize.value.dp + 16.dp)), contentAlignment = Alignment.Center) {
+                Box(itemMotion().size(item), contentAlignment = Alignment.Center) {
                     Box(
                         Modifier
                             .matchParentSize()

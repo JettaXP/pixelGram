@@ -125,7 +125,7 @@ fun InfoGroup(rows: List<InfoRow>) {
                 },
             ) {
                 SegmentedListItem(
-                    onClick = { row.onClick?.invoke() ?: row.onEdit?.invoke() ?: copy() },
+                    onClick = { row.onClick?.invoke() ?: copy() },
                     shapes = groupShapes(index, rows.size),
                     leadingContent = row.leading ?: { Icon(row.icon, contentDescription = null) },
                     supportingContent = {
@@ -147,7 +147,7 @@ fun InfoGroup(rows: List<InfoRow>) {
                             {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     row.trailing?.invoke()
-                                    if (row.onEdit != null) Icon(Icons.Outlined.Edit, contentDescription = "Edit")
+                                    if (row.onEdit != null) androidx.compose.material3.IconButton(onClick = row.onEdit) { Icon(Icons.Outlined.Edit, contentDescription = "Edit") }
                                 }
                             }
                         }

@@ -230,7 +230,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                                 (slideOutHorizontally(trackSpatial) { -it / 3 * dir } + fadeOut(trackFadeOut) + scaleOut(trackScale, targetScale = 0.9f))
                         },
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedContent, boundsTransform = { _, _ -> spring(dampingRatio = CoverSpringDamping, stiffness = CoverSpringStiffness) }, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.RemeasureToBounds),
+                        modifier = Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedContent, boundsTransform = { _, _ -> spring(dampingRatio = CoverSpringDamping, stiffness = CoverSpringStiffness) }, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.scaleToBounds()),
                     ) { slot -> BigCover(slot.audio, telegram) }
                     PlayerView.Lyrics -> LyricsView(audio)
                     PlayerView.Queue -> QueueView(telegram, tracks, index)
@@ -251,7 +251,7 @@ fun FullPlayerPanel(telegram: Telegram, modifier: Modifier = Modifier) {
                         audio,
                         telegram,
                         56.dp,
-                        Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedVisibility, boundsTransform = { _, _ -> spring(dampingRatio = CoverSpringDamping, stiffness = CoverSpringStiffness) }, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.RemeasureToBounds),
+                        Modifier.sharedBounds(rememberSharedContentState(CoverKey), this@AnimatedVisibility, boundsTransform = { _, _ -> spring(dampingRatio = CoverSpringDamping, stiffness = CoverSpringStiffness) }, resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.scaleToBounds()),
                     )
                 }
                 }
@@ -562,11 +562,11 @@ private fun SmallCover(audio: TdApi.Audio?, telegram: Telegram, size: androidx.c
         val hasImage = found != null || mini != null || (file != null && telegram.localPath(file) != null)
     val shape = if (hasImage) RoundedCornerShape(16.dp) else MaterialShapes.Cookie12Sided.toShape()
     Box(
-        modifier.size(size).clip(shape).background(MaterialTheme.colorScheme.primaryContainer),
+        modifier.size(size).clip(shape).then(if (hasImage) Modifier else Modifier.background(MaterialTheme.colorScheme.primaryContainer)),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Rounded.TrackNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(size / 2.4f))
         if (hasImage) ThumbImage(file, mini, telegram, Modifier.fillMaxSize(), localPath = found)
+        else Icon(Icons.Rounded.TrackNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(size / 2.4f))
     }
 }
 
@@ -602,9 +602,6 @@ private fun BigCover(audio: TdApi.Audio?, telegram: Telegram, modifier: Modifier
                     }
                     .clip(RoundedCornerShape(32.dp)),
             ) {
-                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.TrackNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(96.dp))
-                }
                 ThumbImage(file, mini, telegram, Modifier.fillMaxSize(), localPath = found)
             }
         } else {

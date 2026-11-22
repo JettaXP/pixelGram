@@ -1172,8 +1172,8 @@ private fun FolderStyleSection(settings: AppSettings) {
         Slider(
             value = settings.listAvatarSize.value.toFloat(),
             onValueChange = { settings.listAvatarSize.value = it.toInt() },
-            valueRange = 36f..64f,
-            steps = 13,
+            valueRange = 32f..80f,
+            steps = 23,
             modifier = Modifier.weight(1f),
         )
         Text("${settings.listAvatarSize.value} dp", modifier = Modifier.width(64.dp).padding(start = 12.dp))

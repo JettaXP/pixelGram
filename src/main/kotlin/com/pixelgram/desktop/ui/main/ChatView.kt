@@ -1327,7 +1327,7 @@ private fun TypingBubble(chat: ChatState, telegram: Telegram) {
                         telegram.senderTitle(sender),
                         telegram.senderPhoto(sender),
                         telegram,
-                        appSettings?.avatarShapeFor(AvatarKind.Private)?.toShape(appSettings.avatarCorner.value) ?: CircleShape,
+                        appSettings?.avatarShapeFor((sender as? TdApi.MessageSenderChat)?.let { s -> telegram.chats[s.chatId]?.let(telegram::avatarKind) } ?: AvatarKind.Private)?.toShape(appSettings.avatarCorner.value) ?: CircleShape,
                         SenderAvatarSize,
                     )
                 }
