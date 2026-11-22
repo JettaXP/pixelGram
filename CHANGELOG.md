@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.55.1 Slanted
+
+- The Windows media flyout shows the album cover, including covers that finish downloading after the track starts.
+
 ## 0.55.0 Slanted
 
 - Streamer mode: names, usernames and profile info turn into a blur you can click to peek, phone numbers are covered with Material shapes, avatars become a solid color or initials, and the chat list collapses to avatars. Turn it on from the side menu, at startup, when OBS opens or while OBS records or streams.
