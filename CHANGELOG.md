@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.55.3 Slanted
+
+- Escape closes the side menu every time, even when nothing inside the window has focus.
+- The side menu button no longer gets out of step with the menu after quick clicks.
+
 ## 0.55.2 Slanted
 
 - Blurred names in streamer mode fade out softly instead of being cut off at the edges.

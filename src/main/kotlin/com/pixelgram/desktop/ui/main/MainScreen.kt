@@ -206,7 +206,7 @@ fun MainScreen(
     val railState = rememberWideNavigationRailState()
     val scope = rememberCoroutineScope()
     val menuOpen = railState.targetValue == WideNavigationRailValue.Expanded
-    val toggleMenu: () -> Unit = { scope.launch { railState.toggle() } }
+    val toggleMenu: () -> Unit = { scope.launch { if (railState.targetValue == WideNavigationRailValue.Expanded) railState.collapse() else railState.expand() } }
     com.pixelgram.desktop.ui.BackZones.onList = {
         val index = tabs.indexOfFirst { it.key == selectedKey }
         when {
@@ -412,7 +412,7 @@ fun MainScreen(
                 LaunchedEffect(openChatId) { if (openChatId != null) archiveOnTop = false }
                 OnEscape {
                     when {
-                        menuOpen -> scope.launch { railState.collapse() }
+                        railState.targetValue == WideNavigationRailValue.Expanded -> scope.launch { railState.collapse() }
                         MessageSearch.open -> MessageSearch.open = false
                         archiveOnTop && selectedKey == ChatListKey.Archive -> selectedKey = tabs.firstOrNull()?.key ?: ChatListKey.Main
                         onChatBack != null -> onChatBack()

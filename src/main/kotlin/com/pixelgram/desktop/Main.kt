@@ -398,6 +398,7 @@ private fun ApplicationScope.PixelApp() {
         title = com.pixelgram.desktop.core.WindowTitle.text(settings),
         icon = icon,
         state = windowState,
+        onKeyEvent = { event -> event.type == KeyEventType.KeyDown && event.key == Key.Escape && EscapeStack.dispatch() },
     ) {
         window.minimumSize = java.awt.Dimension(800, 520)
         if (com.pixelgram.desktop.core.WindowsMedia.supported) {
@@ -536,7 +537,6 @@ private fun ApplicationScope.PixelApp() {
                                 fullscreenNow = !fullscreenNow
                                 true
                             }
-                            event.key == Key.Escape -> EscapeStack.dispatch()
                             else -> false
                         }
                     },
