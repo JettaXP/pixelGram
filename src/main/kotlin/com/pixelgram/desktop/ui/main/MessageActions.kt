@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.streamerBlur
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.layout.Arrangement
@@ -589,6 +590,7 @@ fun ReplyQuote(
                         color = tint,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.streamerBlur(clickable = false),
                     )
                     if (text.isNotEmpty()) {
                         EmojiText(

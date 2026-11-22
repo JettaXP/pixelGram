@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.icons.outlined.Videocam
+import androidx.compose.material3.Switch
+import com.pixelgram.desktop.ui.components.streamerBlur
 import com.pixelgram.desktop.ui.noBackSwipe
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.zIndex
@@ -249,7 +252,7 @@ fun MainScreen(
             val room = (maxWidth - MinChatWidth - RailWidth - playerSpace - pushedRail).value
             val maxListWidth = minOf(room, maxWidth.value * MaxListShare).coerceAtLeast(compactWidth.value)
             val forum = openChatId?.let { telegram.chats[it] }?.takeIf { telegram.isForum(it) }
-            val compact = forum != null || ((dragWidth < CompactThreshold.value || room < CompactThreshold.value) && !MessageSearch.open)
+            val compact = forum != null || ((dragWidth < CompactThreshold.value || room < CompactThreshold.value || com.pixelgram.desktop.core.StreamerMode.compactList) && !MessageSearch.open)
             val foldersLeft = foldersLeftPref || (compact && tabs.size > 1)
             val listWidth by androidx.compose.animation.core.animateDpAsState(
                 if (compact) compactWidth else dragWidth.coerceAtMost(maxListWidth).coerceAtLeast(if (MessageSearch.open) CompactThreshold.value else 0f).dp,
@@ -702,6 +705,16 @@ private fun MainMenu(
                     }
                 }
             }
+            if (settings.streamerRailToggle.value) {
+                SegmentedListItem(
+                    checked = settings.streamerMode.value,
+                    onCheckedChange = { com.pixelgram.desktop.core.StreamerMode.toggle(it) },
+                    shapes = groupShapes(0, 1),
+                    colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                    leadingContent = { Icon(Icons.Outlined.Videocam, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                    trailingContent = { Switch(checked = settings.streamerMode.value, onCheckedChange = null) },
+                ) { Text("Streamer mode", style = MaterialTheme.typography.titleSmall) }
+            }
         }
     }
 }
@@ -819,7 +832,7 @@ private fun AccountsList(accounts: Accounts, settings: AppSettings) {
                     else -> null
                 },
             ) {
-                EmojiText(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                EmojiText(name, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.streamerBlur(clickable = false))
             }
         }
         SegmentedListItem(
@@ -888,7 +901,7 @@ private fun AccountHeader(
                         style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
+                        modifier = Modifier.weight(1f, fill = false).streamerBlur(),
                     )
                     telegram.chats[me.id]?.let { own -> com.pixelgram.desktop.ui.components.ChatBadges(own, telegram, 22.dp) }
                         ?: com.pixelgram.desktop.ui.components.UserBadge.of(me.id)?.let { com.pixelgram.desktop.ui.components.UserBadgeView(it, telegram, 22.dp) }

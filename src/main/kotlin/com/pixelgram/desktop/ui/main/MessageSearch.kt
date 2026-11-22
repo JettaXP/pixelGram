@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.streamerBlur
 import com.pixelgram.desktop.telegram.hasMainWebApp
 import com.pixelgram.desktop.telegram.openMainWebApp
 import com.pixelgram.desktop.ui.components.groupShapes
@@ -208,7 +209,7 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
                             leadingContent = { ChatAvatar(chat, telegram, settings, size = 44.dp) },
                             trailingContent = app?.let { { BotAppButton(it) } },
                         ) {
-                            EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.streamerBlur(clickable = false))
                         }
                     }
                     if (results.isNotEmpty()) item(key = "messages-header") { SearchSection("Messages") }

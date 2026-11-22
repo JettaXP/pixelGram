@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.settings
 
+import com.pixelgram.desktop.ui.icons.outlined.Videocam
 import androidx.compose.foundation.layout.heightIn
 import kotlin.math.roundToInt
 import androidx.compose.runtime.withFrameNanos
@@ -221,6 +222,7 @@ private enum class Section(val title: String, val icon: ImageVector, val pixel: 
     Chats("Chats", Icons.AutoMirrored.Outlined.Chat, pixel = true),
     Actions("Message actions", Icons.Outlined.SwipeRight, pixel = true),
     Window("Window and system", Icons.Outlined.Computer, pixel = true),
+    Streamer("Streamer mode", Icons.Outlined.Videocam, pixel = true),
     Experimental("Experimental", Icons.Outlined.DataObject, pixel = true),
     Other("Other", Icons.Outlined.MoreHoriz, pixel = true),
     Fonts("Fonts", Icons.Outlined.TextFields, pixel = true, parent = Appearance),
@@ -559,6 +561,7 @@ fun SettingsScreen(
                         Section.Appearance, Section.Bubbles, Section.Corners, Section.FolderStyle, Section.Navigation -> AppearanceSection(settings) { section = it }
                         Section.Chats -> ChatsSection(settings) { section = it }
                         Section.Window -> WindowSection(settings)
+                        Section.Streamer -> StreamerSection(settings)
                         Section.Experimental -> ExperimentalSection(settings)
                         Section.Other, Section.About -> OtherSection(telegram, settings, onOpenChat) { section = it }
                         Section.Fonts -> FontsSection(settings)
@@ -1989,6 +1992,49 @@ private fun WindowSection(settings: AppSettings) {
             SwitchRow(last.value.first, last.value.second, row.title, row.subtitle, row.checked, row.onChange)
         }
     }
+}
+
+@Composable
+private fun StreamerSection(settings: AppSettings) {
+    val streamer = com.pixelgram.desktop.core.StreamerMode
+    Description("Hides private details while you stream or record your screen. Names, usernames and profile info turn into a blur you can click to peek; phone numbers are covered with Material shapes. Messages stay readable.")
+    SwitchRow(0, 2, "Streamer mode", if (streamer.obsRunning) "OBS is running" else null, settings.streamerMode.value) { streamer.toggle(it) }
+    SwitchRow(1, 2, "Switch in the side menu", "Turn streamer mode on and off right from the main menu.", settings.streamerRailToggle.value) { settings.streamerRailToggle.value = it }
+    Header("Turn on automatically")
+    SwitchRow(0, 3, "When pixelGram starts", null, settings.streamerOnStartup.value) { settings.streamerOnStartup.value = it }
+    SwitchRow(1, 3, "When OBS is open", "If you turn it off by hand, it stays off until OBS is closed and opened again.", settings.streamerWithObs.value) { settings.streamerWithObs.value = it }
+    SwitchRow(2, 3, "When OBS records or streams", "Uses the OBS WebSocket server (Tools → WebSocket Server Settings).", settings.streamerWithObsOutput.value) { settings.streamerWithObsOutput.value = it }
+    androidx.compose.animation.AnimatedVisibility(settings.streamerWithObsOutput.value) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            OutlinedTextField(
+                settings.obsPort.value.toString(),
+                { v -> v.filter(Char::isDigit).take(5).toIntOrNull()?.let { settings.obsPort.value = it } },
+                label = { Text("Port") },
+                singleLine = true,
+                modifier = Modifier.width(140.dp),
+            )
+            OutlinedTextField(
+                settings.obsPassword.value,
+                { settings.obsPassword.value = it },
+                label = { Text("Password") },
+                singleLine = true,
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+    Header("What to hide")
+    SwitchRow(0, 4, "Blur names and profile info", "Chat titles, senders, usernames, bio and other profile rows. Click a blur to peek.", settings.streamerHideNames.value) { settings.streamerHideNames.value = it }
+    SwitchRow(1, 4, "Cover phone numbers", "Yours and other people's numbers are replaced with Material shapes.", settings.streamerHidePhones.value) { settings.streamerHidePhones.value = it }
+    SwitchRow(2, 4, "Blur message previews", "Last messages in the chat list.", settings.streamerHidePreviews.value) { settings.streamerHidePreviews.value = it }
+    SwitchRow(3, 4, "Collapse the chat list", "Show only avatars while streaming.", settings.streamerCompactList.value) { settings.streamerCompactList.value = it }
+    Header("Avatars")
+    ConnectedChoice(
+        com.pixelgram.desktop.core.StreamerAvatars.entries.map { it to it.title },
+        settings.streamerAvatars.value,
+        { settings.streamerAvatars.value = it },
+    )
+    Description("Solid color hides photos completely, Initials keeps the first letter (or two for longer names) on a solid background.")
 }
 
 @Composable

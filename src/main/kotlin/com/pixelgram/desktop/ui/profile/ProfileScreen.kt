@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.profile
 
+import com.pixelgram.desktop.ui.components.streamerBlur
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -137,7 +138,7 @@ fun ProfileContent(
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            EmojiText(name, style = MaterialTheme.typography.headlineMediumEmphasized)
+            EmojiText(name, style = MaterialTheme.typography.headlineMediumEmphasized, modifier = Modifier.streamerBlur())
             com.pixelgram.desktop.ui.components.UserBadge.of(me.id)?.let { com.pixelgram.desktop.ui.components.UserBadgeView(it, telegram, 30.dp) }
                 ?: com.pixelgram.desktop.ui.components.SupporterBadge(me.id, name, telegram, 30.dp, label = true)
         }

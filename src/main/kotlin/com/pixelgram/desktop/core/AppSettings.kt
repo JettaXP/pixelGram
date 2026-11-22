@@ -129,6 +129,18 @@ class AppSettings private constructor(private val props: Properties, private val
     val customTitleBar = bool("customTitleBar", !AppPaths.isLinux)
     val messageSeconds = bool("messageSeconds", false)
     val hidePhone = bool("hidePhone", false)
+    val streamerMode = bool("streamerMode", false)
+    val streamerOnStartup = bool("streamerOnStartup", false)
+    val streamerWithObs = bool("streamerWithObs", false)
+    val streamerWithObsOutput = bool("streamerWithObsOutput", false)
+    val obsPort = int("obsPort", 4455)
+    val obsPassword = string("obsPassword", "")
+    val streamerCompactList = bool("streamerCompactList", true)
+    val streamerAvatars = enum("streamerAvatars", StreamerAvatars.Solid)
+    val streamerHideNames = bool("streamerHideNames", true)
+    val streamerHidePhones = bool("streamerHidePhones", true)
+    val streamerHidePreviews = bool("streamerHidePreviews", false)
+    val streamerRailToggle = bool("streamerRailToggle", true)
     val exactNumbers = bool("exactNumbers", false)
     val listAvatarSize = int("listAvatarSize", 48)
     val fullscreen = bool("fullscreenKey", true)
@@ -255,7 +267,7 @@ class AppSettings private constructor(private val props: Properties, private val
         notifyAllAccounts, flashTaskbar, notifyShowName, notifyShowText, badgeIncludeMuted, folderIncludeMuted, badgeCountMessages, respectFocus,
         materialFolders, hideAllChats, folderOrder, folderIcons,
         unreadFolder, unreadFolderName, unreadFolderIcon, mentionsFolder, mentionsFolderName, mentionsFolderIcon,
-        capsuleFolders, pillFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, exactNumbers, zalgoFilter, pythonMessages, inlineMath, titleText, titleCustom, folderTitle, iconPack, roundedIcons, scrollbars, backSwipe, saveOnLowBattery, sideMenuLayout, checkUpdates,
+        capsuleFolders, pillFolders, capsuleSpacing, capsuleHeight, chatListWidth, customTitleBar, messageSeconds, hidePhone, streamerMode, streamerOnStartup, streamerWithObs, streamerWithObsOutput, obsPort, obsPassword, streamerCompactList, streamerAvatars, streamerHideNames, streamerHidePhones, streamerHidePreviews, streamerRailToggle, exactNumbers, zalgoFilter, pythonMessages, inlineMath, titleText, titleCustom, folderTitle, iconPack, roundedIcons, scrollbars, backSwipe, saveOnLowBattery, sideMenuLayout, checkUpdates,
         listAvatarSize, fullscreen, windowsToasts, defaultScale, interfaceScale, secondaryBadges, messageSides,
         doubleClickOwn, doubleClickOther, doubleClickEmoji, swipeLeft, swipeRight, typingBubble, autoCapitalize, settingsStyle, sideMenuStyle,
         avatarShape, avatarCorner,
@@ -356,3 +368,5 @@ class AppSettings private constructor(private val props: Properties, private val
 }
 
 private const val SaveDelayMs = 250L
+
+enum class StreamerAvatars(val title: String) { Solid("Solid color"), Initials("Initials"), Keep("Keep photos") }

@@ -1,5 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
+import androidx.compose.ui.draw.blur
+import com.pixelgram.desktop.ui.components.streamerBlur
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -523,6 +525,7 @@ private fun ChatRow(
                 OnlineAvatar(chat, telegram, settings, settings.listAvatarSize.value.dp)
             },
             supportingContent = {
+                androidx.compose.foundation.layout.Box(if (com.pixelgram.desktop.core.StreamerMode.hidePreviews) Modifier.blur(8.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded) else Modifier) {
                 val draft = chat.draft.takeIf { it.isNotBlank() && !selected }
                 val activity = telegram.activity(chat)
                 androidx.compose.animation.Crossfade(activity, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects()) { typing ->
@@ -542,7 +545,7 @@ private fun ChatRow(
                         if (message.isOutgoing) com.pixelgram.desktop.core.tr("You") else id?.let { telegram.users[it]?.firstName?.ifBlank { null } } ?: telegram.senderTitle(message.senderId)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (!sender.isNullOrBlank()) EmojiText("$sender: ", color = colors.primary, maxLines = 1)
+                        if (!sender.isNullOrBlank()) EmojiText("$sender: ", color = colors.primary, maxLines = 1, modifier = Modifier.streamerBlur(clickable = false))
                         val (thumb, video) = when (val content = last?.content) {
                             is TdApi.MessagePhoto -> content.photo.sizes.minByOrNull { it.width }?.photo to false
                             is TdApi.MessageVideo -> content.video.thumbnail?.file to true
@@ -582,6 +585,7 @@ private fun ChatRow(
                             )
                         }
                     }
+                }
                 }
                 }
             },
@@ -634,7 +638,7 @@ private fun ChatRow(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 SecretLock(chat, telegram, 16.dp)
-                EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).streamerBlur(clickable = false))
                 if (!telegram.isSavedMessages(chat.id)) com.pixelgram.desktop.ui.components.ChatBadges(chat, telegram, 18.dp)
             }
         }

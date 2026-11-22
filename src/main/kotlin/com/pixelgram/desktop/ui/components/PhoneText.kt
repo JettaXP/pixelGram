@@ -55,7 +55,7 @@ fun PhoneText(
     style: TextStyle = LocalTextStyle.current,
     color: Color = Color.Unspecified,
 ) {
-    val hidden = EmojiFonts.settings?.hidePhone?.value == true
+    val hidden = EmojiFonts.settings?.hidePhone?.value == true || com.pixelgram.desktop.core.StreamerMode.hidePhones
     var peek by remember { mutableStateOf(false) }
     LaunchedEffect(peek) {
         if (peek) {

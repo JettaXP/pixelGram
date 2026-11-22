@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.streamerBlur
 import com.pixelgram.desktop.ui.components.ConfirmOnEnter
 import com.pixelgram.desktop.ui.icons.outlined.AlternateEmail
 import com.pixelgram.desktop.ui.icons.outlined.FavoriteBorder
@@ -634,7 +635,7 @@ private fun ChatViewContent(
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
+                        modifier = Modifier.weight(1f, fill = false).streamerBlur(),
                     )
                     if (!telegram.isSavedMessages(chat.id)) com.pixelgram.desktop.ui.components.ChatBadges(chat, telegram, 22.dp)
                 }
@@ -1546,7 +1547,7 @@ fun MessageBubble(
                                 color = senderColor(message.senderUserId.takeIf { it != 0L } ?: message.senderChatId),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false),
+                                modifier = Modifier.weight(1f, fill = false).streamerBlur(),
                             )
                             senderTag?.let { MemberTagPill(it.text, it.rank) }
                         }

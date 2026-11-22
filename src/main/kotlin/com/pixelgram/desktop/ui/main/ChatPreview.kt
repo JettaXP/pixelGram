@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.streamerBlur
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,7 +71,7 @@ fun ChatPreview(chat: ChatState, telegram: Telegram, settings: AppSettings, onOp
                 ) {
                     com.pixelgram.desktop.ui.components.ChatAvatar(chat, telegram, settings, 44.dp)
                     Column(Modifier.weight(1f)) {
-                        EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        EmojiText(telegram.chatTitle(chat), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.streamerBlur())
                         telegram.presence(chat)?.label?.let {
                             Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                         }

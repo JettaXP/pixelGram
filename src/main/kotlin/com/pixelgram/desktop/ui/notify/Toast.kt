@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.notify
 
+import com.pixelgram.desktop.ui.components.streamerBlur
 import com.pixelgram.desktop.ui.themedAppIcon
 import androidx.compose.foundation.Image
 import androidx.compose.animation.AnimatedVisibility
@@ -263,6 +264,7 @@ private fun ToastCard(toast: ToastData, settings: AppSettings, onClick: () -> Un
                         color = colors.fg,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.streamerBlur(clickable = false),
                     )
                     toast.sender?.let {
                         EmojiText(
@@ -271,6 +273,7 @@ private fun ToastCard(toast: ToastData, settings: AppSettings, onClick: () -> Un
                             color = colors.accent,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.streamerBlur(clickable = false),
                         )
                     }
                     if (toast.text.isNotEmpty()) {

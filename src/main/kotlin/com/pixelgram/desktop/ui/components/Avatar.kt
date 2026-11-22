@@ -198,8 +198,12 @@ fun AvatarImage(
             .background(colors.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        val bitmap = image
-        if (bitmap != null) {
+        val streamer = com.pixelgram.desktop.core.StreamerMode.avatars
+        val masked = streamer != com.pixelgram.desktop.core.StreamerAvatars.Keep && title.isNotEmpty() && title != com.pixelgram.desktop.telegram.DeletedAccountTitle
+        val bitmap = image.takeIf { !masked }
+        if (masked && streamer == com.pixelgram.desktop.core.StreamerAvatars.Solid) {
+            Unit
+        } else if (bitmap != null) {
             Image(
                 bitmap = bitmap,
                 contentDescription = title,

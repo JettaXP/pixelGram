@@ -188,6 +188,7 @@ private fun ApplicationScope.PixelApp() {
         com.pixelgram.desktop.core.VideoNoteRecorder.warmUp()
         AppSettings.load().also {
             EmojiFonts.settings = it
+            com.pixelgram.desktop.core.StreamerMode.start(it)
             com.pixelgram.desktop.core.Tweaks.settings = it
             com.pixelgram.desktop.ui.icons.IconPacks.settings = it
         }

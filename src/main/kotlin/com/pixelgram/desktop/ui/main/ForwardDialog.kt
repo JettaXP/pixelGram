@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.streamerBlur
 import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import androidx.compose.foundation.layout.Arrangement
@@ -106,7 +107,7 @@ fun ForwardDialog(telegram: Telegram, settings: AppSettings, onDismiss: () -> Un
                                 leadingContent = { ChatAvatar(chat, telegram, settings, size = 40.dp) },
                                 modifier = Modifier.clip(shape.shape),
                             ) {
-                                EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.streamerBlur(clickable = false))
                             }
                         }
                     }

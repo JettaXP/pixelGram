@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.streamerBlur
 import com.pixelgram.desktop.ui.components.ConfirmOnEnter
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
@@ -643,7 +644,7 @@ fun ChatInfoContent(
                             Modifier
                         },
                     ) { original ->
-                        EmojiText(if (original) originalName.orEmpty() else custom, style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center))
+                        EmojiText(if (original) originalName.orEmpty() else custom, style = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center), modifier = Modifier.streamerBlur())
                     }
                     com.pixelgram.desktop.ui.components.ProfileBadges(chat, telegram, 30.dp)
                 }

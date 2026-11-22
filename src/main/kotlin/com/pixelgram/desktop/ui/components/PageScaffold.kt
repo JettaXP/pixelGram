@@ -167,10 +167,10 @@ fun InfoGroup(rows: List<InfoRow>) {
                                 }
                             }
                             CompositionLocalProvider(LocalUriHandler provides handler) {
-                                FormattedText(row.value, withMentions(row.value, row.entities))
+                                androidx.compose.foundation.layout.Box(Modifier.streamerBlur()) { FormattedText(row.value, withMentions(row.value, row.entities)) }
                             }
                         }
-                        else -> EmojiText(row.value)
+                        else -> EmojiText(row.value, modifier = Modifier.streamerBlur())
                     }
                 }
                 menuAt?.let { at ->
