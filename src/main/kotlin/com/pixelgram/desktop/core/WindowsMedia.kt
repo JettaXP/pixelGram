@@ -61,6 +61,15 @@ object WindowsMedia {
                         val (current, playing, title) = state
                         runCatching { update(combase, smtc, current, playing, title, audio) }
                             .onFailure { AppLog.write("Windows media update failed", it) }
+                        if (current != null && Mpris.coverPath() == null) {
+                            repeat(CoverWaitTries) {
+                                kotlinx.coroutines.delay(CoverWaitMs)
+                                if (Mpris.coverPath() != null) {
+                                    runCatching { update(combase, smtc, current, playing, title, audio) }
+                                    return@collectLatest
+                                }
+                            }
+                        }
                     }
             }.onFailure { AppLog.write("Windows media controls failed", it) }
         }
@@ -88,16 +97,22 @@ object WindowsMedia {
     }
 
     private fun thumbnail(combase: NativeLibrary, updater: Pointer, path: String) {
-        val uriFactory = activationFactory(combase, "Windows.Foundation.Uri", UriFactoryIid)
-        val uriOut = PointerByReference()
-        withString(combase, java.io.File(path).toURI().toString()) { call(uriFactory, CreateUri, it, uriOut) }
-        release(uriFactory)
-        val uri = uriOut.value ?: return
+        val streamOut = PointerByReference()
+        val shlwapi = NativeLibrary.getInstance("shlwapi")
+        val opened = shlwapi.getFunction("SHCreateStreamOnFileEx").invokeInt(arrayOf(com.sun.jna.WString(path), 0, 0, 0, null, streamOut))
+        val stream = streamOut.value
+        if (opened != 0 || stream == null) return
+        val randomOut = PointerByReference()
+        val shcore = NativeLibrary.getInstance("shcore")
+        val wrapped = shcore.getFunction("CreateRandomAccessStreamOverStream").invokeInt(arrayOf(stream, 0, guid(RandomAccessStreamIid), randomOut))
+        release(stream)
+        val random = randomOut.value
+        if (wrapped != 0 || random == null) return
         val streams = activationFactory(combase, "Windows.Storage.Streams.RandomAccessStreamReference", StreamStaticsIid)
         val refOut = PointerByReference()
-        call(streams, CreateFromUri, uri, refOut)
+        call(streams, CreateFromStream, random, refOut)
         release(streams)
-        release(uri)
+        release(random)
         refOut.value?.let { reference ->
             call(updater, PutThumbnail, reference)
             release(reference)
@@ -207,7 +222,6 @@ object WindowsMedia {
     private const val HandlerIid = "0557e996-7b23-5bae-aa81-ea0d671143a4"
     private const val UnknownIid = "00000000-0000-0000-c000-000000000046"
     private const val AgileIid = "94ea2b94-e9cc-49e0-c0ff-ee64ca8f5b90"
-    private const val UriFactoryIid = "44a9796f-723e-4fdf-a218-033e75b0c084"
     private const val StreamStaticsIid = "857309dc-3fbf-4e7d-986f-ef3b1a07a964"
     private const val InteropGetForWindow = 6
     private const val PutPlaybackStatus = 7
@@ -226,8 +240,10 @@ object WindowsMedia {
     private const val PutTitle = 7
     private const val PutArtist = 11
     private const val GetButton = 6
-    private const val CreateUri = 6
-    private const val CreateFromUri = 7
+    private const val CreateFromStream = 8
+    private const val CoverWaitTries = 20
+    private const val CoverWaitMs = 1000L
+    private const val RandomAccessStreamIid = "905A0FE1-BC53-11DF-8C49-001E4FC686DA"
     private const val TypeMusic = 1
     private const val StatusClosed = 0
     private const val StatusPlaying = 3
