@@ -539,7 +539,7 @@ private fun ChatRow(
                 OnlineAvatar(chat, telegram, settings, settings.listAvatarSize.value.dp)
             },
             supportingContent = {
-                androidx.compose.foundation.layout.Box(if (com.pixelgram.desktop.core.StreamerMode.hidePreviews) Modifier.blur(8.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Rectangle) else Modifier) {
+                androidx.compose.foundation.layout.Box(Modifier.streamerBlur(clickable = false, enabled = com.pixelgram.desktop.core.StreamerMode.hidePreviews)) {
                 val draft = chat.draft.takeIf { it.isNotBlank() && !selected }
                 val activity = telegram.activity(chat)
                 androidx.compose.animation.Crossfade(activity, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects()) { typing ->
