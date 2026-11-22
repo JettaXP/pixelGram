@@ -549,8 +549,19 @@ fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = M
             }
         }
     }
+    var anchorFraction by remember { androidx.compose.runtime.mutableFloatStateOf(fraction) }
+    var anchorTime by remember { androidx.compose.runtime.mutableLongStateOf(System.nanoTime()) }
+    var nowTime by remember { androidx.compose.runtime.mutableLongStateOf(System.nanoTime()) }
+    if (fraction != anchorFraction) {
+        anchorFraction = fraction
+        anchorTime = System.nanoTime()
+    }
+    LaunchedEffect(playing, duration) {
+        while (playing && duration > 0f) androidx.compose.runtime.withFrameNanos { nowTime = System.nanoTime() }
+    }
+    val extrapolated = if (playing && duration > 0f) anchorFraction + ((nowTime - anchorTime).coerceIn(0L, MaxExtrapolationNanos) / 1_000_000_000f) / duration else anchorFraction
     val colors = MaterialTheme.colorScheme
-    val shown = (drag ?: fraction).coerceIn(0f, 1f)
+    val shown = (drag ?: extrapolated).coerceIn(0f, 1f)
     Box(modifier.height(28.dp)) {
         androidx.compose.foundation.Canvas(
             Modifier
@@ -587,10 +598,10 @@ fun WavySeekBar(fraction: Float, onSeek: (Float) -> Unit, modifier: Modifier = M
             if (end > stroke / 2) {
                 val path = androidx.compose.ui.graphics.Path()
                 var px = stroke / 2
-                path.moveTo(px, mid + amp * kotlin.math.sin((px / wavelength - phase) * 2f * kotlin.math.PI.toFloat()))
+                path.moveTo(px, mid + amp * kotlin.math.sin((px / wavelength + phase) * 2f * kotlin.math.PI.toFloat()))
                 while (px < end) {
                     px = (px + 1f).coerceAtMost(end)
-                    path.lineTo(px, mid + amp * kotlin.math.sin((px / wavelength - phase) * 2f * kotlin.math.PI.toFloat()))
+                    path.lineTo(px, mid + amp * kotlin.math.sin((px / wavelength + phase) * 2f * kotlin.math.PI.toFloat()))
                 }
                 drawPath(path, colors.primary, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = StrokeCap.Round))
             }
@@ -714,3 +725,5 @@ private suspend fun awaitStream(telegram: Telegram, file: TdApi.File?): String? 
 
 private const val StreamPollMs = 150L
 private const val StreamRetryMs = 3_000L
+
+private const val MaxExtrapolationNanos = 1_500_000_000L

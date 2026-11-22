@@ -258,7 +258,9 @@
       }
       applyMode();
       themeButton.addEventListener('click', function () {
-        mode = modes[(modes.indexOf(mode) + 1) % modes.length];
+        var system = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        var other = system === 'dark' ? 'light' : 'dark';
+        mode = (mode === 'auto' || mode === system) ? other : 'auto';
         store.set('mode', mode);
         applyMode();
       });

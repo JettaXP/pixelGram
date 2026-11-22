@@ -291,15 +291,8 @@ private fun richCaption(blocks: Array<TdApi.PageBlock>): String? = blocks.firstN
 }
 
 fun richPreviewText(rich: TdApi.RichMessage): String {
-    val media = richMedia(rich.blocks)
     val text = richCaption(rich.blocks) ?: richTitle(rich)
-    val mark = when (media) {
-        is TdApi.PageBlockVideo -> "🎬 "
-        is TdApi.PageBlockAnimation -> "🎞 "
-        null -> ""
-        else -> "🖼 "
-    }
-    return (mark + text).trim()
+    return text.trim()
 }
 
 fun richThumb(rich: TdApi.RichMessage): Pair<TdApi.File?, Boolean>? = when (val media = richMedia(rich.blocks)) {

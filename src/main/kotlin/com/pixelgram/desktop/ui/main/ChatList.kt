@@ -1,5 +1,19 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.icons.outlined.Star
+import com.pixelgram.desktop.ui.icons.outlined.CardGiftcard
+import com.pixelgram.desktop.ui.icons.outlined.Call
+import com.pixelgram.desktop.ui.icons.outlined.PushPin
+import com.pixelgram.desktop.ui.icons.outlined.BarChart
+import com.pixelgram.desktop.ui.icons.outlined.Place
+import com.pixelgram.desktop.ui.icons.outlined.Person
+import com.pixelgram.desktop.ui.icons.outlined.Videocam
+import com.pixelgram.desktop.ui.icons.outlined.Mic
+import com.pixelgram.desktop.ui.icons.outlined.MusicNote
+import com.pixelgram.desktop.ui.icons.outlined.Description
+import com.pixelgram.desktop.ui.icons.outlined.Gif
+import com.pixelgram.desktop.ui.icons.outlined.Movie
+import com.pixelgram.desktop.ui.icons.outlined.Image
 import androidx.compose.ui.draw.blur
 import com.pixelgram.desktop.ui.components.streamerBlur
 import androidx.compose.ui.input.pointer.isPrimaryPressed
@@ -575,11 +589,11 @@ private fun ChatRow(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         } else {
+                            if (thumb == null) previewIcon(last?.content)?.let { icon ->
+                                Icon(icon, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.padding(end = 4.dp).size(16.dp))
+                            }
                             EmojiText(
-                                last?.let { message ->
-                                    val text = contentText(message.content).replace('\n', ' ')
-                                    if (thumb != null) MediaMarks.fold(text) { acc, mark -> acc.removePrefix(mark) } else text
-                                } ?: "",
+                                last?.let { message -> contentText(message.content).replace('\n', ' ') } ?: "",
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -696,4 +710,20 @@ private const val PreviewHoldMs = 675L
 
 private val FabClearance = 88.dp
 
-private val MediaMarks = listOf("🖼 ", "🎬 ", "🎞 ")
+private fun previewIcon(content: TdApi.MessageContent?): androidx.compose.ui.graphics.vector.ImageVector? = when (content) {
+    is TdApi.MessagePhoto -> Icons.Outlined.Image
+    is TdApi.MessageVideo -> Icons.Outlined.Movie
+    is TdApi.MessageAnimation -> Icons.Outlined.Gif
+    is TdApi.MessageDocument -> Icons.Outlined.Description
+    is TdApi.MessageAudio -> Icons.Outlined.MusicNote
+    is TdApi.MessageVoiceNote -> Icons.Outlined.Mic
+    is TdApi.MessageVideoNote -> Icons.Outlined.Videocam
+    is TdApi.MessageContact -> Icons.Outlined.Person
+    is TdApi.MessageLocation, is TdApi.MessageLiveLocation -> Icons.Outlined.Place
+    is TdApi.MessagePoll -> Icons.Outlined.BarChart
+    is TdApi.MessagePinMessage -> Icons.Outlined.PushPin
+    is TdApi.MessageCall -> if (content.isVideo) Icons.Outlined.Videocam else Icons.Outlined.Call
+    is TdApi.MessageGift, is TdApi.MessageUpgradedGift -> Icons.Outlined.CardGiftcard
+    is TdApi.MessagePaidMedia, is TdApi.MessageGiftedStars, is TdApi.MessageGiftedPremium -> Icons.Outlined.Star
+    else -> null
+}
