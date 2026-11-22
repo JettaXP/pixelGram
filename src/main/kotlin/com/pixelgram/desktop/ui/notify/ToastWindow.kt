@@ -53,7 +53,7 @@ fun notificationScreens(): List<Pair<String, String>> =
         device.iDstring to "Display ${index + 1} (${mode?.width ?: bounds.width}×${mode?.height ?: bounds.height})"
     }
 
-private fun positionFor(side: ToastSide, screen: String, height: Int): WindowPosition {
+private fun positionFor(side: ToastSide, screen: String, height: Int, w: Int = ToastWindowWidth.value.toInt()): WindowPosition {
     val environment = GraphicsEnvironment.getLocalGraphicsEnvironment()
     val device = environment.screenDevices.firstOrNull { it.iDstring == screen } ?: environment.defaultScreenDevice
     val config = device.defaultConfiguration
@@ -63,7 +63,6 @@ private fun positionFor(side: ToastSide, screen: String, height: Int): WindowPos
     val top = bounds.y + insets.top
     val width = bounds.width - insets.left - insets.right
     val area = bounds.height - insets.top - insets.bottom
-    val w = ToastWindowWidth.value.toInt()
     val x = when (side.column) {
         0 -> left
         2 -> left + width - w
@@ -86,16 +85,22 @@ fun ToastWindow(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) ->
         warm = false
     }
     val showing = stack.entries.isNotEmpty()
-    val state = rememberDialogState(position = OffScreen, size = DpSize(ToastWindowWidth, height))
-    LaunchedEffect(showing, side, screen, height) {
-        state.size = DpSize(ToastWindowWidth, height)
-        state.position = if (showing) positionFor(side, screen, height.value.toInt()) else OffScreen
+    val opaque = !com.pixelgram.desktop.core.AppPaths.translucentWindows
+    val visibleCount = stack.shown.size.coerceAtLeast(1)
+    val windowWidth = if (opaque) ToastCardWidth else ToastWindowWidth
+    val windowHeight = if (opaque) ToastCardHeight * visibleCount + (if (stack.shown.size >= stack.max && stack.max > 1) 48.dp else 0.dp) else height
+    val state = rememberDialogState(position = OffScreen, size = DpSize(windowWidth, windowHeight))
+    LaunchedEffect(showing, side, screen, windowHeight) {
+        state.size = DpSize(windowWidth, windowHeight)
+        val target = if (showing) positionFor(side, screen, windowHeight.value.toInt(), windowWidth.value.toInt()) else OffScreen
+        state.position = target
+        if (showing && opaque) com.pixelgram.desktop.core.CompositorPlace.place(ToastTitle, target.x.value.toInt(), target.y.value.toInt(), windowWidth.value.toInt(), windowHeight.value.toInt())
     }
     DialogWindow(
         onCloseRequest = stack::dismissAll,
         visible = warm || showing,
         state = state,
-        title = "pixelGram",
+        title = ToastTitle,
         undecorated = true,
         transparent = com.pixelgram.desktop.core.AppPaths.translucentWindows,
         resizable = false,
@@ -103,11 +108,12 @@ fun ToastWindow(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) ->
         alwaysOnTop = true,
     ) {
         PixelTheme(settings) {
-            ToastStackContent(stack, settings, onOpen)
+            ToastStackContent(stack, settings, onOpen, opaque = opaque)
         }
     }
 }
 
+const val ToastTitle = "pixelGram notification"
 private val OffScreen = WindowPosition((-10000).dp, (-10000).dp)
 private const val WarmUpMs = 1500L
 const val MaxCount = 5

@@ -152,7 +152,7 @@ class ToastStack {
 
 
 @Composable
-fun ToastStackContent(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) -> Unit) {
+fun ToastStackContent(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) -> Unit, opaque: Boolean = false) {
     val side = settings.notificationSide.value
     val newestFirst = side.top
     val entries = if (newestFirst) stack.entries.reversed() else stack.entries.toList()
@@ -169,7 +169,7 @@ fun ToastStackContent(stack: ToastStack, settings: AppSettings, onOpen: (ToastDa
         }
     }
     Box(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        Modifier.fillMaxSize().padding(horizontal = if (opaque) 0.dp else 16.dp, vertical = if (opaque) 0.dp else 8.dp),
         contentAlignment = if (newestFirst) Alignment.TopCenter else Alignment.BottomCenter,
     ) {
         Column(horizontalAlignment = when (side.column) {
@@ -188,10 +188,11 @@ fun ToastStackContent(stack: ToastStack, settings: AppSettings, onOpen: (ToastDa
                         stack.removeGone()
                     }
                     AnimatedVisibility(entry.visible, enter = enterFor(side), exit = exitFor(side)) {
-                        Box(Modifier.padding(vertical = 4.dp)) {
+                        Box(Modifier.padding(vertical = if (opaque) 0.dp else 4.dp)) {
                             ToastCard(
                                 entry.data,
                                 settings,
+                                opaque = opaque,
                                 onClick = {
                                     stack.dismiss(entry)
                                     onOpen(entry.data)
@@ -218,14 +219,14 @@ data class ToastData(
 )
 
 @Composable
-private fun ToastCard(toast: ToastData, settings: AppSettings, onClick: () -> Unit, onClose: () -> Unit) {
+private fun ToastCard(toast: ToastData, settings: AppSettings, onClick: () -> Unit, onClose: () -> Unit, opaque: Boolean = false) {
     val colors = toastColors()
     Surface(
         onClick = onClick,
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = if (opaque) androidx.compose.ui.graphics.RectangleShape else MaterialTheme.shapes.extraLarge,
         color = colors.bg,
         contentColor = colors.fg,
-        shadowElevation = 6.dp,
+        shadowElevation = if (opaque) 0.dp else 6.dp,
         modifier = Modifier.size(ToastCardWidth, ToastCardHeight),
     ) {
         Box {

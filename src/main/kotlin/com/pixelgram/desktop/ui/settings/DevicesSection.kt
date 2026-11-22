@@ -77,6 +77,7 @@ private val PreviewMaxWidth = 520.dp
 fun DevicesSection(settings: AppSettings) {
     val outputs by produceState(emptyList<String>()) { value = withContext(Dispatchers.IO) { AudioDevices.outputs() } }
     val inputs by produceState(emptyList<String>()) { value = withContext(Dispatchers.IO) { AudioDevices.inputs() } }
+    val inputLabels by produceState(emptyMap<String, String>(), inputs) { value = withContext(Dispatchers.IO) { inputs.associateWith { AudioDevices.inputLabel(it) } } }
     val cameras by produceState(emptyList<String>()) { value = withContext(Dispatchers.IO) { CameraSession.devices() } }
 
     Header("Speakers and headphones")
@@ -85,7 +86,7 @@ fun DevicesSection(settings: AppSettings) {
     }
     Header("Microphone")
     SegmentedGroup {
-        DeviceRow(Icons.Outlined.Mic, "Input device", settings.inputDevice, inputs, 0, 2)
+        DeviceRow(Icons.Outlined.Mic, "Input device", settings.inputDevice, inputs, 0, 2) { inputLabels[it] ?: it }
         Surface(shape = groupShapes(1, 2).shape, color = MaterialTheme.colorScheme.surfaceContainer) {
             MicLevel(settings.inputDevice.value, Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp))
         }
@@ -111,7 +112,7 @@ fun DevicesSection(settings: AppSettings) {
 }
 
 @Composable
-private fun DeviceRow(icon: ImageVector, title: String, setting: Setting<String>, devices: List<String>, index: Int, count: Int) {
+private fun DeviceRow(icon: ImageVector, title: String, setting: Setting<String>, devices: List<String>, index: Int, count: Int, label: (String) -> String = { it }) {
     var open by remember { mutableStateOf(false) }
     Box {
         SegmentedListItem(
@@ -122,7 +123,7 @@ private fun DeviceRow(icon: ImageVector, title: String, setting: Setting<String>
                 val enter = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
                 val exit = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
                 AnimatedContent(
-                    targetState = setting.value.ifEmpty { DefaultDevice },
+                    targetState = setting.value.ifEmpty { DefaultDevice }.let { if (it == DefaultDevice) it else label(it) },
                     transitionSpec = { fadeIn(enter) togetherWith fadeOut(exit) },
                 ) { name ->
                     Text(
@@ -144,7 +145,7 @@ private fun DeviceRow(icon: ImageVector, title: String, setting: Setting<String>
         ) {
             (listOf("") + devices).forEach { device ->
                 DropdownMenuItem(
-                    text = { Text(device.ifEmpty { DefaultDevice }) },
+                    text = { Text(if (device.isEmpty()) DefaultDevice else label(device)) },
                     trailingIcon = if (device == setting.value) {
                         { Icon(Icons.Outlined.Check, contentDescription = null) }
                     } else {

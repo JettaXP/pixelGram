@@ -12,13 +12,23 @@ object AudioDevices {
 
     fun outputs(): List<String> = names { mixer -> mixer.sourceLineInfo.any { SourceDataLine::class.java.isAssignableFrom(it.lineClass) } }
 
-    fun inputs(): List<String> = names { mixer -> mixer.targetLineInfo.any { TargetDataLine::class.java.isAssignableFrom(it.lineClass) } }
+    fun inputs(): List<String> =
+        if (LinuxCapture.available) LinuxCapture.sources().map { it.name }.ifEmpty { names { mixer -> mixer.targetLineInfo.any { TargetDataLine::class.java.isAssignableFrom(it.lineClass) } } }
+        else names { mixer -> mixer.targetLineInfo.any { TargetDataLine::class.java.isAssignableFrom(it.lineClass) } }
+
+    fun inputLabel(name: String): String = if (LinuxCapture.available) LinuxCapture.sources().firstOrNull { it.name == name }?.description ?: name else name
 
     fun sourceLine(format: AudioFormat): SourceDataLine =
         mixer(settings?.outputDevice?.value)?.let { info -> runCatching { AudioSystem.getSourceDataLine(format, info) }.getOrNull() }
             ?: AudioSystem.getSourceDataLine(format)
 
-    fun targetLine(format: AudioFormat): TargetDataLine =
+    fun targetLine(format: AudioFormat): TargetDataLine {
+        val wanted = settings?.inputDevice?.value
+        if (LinuxCapture.available && (wanted.isNullOrEmpty() || mixer(wanted) == null)) return ProcessTargetLine(format, wanted?.takeIf { it.isNotEmpty() })
+        return javaLine(format)
+    }
+
+    private fun javaLine(format: AudioFormat): TargetDataLine =
         mixer(settings?.inputDevice?.value)?.let { info -> runCatching { AudioSystem.getTargetDataLine(format, info) }.getOrNull() }
             ?: AudioSystem.getTargetDataLine(format)
 
