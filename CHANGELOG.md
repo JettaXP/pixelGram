@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.55.0 Slanted
+
+- Streamer mode: names, usernames and profile info turn into a blur you can click to peek, phone numbers are covered with Material shapes, avatars become a solid color or initials, and the chat list collapses to avatars. Turn it on from the side menu, at startup, when OBS opens or while OBS records or streams.
+- The chat list collapsed to avatars shows folders on the left and has a search button; its width follows the avatar size, which now goes from 32 to 80 dp.
+- Chat list previews show Material icons for files, photos, voice messages, pins and other media instead of emoji.
+- The mini player progress moves smoothly and its wave flows backwards, like in the full player.
+- Notifications on Wayland open in a window the size of the card and are placed by niri, Hyprland and Sway.
+- The microphone records through PipeWire or PulseAudio on Linux, with your input devices listed by name.
+- Your bio opens for editing only with the pencil, so links and usernames in it can be clicked.
+- The album cover no longer shows a placeholder behind it while expanding.
+- Sender avatars in messages follow the shape set for that kind of chat.
+
 ## 0.54.3 Very Sunny
 
 - Telegram Premium and Stars in settings, Stars payments for bots and paid media, and a native card payment form.
