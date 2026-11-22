@@ -77,10 +77,10 @@
     .btn.outlined { border: 1px solid var(--outline); color: var(--primary); }
     .btn small { font-weight: 500; opacity: .75; }
     .note { margin-top: 18px; font-size: 14px; color: var(--on-surface-variant); }
-    .phones { display: flex; justify-content: center; gap: 18px; }
-    .phone { width: 230px; border-radius: 32px; overflow: hidden; background: var(--surface-highest); box-shadow: 0 18px 48px rgb(0 0 0 / .25); border: 6px solid var(--surface-highest); }
+    .phones { display: flex; justify-content: center; align-items: flex-start; gap: 18px; }
+    .phone { flex: 0 0 auto; width: min(230px, 44vw); align-self: flex-start; border-radius: 32px; overflow: hidden; background: var(--surface-highest); box-shadow: 0 18px 48px rgb(0 0 0 / .25); border: 6px solid var(--surface-highest); }
     .phone img { display: block; width: 100%; height: auto; border-radius: 26px; }
-    .phone.back { transform: translateY(36px) rotate(4deg); width: 210px; opacity: .95; }
+    .phone.back { transform: translateY(36px) rotate(4deg); width: min(210px, 40vw); opacity: .95; }
     .alert { display: flex; gap: 16px; padding: 20px 24px; border-radius: 28px; background: var(--error-container); color: var(--on-error-container); margin: 16px 0 8px; }
     .alert .icon { font-size: 28px; }
     .alert h3 { margin: 0 0 4px; font-size: 18px; }
@@ -103,7 +103,7 @@
     .card p { margin: 0; color: var(--on-surface-variant); }
     .shots { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 12px; scroll-snap-type: x mandatory; }
     .shots figure { margin: 0; flex: 0 0 240px; scroll-snap-align: start; }
-    .shots img { width: 100%; border-radius: 24px; display: block; background: var(--surface-highest); }
+    .shots img { width: 100%; height: auto; aspect-ratio: 540 / 1200; object-fit: cover; border-radius: 24px; display: block; background: var(--surface-highest); }
     .shots figcaption { text-align: center; color: var(--on-surface-variant); font-size: 14px; margin-top: 8px; }
     .steps { counter-reset: step; display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
     .steps li { counter-increment: step; display: flex; gap: 16px; align-items: flex-start; background: var(--surface-low); border-radius: 20px; padding: 18px 20px; }
@@ -199,7 +199,11 @@
 
     <section id="download">
       <h2 data-ru="Как установить">How to install</h2>
-      <p class="section-lead" data-ru="Пока pixelGram нет в магазинах, APK ставится вручную.">pixelGram isn't in app stores yet, so you install the APK yourself.</p>
+      <p class="section-lead" data-ru="pixelGram для Android есть в Orion Store — открытом магазине приложений, который ставит и обновляет APK прямо с GitHub. Можно установить и вручную.">pixelGram for Android is available in Orion Store, an open source app store that installs and updates APKs straight from GitHub. You can also install it manually.</p>
+      <div class="cta" style="margin-bottom:20px">
+        <a class="btn tonal" href="https://github.com/RookieEnough/Orion-Store" target="_blank" rel="noopener" data-ru="Orion Store">Orion Store</a>
+        <a class="btn outlined" href="https://appimage.github.io/pixelGram/" target="_blank" rel="noopener" data-ru="pixelGram Desktop на AppImageHub">pixelGram Desktop on AppImageHub</a>
+      </div>
       <ol class="steps">
         <li><div><b data-ru="Скачайте APK">Download the APK</b><span data-ru="Подходит почти всем современным телефонам (arm64).">Fits almost every modern phone (arm64).</span> <a href="https://github.com/JettaXP/pixelGram-android/releases/download/alpha/pixelGram-android-arm64.apk" data-ru="Скачать">Download</a></div></li>
         <li><div><b data-ru="Разрешите установку">Allow the install</b><span data-ru="Android спросит разрешение на установку из браузера или файлового менеджера. Разрешите его один раз.">Android will ask to allow installs from your browser or file manager. Allow it once.</span></div></li>
