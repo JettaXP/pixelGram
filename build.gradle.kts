@@ -7,9 +7,9 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.55.1"
+version = "0.55.2"
 description = "Material 3 Expressive Telegram desktop client"
-val codename = "Very Sunny"
+val codename = "Slanted"
 
 kotlin {
     jvmToolchain(21)

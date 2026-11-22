@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.55.2 Slanted
+
+- Blurred names in streamer mode fade out softly instead of being cut off at the edges.
+- The release name shows the right codename.
+
 ## 0.55.1 Slanted
 
 - Settings and profile rows sit in segmented Material 3 Expressive containers again; switches show a check and a cross, like Android 16.
