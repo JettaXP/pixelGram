@@ -1,5 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
+import kotlinx.coroutines.flow.first
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.IntOffset
@@ -643,26 +646,70 @@ private fun VideoControls(request: VideoRequest, engine: VideoEngine) {
 
 @Composable
 fun InlineVideo(path: String, modifier: Modifier = Modifier, maxWidth: Int = InlineDecodeWidth) {
-    var settled by remember(path) { mutableStateOf(false) }
-    LaunchedEffect(path) {
-        kotlinx.coroutines.delay(InlineStartDelayMs)
-        settled = true
-    }
-    if (!settled) return
-    val engine = remember(path) { if (InlineSlots.acquire()) VideoEngine(path, loop = true, sound = false, maxWidth = maxWidth).apply { start() } else null }
-    DisposableEffect(engine) {
-        onDispose {
-            if (engine != null) {
-                engine.close()
-                InlineSlots.release()
+    var visible by remember(path) { mutableStateOf(false) }
+    androidx.compose.foundation.layout.Box(
+        modifier.onGloballyPositioned { coords ->
+            val full = coords.size.height
+            val shown = coords.boundsInWindow().height
+            visible = full > 0 && shown >= full * VisibleShare
+        },
+    ) {
+        var settled by remember(path) { mutableStateOf(false) }
+        LaunchedEffect(path, visible) {
+            if (!visible || settled) return@LaunchedEffect
+            kotlinx.coroutines.delay(InlineStartDelayMs)
+            settled = true
+        }
+        if (!settled) return@Box
+        val engine = remember(path) {
+            if (InlineSlots.acquire()) {
+                VideoEngine(path, loop = true, sound = false, maxWidth = maxWidth).apply {
+                    start()
+                }
+            } else {
+                null
             }
         }
+        DisposableEffect(engine) {
+            onDispose {
+                if (engine != null) {
+                    InlinePositions.keep(path, engine.position)
+                    engine.close()
+                    InlineSlots.release()
+                }
+            }
+        }
+        val playing = engine ?: return@Box
+        LaunchedEffect(playing) {
+            val resume = InlinePositions.take(path) ?: return@LaunchedEffect
+            val total = androidx.compose.runtime.snapshotFlow { playing.duration }.first { it > 0 }
+            playing.seek(resume % total)
+        }
+        val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
+        LaunchedEffect(playing, focused, visible) {
+            val want = focused && visible
+            if (playing.playing != want) playing.toggle()
+        }
+        VideoFrame(playing, Modifier.fillMaxSize())
     }
-    val playing = engine ?: return
-    val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
-    LaunchedEffect(playing, focused) { if (playing.playing != focused) playing.toggle() }
-    VideoFrame(playing, modifier)
 }
+
+private object InlinePositions {
+    private val saved = object : LinkedHashMap<String, Long>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>?) = size > MaxSavedPositions
+    }
+
+    @Synchronized
+    fun keep(path: String, position: Long) {
+        if (position > 0) saved[path] = position
+    }
+
+    @Synchronized
+    fun take(path: String): Long? = saved[path]
+}
+
+private const val VisibleShare = 0.5f
+private const val MaxSavedPositions = 64
 
 private object InlineSlots {
     private var used = 0
