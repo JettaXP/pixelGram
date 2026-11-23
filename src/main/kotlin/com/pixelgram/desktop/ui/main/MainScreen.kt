@@ -278,24 +278,32 @@ fun MainScreen(
                 enter = expandHorizontally(railSpec) + fadeIn(fade),
                 exit = shrinkHorizontally(railSpec) + fadeOut(fade),
             ) {
-                PixelRail(
-                    accounts = accounts,
-                    state = railState,
-                    expanded = menuOpen,
-                    showFolders = foldersLeft,
-                    showMenuButton = foldersLeft,
-                    telegram = telegram,
-                    settings = settings,
-                    tabs = tabs,
-                    selected = selectedKey,
-                    onToggleMenu = toggleMenu,
-                    onSelect = { key -> closeMenuAnd { MessageSearch.open = false; if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
-                    onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
-                    onOpenSaved = {
-                        closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
-                    },
-                    onNewChat = { channel -> closeMenuAnd { newChat = channel } },
-                )
+                Box(Modifier.fillMaxHeight()) {
+                    PixelRail(
+                        accounts = accounts,
+                        state = railState,
+                        expanded = menuOpen,
+                        showFolders = foldersLeft,
+                        showMenuButton = foldersLeft,
+                        telegram = telegram,
+                        settings = settings,
+                        tabs = tabs,
+                        selected = selectedKey,
+                        onToggleMenu = toggleMenu,
+                        onSelect = { key -> closeMenuAnd { MessageSearch.open = false; if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
+                        onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
+                        onOpenSaved = {
+                            closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
+                        },
+                        onNewChat = { channel -> closeMenuAnd { newChat = channel } },
+                    )
+                    androidx.compose.animation.AnimatedVisibility(
+                        menuOpen,
+                        enter = fadeIn(fade),
+                        exit = fadeOut(fade),
+                        modifier = Modifier.align(Alignment.BottomStart),
+                    ) { MenuFooter() }
+                }
             }
             Row(Modifier.fillMaxSize()) {
                 when {
@@ -633,7 +641,7 @@ private fun MainMenu(
 ) {
     var accountsOpen by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxHeight()) {
-    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 72.dp)) {
         AccountHeader(telegram, settings, accountsOpen) { accountsOpen = !accountsOpen }
         val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
         val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -723,7 +731,6 @@ private fun MainMenu(
             }
         }
     }
-    MenuFooter()
     }
 }
 
@@ -1134,7 +1141,7 @@ private fun MenuFooter() {
     var about by remember { mutableStateOf(false) }
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val channel = { com.pixelgram.desktop.ui.main.Links.open(ChannelLink) }
-    Column(Modifier.width(AccountsWidth).padding(start = 24.dp, end = 12.dp, top = 12.dp, bottom = 16.dp)) {
+    Column(Modifier.width(AccountsWidth).background(MaterialTheme.colorScheme.surfaceContainer).padding(start = 24.dp, end = 12.dp, top = 12.dp, bottom = 16.dp)) {
         FooterLink("pixelGram Desktop", muted, onClick = channel)
         Row(verticalAlignment = Alignment.CenterVertically) {
             BuildTooltip { FooterLink(com.pixelgram.desktop.core.tr("Version") + " " + com.pixelgram.desktop.BuildConfig.VERSION, muted, onClick = channel) }

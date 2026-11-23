@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.55.5 Slanted
+
+- The version and About links sit at the bottom of the side menu.
+- Right-clicking a photo in an album replies to that photo instead of the whole album.
+- Tapping any folder, including the current one, closes search.
+- The username QR window is centered.
+
 ## 0.55.4 Slanted
 
 - Scheduled messages open as their own chat-like section with day headers, a clock send button, and voice or video messages that ask for a time first.

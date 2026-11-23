@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.pixelgram.desktop"
-version = "0.55.4"
+version = "0.55.5"
 description = "Material 3 Expressive Telegram desktop client"
 val codename = "Slanted"
 
