@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.55.4 Slanted
+
+- Scheduled messages open as their own chat-like section with day headers, a clock send button, and voice or video messages that ask for a time first.
+- The schedule picker shows the date, the time fields and the dial side by side, and no longer accepts a time in the past.
+- Send and record buttons are round, keep their shape when held and fade between colors; the voice button shows a waveform and the lock hint animates in and out.
+- The send button menu is segmented and opens above the button.
+- Search shows frequent contacts and recent chats, and closes when you switch folders.
+- Member tags follow Telegram Desktop: pills for admins and owners, plain gray text for members, and dialogs explaining tags and editing your own.
+- Sender names and avatars open the profile of the user, group or channel.
+- Profiles show Telegram Premium colors with the emoji pattern, pinned collectibles around the avatar and segmented rows with label pills.
+- The side menu groups regular items together and shows the version, build details and an About window at the bottom.
+- Inline videos play only while visible and resume where they stopped.
+- Album previews in the chat list show several thumbnails, and channel previews show the author's first name for signed posts.
+- Very long images are sent as files instead of failing.
+- Telegram Stars is translated into Russian.
+
 ## 0.55.3 Slanted
 
 - Escape closes the side menu every time, even when nothing inside the window has focus.
