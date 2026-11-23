@@ -1,3 +1,5 @@
+import java.time.LocalDate
+import java.time.ZoneOffset
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
@@ -90,12 +92,16 @@ val generateBuildConfig by tasks.registering {
     val appVersion = project.version.toString()
     val appCodename = codename
     val commit = providers.environmentVariable("GITHUB_SHA").filter { it.isNotBlank() }.orElse("dev")
+    val buildNumber = providers.environmentVariable("GITHUB_RUN_NUMBER").filter { it.isNotBlank() }.orElse("0")
+    val buildDate = LocalDate.now(ZoneOffset.UTC).toString()
     val outputDir = layout.buildDirectory.dir("generated/buildconfig")
     inputs.property("apiId", apiId)
     inputs.property("apiHash", apiHash)
     inputs.property("version", appVersion)
     inputs.property("codename", appCodename)
     inputs.property("commit", commit)
+    inputs.property("buildNumber", buildNumber)
+    inputs.property("buildDate", buildDate)
     outputs.dir(outputDir)
     doLast {
         val id = apiId.get().trim().toIntOrNull() ?: 0
@@ -109,6 +115,8 @@ val generateBuildConfig by tasks.registering {
             |    const val VERSION = "$appVersion"
             |    const val CODENAME = "$appCodename"
             |    const val COMMIT = "${commit.get()}"
+            |    const val BUILD = ${buildNumber.get().toIntOrNull() ?: 0}
+            |    const val BUILD_DATE = "$buildDate"
             |    const val API_ID = $id
             |    const val API_HASH = "${apiHash.get().trim()}"
             |}

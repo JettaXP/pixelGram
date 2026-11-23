@@ -24,6 +24,10 @@ import com.pixelgram.desktop.ui.icons.outlined.Star
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.hoverable
+import androidx.compose.ui.text.withLink
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
@@ -628,7 +632,8 @@ private fun MainMenu(
     onNewChat: (channel: Boolean) -> Unit,
 ) {
     var accountsOpen by remember { mutableStateOf(false) }
-    Column(Modifier.verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxHeight()) {
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
         AccountHeader(telegram, settings, accountsOpen) { accountsOpen = !accountsOpen }
         val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
         val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -682,13 +687,7 @@ private fun MainMenu(
         val listed = layout.list.filter(::available)
         val groups = buildList<List<Triple<ImageVector, String, () -> Unit>>> {
             var current = mutableListOf<Triple<ImageVector, String, () -> Unit>>()
-            var group = -1
             listed.forEach { item ->
-                if (item.group != group && current.isNotEmpty()) {
-                    add(current)
-                    current = mutableListOf()
-                }
-                group = item.group
                 current += Triple(sideIcon(item, dark), if (item == com.pixelgram.desktop.core.SideItem.Theme) (if (dark) "Night" else "Day") else item.title) { action(item) }
             }
             if (current.isNotEmpty()) add(current)
@@ -723,6 +722,8 @@ private fun MainMenu(
                 ) { Text("Streamer mode", style = MaterialTheme.typography.titleSmall) }
             }
         }
+    }
+    MenuFooter()
     }
 }
 
@@ -1127,3 +1128,92 @@ internal fun sideIcon(item: com.pixelgram.desktop.core.SideItem, dark: Boolean):
     com.pixelgram.desktop.core.SideItem.Settings -> Icons.Outlined.Settings
     com.pixelgram.desktop.core.SideItem.PixelSettings -> Icons.Outlined.Star
 }
+
+@Composable
+private fun MenuFooter() {
+    var about by remember { mutableStateOf(false) }
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val channel = { com.pixelgram.desktop.ui.main.Links.open(ChannelLink) }
+    Column(Modifier.width(AccountsWidth).padding(start = 24.dp, end = 12.dp, top = 12.dp, bottom = 16.dp)) {
+        FooterLink("pixelGram Desktop", muted, onClick = channel)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BuildTooltip { FooterLink(com.pixelgram.desktop.core.tr("Version") + " " + com.pixelgram.desktop.BuildConfig.VERSION, muted, onClick = channel) }
+            Text(" – ", style = MaterialTheme.typography.bodyMedium, color = muted)
+            BuildTooltip { FooterLink(com.pixelgram.desktop.core.tr("About"), muted) { about = true } }
+        }
+    }
+    if (about) AboutDialog { about = false }
+}
+
+@Composable
+private fun FooterLink(text: String, color: Color, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    androidx.compose.material3.Text(
+        text,
+        style = MaterialTheme.typography.bodyMedium.copy(textDecoration = if (hovered) androidx.compose.ui.text.style.TextDecoration.Underline else null),
+        color = color,
+        modifier = Modifier
+            .hoverable(interaction)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .pointerHoverIcon(androidx.compose.ui.input.pointer.PointerIcon.Hand),
+    )
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun BuildTooltip(content: @Composable () -> Unit) {
+    val build = com.pixelgram.desktop.BuildConfig.BUILD
+    val lines = listOfNotNull(
+        com.pixelgram.desktop.core.tr("Build date") + ": " + com.pixelgram.desktop.BuildConfig.BUILD_DATE,
+        (com.pixelgram.desktop.core.tr("Build number") + ": " + build).takeIf { build > 0 },
+        com.pixelgram.desktop.core.tr("Codename") + ": " + com.pixelgram.desktop.BuildConfig.CODENAME,
+        "Java: " + System.getProperty("java.version"),
+    )
+    androidx.compose.material3.TooltipBox(
+        positionProvider = androidx.compose.material3.TooltipDefaults.rememberTooltipPositionProvider(androidx.compose.material3.TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { androidx.compose.material3.Text(lines.joinToString("\n")) } },
+        state = androidx.compose.material3.rememberTooltipState(),
+    ) { content() }
+}
+
+@Composable
+private fun AboutDialog(onDismiss: () -> Unit) {
+    com.pixelgram.desktop.ui.components.expressive.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text("pixelGram Desktop")
+                Text(
+                    com.pixelgram.desktop.core.tr("version") + " " + com.pixelgram.desktop.BuildConfig.VERSION + " " + com.pixelgram.desktop.BuildConfig.CODENAME,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                AboutLine("Unofficial Telegram client with Material 3 Expressive, built on the ", "Telegram API", "https://core.telegram.org/api", ".")
+                AboutLine("This software is licensed under ", "GNU GPL version 3", "https://www.gnu.org/licenses/gpl-3.0.html", ".")
+                AboutLine("Source code is available on ", "GitHub", "https://github.com/JettaXP/pixelGram", ".")
+                AboutLine("News and updates are posted in ", "@pixelgramclient", ChannelLink, ".")
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Close") } },
+    )
+}
+
+@Composable
+private fun AboutLine(before: String, link: String, url: String, after: String) {
+    val color = MaterialTheme.colorScheme.primary
+    androidx.compose.material3.Text(
+        androidx.compose.ui.text.buildAnnotatedString {
+            append(com.pixelgram.desktop.core.tr(before))
+            withLink(androidx.compose.ui.text.LinkAnnotation.Url(url, androidx.compose.ui.text.TextLinkStyles(androidx.compose.ui.text.SpanStyle(color = color)))) { append(com.pixelgram.desktop.core.tr(link)) }
+            append(after)
+        },
+        style = MaterialTheme.typography.bodyLarge,
+    )
+}
+
+private const val ChannelLink = "https://t.me/pixelgramclient"
