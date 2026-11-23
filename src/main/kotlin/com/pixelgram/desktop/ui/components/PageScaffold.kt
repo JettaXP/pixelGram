@@ -104,7 +104,7 @@ private fun withMentions(text: String, entities: List<TdApi.TextEntity>): List<T
 }
 
 @Composable
-fun InfoGroup(rows: List<InfoRow>) {
+fun InfoGroup(rows: List<InfoRow>, container: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified) {
     Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
         rows.forEachIndexed { index, row ->
             var menuAt by remember { mutableStateOf<DpOffset?>(null) }
@@ -125,7 +125,7 @@ fun InfoGroup(rows: List<InfoRow>) {
                 },
             ) {
                 SegmentedListItem(
-                    colors = com.pixelgram.desktop.ui.components.rowColors(),
+                    colors = if (container == androidx.compose.ui.graphics.Color.Unspecified) com.pixelgram.desktop.ui.components.rowColors() else androidx.compose.material3.ListItemDefaults.segmentedColors(containerColor = container),
                     onClick = { row.onClick?.invoke() ?: copy() },
                     shapes = groupShapes(index, rows.size),
                     leadingContent = row.leading ?: { Icon(row.icon, contentDescription = null) },

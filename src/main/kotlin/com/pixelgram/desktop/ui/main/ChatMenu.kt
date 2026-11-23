@@ -596,6 +596,19 @@ fun ChatInfoContent(
           val scroll = rememberScrollState()
           com.pixelgram.desktop.ui.BackSwipeBox(onBack = onDismiss) {
             val bannerId = if (chat.privateUserId != 0L) chat.privateUserId else chat.id
+            var orbit by remember(chat.id) { mutableStateOf<List<TdApi.UpgradedGift>>(emptyList()) }
+            LaunchedEffect(chat.id) { if (chat.privateUserId != 0L) telegram.pinnedUpgradedGifts(chat.privateUserId) { orbit = it } }
+            val look = profileLook(chat, telegram)
+            if (Banners.banner(bannerId) == null) {
+                val center = 24.dp + if (orbit.isNotEmpty()) 72.dp else 48.dp
+                ProfileBackdrop(
+                    look,
+                    center,
+                    96.dp,
+                    center + 230.dp,
+                    Modifier.clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).graphicsLayer { translationY = -scroll.value * BannerParallax },
+                )
+            }
             if (Banners.banner(bannerId) != null) {
                 val bannerPx = with(LocalDensity.current) { DialogBannerHeight.toPx() }
                 ProfileBanner(
@@ -616,6 +629,8 @@ fun ChatInfoContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.verticalScroll(scroll).padding(24.dp),
             ) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                PinnedGiftsOrbit(orbit, telegram, 96.dp)
                 ChatAvatar(
                     chat,
                     telegram,
@@ -631,6 +646,7 @@ fun ChatInfoContent(
                         else -> null
                     },
                 )
+                }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val custom = telegram.chatTitle(chat)
                     val originalName = remember(chat.id, custom, user) { originalTitle(chat, user, telegram)?.takeIf { it != custom } }
@@ -785,7 +801,7 @@ fun ChatInfoContent(
                     add(InfoRow(Icons.Outlined.Numbers, "ID", (if (chat.privateUserId != 0L) chat.privateUserId else chat.id).toString()))
                 }
                 if (chat.privateUserId != 0L) ProfileMusic(telegram, settings, chat.privateUserId, own = false, modifier = Modifier.padding(top = 8.dp))
-                Box(Modifier.fillMaxWidth().padding(top = 8.dp)) { InfoGroup(rows) }
+                Box(Modifier.fillMaxWidth().padding(top = 8.dp)) { InfoGroup(rows, MaterialTheme.colorScheme.surfaceContainerHighest) }
                 ChatMemberRows(chat, telegram, settings, onOpenChat, Modifier.fillMaxWidth().padding(top = 8.dp))
                 if (personalChannel != 0L) {
                     PersonalChannelCard(

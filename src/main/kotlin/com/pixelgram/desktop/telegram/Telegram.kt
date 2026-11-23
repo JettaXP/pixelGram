@@ -277,6 +277,7 @@ class Telegram(
 
     val chats = mutableStateMapOf<Long, ChatState>()
     var scheduledVersion by mutableIntStateOf(0)
+    val profileAccents = mutableStateMapOf<Int, TdApi.ProfileAccentColor>()
     val users = KeyedState<Long, TdApi.User>()
     val unread = mutableStateMapOf<ChatListKey, UnreadCount>()
     val unreadMessages = mutableStateMapOf<ChatListKey, UnreadCount>()
@@ -1245,6 +1246,7 @@ class Telegram(
                     if (update.messageId !in list) list.add(update.messageId)
                 }
             }
+            is TdApi.UpdateProfileAccentColors -> update.colors.forEach { profileAccents[it.id] = it }
             is TdApi.UpdateChatHasScheduledMessages -> {
                 chats[update.chatId]?.hasScheduled = update.hasScheduledMessages
                 scheduledVersion++
