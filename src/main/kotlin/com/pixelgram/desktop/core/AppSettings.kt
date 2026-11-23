@@ -183,6 +183,8 @@ class AppSettings private constructor(private val props: Properties, private val
 
     fun avatarShapeFor(kind: AvatarKind?): AvatarShape = kind?.let(::kindShape) ?: avatarShape.value
 
+    val playerVolume = int("playerVolume", 100)
+    val playerMuted = bool("playerMuted", false)
     val deviceName = string("deviceName", "")
     val israelLogo = bool("israelLogo", false)
     val outputDevice = string("outputDevice", "")

@@ -190,7 +190,16 @@ private fun ApplicationScope.PixelApp() {
             EmojiFonts.settings = it
             com.pixelgram.desktop.core.StreamerMode.start(it)
             com.pixelgram.desktop.core.Tweaks.settings = it
+            com.pixelgram.desktop.core.AudioPlayer.volume = it.playerVolume.value.coerceIn(0, 100) / 100f
+            com.pixelgram.desktop.core.AudioPlayer.muted = it.playerMuted.value
             com.pixelgram.desktop.ui.icons.IconPacks.settings = it
+        }
+    }
+    LaunchedEffect(settings) {
+        androidx.compose.runtime.snapshotFlow { com.pixelgram.desktop.core.AudioPlayer.volume to com.pixelgram.desktop.core.AudioPlayer.muted }.collectLatest { (volume, muted) ->
+            kotlinx.coroutines.delay(400)
+            settings.playerVolume.value = (volume * 100).toInt()
+            settings.playerMuted.value = muted
         }
     }
     val accounts = remember {

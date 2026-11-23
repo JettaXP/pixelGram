@@ -297,12 +297,14 @@ fun MainScreen(
                         },
                         onNewChat = { channel -> closeMenuAnd { newChat = channel } },
                     )
-                    androidx.compose.animation.AnimatedVisibility(
-                        menuOpen,
-                        enter = fadeIn(fade),
-                        exit = fadeOut(fade),
-                        modifier = Modifier.align(Alignment.BottomStart),
-                    ) { MenuFooter() }
+                    Box(Modifier.matchParentSize().clipToBounds()) {
+                        androidx.compose.animation.AnimatedVisibility(
+                            menuOpen,
+                            enter = fadeIn(fade),
+                            exit = fadeOut(fade),
+                            modifier = Modifier.align(Alignment.BottomStart).wrapContentWidth(Alignment.Start, unbounded = true),
+                        ) { MenuFooter() }
+                    }
                 }
             }
             Row(Modifier.fillMaxSize()) {

@@ -1973,8 +1973,10 @@ private fun WindowSection(settings: AppSettings) {
             add(Triple("Use system window frame", !settings.customTitleBar.value) { value: Boolean -> settings.customTitleBar.value = !value })
         }
     }
-    titleRows.forEachIndexed { index, (title, checked, change) ->
-        SwitchRow(index, titleRows.size, title, if (title == "Use system window frame") "Applies after restarting pixelGram." else null, checked, change)
+    SegmentedGroup {
+        titleRows.forEachIndexed { index, (title, checked, change) ->
+            SwitchRow(index, titleRows.size, title, if (title == "Use system window frame") "Applies after restarting pixelGram." else null, checked, change)
+        }
     }
     Header("System integration")
     val autostart = com.pixelgram.desktop.core.Autostart.supported
@@ -1998,12 +2000,14 @@ private fun WindowSection(settings: AppSettings) {
         }
     }
     val shown = systemRows.filter { it.visible }
-    systemRows.forEach { row ->
-        val index = shown.indexOf(row)
-        val last = remember { mutableStateOf(index to shown.size) }
-        if (index >= 0) last.value = index to shown.size
-        Reveal(row.visible) {
-            SwitchRow(last.value.first, last.value.second, row.title, row.subtitle, row.checked, row.onChange)
+    SegmentedGroup {
+        systemRows.forEach { row ->
+            val index = shown.indexOf(row)
+            val last = remember { mutableStateOf(index to shown.size) }
+            if (index >= 0) last.value = index to shown.size
+            Reveal(row.visible) {
+                SwitchRow(last.value.first, last.value.second, row.title, row.subtitle, row.checked, row.onChange)
+            }
         }
     }
 }
