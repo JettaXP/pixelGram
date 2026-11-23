@@ -227,6 +227,13 @@ fun MainScreen(
     }
 
     LaunchedEffect(selectedKey) { telegram.loadChats(selectedKey) }
+    var searchFolder by remember { mutableStateOf(selectedKey) }
+    LaunchedEffect(selectedKey) {
+        if (selectedKey != searchFolder) {
+            searchFolder = selectedKey
+            MessageSearch.open = false
+        }
+    }
     LaunchedEffect(Unit) { telegram.loadChats(ChatListKey.Archive) }
 
     val foldersLeftPref = settings.materialFolders.value && !settings.capsuleFolders.value && tabs.size > 1

@@ -6,6 +6,10 @@ import com.pixelgram.desktop.telegram.openMainWebApp
 import com.pixelgram.desktop.ui.components.groupShapes
 import com.pixelgram.desktop.ui.theme.EmojiVisualTransformation
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -115,7 +119,7 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
                 visualTransformation = EmojiVisualTransformation,
                 onValueChange = { query = it },
                 singleLine = true,
-                placeholder = { Text("Search messages") },
+                placeholder = { Text(if (scope == null) "Search" else "Search messages") },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 trailingIcon = when {
                     query.isNotEmpty() -> {
@@ -172,6 +176,13 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
                 }
             }
         }
+        if (query.isBlank() && tag == null && scope == null) {
+            SearchHome(telegram, settings, Modifier.weight(1f).fillMaxWidth()) { id ->
+                telegram.addRecentChat(id)
+                onOpen(id)
+            }
+            return@Column
+        }
         if (query.isBlank() && tag == null) {
             Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
                 Text("Search for messages", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -204,7 +215,10 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
                             null
                         }
                         SegmentedListItem(
-                            onClick = { onOpen(id) },
+                            onClick = {
+                                telegram.addRecentChat(id)
+                                onOpen(id)
+                            },
                             shapes = groupShapes(index, foundChats.size),
                             leadingContent = { ChatAvatar(chat, telegram, settings, size = 44.dp) },
                             trailingContent = app?.let { { BotAppButton(it) } },
@@ -250,6 +264,120 @@ fun MessageSearchPanel(telegram: Telegram, settings: AppSettings, onOpen: (Long)
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SearchHome(telegram: Telegram, settings: AppSettings, modifier: Modifier, onOpen: (Long) -> Unit) {
+    var top by remember { mutableStateOf<List<Long>>(emptyList()) }
+    var recent by remember { mutableStateOf<List<Long>>(emptyList()) }
+    var more by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        telegram.topChats { top = it }
+        telegram.recentChats { recent = it }
+    }
+    val frequent = top.filter { telegram.chats[it] != null }
+    val recents = recent.filter { telegram.chats[it] != null }
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+    ) {
+        if (frequent.isNotEmpty()) {
+            item(key = "frequent-header") {
+                SearchHeader("Frequent contacts", if (frequent.size > FrequentRow) (if (more) "Show less" else "Show more") else null) { more = !more }
+            }
+            item(key = "frequent") {
+                val shown = if (more) frequent else frequent.take(FrequentRow)
+                val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.unit.IntSize>()
+                androidx.compose.animation.AnimatedContent(
+                    more,
+                    transitionSpec = { androidx.compose.animation.fadeIn(effects) togetherWith androidx.compose.animation.fadeOut(effects) using androidx.compose.animation.SizeTransform(clip = false) { _, _ -> spatial } },
+                    label = "frequent",
+                ) { expanded ->
+                    val list = if (expanded) frequent else shown
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        maxItemsInEachRow = FrequentRow,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.extraLarge).background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .padding(vertical = 10.dp),
+                    ) {
+                        list.forEach { id ->
+                            val chat = telegram.chats[id] ?: return@forEach
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(MaterialTheme.shapes.large)
+                                    .clickable { onOpen(id) }
+                                    .padding(vertical = 6.dp),
+                            ) {
+                                ChatAvatar(chat, telegram, settings, size = 52.dp)
+                                EmojiText(
+                                    telegram.chatTitle(chat),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp).streamerBlur(clickable = false),
+                                )
+                            }
+                        }
+                        repeat((FrequentRow - list.size % FrequentRow) % FrequentRow) { Box(Modifier.weight(1f)) }
+                    }
+                }
+            }
+        }
+        if (recents.isNotEmpty()) {
+            item(key = "recent-header") {
+                SearchHeader("Recent", "Clear") {
+                    telegram.clearRecentChats()
+                    recent = emptyList()
+                }
+            }
+            itemsIndexed(recents, key = { _, id -> "recent:$id" }) { index, id ->
+                val chat = telegram.chats[id] ?: return@itemsIndexed
+                val presence = telegram.presence(chat)
+                SegmentedListItem(
+                    onClick = { onOpen(id) },
+                    shapes = groupShapes(index, recents.size),
+                    leadingContent = { ChatAvatar(chat, telegram, settings, size = 44.dp) },
+                    supportingContent = presence?.let { p ->
+                        { Text(p.label, maxLines = 1, color = if (p.online) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }
+                    },
+                    trailingContent = {
+                        IconButton(onClick = {
+                            telegram.removeRecentChat(id)
+                            recent = recent - id
+                        }) { Icon(Icons.Filled.Close, contentDescription = "Remove") }
+                    },
+                    modifier = Modifier.animateItem(),
+                ) {
+                    EmojiText(telegram.chatTitle(chat), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.streamerBlur(clickable = false))
+                }
+            }
+        }
+        if (frequent.isEmpty() && recents.isEmpty()) {
+            item(key = "empty") {
+                Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
+                    Text("Search chats and messages", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchHeader(title: String, action: String?, onAction: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 6.dp)) {
+        Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        if (action != null) {
+            androidx.compose.material3.TextButton(onClick = onAction) { Text(action) }
+        }
+    }
+}
+
 @Composable
 private fun SearchSection(title: String) {
     Text(
@@ -277,3 +405,4 @@ private fun snippet(text: String, query: String): String {
 private const val SearchDelayMs = 350L
 private const val ChatSearchDelayMs = 150L
 private const val SnippetLead = 12
+private const val FrequentRow = 5

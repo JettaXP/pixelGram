@@ -181,7 +181,7 @@ fun ProfileContent(
         }
         ProfileMusic(telegram, settings, me.id, own = true)
         InfoGroup(rows)
-        androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(androidx.compose.material3.ListItemDefaults.SegmentedGap)) {
             val owner = remember(me.id) { TdApi.MessageSenderUser(me.id) }
             com.pixelgram.desktop.ui.main.ProfileGifts(owner, telegram, Modifier.fillMaxWidth(), own = true, index = 0, count = 2)
             com.pixelgram.desktop.ui.main.StoryArchiveRow(me.id, telegram, index = 1, count = 2, modifier = Modifier.fillMaxWidth())

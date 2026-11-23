@@ -2718,7 +2718,7 @@ class Telegram(
                 }
                 this.caption = text
             }
-        } else if (asPhoto) {
+        } else if (asPhoto && fitsPhoto(file)) {
             val (width, height) = imageSize(file)
             TdApi.InputMessagePhoto().apply {
                 photo = TdApi.InputPhoto().apply {
@@ -3054,6 +3054,30 @@ class Telegram(
                 onResult((mine + global).distinct().filter { chats[it] != null })
             }
         }
+    }
+
+    fun topChats(onResult: (List<Long>) -> Unit) {
+        send(TdApi.GetTopChats(TdApi.TopChatCategoryUsers(), TopChatsLimit)) { result ->
+            onResult((result as? TdApi.Chats)?.chatIds?.toList().orEmpty())
+        }
+    }
+
+    fun recentChats(onResult: (List<Long>) -> Unit) {
+        send(TdApi.SearchRecentlyFoundChats("", null, RecentChatsLimit)) { result ->
+            onResult((result as? TdApi.Chats)?.chatIds?.toList().orEmpty())
+        }
+    }
+
+    fun addRecentChat(chatId: Long) {
+        send(TdApi.AddRecentlyFoundChat(chatId))
+    }
+
+    fun removeRecentChat(chatId: Long) {
+        send(TdApi.RemoveRecentlyFoundChat(chatId))
+    }
+
+    fun clearRecentChats() {
+        send(TdApi.ClearRecentlyFoundChats())
     }
 
     fun savedTags(onResult: (List<TdApi.SavedMessagesTag>) -> Unit) {
@@ -3526,6 +3550,7 @@ class Telegram(
                 val first = index == 0
                 val text = TdApi.FormattedText(if (first) caption else "", if (first) outgoingEntities(chatId, entities) else arrayOf())
                 val input = TdApi.InputFileLocal(file.absolutePath)
+                val photoFile by lazy(LazyThreadSafetyMode.NONE) { if (highQuality) file else com.pixelgram.desktop.ui.main.Attachments.standardQuality(file) }
                 if (asPhotos && com.pixelgram.desktop.ui.main.Attachments.isAnimation(file)) {
                     val info = com.pixelgram.desktop.ui.main.Attachments.videoInfo(file)
                     TdApi.InputMessageAnimation().apply {
@@ -3557,8 +3582,12 @@ class Telegram(
                         this.caption = text
                         hasSpoiler = spoiler
                     }
+                } else if (asPhotos && !fitsPhoto(photoFile)) {
+                    TdApi.InputMessageDocument().apply {
+                        document = TdApi.InputDocument().apply { document = input }
+                        this.caption = text
+                    }
                 } else if (asPhotos) {
-                    val photoFile = if (highQuality) file else com.pixelgram.desktop.ui.main.Attachments.standardQuality(file)
                     val (width, height) = imageSize(photoFile)
                     TdApi.InputMessagePhoto().apply {
                         photo = TdApi.InputPhoto().apply {
@@ -3580,7 +3609,7 @@ class Telegram(
             val groups = buildList {
                 var album = mutableListOf<TdApi.InputMessageContent>()
                 contents.forEach { content ->
-                    if (content is TdApi.InputMessageAnimation) {
+                    if (content is TdApi.InputMessageAnimation || (asPhotos && content is TdApi.InputMessageDocument)) {
                         if (album.isNotEmpty()) add(album)
                         album = mutableListOf()
                         add(listOf(content))
@@ -3862,6 +3891,17 @@ internal fun friendlyError(message: String?): String {
         else -> text.ifEmpty { "Something went wrong." }
     }
 }
+
+fun fitsPhoto(file: File): Boolean {
+    if (file.length() > MaxPhotoBytes) return false
+    val (width, height) = imageSize(file)
+    return width > 0 && height > 0 && width < MaxPhotoRatio * height && height < MaxPhotoRatio * width
+}
+
+private const val TopChatsLimit = 30
+private const val RecentChatsLimit = 50
+private const val MaxPhotoBytes = 10L * 1024 * 1024
+private const val MaxPhotoRatio = 20
 
 fun imageSize(file: File): Pair<Int, Int> = runCatching {
     javax.imageio.ImageIO.createImageInputStream(file).use { stream ->

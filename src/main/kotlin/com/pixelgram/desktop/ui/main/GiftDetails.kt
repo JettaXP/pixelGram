@@ -211,6 +211,7 @@ fun ProfileGifts(owner: TdApi.MessageSender, telegram: Telegram, modifier: Modif
     androidx.compose.material3.SegmentedListItem(
         onClick = { open = true },
         shapes = com.pixelgram.desktop.ui.components.groupShapes(index, count),
+        colors = com.pixelgram.desktop.ui.components.rowColors(),
         leadingContent = { androidx.compose.material3.Icon(Icons.Outlined.CardGiftcard, contentDescription = null) },
         trailingContent = {
             androidx.compose.foundation.layout.Row(

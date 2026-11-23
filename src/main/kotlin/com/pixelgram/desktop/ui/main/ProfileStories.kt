@@ -237,6 +237,7 @@ fun StoryArchiveRow(chatId: Long, telegram: Telegram, index: Int, count: Int, mo
     SegmentedListItem(
         onClick = { open = true },
         shapes = groupShapes(index, count),
+        colors = com.pixelgram.desktop.ui.components.rowColors(),
         leadingContent = { Icon(Icons.Outlined.History, contentDescription = null) },
         trailingContent = { Text(total.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant) },
         modifier = modifier,
