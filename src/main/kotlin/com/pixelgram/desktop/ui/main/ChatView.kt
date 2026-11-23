@@ -342,6 +342,13 @@ private fun ChatViewContent(
     var deleting by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var forwarding by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var profileChat by remember(chat.id) { mutableStateOf<ChatState?>(null) }
+    val openSender = { message: UiMessage ->
+        if (message.senderUserId != 0L) {
+            telegram.openPrivateChat(message.senderUserId) { id -> profileChat = telegram.chats[id] }
+        } else if (message.senderChatId != 0L) {
+            telegram.chats[message.senderChatId]?.let { profileChat = it } ?: onOpenChat(message.senderChatId)
+        }
+    }
     var savedHub by remember(chat.id) { mutableStateOf(false) }
     val openOrigin = { origin: TdApi.MessageOrigin ->
         when (origin) {
@@ -972,13 +979,7 @@ private fun ChatViewContent(
                                 if (groupChat || !chat.isChannel) {
                                     Box(if (groupChat) Modifier.width(SenderAvatarSlot) else Modifier.wideSlot(wideProgress)) {
                                         if (lastInRun) {
-                                            SenderAvatar(message, telegram, settings) {
-                                                if (message.senderUserId != 0L) {
-                                                    telegram.openPrivateChat(message.senderUserId) { id -> profileChat = telegram.chats[id] }
-                                                } else {
-                                                    onOpenChat(message.senderChatId)
-                                                }
-                                            }
+                                            SenderAvatar(message, telegram, settings) { openSender(message) }
                                         }
                                     }
                                 }
@@ -988,7 +989,9 @@ private fun ChatViewContent(
                                     message = if (chat.isChannel && message.isOutgoing) message.copy(isOutgoing = false) else message,
                                     modifier = Modifier.weight(1f),
                                     senderName = if ((groupChat || sentAsChat) && firstInRun) telegram.senderName(message) else null,
-                                    senderTag = if (groupChat && firstInRun) telegram.senderTag(chat, message) else null,
+                                    senderTag = if (groupChat && firstInRun && !message.isOutgoing) telegram.senderTag(chat, message) else null,
+                                    onSender = { openSender(message) },
+                                    onTag = if (message.isOutgoing) null else ({ tag -> TagDialogs.info = TagInfo(chat, telegram.senderName(message), tag.text, tag.rank) }),
                                     settings = settings,
                                     status = if (message.isOutgoing && !chat.isChannel) telegram.status(chat, message) else null,
                                     onReact = { emoji -> telegram.toggleReaction(message, emoji) },
@@ -1449,6 +1452,8 @@ fun MessageBubble(
     onVia: ((String) -> Unit)? = null,
     onComments: (() -> Unit)? = null,
     senderTag: SenderTag? = null,
+    onTag: ((SenderTag) -> Unit)? = null,
+    onSender: (() -> Unit)? = null,
 ) {
     val seconds = settings.messageSeconds.value
     remember(message.chatId, message.id) { ReactionMemory.note(message) }
@@ -1547,9 +1552,9 @@ fun MessageBubble(
                                 color = senderColor(message.senderUserId.takeIf { it != 0L } ?: message.senderChatId),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false).streamerBlur(),
+                                modifier = Modifier.weight(1f, fill = false).then(if (onSender != null) Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onSender).pointerHoverIcon(androidx.compose.ui.input.pointer.PointerIcon.Hand) else Modifier).streamerBlur(clickable = false),
                             )
-                            senderTag?.let { MemberTagPill(it.text, it.rank) }
+                            senderTag?.let { tag -> MemberTagPill(tag.text, tag.rank, onClick = onTag?.let { { it(tag) } }) }
                         }
                         if (via.isNotBlank()) {
                             Text(

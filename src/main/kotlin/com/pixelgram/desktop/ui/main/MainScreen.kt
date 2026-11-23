@@ -197,6 +197,7 @@ fun MainScreen(
     com.pixelgram.desktop.ui.premium.EmojiStatusOverlay()
     com.pixelgram.desktop.ui.premium.PremiumOverlay()
     LinkDialogs(settings, onOpenChat)
+    TagDialogHost(telegram)
     val tabs = FolderLayout.tabs(telegram, settings)
     var selectedKey by rememberSaveable { mutableStateOf<ChatListKey>(ChatListKey.Main) }
     if (selectedKey != ChatListKey.Archive && tabs.none { it.key == selectedKey } && tabs.isNotEmpty()) {

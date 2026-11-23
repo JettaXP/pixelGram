@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -201,18 +202,20 @@ fun tagColor(rank: MemberRank): Color {
 }
 
 @Composable
-fun MemberTagPill(text: String, rank: MemberRank, modifier: Modifier = Modifier) {
+fun MemberTagPill(text: String, rank: MemberRank, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     val color = tagColor(rank)
+    val click = if (onClick != null) Modifier.clip(CircleShape).clickable(onClick = onClick) else Modifier
     EmojiText(
         text,
         style = MaterialTheme.typography.labelSmall,
         color = color,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(color.copy(alpha = TagPillAlpha))
-            .padding(horizontal = 6.dp, vertical = 1.dp),
+        modifier = if (rank == MemberRank.Member) {
+            modifier.then(click).padding(horizontal = 2.dp, vertical = 1.dp)
+        } else {
+            modifier.then(click).clip(CircleShape).background(color.copy(alpha = TagPillAlpha)).padding(horizontal = 7.dp, vertical = 1.dp)
+        },
     )
 }
 

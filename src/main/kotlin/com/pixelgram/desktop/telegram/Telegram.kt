@@ -1861,6 +1861,17 @@ class Telegram(
         }
     }
 
+    fun ownTag(chat: ChatState): SenderTag? {
+        val id = me?.id ?: return null
+        val role = memberRoles(chat)[id] ?: return null
+        return SenderTag(role.tag, role.rank)
+    }
+
+    fun ownMemberTag(chatId: Long, onResult: (String) -> Unit) {
+        val id = me?.id ?: return
+        send(TdApi.GetChatMember(chatId, TdApi.MessageSenderUser(id))) { result -> (result as? TdApi.ChatMember)?.let { onResult(it.tag.orEmpty()) } }
+    }
+
     fun senderTag(chat: ChatState, message: UiMessage): SenderTag? {
         if (!chat.isGroup || chat.isChannel || message.senderUserId == 0L) return null
         val role = memberRoles(chat)[message.senderUserId]

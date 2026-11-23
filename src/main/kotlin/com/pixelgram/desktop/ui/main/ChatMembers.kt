@@ -177,7 +177,7 @@ private fun MemberItem(
             onClick = onProfile,
             shapes = groupShapes(index, count),
             leadingContent = { AvatarImage(name, telegram.senderPhoto(member.memberId), telegram, CircleShape, 36.dp) },
-            trailingContent = role?.let { { MemberTagPill(it, if (owner) MemberRank.Owner else if (admin) MemberRank.Admin else MemberRank.Member) } },
+            trailingContent = role?.let { { MemberTagPill(it, if (owner) MemberRank.Owner else if (admin) MemberRank.Admin else MemberRank.Member, onClick = if (self && telegram.canEditOwnTag(chat)) ({ TagDialogs.edit = chat }) else null) } },
             modifier = Modifier.fillMaxWidth().pointerInput(member.memberId) {
                 awaitPointerEventScope {
                     while (true) {
