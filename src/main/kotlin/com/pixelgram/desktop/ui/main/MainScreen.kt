@@ -289,7 +289,7 @@ fun MainScreen(
                     tabs = tabs,
                     selected = selectedKey,
                     onToggleMenu = toggleMenu,
-                    onSelect = { key -> closeMenuAnd { if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
+                    onSelect = { key -> closeMenuAnd { MessageSearch.open = false; if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
                     onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
                     onOpenSaved = {
                         closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
@@ -319,11 +319,11 @@ fun MainScreen(
                     val topFolders = @Composable {
                         if (!foldersLeft && selectedKey != ChatListKey.Archive) {
                             if (settings.capsuleFolders.value) {
-                                CapsuleFolders(tabs, selectedKey, settings, onSelect = { if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
+                                CapsuleFolders(tabs, selectedKey, settings, onSelect = { MessageSearch.open = false; if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
                             } else if (settings.pillFolders.value) {
-                                PillFolders(tabs, selectedKey, settings.folderTitle.value, onSelect = { if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
+                                PillFolders(tabs, selectedKey, settings.folderTitle.value, onSelect = { MessageSearch.open = false; if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
                             } else {
-                                TopFolders(tabs, selectedKey, com.pixelgram.desktop.core.FolderTitle.NamesAndIcons, onSelect = { if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
+                                TopFolders(tabs, selectedKey, com.pixelgram.desktop.core.FolderTitle.NamesAndIcons, onSelect = { MessageSearch.open = false; if (it == selectedKey) ChatListScroll.request++ else selectedKey = it })
                             }
                         }
                     }

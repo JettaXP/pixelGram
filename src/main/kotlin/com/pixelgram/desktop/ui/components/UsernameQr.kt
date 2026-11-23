@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.components
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,7 +41,7 @@ fun UsernameQrDialog(username: String, title: String, photo: TdApi.ProfilePhoto?
     AlertDialog(
         onDismissRequest = onDismiss,
         text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 AvatarImage(
                     title,
                     photo?.small,
