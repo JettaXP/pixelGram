@@ -587,6 +587,11 @@ private fun ChatRow(
                         val id = (message.senderId as? TdApi.MessageSenderUser)?.userId
                         if (message.isOutgoing) com.pixelgram.desktop.core.tr("You") else id?.let { telegram.users[it]?.firstName?.ifBlank { null } } ?: telegram.senderTitle(message.senderId)
                     }
+                        ?: last?.takeIf { chat.isChannel && !isService(it.content) }?.let { message ->
+                            val id = (message.senderId as? TdApi.MessageSenderUser)?.userId
+                            val name = id?.let { telegram.users[it]?.firstName?.ifBlank { null } ?: telegram.userName(it) } ?: message.authorSignature
+                            name.trim().split(Regex("\\s+")).firstOrNull()?.takeIf { it.isNotBlank() }
+                        }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (!sender.isNullOrBlank()) EmojiText("$sender: ", color = colors.primary, maxLines = 1, modifier = Modifier.streamerBlur(clickable = false))
                         val album = last?.mediaAlbumId?.takeIf { it != 0L }
