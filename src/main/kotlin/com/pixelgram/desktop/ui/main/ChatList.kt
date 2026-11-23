@@ -457,6 +457,35 @@ private fun CompactChatList(
 private val CompactItemSize = 64.dp
 private val MarkBadge = 18.dp
 private val PreviewThumb = 18.dp
+private const val AlbumThumbs = 3
+
+private fun mediaThumb(content: TdApi.MessageContent?): Pair<TdApi.File?, Boolean> = when (content) {
+    is TdApi.MessagePhoto -> content.photo.sizes.minByOrNull { it.width }?.photo to false
+    is TdApi.MessageVideo -> content.video.thumbnail?.file to true
+    is TdApi.MessageDocument -> content.document.thumbnail?.file to false
+    is TdApi.MessageAudio -> content.audio.albumCoverThumbnail?.file to false
+    else -> null to false
+}
+
+private fun captionOf(content: TdApi.MessageContent?): String? = when (content) {
+    is TdApi.MessagePhoto -> content.caption.text
+    is TdApi.MessageVideo -> content.caption.text
+    is TdApi.MessageDocument -> content.caption.text
+    is TdApi.MessageAudio -> content.caption.text
+    else -> null
+}
+
+private fun albumLabel(group: List<TdApi.Message>): String {
+    val tr = { key: String -> com.pixelgram.desktop.core.tr(key) }
+    val count = group.size
+    return when {
+        group.all { it.content is TdApi.MessagePhoto } -> tr("%d photos").format(count)
+        group.all { it.content is TdApi.MessageVideo } -> tr("%d videos").format(count)
+        group.all { it.content is TdApi.MessageDocument } -> tr("%d files").format(count)
+        group.all { it.content is TdApi.MessageAudio } -> tr("%d audio files").format(count)
+        else -> tr("%d media").format(count)
+    }
+}
 private const val ScrollJumpItems = 12
 
 @Composable
@@ -560,6 +589,28 @@ private fun ChatRow(
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (!sender.isNullOrBlank()) EmojiText("$sender: ", color = colors.primary, maxLines = 1, modifier = Modifier.streamerBlur(clickable = false))
+                        val album = last?.mediaAlbumId?.takeIf { it != 0L }
+                        if (album != null && last != null) androidx.compose.runtime.LaunchedEffect(last.id) { telegram.loadAlbum(last) }
+                        val group = album?.let { telegram.albums[it] }?.takeIf { it.size > 1 }
+                        if (group != null) {
+                            group.take(AlbumThumbs).forEach { part ->
+                                val (partThumb, partVideo) = mediaThumb(part.content)
+                                if (partThumb != null) {
+                                    Box(Modifier.padding(end = 3.dp), contentAlignment = Alignment.Center) {
+                                        com.pixelgram.desktop.ui.components.AvatarImage("", partThumb, telegram, RoundedCornerShape(4.dp), PreviewThumb)
+                                        if (partVideo) Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(PreviewThumb * 0.7f))
+                                    }
+                                }
+                            }
+                            val caption = group.firstNotNullOfOrNull { part -> captionOf(part.content)?.takeIf { it.isNotBlank() } }
+                            EmojiText(
+                                (caption ?: albumLabel(group)).replace('\n', ' '),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = 1.dp),
+                            )
+                            return@Row
+                        }
                         val (thumb, video) = when (val content = last?.content) {
                             is TdApi.MessagePhoto -> content.photo.sizes.minByOrNull { it.width }?.photo to false
                             is TdApi.MessageVideo -> content.video.thumbnail?.file to true

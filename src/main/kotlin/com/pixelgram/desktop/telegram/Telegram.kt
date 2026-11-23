@@ -3078,6 +3078,17 @@ class Telegram(
         }
     }
 
+    val albums = mutableStateMapOf<Long, List<TdApi.Message>>()
+
+    fun loadAlbum(last: TdApi.Message) {
+        val album = last.mediaAlbumId
+        if (album == 0L || albums[album]?.any { it.id == last.id } == true) return
+        send(TdApi.GetChatHistory(last.chatId, last.id, 0, AlbumLookup, false)) { result ->
+            val found = (result as? TdApi.Messages)?.messages?.filterNotNull()?.filter { it.mediaAlbumId == album }.orEmpty()
+            albums[album] = (found + last).distinctBy { it.id }.sortedBy { it.id }
+        }
+    }
+
     fun topChats(onResult: (List<Long>) -> Unit) {
         send(TdApi.GetTopChats(TdApi.TopChatCategoryUsers(), TopChatsLimit)) { result ->
             onResult((result as? TdApi.Chats)?.chatIds?.toList().orEmpty())
@@ -3923,6 +3934,7 @@ fun fitsPhoto(file: File): Boolean {
 }
 
 private const val TopChatsLimit = 30
+private const val AlbumLookup = 10
 private const val RecentChatsLimit = 50
 private const val MaxPhotoBytes = 10L * 1024 * 1024
 private const val MaxPhotoRatio = 20
