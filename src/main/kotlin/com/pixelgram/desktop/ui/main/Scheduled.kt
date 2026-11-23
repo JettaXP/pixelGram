@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,6 +40,9 @@ import com.pixelgram.desktop.telegram.UiMessage
 import com.pixelgram.desktop.telegram.contentText
 import com.pixelgram.desktop.ui.components.Text
 import com.pixelgram.desktop.ui.icons.Icons
+import com.pixelgram.desktop.ui.OnEscape
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import com.pixelgram.desktop.ui.icons.automirrored.filled.ArrowBack
 import com.pixelgram.desktop.ui.icons.outlined.CalendarMonth
 import com.pixelgram.desktop.ui.icons.outlined.ContentCopy
 import com.pixelgram.desktop.ui.icons.outlined.Delete
@@ -52,25 +57,70 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private sealed interface ScheduledRow {
+    val key: String
+
+    class Day(val label: String) : ScheduledRow {
+        override val key = "day:$label"
+    }
+
+    class Item(val message: UiMessage) : ScheduledRow {
+        override val key = "msg:${message.key}"
+    }
+}
+
+private fun scheduledRows(list: List<UiMessage>): List<ScheduledRow> {
+    val zone = ZoneId.systemDefault()
+    val dated = list.filter { it.scheduledAt >= 0 }.sortedBy { it.scheduledAt }
+    val online = list.filter { it.scheduledAt < 0 }
+    val rows = ArrayList<ScheduledRow>()
+    dated.groupBy { Instant.ofEpochSecond(it.scheduledAt.toLong()).atZone(zone).toLocalDate() }.forEach { (day, items) ->
+        rows += ScheduledRow.Day(dayLabel(day))
+        items.forEach { rows += ScheduledRow.Item(it) }
+    }
+    if (online.isNotEmpty()) {
+        rows += ScheduledRow.Day(com.pixelgram.desktop.core.tr("Scheduled until online"))
+        online.forEach { rows += ScheduledRow.Item(it) }
+    }
+    return rows
+}
+
+private fun dayLabel(day: java.time.LocalDate): String {
+    val today = java.time.LocalDate.now()
+    val tr = { key: String -> com.pixelgram.desktop.core.tr(key) }
+    return when (day) {
+        today -> tr("Scheduled for today")
+        today.plusDays(1) -> tr("Scheduled for tomorrow")
+        else -> tr("Scheduled for") + " " + DateTimeFormatter.ofPattern(if (day.year == today.year) "d MMMM" else "d MMMM yyyy", Locale.forLanguageTag(com.pixelgram.desktop.core.I18n.code)).format(day)
+    }
+}
+
 @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ScheduledDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> Unit) {
-    var list by remember { mutableStateOf<List<UiMessage>?>(null) }
-    var reload by remember { mutableIntStateOf(0) }
-    LaunchedEffect(reload) { telegram.scheduledMessages(chat.id) { list = it.sortedBy { message -> if (message.scheduledAt < 0) Int.MAX_VALUE else message.scheduledAt } } }
-    val refresh = { reload++ }
-    var menuFor by remember { mutableStateOf<UiMessage?>(null) }
+fun ScheduledPane(chat: ChatState, telegram: Telegram, settings: com.pixelgram.desktop.core.AppSettings, modifier: Modifier, onBack: () -> Unit) {
+    var list by remember(chat.id) { mutableStateOf<List<UiMessage>?>(null) }
+    LaunchedEffect(chat.id, telegram.scheduledVersion) {
+        telegram.scheduledMessages(chat.id) { found -> list = found }
+    }
+    LaunchedEffect(list, chat.hasScheduled) {
+        if (list?.isEmpty() == true && !chat.hasScheduled) onBack()
+    }
+    OnEscape {
+        onBack()
+        true
+    }
+    val refresh = { telegram.scheduledMessages(chat.id) { found -> list = found } }
     var editing by remember { mutableStateOf<UiMessage?>(null) }
     var rescheduling by remember { mutableStateOf<UiMessage?>(null) }
     rescheduling?.let { message ->
-        ScheduleDialog(onDismiss = { rescheduling = null }) { date ->
+        ScheduleDialog(onDismiss = { rescheduling = null }, initial = message.scheduledAt.coerceAtLeast(0)) { date ->
             telegram.reschedule(chat.id, message.id, TdApi.MessageSchedulingStateSendAtDate(date, 0)) { refresh() }
             rescheduling = null
         }
     }
     editing?.let { message ->
         var draft by remember(message.key) { mutableStateOf(message.text) }
-        AlertDialog(
+        com.pixelgram.desktop.ui.components.expressive.AlertDialog(
             onDismissRequest = { editing = null },
             title = { Text("Edit") },
             text = { OutlinedTextField(draft, { draft = it }, modifier = Modifier.fillMaxWidth()) },
@@ -83,70 +133,108 @@ fun ScheduledDialog(chat: ChatState, telegram: Telegram, onDismiss: () -> Unit) 
             dismissButton = { TextButton(onClick = { editing = null }) { Text("Cancel") } },
         )
     }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (telegram.isSavedMessages(chat.id)) "Reminders" else "Scheduled messages") },
-        text = {
-            val items = list
-            when {
-                items == null -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
-                items.isEmpty() -> Text("No scheduled messages")
-                else -> LazyColumn(Modifier.heightIn(max = ListHeight), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(items, key = { it.key }) { message ->
-                        Box {
-                            Surface(
-                                onClick = { menuFor = message },
-                                shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            ) {
-                                Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
-                                    Text(
-                                        if (message.scheduledAt < 0) "When online" else scheduleLabel(message.scheduledAt),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                    EmojiText(
-                                        message.text.ifBlank { contentText(message.content) },
-                                        maxLines = 3,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
+    Column(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp)) {
+            com.pixelgram.desktop.ui.components.expressive.IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+            Text(
+                if (telegram.isSavedMessages(chat.id)) "Reminders" else "Scheduled Messages",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
+        val items = list
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            if (items == null) {
+                LoadingIndicator(Modifier.align(Alignment.Center))
+            } else {
+                val rows = remember(items) { scheduledRows(items).asReversed() }
+                LazyColumn(
+                    reverseLayout = true,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    items(rows, key = { it.key }) { row ->
+                        when (row) {
+                            is ScheduledRow.Day -> Box(Modifier.fillMaxWidth().padding(vertical = 6.dp).animateItem(), contentAlignment = Alignment.Center) {
+                                Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                                    Text(row.label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp))
                                 }
                             }
-                            if (menuFor === message) {
-                                DropdownMenu(expanded = true, onDismissRequest = { menuFor = null }, shape = RoundedCornerShape(16.dp)) {
-                                    val item = @Composable { label: String, icon: ImageVector, action: () -> Unit ->
-                                        DropdownMenuItem(
-                                            text = { Text(label) },
-                                            leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                                            onClick = {
-                                                menuFor = null
-                                                action()
-                                            },
-                                        )
-                                    }
-                                    if (message.content is TdApi.MessageText) item("Edit", Icons.Outlined.Edit) { editing = message }
-                                    if (message.text.isNotBlank()) {
-                                        item("Copy Text", Icons.Outlined.ContentCopy) {
-                                            Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(message.text), null)
-                                        }
-                                    }
-                                    item("Send Now", Icons.Outlined.Send) { telegram.reschedule(chat.id, message.id, null) { refresh() } }
-                                    if (message.scheduledAt >= 0) item("Reschedule", Icons.Outlined.CalendarMonth) { rescheduling = message }
-                                    item("Delete", Icons.Outlined.Delete) { telegram.deleteScheduled(chat.id, longArrayOf(message.id)) { refresh() } }
-                                }
-                            }
+                            is ScheduledRow.Item -> ScheduledBubble(
+                                row.message,
+                                telegram,
+                                settings,
+                                Modifier.animateItem(),
+                                onEdit = { editing = row.message },
+                                onSendNow = { telegram.reschedule(chat.id, row.message.id, null) { refresh() } },
+                                onReschedule = { rescheduling = row.message },
+                                onDelete = { telegram.deleteScheduled(chat.id, longArrayOf(row.message.id)) { refresh() } },
+                            )
                         }
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
-    )
+        }
+    }
 }
 
-private fun scheduleLabel(date: Int): String =
-    DateTimeFormatter.ofPattern("d MMMM, HH:mm", Locale.forLanguageTag(com.pixelgram.desktop.core.I18n.code))
-        .withZone(ZoneId.systemDefault())
-        .format(Instant.ofEpochSecond(date.toLong()))
+@Composable
+private fun ScheduledBubble(
+    message: UiMessage,
+    telegram: Telegram,
+    settings: com.pixelgram.desktop.core.AppSettings,
+    modifier: Modifier,
+    onEdit: () -> Unit,
+    onSendNow: () -> Unit,
+    onReschedule: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var menu by remember { mutableStateOf(false) }
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+        Box(
+            Modifier.pointerInput(message.key) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                            event.changes.first().consume()
+                            menu = true
+                        }
+                    }
+                }
+            },
+        ) {
+            MessageBubble(
+                message = message.copy(date = message.scheduledAt.coerceAtLeast(0), isOutgoing = true),
+                senderName = null,
+                settings = settings,
+                telegram = telegram,
+            )
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, shape = RoundedCornerShape(16.dp)) {
+                val item = @Composable { label: String, icon: ImageVector, action: () -> Unit ->
+                    DropdownMenuItem(
+                        text = { Text(label) },
+                        leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        onClick = {
+                            menu = false
+                            action()
+                        },
+                    )
+                }
+                item("Send Now", Icons.Outlined.Send, onSendNow)
+                if (message.scheduledAt >= 0) item("Reschedule", Icons.Outlined.CalendarMonth, onReschedule)
+                if (message.content is TdApi.MessageText) item("Edit", Icons.Outlined.Edit, onEdit)
+                if (message.text.isNotBlank()) {
+                    item("Copy Text", Icons.Outlined.ContentCopy) {
+                        Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(message.text), null)
+                    }
+                }
+                item("Delete", Icons.Outlined.Delete, onDelete)
+            }
+        }
+    }
+}
 
-private val ListHeight = 420.dp

@@ -309,6 +309,14 @@ private fun ChatViewContent(
     var spoiler by remember(chat.id) { mutableStateOf(false) }
     var sendWith by remember(chat.id) { mutableStateOf<AttachmentSend?>(null) }
     var sendRequested by remember(chat.id) { mutableStateOf(false) }
+    var scheduledView by remember(chat.id) { mutableStateOf(false) }
+    var schedulePick by remember(chat.id) { mutableStateOf<((TdApi.MessageSchedulingState) -> Unit)?>(null) }
+    schedulePick?.let { pick ->
+        ScheduleDialog(onDismiss = { schedulePick = null }) { date ->
+            schedulePick = null
+            pick(TdApi.MessageSchedulingStateSendAtDate(date, 0))
+        }
+    }
     val modal = LocalModalHost.current
     val editAttachment = { file: File ->
         modal?.editing = EditRequest(file, telegram, chat.id) { result ->
@@ -599,6 +607,9 @@ private fun ChatViewContent(
     if (forumSidebar && telegram.isForum(chat)) ForumSidebar(chat, telegram, Modifier.fillMaxHeight())
     Column(Modifier.weight(1f).fillMaxHeight()) {
         MiniPlayer(telegram)
+        if (scheduledView) {
+            ScheduledPane(chat, telegram, settings, Modifier.weight(1f).fillMaxWidth()) { scheduledView = false }
+        } else {
         var headerWidth by remember { mutableStateOf(Int.MAX_VALUE) }
         val canCall = chat.privateUserId != 0L && com.pixelgram.desktop.calls.Calls.canCall(telegram, chat.privateUserId)
         val headerButtons = if (canCall) 4 else 2
@@ -1109,6 +1120,7 @@ private fun ChatViewContent(
                 }
             }
         }
+        }
         val panelSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
         val panelFade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
         val panelSize = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
@@ -1227,6 +1239,8 @@ private fun ChatViewContent(
                 sendWith = how
                 sendRequested = true
             },
+            onOpenScheduled = { scheduledView = true },
+            askSchedule = if (scheduledView) ({ pick -> schedulePick = pick }) else null,
             onSend = { text, entities ->
                 val edited = editing
                 val replyId = replyTo?.id ?: 0L
@@ -1909,7 +1923,7 @@ private fun MessageMeta(
         if (message.edited) {
             Icon(Icons.Outlined.Edit, contentDescription = "Edited", tint = color, modifier = Modifier.size(13.dp))
         }
-        Text(formatMessageTime(message.date, seconds), style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
+        if (message.date > 0) Text(formatMessageTime(message.date, seconds), style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
         if (status != null) {
             MessageStatusIcon(status, color = if (status == MessageStatus.Read) readColor else color, size = 16.dp)
         }
@@ -2464,6 +2478,8 @@ private fun Composer(
     onOpenChat: (Long) -> Unit = {},
     onScrollBottom: () -> Unit = {},
     onSendWith: ((AttachmentSend) -> Unit)? = null,
+    onOpenScheduled: () -> Unit = {},
+    askSchedule: (((TdApi.MessageSchedulingState) -> Unit) -> Unit)? = null,
 ) {
     var text by remember(chatId) {
         val draft = telegram.chats[chatId]?.draft.orEmpty()
@@ -2652,7 +2668,16 @@ private fun Composer(
     }
     val hasForward = editing == null && PendingForward.drafts[chatId] != null
     val canSend = if (editing?.photo != null) hasAttachments else text.text.isNotBlank() || hasAttachments || hasForward
-    val send = {
+    val scheduleArmed = remember(chatId) { booleanArrayOf(false) }
+    val send = send@{
+        if (askSchedule != null && editing == null && canSend && !scheduleArmed[0]) {
+            askSchedule { state ->
+                scheduleArmed[0] = true
+                onSendWith?.invoke(AttachmentSend(schedule = state))
+            }
+            return@send
+        }
+        scheduleArmed[0] = false
         if (editing != null && editing.photo == null && text.text.isBlank() && !hasAttachments) {
             onDeleteEditing()
         } else if (!canSend && text.text.isNotEmpty() && editing == null) {
@@ -2836,11 +2861,15 @@ private fun Composer(
             voice.cancel()
         } else {
             voiceScope.launch {
-                when (val recorded = voice.finish()) {
-                    is Recorded.Voice -> telegram.sendVoice(chatId, recorded.note, replyTo?.id ?: 0)
-                    is Recorded.Round -> telegram.sendVideoNote(chatId, recorded.note, replyTo?.id ?: 0)
-                    null -> return@launch
+                val recorded = voice.finish() ?: return@launch
+                val reply = replyTo?.id ?: 0
+                val deliver = { state: TdApi.MessageSchedulingState? ->
+                    when (recorded) {
+                        is Recorded.Voice -> telegram.sendVoice(chatId, recorded.note, reply, state)
+                        is Recorded.Round -> telegram.sendVideoNote(chatId, recorded.note, reply, state)
+                    }
                 }
+                if (askSchedule != null) askSchedule { state -> deliver(state) } else deliver(null)
                 onCancelReply()
             }
         }
@@ -3042,15 +3071,13 @@ private fun Composer(
             }
         }
         val composerChat = telegram.chats[chatId]
-        if (composerChat?.hasScheduled == true && editing == null) {
-            var scheduledOpen by remember(chatId) { mutableStateOf(false) }
-            IconButton(onClick = { scheduledOpen = true }, modifier = Modifier.focusProperties { canFocus = false }) {
+        if (composerChat?.hasScheduled == true && editing == null && askSchedule == null) {
+            IconButton(onClick = onOpenScheduled, modifier = Modifier.focusProperties { canFocus = false }) {
                 Box {
                     Icon(Icons.Outlined.Schedule, contentDescription = "Scheduled messages")
                     Box(Modifier.align(Alignment.TopEnd).size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.error))
                 }
             }
-            if (scheduledOpen) ScheduledDialog(composerChat, telegram) { scheduledOpen = false }
         }
         if (botApp == null && commands.isNotEmpty() && composerChat?.privateUserId == 0L) {
             IconButton(onClick = {
@@ -3193,19 +3220,25 @@ private fun Composer(
                 }
             } else {
                 val showMic = voice.active || (VoiceButton.preferred && !canSend && editing == null)
-                val swapFade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-                val swapScale = androidx.compose.animation.core.tween<Float>(SwapMs, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                val swapFade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                val buttonColor by androidx.compose.animation.animateColorAsState(
+                    if (showMic) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary,
+                    MaterialTheme.motionScheme.defaultEffectsSpec(),
+                )
+                val buttonContent by androidx.compose.animation.animateColorAsState(
+                    if (showMic) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimary,
+                    MaterialTheme.motionScheme.defaultEffectsSpec(),
+                )
                 Box(Modifier.size(SendButtonSlot), contentAlignment = Alignment.Center) {
                     AnimatedContent(
                         targetState = showMic,
                         transitionSpec = {
-                            ((fadeIn(swapFade) + scaleIn(swapScale, initialScale = SwapScaleFrom)) togetherWith
-                                (fadeOut(swapFade) + scaleOut(swapScale, targetScale = SwapScaleFrom))) using SizeTransform(clip = false) { _, _ -> androidx.compose.animation.core.snap() }
+                            fadeIn(swapFade) togetherWith fadeOut(swapFade) using SizeTransform(clip = false) { _, _ -> androidx.compose.animation.core.snap() }
                         },
                         contentAlignment = Alignment.Center,
                     ) { mic ->
                         if (mic) {
-                            MicButton(voice, onRelease = releaseVoice)
+                            MicButton(voice, onRelease = releaseVoice, container = buttonColor, content = buttonContent)
                         } else {
                             var sendMenu by remember { mutableStateOf(false) }
                             var scheduleFor by remember { mutableStateOf(false) }
@@ -3215,35 +3248,29 @@ private fun Composer(
                                     onSendWith(AttachmentSend(schedule = TdApi.MessageSchedulingStateSendAtDate(date, 0)))
                                 }
                             }
-                            if (sendMenu && onSendWith != null) {
+                            if (onSendWith != null) {
                                 val saved = telegram.isSavedMessages(chatId)
                                 val person = composerChat?.let { it.privateUserId != 0L && !saved && !telegram.isBot(it) } == true
-                                androidx.compose.material3.DropdownMenu(expanded = true, onDismissRequest = { sendMenu = false }, shape = RoundedCornerShape(16.dp)) {
-                                    val item = @Composable { label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, action: () -> Unit ->
-                                        androidx.compose.material3.DropdownMenuItem(
-                                            text = { Text(label) },
-                                            leadingIcon = { Icon(icon, contentDescription = null) },
-                                            onClick = {
-                                                sendMenu = false
-                                                action()
-                                            },
-                                        )
-                                    }
-                                    if (hasAttachments) item("Send as file", Icons.Outlined.InsertDriveFile) { onSendWith(AttachmentSend(asFile = true)) }
-                                    if (!saved) item("Send without sound", Icons.Outlined.NotificationsOff) { onSendWith(AttachmentSend(silent = true)) }
-                                    item(if (saved) "Set a reminder" else "Schedule message", Icons.Outlined.CalendarMonth) { scheduleFor = true }
-                                    if (person) item("Send when online", Icons.Outlined.Alarm) { onSendWith(AttachmentSend(schedule = TdApi.MessageSchedulingStateSendWhenOnline())) }
+                                com.pixelgram.desktop.ui.components.AboveMenu(expanded = sendMenu, onDismiss = { sendMenu = false }) {
+                                    val act = { action: () -> Unit -> { sendMenu = false; action() } }
+                                    com.pixelgram.desktop.ui.components.MenuGroups(listOf(
+                                        listOfNotNull(
+                                            if (hasAttachments) com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.InsertDriveFile, "Send as file", onClick = act { onSendWith(AttachmentSend(asFile = true)) }) else null,
+                                            if (!saved) com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.NotificationsOff, "Send without sound", onClick = act { onSendWith(AttachmentSend(silent = true)) }) else null,
+                                        ),
+                                        listOfNotNull(
+                                            com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.CalendarMonth, if (saved) "Set a reminder" else "Schedule message", onClick = act { scheduleFor = true }),
+                                            if (person) com.pixelgram.desktop.ui.components.MenuEntry(Icons.Outlined.Alarm, "Send when online", onClick = act { onSendWith(AttachmentSend(schedule = TdApi.MessageSchedulingStateSendWhenOnline())) }) else null,
+                                        ),
+                                    ))
                                 }
                             }
                             val sendPress = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                            val sendHeld by sendPress.collectIsPressedAsState()
-                            val sendMorph = remember { androidx.graphics.shapes.Morph(MaterialShapes.Cookie12Sided, MaterialShapes.Square) }
-                            val sendProgress by animateFloatAsState(if (sendHeld) 1f else 0f, MaterialTheme.motionScheme.fastSpatialSpec())
-                            val sendShape = remember(sendProgress) { MorphShape(sendMorph, sendProgress) }
                             FilledIconButton(
                                 onClick = send,
                                 enabled = canSend,
-                                shapes = androidx.compose.material3.IconButtonShapes(sendShape, sendShape),
+                                shapes = androidx.compose.material3.IconButtonShapes(CircleShape, CircleShape),
+                                colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(containerColor = buttonColor, contentColor = buttonContent),
                                 interactionSource = sendPress,
                                 modifier = Modifier.pointerInput(canSend) {
                                     awaitPointerEventScope {
@@ -3257,11 +3284,11 @@ private fun Composer(
                                     }
                                 },
                             ) {
-                                Crossfade(editing != null, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects()) { isEditing ->
-                                    if (isEditing) {
-                                        Icon(Icons.Filled.Check, contentDescription = "Save")
-                                    } else {
-                                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                                Crossfade(if (editing != null) 1 else if (askSchedule != null) 2 else 0, animationSpec = com.pixelgram.desktop.ui.components.Motion.effects()) { kind ->
+                                    when (kind) {
+                                        1 -> Icon(Icons.Filled.Check, contentDescription = "Save")
+                                        2 -> Icon(Icons.Outlined.Schedule, contentDescription = "Schedule")
+                                        else -> Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
                                     }
                                 }
                             }

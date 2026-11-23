@@ -276,6 +276,7 @@ class Telegram(
     private var authRequest = 0
 
     val chats = mutableStateMapOf<Long, ChatState>()
+    var scheduledVersion by mutableIntStateOf(0)
     val users = KeyedState<Long, TdApi.User>()
     val unread = mutableStateMapOf<ChatListKey, UnreadCount>()
     val unreadMessages = mutableStateMapOf<ChatListKey, UnreadCount>()
@@ -1244,7 +1245,10 @@ class Telegram(
                     if (update.messageId !in list) list.add(update.messageId)
                 }
             }
-            is TdApi.UpdateChatHasScheduledMessages -> chats[update.chatId]?.hasScheduled = update.hasScheduledMessages
+            is TdApi.UpdateChatHasScheduledMessages -> {
+                chats[update.chatId]?.hasScheduled = update.hasScheduledMessages
+                scheduledVersion++
+            }
             is TdApi.UpdateChatIsMarkedAsUnread -> chats[update.chatId]?.let { chat ->
                 chat.markedUnread = update.isMarkedAsUnread
                 chatListsChanged()
@@ -1311,7 +1315,9 @@ class Telegram(
                     folders.add(FolderInfo(info.id, info.name?.text?.text ?: "", info.icon?.name ?: ""))
                 }
             }
-            is TdApi.UpdateNewMessage -> {
+            is TdApi.UpdateNewMessage -> if (update.message.schedulingState != null) {
+                scheduledVersion++
+            } else {
                 activeThread?.let { (threadChat, threadId) ->
                     val topic = update.message.topicId as? TdApi.MessageTopicThread
                     if (update.message.chatId == threadChat && topic?.messageThreadId == threadId && threadMessages.none { it.id == update.message.id }) {
@@ -1344,7 +1350,9 @@ class Telegram(
             }
             is TdApi.UpdateScopeNotificationSettings ->
                 scopeNotifications[update.scope.javaClass] = update.notificationSettings
-            is TdApi.UpdateMessageSendSucceeded -> {
+            is TdApi.UpdateMessageSendSucceeded -> if (update.message.schedulingState != null) {
+                scheduledVersion++
+            } else {
                 messages[update.message.chatId]?.let { list ->
                     val index = list.indexOfFirst { it.id == update.oldMessageId }
                     if (index >= 0) list[index] = update.message.toUi().copy(key = list[index].key, fresh = true)
@@ -1409,6 +1417,7 @@ class Telegram(
                 }
             }
             is TdApi.UpdateDeleteMessages -> if (update.isPermanent) {
+                scheduledVersion++
                 messages[update.chatId]?.removeAll { it.id in update.messageIds }
                 update.messageIds.forEach { id ->
                     replyCache.remove(update.chatId to id)
@@ -3270,11 +3279,12 @@ class Telegram(
         })
     }
 
-    fun sendVoice(chatId: Long, voice: com.pixelgram.desktop.core.VoiceNote, replyToId: Long = 0) {
+    fun sendVoice(chatId: Long, voice: com.pixelgram.desktop.core.VoiceNote, replyToId: Long = 0, schedule: TdApi.MessageSchedulingState? = null) {
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
             topicId = topicOf(chatId)
             replyTo = replyInput(replyToId)
+            if (schedule != null) options = TdApi.MessageSendOptions().apply { schedulingState = schedule }
             inputMessageContent = TdApi.InputMessageVoiceNote().apply {
                 voiceNote = TdApi.InputVoiceNote(TdApi.InputFileLocal(voice.file.absolutePath), voice.duration, voice.waveform)
                 caption = TdApi.FormattedText("", arrayOf())
@@ -3282,11 +3292,12 @@ class Telegram(
         })
     }
 
-    fun sendVideoNote(chatId: Long, note: com.pixelgram.desktop.core.VideoNote, replyToId: Long = 0) {
+    fun sendVideoNote(chatId: Long, note: com.pixelgram.desktop.core.VideoNote, replyToId: Long = 0, schedule: TdApi.MessageSchedulingState? = null) {
         send(TdApi.SendMessage().apply {
             this.chatId = chatId
             topicId = topicOf(chatId)
             replyTo = replyInput(replyToId)
+            if (schedule != null) options = TdApi.MessageSendOptions().apply { schedulingState = schedule }
             inputMessageContent = TdApi.InputMessageVideoNote().apply {
                 videoNote = TdApi.InputVideoNote().apply {
                     videoNote = TdApi.InputFileLocal(note.file.absolutePath)

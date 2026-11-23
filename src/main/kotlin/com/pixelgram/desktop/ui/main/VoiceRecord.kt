@@ -36,6 +36,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.automirrored.filled.KeyboardArrowLeft
 import com.pixelgram.desktop.ui.icons.filled.Mic
+import com.pixelgram.desktop.ui.icons.filled.GraphicEq
+import com.pixelgram.desktop.ui.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
@@ -230,7 +232,7 @@ object RecordButton {
 
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modifier: Modifier = Modifier) {
+fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modifier: Modifier = Modifier, container: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary, content: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onPrimary) {
     val density = LocalDensity.current
     val cancelPx = with(density) { CancelDistance.toPx() }
     val lockPx = with(density) { LockDistance.toPx() }
@@ -257,7 +259,7 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
     val pulse by animateFloatAsState(if (recording) 1f + voice.level * PulseScale else 1f, MaterialTheme.motionScheme.fastSpatialSpec())
     val turn by animateFloatAsState(if (RecordButton.mode == RecordMode.Round) 90f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec())
     val scheme = MaterialTheme.colorScheme
-    val micShape = MaterialShapes.Cookie4Sided.toShape()
+    val micShape = CircleShape
     if (hint && !recording) {
         androidx.compose.ui.window.Popup(
             alignment = Alignment.TopEnd,
@@ -278,22 +280,34 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
             }
         }
     }
-    if (recording && !voice.locked) {
-        val lift = (-voice.dragY / lockPx).coerceIn(0f, 1f)
+    val plate = remember { androidx.compose.animation.core.MutableTransitionState(false) }
+    plate.targetState = recording && !voice.locked
+    var lift by remember { mutableStateOf(0f) }
+    if (plate.targetState) lift = (-voice.dragY / lockPx).coerceIn(0f, 1f)
+    if (plate.currentState || plate.targetState) {
         androidx.compose.ui.window.Popup(
             alignment = Alignment.TopCenter,
             offset = androidx.compose.ui.unit.IntOffset(0, -(LockHintOffset + (lift * LockTravel)).toInt()),
         ) {
-            Surface(
-                shape = CircleShape,
-                color = lerp(scheme.surfaceContainerHigh, scheme.primaryContainer, lift),
-                contentColor = lerp(scheme.onSurfaceVariant, scheme.onPrimaryContainer, lift),
-                shadowElevation = 3.dp,
-                modifier = Modifier.popIn(),
+            androidx.compose.animation.AnimatedVisibility(
+                visibleState = plate,
+                enter = androidx.compose.animation.fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                    androidx.compose.animation.scaleIn(MaterialTheme.motionScheme.fastSpatialSpec(), initialScale = 0.6f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)) +
+                    androidx.compose.animation.slideInVertically(MaterialTheme.motionScheme.fastSpatialSpec()) { it / 2 },
+                exit = androidx.compose.animation.fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                    androidx.compose.animation.scaleOut(MaterialTheme.motionScheme.fastSpatialSpec(), targetScale = 0.6f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)) +
+                    androidx.compose.animation.slideOutVertically(MaterialTheme.motionScheme.fastSpatialSpec()) { it / 2 },
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)) {
-                    Icon(Icons.Outlined.Lock, contentDescription = "Slide up to lock", modifier = Modifier.size(20.dp))
-                    Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, modifier = Modifier.size(18.dp))
+                Surface(
+                    shape = CircleShape,
+                    color = lerp(scheme.surfaceContainerHigh, scheme.primaryContainer, lift),
+                    contentColor = lerp(scheme.onSurfaceVariant, scheme.onPrimaryContainer, lift),
+                    shadowElevation = 3.dp,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)) {
+                        Icon(Icons.Outlined.Lock, contentDescription = "Slide up to lock", modifier = Modifier.size(20.dp))
+                        Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
                 }
             }
         }
@@ -362,7 +376,7 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
                     scaleY = scale * pulse
                     alpha = if (recording) PulseAlpha else 0f
                 }
-                .background(scheme.primary, micShape),
+                .background(container, micShape),
         )
         Box(
             contentAlignment = Alignment.Center,
@@ -373,7 +387,7 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
                     scaleY = scale
                     rotationZ = turn
                 }
-                .background(scheme.primary, micShape),
+                .background(container, micShape),
         ) {
             androidx.compose.animation.AnimatedContent(
                 targetState = if (voice.locked && voice.active) null else RecordButton.mode,
@@ -384,13 +398,18 @@ fun MicButton(voice: VoiceRecording, onRelease: (cancel: Boolean) -> Unit, modif
                 modifier = Modifier.graphicsLayer { rotationZ = -turn },
             ) { mode ->
                 if (mode == null) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = scheme.onPrimary, modifier = Modifier.size(22.dp))
+                    Box(Modifier.size(28.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = content, modifier = Modifier.size(22.dp).align(Alignment.Center))
+                        Box(Modifier.align(Alignment.BottomEnd).size(13.dp).clip(CircleShape).background(container), contentAlignment = Alignment.Center) {
+                            Icon(com.pixelgram.desktop.ui.icons.Icons.Filled.Lock, contentDescription = null, tint = content, modifier = Modifier.size(9.dp))
+                        }
+                    }
                     return@AnimatedContent
                 }
                 Icon(
-                    if (mode == RecordMode.Voice) Icons.Filled.Mic else Icons.Filled.Videocam,
+                    if (mode == RecordMode.Voice) Icons.Filled.GraphicEq else Icons.Filled.Videocam,
                     contentDescription = if (mode == RecordMode.Voice) "Hold to record a voice message, click for a video message" else "Hold to record a video message, click for a voice message",
-                    tint = scheme.onPrimary,
+                    tint = content,
                     modifier = Modifier.size(22.dp),
                 )
             }

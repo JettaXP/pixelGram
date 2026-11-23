@@ -1,5 +1,6 @@
 package com.pixelgram.desktop.ui.main
 
+import com.pixelgram.desktop.ui.components.expressive.popIn
 import androidx.compose.foundation.gestures.detectTapGestures
 import com.pixelgram.desktop.ui.icons.outlined.NotificationsOff
 import com.pixelgram.desktop.ui.icons.outlined.CalendarMonth
@@ -748,40 +749,81 @@ private const val PreviewScrim = 0.45f
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-internal fun ScheduleDialog(onDismiss: () -> Unit, onPick: (Int) -> Unit) {
-    var day by remember { mutableStateOf<Long?>(null) }
-    val dateState = androidx.compose.material3.rememberDatePickerState(initialSelectedDateMillis = System.currentTimeMillis())
-    val now = java.time.LocalTime.now().plusMinutes(ScheduleLeadMinutes)
-    val timeState = androidx.compose.material3.rememberTimePickerState(initialHour = now.hour, initialMinute = now.minute, is24Hour = true)
-    val pickedDay = day
-    if (pickedDay == null) {
+internal fun ScheduleDialog(onDismiss: () -> Unit, initial: Int = 0, onPick: (Int) -> Unit) {
+    val zone = java.time.ZoneId.systemDefault()
+    val start = if (initial > 0) java.time.Instant.ofEpochSecond(initial.toLong()).atZone(zone).toLocalDateTime() else java.time.LocalDateTime.now().plusMinutes(ScheduleLeadMinutes)
+    var day by remember { mutableStateOf(start.toLocalDate()) }
+    var pickingDay by remember { mutableStateOf(false) }
+    val timeState = androidx.compose.material3.rememberTimePickerState(initialHour = start.hour, initialMinute = start.minute, is24Hour = true)
+    var now by remember { mutableStateOf(System.currentTimeMillis() / 1000) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(ClockTickMs)
+            now = System.currentTimeMillis() / 1000
+        }
+    }
+    val at = day.atTime(timeState.hour, timeState.minute).atZone(zone).toEpochSecond()
+    val future = at > now + MinLeadSeconds
+    if (pickingDay) {
+        val today = java.time.LocalDate.now(zone)
+        val dateState = androidx.compose.material3.rememberDatePickerState(
+            initialSelectedDateMillis = day.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(),
+            selectableDates = object : androidx.compose.material3.SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    !java.time.Instant.ofEpochMilli(utcTimeMillis).atZone(java.time.ZoneOffset.UTC).toLocalDate().isBefore(today)
+
+                override fun isSelectableYear(year: Int): Boolean = year >= today.year
+            },
+        )
         androidx.compose.material3.DatePickerDialog(
-            onDismissRequest = onDismiss,
+            onDismissRequest = { pickingDay = false },
             confirmButton = {
                 androidx.compose.material3.TextButton(
-                    onClick = { day = dateState.selectedDateMillis },
+                    onClick = {
+                        dateState.selectedDateMillis?.let { day = java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneOffset.UTC).toLocalDate() }
+                        pickingDay = false
+                    },
                     enabled = dateState.selectedDateMillis != null,
-                ) { Text("Next") }
+                ) { Text("OK") }
             },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { pickingDay = false }) { Text("Cancel") } },
         ) { androidx.compose.material3.DatePicker(dateState) }
-    } else {
-        com.pixelgram.desktop.ui.components.expressive.AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("Send at") },
-            text = { androidx.compose.material3.TimePicker(timeState) },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
-                    val date = java.time.Instant.ofEpochMilli(pickedDay).atZone(java.time.ZoneOffset.UTC).toLocalDate()
-                    val at = date.atTime(timeState.hour, timeState.minute).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
-                    onPick(at.toInt())
-                }) { Text("Schedule") }
-            },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") } },
-        )
+        return
+    }
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.material3.Surface(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.popIn(),
+        ) {
+            androidx.compose.foundation.layout.Column(Modifier.padding(24.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                    Text("Send this message on…", style = MaterialTheme.typography.headlineSmall)
+                    androidx.compose.material3.FilledTonalButton(onClick = { pickingDay = true }) { Text(scheduleDay(day)) }
+                }
+                androidx.compose.material3.TimePicker(timeState, layoutType = androidx.compose.material3.TimePickerLayoutType.Horizontal)
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.animation.AnimatedVisibility(!future, modifier = Modifier.weight(1f)) {
+                        Text("Pick a time in the future", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    if (future) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                    androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") }
+                    androidx.compose.material3.TextButton(enabled = future, onClick = { onPick(at.toInt()) }) { Text("Schedule") }
+                }
+            }
+        }
     }
 }
 
+private fun scheduleDay(day: java.time.LocalDate): String {
+    val today = java.time.LocalDate.now()
+    val locale = java.util.Locale.forLanguageTag(com.pixelgram.desktop.core.I18n.code)
+    val pattern = if (day.year == today.year) "d MMMM" else "d MMMM yyyy"
+    return java.time.format.DateTimeFormatter.ofPattern(pattern, locale).format(day)
+}
+
+private const val ClockTickMs = 15_000L
+private const val MinLeadSeconds = 30L
 private const val ScheduleLeadMinutes = 10L
 
 private fun Modifier.onSecondaryPress(action: () -> Unit): Modifier = pointerInput(Unit) {

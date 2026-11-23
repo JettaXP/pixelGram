@@ -175,3 +175,46 @@ object PixelContextMenu : androidx.compose.foundation.ContextMenuRepresentation 
         }
     }
 }
+
+@Composable
+fun AboveMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val visible = androidx.compose.runtime.remember { androidx.compose.animation.core.MutableTransitionState(false) }
+    visible.targetState = expanded
+    if (!visible.currentState && !visible.targetState) return
+    val gap = with(androidx.compose.ui.platform.LocalDensity.current) { AboveGap.roundToPx() }
+    val provider = androidx.compose.runtime.remember(gap) {
+        object : androidx.compose.ui.window.PopupPositionProvider {
+            override fun calculatePosition(
+                anchorBounds: androidx.compose.ui.unit.IntRect,
+                windowSize: androidx.compose.ui.unit.IntSize,
+                layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                popupContentSize: androidx.compose.ui.unit.IntSize,
+            ): androidx.compose.ui.unit.IntOffset {
+                val x = (anchorBounds.right - popupContentSize.width).coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0))
+                val y = (anchorBounds.top - popupContentSize.height - gap).coerceAtLeast(0)
+                return androidx.compose.ui.unit.IntOffset(x, y)
+            }
+        }
+    }
+    androidx.compose.ui.window.Popup(
+        popupPositionProvider = provider,
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        androidx.compose.animation.AnimatedVisibility(
+            visibleState = visible,
+            enter = androidx.compose.animation.fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                androidx.compose.animation.scaleIn(MaterialTheme.motionScheme.fastSpatialSpec(), initialScale = 0.8f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(1f, 1f)),
+            exit = androidx.compose.animation.fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                androidx.compose.animation.scaleOut(MaterialTheme.motionScheme.fastSpatialSpec(), targetScale = 0.8f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(1f, 1f)),
+        ) {
+            Column(content = content)
+        }
+    }
+}
+
+private val AboveGap = 4.dp

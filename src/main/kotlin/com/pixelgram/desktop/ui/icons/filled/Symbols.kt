@@ -243,3 +243,6 @@ val Icons.Filled.WindowMaximize: ImageVector get() = IconPacks.icon("Filled.Wind
 val Icons.Filled.WindowRestore: ImageVector get() = IconPacks.icon("Filled.WindowRestore", filterNoneSymbol)
 
 val Icons.Filled.WindowClose: ImageVector get() = IconPacks.icon("Filled.WindowClose", closeSymbol)
+
+private val graphicEqSymbol by lazy { symbol("Filled.GraphicEq", "M160 400Q160 360 200 360Q240 360 240 400V560Q240 600 200 600Q160 600 160 560ZM300 280Q300 240 340 240Q380 240 380 280V680Q380 720 340 720Q300 720 300 680ZM440 180Q440 140 480 140Q520 140 520 180V780Q520 820 480 820Q440 820 440 780ZM580 280Q580 240 620 240Q660 240 660 280V680Q660 720 620 720Q580 720 580 680ZM720 400Q720 360 760 360Q800 360 800 400V560Q800 600 760 600Q720 600 720 560Z") }
+val Icons.Filled.GraphicEq: ImageVector get() = IconPacks.icon("Filled.GraphicEq", graphicEqSymbol)
