@@ -205,6 +205,7 @@ fun MessageGestures(
                         val pressAt = drag.pressAt
                         if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
                             change.consume()
+                            AlbumHover.picked = AlbumHover.part
                             settle?.cancel()
                             if (swipe.active) finish(swipe.pull, false)
                             drag.start(

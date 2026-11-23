@@ -17,6 +17,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -128,6 +129,7 @@ fun AlbumGrid(
     }
 }
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 private fun AlbumCell(message: UiMessage, cell: Cell, telegram: Telegram, modifier: Modifier) {
     val video = cell.video
@@ -140,7 +142,11 @@ private fun AlbumCell(message: UiMessage, cell: Cell, telegram: Telegram, modifi
         }
     }
     Box(
-        modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest).clickable(onClick = open),
+        modifier
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { AlbumHover.part = message }
+            .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Exit) { if (AlbumHover.part?.id == message.id) AlbumHover.part = null }
+            .clickable(onClick = open),
         contentAlignment = Alignment.Center,
     ) {
         ThumbImage(cell.thumb, cell.mini, telegram, Modifier.fillMaxSize())
@@ -160,4 +166,11 @@ private fun AlbumCell(message: UiMessage, cell: Cell, telegram: Telegram, modifi
             }
         }
     }
+}
+
+object AlbumHover {
+    var part: UiMessage? = null
+    var picked: UiMessage? = null
+
+    fun target(message: UiMessage): UiMessage = picked?.takeIf { part -> message.album.size > 1 && message.album.any { it.id == part.id } } ?: message
 }

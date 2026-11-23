@@ -426,7 +426,7 @@ private fun ChatViewContent(
     val canReact = !telegram.isSavedMessages(chat.id) || telegram.me?.isPremium == true
     val actions = remember(chat.id, canReact, chat.protectedContent) {
         MessageActions(
-            onReply = { editing = null; replyTo = it },
+            onReply = { editing = null; replyTo = AlbumHover.target(it) },
             onEdit = { replyTo = null; editing = it },
             onDelete = { deleting = it },
             onCopyPhoto = { message -> telegram.photoPath(message)?.let(Attachments::copyImage) },
