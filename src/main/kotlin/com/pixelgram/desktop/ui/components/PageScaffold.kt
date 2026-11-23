@@ -130,9 +130,10 @@ fun InfoGroup(rows: List<InfoRow>, container: androidx.compose.ui.graphics.Color
                     shapes = groupShapes(index, rows.size),
                     leadingContent = row.leading ?: { Icon(row.icon, contentDescription = null) },
                     supportingContent = {
+                        val rowBg = if (container == androidx.compose.ui.graphics.Color.Unspecified) MaterialTheme.colorScheme.surfaceContainerHigh else container
                         Surface(
                             shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            color = androidx.compose.ui.graphics.lerp(rowBg, MaterialTheme.colorScheme.onSurface, PillTint),
                             modifier = Modifier.padding(top = 4.dp),
                         ) {
                             Text(
@@ -209,3 +210,5 @@ fun InfoGroup(rows: List<InfoRow>, container: androidx.compose.ui.graphics.Color
         }
     }
 }
+
+private const val PillTint = 0.08f
