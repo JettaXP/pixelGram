@@ -66,7 +66,7 @@ import kotlinx.coroutines.delay
 
 private const val TopicNameLimit = 128
 private const val TopicRefreshMs = 400L
-private val SidebarWidth = 260.dp
+internal val SidebarWidth = 260.dp
 
 @Composable
 fun TopicIcon(info: TdApi.ForumTopicInfo, size: Dp) {

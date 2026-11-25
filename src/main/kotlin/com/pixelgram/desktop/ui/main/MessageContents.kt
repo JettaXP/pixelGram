@@ -1,6 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
 import com.pixelgram.desktop.ui.icons.filled.Star
+import com.pixelgram.desktop.ui.icons.outlined.Diamond
+import androidx.compose.ui.graphics.Brush
 import com.pixelgram.desktop.core.tr
 import com.pixelgram.desktop.telegram.stopLiveLocation
 import com.pixelgram.desktop.telegram.recognizeSpeech
@@ -125,7 +127,7 @@ import org.jetbrains.skia.Image as SkiaImage
 
 fun isBareContent(content: TdApi.MessageContent?): Boolean =
     content is TdApi.MessageSticker || content is TdApi.MessageAnimatedEmoji || content is TdApi.MessageDice ||
-        content is TdApi.MessageVideoNote
+        content is TdApi.MessageVideoNote || content is TdApi.MessageTonWalletTransfer
 
 fun isGiftContent(content: TdApi.MessageContent?): Boolean =
     content is TdApi.MessageGift || content is TdApi.MessageUpgradedGift ||
@@ -692,6 +694,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
             busy = false,
             onClick = { if (content.receiptMessageId == 0L) com.pixelgram.desktop.ui.premium.PaymentRequest.current = telegram to TdApi.InputInvoiceMessage(message.chatId, message.id) },
         )
+        is TdApi.MessageTonWalletTransfer -> TonTransferContent(message, content)
         is TdApi.MessageRichMessage -> RichMessageContent(message, content.message, telegram)
         is TdApi.MessageContact -> {
             val contact = content.contact
@@ -731,6 +734,80 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
             }
         }
         else -> Unit
+    }
+}
+
+private val GramCardWidth = 280.dp
+
+@Composable
+private fun TonTransferContent(message: UiMessage, content: TdApi.MessageTonWalletTransfer) {
+    val colors = MaterialTheme.colorScheme
+    val outgoing = message.isOutgoing
+    val amount = gramText(if (outgoing) -content.amount else content.amount, signed = true)
+    val comment = content.comment.trim()
+    val shape = RoundedCornerShape(24.dp)
+    Column(
+        Modifier
+            .width(GramCardWidth)
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(colors.primary, colors.tertiary)))
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Diamond, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(7.dp))
+            Text(
+                tr(if (outgoing) "Sent" else "Received").uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.onPrimary.copy(alpha = 0.72f),
+                letterSpacing = 1.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                tr("GRAM transfer"),
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.onPrimary.copy(alpha = 0.72f),
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                amount,
+                style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Medium),
+                color = colors.onPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "GRAM",
+                style = MaterialTheme.typography.headlineSmall,
+                color = colors.onPrimary.copy(alpha = 0.7f),
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+        }
+        if (comment.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                (if (content.isCommentEncrypted) "🔒 " else "") + comment,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onPrimary.copy(alpha = 0.9f),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (content.peerAddress.isBlank()) tr("Gram wallet") else content.peerAddress.chunked(4).joinToString(" "),
+                style = MaterialTheme.typography.labelSmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                color = colors.onPrimary.copy(alpha = 0.55f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(Icons.Outlined.Diamond, contentDescription = null, tint = colors.onPrimary.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        }
     }
 }
 
@@ -817,7 +894,7 @@ private fun VoiceContent(message: UiMessage, voice: TdApi.VoiceNote, telegram: T
                 color = LocalContentColorAlpha(),
             )
         }
-        TranscribeButton(message, voice.speechRecognitionResult, telegram)
+        TranscribeButton(message, voice.speechRecognitionResult, telegram, buttonSize = PlayerButton, iconSize = 22.dp)
     }
     TranscriptText(message, voice.speechRecognitionResult)
     }
@@ -826,7 +903,14 @@ private fun VoiceContent(message: UiMessage, voice: TdApi.VoiceNote, telegram: T
 private val transcriptsShown = androidx.compose.runtime.mutableStateMapOf<Long, Boolean>()
 
 @Composable
-private fun TranscribeButton(message: UiMessage, result: TdApi.SpeechRecognitionResult?, telegram: Telegram) {
+private fun TranscribeButton(
+    message: UiMessage,
+    result: TdApi.SpeechRecognitionResult?,
+    telegram: Telegram,
+    modifier: Modifier = Modifier,
+    buttonSize: androidx.compose.ui.unit.Dp = 40.dp,
+    iconSize: androidx.compose.ui.unit.Dp = 20.dp,
+) {
     var busy by remember(message.key) { mutableStateOf(false) }
     var error by remember(message.key) { mutableStateOf<String?>(null) }
     val shown = transcriptsShown[message.key] == true
@@ -843,9 +927,9 @@ private fun TranscribeButton(message: UiMessage, result: TdApi.SpeechRecognition
                 }
             }
         },
-        modifier = Modifier.size(32.dp).focusProperties { canFocus = false },
+        modifier = modifier.size(buttonSize).focusProperties { canFocus = false },
     ) {
-        Icon(if (shown && result != null) Icons.Outlined.ExpandLess else Icons.Outlined.Subtitles, contentDescription = "Transcribe", modifier = Modifier.size(18.dp))
+        Icon(if (shown && result != null) Icons.Outlined.ExpandLess else Icons.Outlined.Subtitles, contentDescription = "Transcribe", modifier = Modifier.size(iconSize))
     }
     error?.let { failure ->
         LaunchedEffect(failure) { TopNotice.text = failure }
@@ -1256,38 +1340,46 @@ fun BareContent(message: UiMessage, telegram: Telegram) {
                     }
                 }
             }
-            Box(
-                Modifier.size(VideoNoteSize).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest).clickable(onClick = click),
-                contentAlignment = Alignment.Center,
-            ) {
-                ThumbImage(note.thumbnail?.file, note.minithumbnail, telegram, Modifier.fillMaxSize())
-                if (engine != null) VideoFrame(engine, Modifier.fillMaxSize())
-                if (engine != null && engine.duration > 0) {
-                    val fraction = (engine.position.toFloat() / engine.duration).coerceIn(0f, 1f)
-                    val paused = !engine.playing
-                    CircularWavyProgressIndicator(
-                        progress = { fraction },
-                        modifier = Modifier.fillMaxSize().padding(4.dp),
-                        color = Color.White,
-                        trackColor = if (paused) Color.White.copy(alpha = 0.3f) else Color.Transparent,
-                        amplitude = { if (paused) 1f else 0f },
-                        waveSpeed = 0.dp,
-                    )
-                }
-                Box(Modifier.align(Alignment.BottomEnd).padding(10.dp)) { TranscribeButton(message, note.speechRecognitionResult, telegram) }
-                when {
-                    progress != null -> Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                        TransferRing(progress, Color.White, { telegram.cancelDownload(note.video) }, 44.dp)
+            Box(Modifier.size(VideoNoteSize)) {
+                Box(
+                    Modifier.fillMaxSize().clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest).clickable(onClick = click),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ThumbImage(note.thumbnail?.file, note.minithumbnail, telegram, Modifier.fillMaxSize())
+                    if (engine != null) VideoFrame(engine, Modifier.fillMaxSize())
+                    if (engine != null && engine.duration > 0) {
+                        val fraction = (engine.position.toFloat() / engine.duration).coerceIn(0f, 1f)
+                        val paused = !engine.playing
+                        CircularWavyProgressIndicator(
+                            progress = { fraction },
+                            modifier = Modifier.fillMaxSize().padding(4.dp),
+                            color = Color.White,
+                            trackColor = if (paused) Color.White.copy(alpha = 0.3f) else Color.Transparent,
+                            amplitude = { if (paused) 1f else 0f },
+                            waveSpeed = 0.dp,
+                        )
                     }
-                    path == null -> Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.ArrowDownward, contentDescription = "Download", tint = Color.White, modifier = Modifier.size(28.dp))
+                    when {
+                        progress != null -> Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                            TransferRing(progress, Color.White, { telegram.cancelDownload(note.video) }, 44.dp)
+                        }
+                        path == null -> Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.ArrowDownward, contentDescription = "Download", tint = Color.White, modifier = Modifier.size(28.dp))
+                        }
+                        engine == null -> PlayBadge(false)
+                        !engine.playing -> PlayBadge(false)
                     }
-                    engine == null -> PlayBadge(false)
-                    !engine.playing -> PlayBadge(false)
                 }
+                TranscribeButton(
+                    message,
+                    note.speechRecognitionResult,
+                    telegram,
+                    Modifier.align(Alignment.BottomEnd).padding(end = 0.dp, bottom = 27.dp),
+                )
             }
             TranscriptText(message, note.speechRecognitionResult)
         }
+        is TdApi.MessageTonWalletTransfer -> TonTransferContent(message, content)
         else -> Unit
     }
 }
@@ -1368,7 +1460,7 @@ fun giftServiceText(message: UiMessage, telegram: Telegram): String? = when (val
 }
 
 val StickerSize = 180.dp
-private val VideoNoteSize = 220.dp
+internal val VideoNoteSize = 220.dp
 private val GiftWidth = 240.dp
 
 @Composable

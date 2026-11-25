@@ -1,6 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
 import com.pixelgram.desktop.ui.icons.outlined.Videocam
+import com.pixelgram.desktop.core.BatterySaver
 import androidx.compose.material3.Switch
 import com.pixelgram.desktop.ui.components.streamerBlur
 import com.pixelgram.desktop.ui.noBackSwipe
@@ -98,6 +99,8 @@ import androidx.compose.material3.Icon
 import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.material3.NavigationItemIconPosition
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.ShortNavigationBarItem
@@ -243,8 +246,14 @@ fun MainScreen(
 
     val foldersLeftPref = settings.materialFolders.value && !settings.capsuleFolders.value && tabs.size > 1
     val compactWidth = (maxOf(64, settings.listAvatarSize.value + 16) + 16).dp
-    val railSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
-    val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val motionScheme = MaterialTheme.motionScheme
+    val railSpec = motionScheme.fastSpatialSpec<IntSize>()
+    val fade = motionScheme.defaultEffectsSpec<Float>()
+    val railScheme = remember(motionScheme) {
+        object : MotionScheme by motionScheme {
+            override fun <T> defaultSpatialSpec(): FiniteAnimationSpec<T> = motionScheme.fastSpatialSpec()
+        }
+    }
     val density = LocalDensity.current
     var dragWidth by remember { mutableStateOf(settings.chatListWidth.value.toFloat()) }
     var railWidthPx by remember { androidx.compose.runtime.mutableIntStateOf(0) }
@@ -261,10 +270,11 @@ fun MainScreen(
             }
             val playerSpace = if (sideKind != null) FullPlayerWidth else 0.dp
             val pushedRail = if (settings.sideMenuStyle.value == com.pixelgram.desktop.core.SideMenuStyle.Push) with(density) { railWidthPx.toDp() } else 0.dp
-            val room = (maxWidth - MinChatWidth - RailWidth - playerSpace - pushedRail).value
-            val maxListWidth = minOf(room, maxWidth.value * MaxListShare).coerceAtLeast(compactWidth.value)
             val forum = openChatId?.let { telegram.chats[it] }?.takeIf { telegram.isForum(it) }
-            val compact = forum != null || ((dragWidth < CompactThreshold.value || room < CompactThreshold.value || com.pixelgram.desktop.core.StreamerMode.compactList) && !MessageSearch.open)
+            val forumSpace = if (forum != null) SidebarWidth + 8.dp else 0.dp
+            val room = (maxWidth - MinChatWidth - RailWidth - playerSpace - pushedRail - forumSpace).value
+            val maxListWidth = minOf(room, maxWidth.value * MaxListShare).coerceAtLeast(compactWidth.value)
+            val compact = ((dragWidth < CompactThreshold.value || room < CompactThreshold.value || com.pixelgram.desktop.core.StreamerMode.compactList) && !MessageSearch.open)
             val foldersLeft = foldersLeftPref || (compact && tabs.size > 1)
             val listWidth by androidx.compose.animation.core.animateDpAsState(
                 if (compact) compactWidth else dragWidth.coerceAtMost(maxListWidth).coerceAtLeast(if (MessageSearch.open) CompactThreshold.value else 0f).dp,
@@ -279,24 +289,26 @@ fun MainScreen(
                 exit = shrinkHorizontally(railSpec) + fadeOut(fade),
             ) {
                 Box(Modifier.fillMaxHeight()) {
-                    PixelRail(
-                        accounts = accounts,
-                        state = railState,
-                        expanded = menuOpen,
-                        showFolders = foldersLeft,
-                        showMenuButton = foldersLeft,
-                        telegram = telegram,
-                        settings = settings,
-                        tabs = tabs,
-                        selected = selectedKey,
-                        onToggleMenu = toggleMenu,
-                        onSelect = { key -> closeMenuAnd { MessageSearch.open = false; if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
-                        onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
-                        onOpenSaved = {
-                            closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
-                        },
-                        onNewChat = { channel -> closeMenuAnd { newChat = channel } },
-                    )
+                    MaterialTheme(motionScheme = railScheme) {
+                        PixelRail(
+                            accounts = accounts,
+                            state = railState,
+                            expanded = menuOpen,
+                            showFolders = foldersLeft,
+                            showMenuButton = foldersLeft,
+                            telegram = telegram,
+                            settings = settings,
+                            tabs = tabs,
+                            selected = selectedKey,
+                            onToggleMenu = toggleMenu,
+                            onSelect = { key -> closeMenuAnd { MessageSearch.open = false; if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
+                            onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
+                            onOpenSaved = {
+                                closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
+                            },
+                            onNewChat = { channel -> closeMenuAnd { newChat = channel } },
+                        )
+                    }
                     Box(Modifier.matchParentSize().clipToBounds()) {
                         androidx.compose.animation.AnimatedVisibility(
                             menuOpen,
@@ -317,7 +329,7 @@ fun MainScreen(
                             layout(width, 0) { placeable.place(0, 0) }
                         },
                     )
-                    foldersLeft -> Spacer(Modifier.width(maxOf(RailWidth, with(density) { if (menuOpen) 0.dp else railWidthPx.toDp() })))
+                    foldersLeft -> Spacer(Modifier.width(RailWidth))
                 }
                 Column(
                     Modifier
@@ -477,7 +489,7 @@ fun MainScreen(
                                     enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
                                     exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                                     modifier = Modifier.matchParentSize(),
-                                ) { EmptyShapes() }
+                                ) { EmptyShapes(spin = settings.emptyShapesMotion.value && settings.interfaceAnimations.value && !BatterySaver.saving, scale = 1.35f) }
                                 Surface(
                                     shape = CircleShape,
                                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -1075,12 +1087,12 @@ internal fun EmptyShapes(spin: Boolean = false, scale: Float = 1f) {
         null
     }
     val shapes = listOf(
-        EmptyShape(androidx.compose.material3.MaterialShapes.Cookie12Sided, scheme.primaryContainer, -0.28f, -0.22f, 120.dp, 12f),
-        EmptyShape(androidx.compose.material3.MaterialShapes.Flower, scheme.tertiaryContainer, 0.3f, -0.26f, 96.dp, -18f),
-        EmptyShape(androidx.compose.material3.MaterialShapes.Pill, scheme.secondaryContainer, 0.26f, 0.24f, 110.dp, 35f),
-        EmptyShape(androidx.compose.material3.MaterialShapes.Sunny, scheme.primaryContainer, -0.3f, 0.26f, 84.dp, 0f),
-        EmptyShape(androidx.compose.material3.MaterialShapes.Cookie4Sided, scheme.tertiaryContainer, -0.05f, -0.36f, 56.dp, 20f),
-        EmptyShape(androidx.compose.material3.MaterialShapes.SoftBurst, scheme.secondaryContainer, 0.04f, 0.36f, 64.dp, -10f),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Cookie12Sided, scheme.primaryContainer, -0.28f, -0.22f, 120.dp, 12f, 0.34f, true),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Flower, scheme.tertiaryContainer, 0.3f, -0.26f, 96.dp, -18f, 0.62f, false),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Pill, scheme.secondaryContainer, 0.26f, 0.24f, 110.dp, 35f, 0.88f, true),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Sunny, scheme.primaryContainer, -0.3f, 0.26f, 84.dp, 0f, 0.46f, false),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Cookie4Sided, scheme.tertiaryContainer, -0.05f, -0.36f, 56.dp, 20f, 1.12f, true),
+        EmptyShape(androidx.compose.material3.MaterialShapes.SoftBurst, scheme.secondaryContainer, 0.04f, 0.36f, 64.dp, -10f, 0.74f, false),
     )
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
         shapes.forEachIndexed { index, item ->
@@ -1090,7 +1102,7 @@ internal fun EmptyShapes(spin: Boolean = false, scale: Float = 1f) {
                     .offset(maxWidth * item.x, maxHeight * item.y)
                     .size(item.size * scale)
                     .graphicsLayer {
-                        rotationZ = item.rotation + (turn?.value ?: 0f) * (index % 3 + 1) * if (index % 2 == 0) 1 else -1
+                        rotationZ = item.rotation + (turn?.value ?: 0f) * item.speed * if (item.clockwise) 1 else -1
                         alpha = EmptyShapeAlpha
                     }
                     .background(item.color, item.shape.toShape()),
@@ -1106,6 +1118,8 @@ private class EmptyShape(
     val y: Float,
     val size: androidx.compose.ui.unit.Dp,
     val rotation: Float,
+    val speed: Float,
+    val clockwise: Boolean,
 )
 
 private const val EmptyShapeAlpha = 0.55f

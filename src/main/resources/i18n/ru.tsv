@@ -1925,3 +1925,21 @@ Share your role, title or how you're known in this group. Your tag is visible to
 %d files	Файлов: %d
 %d audio files	Аудио: %d
 %d media	Медиа: %d
+Usernames	Имена пользователей
+Active	Активные
+No active usernames	Нет активных имён пользователя
+Inactive	Неактивные
+Main username	Основное имя пользователя
+Editable username	Изменяемое имя пользователя
+Tap the circle to choose the main username.	Нажмите на кружок, чтобы выбрать основное имя пользователя.
+Activate	Активировать
+Deactivate	Деактивировать
+a-z, 0-9 and underscores, at least 5 characters. Leave empty to remove it.	a-z, 0-9 и подчёркивания, минимум 5 символов. Оставьте пустым, чтобы удалить.
+Other active usernames are switched on and off here. New collectible usernames are acquired in Fragment.	Остальные активные имена включаются и выключаются здесь. Новые коллекционные имена приобретаются во Fragment.
+Saving…	Сохранение…
+Animate shapes	Анимировать фигуры
+Slowly rotate the shapes at different speeds.	Медленно вращать фигуры с разной скоростью.
+Sent	Отправлено
+Received	Получено
+GRAM transfer	Перевод GRAM
+Gram wallet	GRAM-кошелёк

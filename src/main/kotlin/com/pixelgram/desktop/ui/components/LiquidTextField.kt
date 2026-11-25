@@ -379,21 +379,57 @@ private fun LiquidCaret(
     LaunchedEffect(target) {
         if (target != null) moved = System.nanoTime()
     }
-    LaunchedEffect(smooth, stiffness, tailStiffness) {
+    val typingJump = with(LocalDensity.current) { TypingJumpMax.toPx() }
+    val maxLead = with(LocalDensity.current) { TypingLeadMax.toPx() }
+    LaunchedEffect(smooth, stiffness, tailStiffness, typingJump, maxLead) {
+        var previous: Offset? = null
+        var lastChange = 0L
+        var speed = 0f
+        var lead = 0f
         while (true) {
             val goal = snapshotFlow { latestTarget }.filterNotNull().first()
+            previous = goal.first
             if (!motion.ready || !smooth) {
+                speed = 0f
+                lead = 0f
                 motion.snap(goal.first, goal.second)
                 snapshotFlow { latestTarget }.filterNotNull().first { it != goal }
                 continue
             }
             var last = withFrameNanos { it }
+            lastChange = last
             while (true) {
                 val settled = withFrameNanos { now ->
                     val current = latestTarget ?: return@withFrameNanos true
                     val dt = ((now - last) / 1_000_000_000f).coerceAtMost(MaxFrameSeconds)
                     last = now
-                    motion.step(current.first, current.second, dt, stiffness, tailStiffness)
+                    val from = previous
+                    if (from != null && current.first != from) {
+                        val dx = current.first.x - from.x
+                        val dy = current.first.y - from.y
+                        val elapsed = ((now - lastChange) / 1_000_000_000f).coerceIn(0.008f, 0.3f)
+                        if (kotlin.math.abs(dy) < 1f && kotlin.math.abs(dx) <= typingJump) {
+                            speed += (dx / elapsed - speed) * TypingVelocityMix
+                            lead = (speed * TypingLeadTime).coerceIn(-maxLead, maxLead)
+                        } else {
+                            speed = 0f
+                            lead = 0f
+                        }
+                        lastChange = now
+                    } else {
+                        speed *= kotlin.math.exp(-dt / TypingSpeedDecay)
+                        lead *= kotlin.math.exp(-dt / TypingLeadDecay)
+                        if (kotlin.math.abs(lead) < 0.5f) lead = 0f
+                    }
+                    previous = current.first
+                    motion.step(
+                        Offset(current.first.x + lead, current.first.y),
+                        current.second,
+                        dt,
+                        stiffness,
+                        tailStiffness,
+                        snapWhenDone = lead == 0f,
+                    )
                 }
                 if (settled) break
             }
@@ -465,7 +501,7 @@ private class CaretMotion {
         ready = true
     }
 
-    fun step(point: Offset, size: Float, dt: Float, stiffness: Float, tailStiffness: Float): Boolean {
+    fun step(point: Offset, size: Float, dt: Float, stiffness: Float, tailStiffness: Float, snapWhenDone: Boolean = true): Boolean {
         var left = dt
         var h = head
         var t = tail
@@ -482,12 +518,12 @@ private class CaretMotion {
         }
         val done = (h - point).getDistance() < RestDistance && (t - point).getDistance() < RestDistance &&
             headSpeed.getDistance() < RestSpeed && tailSpeed.getDistance() < RestSpeed && kotlin.math.abs(size - z) < RestDistance
-        if (done) snap(point, size) else {
+        if (done && snapWhenDone) snap(point, size) else {
             head = h
             tail = t
             height = z
         }
-        return done
+        return done && snapWhenDone
     }
 
     private fun damping(stiffness: Float, ratio: Float) = 2f * ratio * sqrt(stiffness)
@@ -495,6 +531,12 @@ private class CaretMotion {
 
 private const val SubStep = 0.004f
 private const val MaxFrameSeconds = 0.2f
+private val TypingJumpMax = 32.dp
+private val TypingLeadMax = 20.dp
+private const val TypingLeadTime = 0.09f
+private const val TypingLeadDecay = 0.16f
+private const val TypingSpeedDecay = 0.25f
+private const val TypingVelocityMix = 0.5f
 private const val RestDistance = 0.3f
 private const val RestSpeed = 4f
 

@@ -638,10 +638,16 @@ fun ChatInfoContent(
                     size = 96.dp,
                     onClick = when {
                         chat.privateUserId != 0L && chat.photo != null -> {
-                            { com.pixelgram.desktop.ui.profile.openProfilePhotos(telegram, chat.privateUserId, telegram.chatTitle(chat)) }
+                            {
+                                onDismiss()
+                                com.pixelgram.desktop.ui.profile.openProfilePhotos(telegram, chat.privateUserId, telegram.chatTitle(chat))
+                            }
                         }
                         chat.bigPhoto != null -> {
-                            { chat.bigPhoto?.let { big -> PhotoViewer.current = ViewedPhoto(telegram, chat.photo ?: big, big, "", subtitle = telegram.chatTitle(chat)) } }
+                            {
+                                onDismiss()
+                                chat.bigPhoto?.let { big -> PhotoViewer.current = ViewedPhoto(telegram, chat.photo ?: big, big, "", subtitle = telegram.chatTitle(chat)) }
+                            }
                         }
                         else -> null
                     },

@@ -1013,6 +1013,12 @@ class Telegram(
     fun setUsername(username: String, done: (String?) -> Unit) =
         send(TdApi.SetUsername(username.trim().removePrefix("@")), okOrError(done))
 
+    fun toggleUsername(username: String, active: Boolean, done: (String?) -> Unit) =
+        send(TdApi.ToggleUsernameIsActive(username.trim().removePrefix("@"), active), okOrError(done))
+
+    fun reorderUsernames(usernames: List<String>, done: (String?) -> Unit) =
+        send(TdApi.ReorderActiveUsernames(usernames.map { it.trim().removePrefix("@") }.toTypedArray()), okOrError(done))
+
     fun setBio(bio: String, done: (String?) -> Unit) = send(TdApi.SetBio(bio.trim()), okOrError(done))
 
     fun setBirthdate(day: Int, month: Int, year: Int, done: (String?) -> Unit) {
@@ -3787,7 +3793,8 @@ fun isRich(content: TdApi.MessageContent?): Boolean = when (content) {
     is TdApi.MessageSticker, is TdApi.MessageGift, is TdApi.MessageUpgradedGift, is TdApi.MessageGiftedStars,
     is TdApi.MessageGiftedPremium, is TdApi.MessageAnimation, is TdApi.MessageVideo, is TdApi.MessageVideoNote,
     is TdApi.MessagePoll, is TdApi.MessageContact, is TdApi.MessageLocation, is TdApi.MessageAnimatedEmoji,
-    is TdApi.MessageDice, is TdApi.MessageRichMessage, is TdApi.MessageChecklist, is TdApi.MessagePaidMedia -> true
+    is TdApi.MessageDice, is TdApi.MessageRichMessage, is TdApi.MessageChecklist, is TdApi.MessagePaidMedia,
+    is TdApi.MessageTonWalletTransfer -> true
     else -> false
 }
 
@@ -3890,6 +3897,7 @@ fun contentText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageUpgradedGift -> "${content.gift.title}"
     is TdApi.MessageGiftedStars -> "${content.starCount} Stars"
     is TdApi.MessageGiftedPremium -> "Telegram Premium"
+    is TdApi.MessageTonWalletTransfer -> "💎 " + com.pixelgram.desktop.ui.main.gramText(content.amount, signed = true) + " GRAM"
     is TdApi.MessageAnimatedEmoji -> content.emoji
     is TdApi.MessageDice -> content.emoji
     null -> ""

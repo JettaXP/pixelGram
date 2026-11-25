@@ -599,7 +599,8 @@ fun SettingsScreen(
 @Composable
 private fun ProfileCard(telegram: Telegram, settings: AppSettings, selected: Boolean, onClick: () -> Unit) {
     val me = telegram.me ?: return
-    val username = me.usernames?.activeUsernames?.firstOrNull()
+    val activeUsernames = me.usernames?.activeUsernames?.toList().orEmpty()
+    val username = activeUsernames.firstOrNull()
     var showQr by remember { mutableStateOf(false) }
     val container by androidx.compose.animation.animateColorAsState(
         if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -622,8 +623,12 @@ private fun ProfileCard(telegram: Telegram, settings: AppSettings, selected: Boo
                 me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
                     PhoneText(it, style = MaterialTheme.typography.bodyMedium)
                 }
-                username?.let {
-                    Text("@$it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                if (activeUsernames.isNotEmpty()) {
+                    Text(
+                        activeUsernames.joinToString(" · ") { "@$it" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
             if (username != null) {
@@ -1526,6 +1531,13 @@ private fun ChatsSection(settings: AppSettings, onOpen: (Section) -> Unit) {
         "Shapes behind the hint when no chat is open.",
         settings.emptyShapes.value,
     ) { settings.emptyShapes.value = it }
+    SwitchRow(
+        0,
+        1,
+        "Animate shapes",
+        "Slowly rotate the shapes at different speeds.",
+        settings.emptyShapesMotion.value,
+    ) { settings.emptyShapesMotion.value = it }
     Header("Typing")
     SwitchRow(
         0,

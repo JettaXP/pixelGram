@@ -93,7 +93,7 @@ import com.pixelgram.desktop.ui.rememberWindowChrome
 import com.pixelgram.desktop.ui.auth.AuthScreen
 import com.pixelgram.desktop.ui.main.Attachments
 import com.pixelgram.desktop.ui.main.PhotoViewer
-import com.pixelgram.desktop.ui.main.PhotoViewerWindow
+import com.pixelgram.desktop.ui.main.PhotoViewerOverlay
 import com.pixelgram.desktop.ui.main.MainScreen
 import com.pixelgram.desktop.ui.notify.ToastData
 import com.pixelgram.desktop.ui.notify.ToastStack
@@ -379,9 +379,6 @@ private fun ApplicationScope.PixelApp() {
             }
         }
     }
-    PhotoViewer.current?.let { photo ->
-        key(photo) { PhotoViewerWindow(photo, settings) }
-    }
     VideoPlayer.current?.let { video ->
         key(video) { VideoPlayerWindow(video, settings) }
     }
@@ -561,6 +558,9 @@ private fun ApplicationScope.PixelApp() {
                 }
                 if (ownTitleBar && !macNativeWindow) ResizeHandles(chrome)
                 BackSwipeIndicator(backSwipe)
+                PhotoViewer.current?.let { photo ->
+                    key(photo) { PhotoViewerOverlay(photo, settings) }
+                }
             }
         }
     }
