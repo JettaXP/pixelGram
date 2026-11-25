@@ -98,7 +98,7 @@ fun ToastWindow(stack: ToastStack, settings: AppSettings, onOpen: (ToastData) ->
     }
     DialogWindow(
         onCloseRequest = stack::dismissAll,
-        visible = warm || showing,
+        visible = showing || (warm && !opaque),
         state = state,
         title = ToastTitle,
         undecorated = true,

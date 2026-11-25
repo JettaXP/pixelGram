@@ -72,6 +72,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -79,18 +83,13 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.WindowPosition
-import androidx.compose.ui.window.rememberWindowState
 import com.pixelgram.desktop.core.AppSettings
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.ui.components.loadImage
 import com.pixelgram.desktop.ui.theme.EmojiText
 import com.pixelgram.desktop.ui.theme.PixelTheme
 import it.tdlight.jni.TdApi
-import java.awt.GraphicsEnvironment
 
 class ViewedPhoto(
     val telegram: Telegram,
@@ -112,13 +111,14 @@ object PhotoViewer {
 }
 
 @Composable
-fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
+fun PhotoViewerOverlay(photo: ViewedPhoto, settings: AppSettings, modifier: Modifier = Modifier) {
     val shown = remember(photo) { MutableTransitionState(false).apply { targetState = true } }
     val close = { shown.targetState = false }
     LaunchedEffect(shown.isIdle, shown.currentState) {
         if (shown.isIdle && !shown.currentState && PhotoViewer.current === photo) PhotoViewer.current = null
     }
-    val screen = remember { viewerBounds() }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
     val telegram = photo.telegram
     var photos by remember(photo) {
         mutableStateOf(
@@ -158,38 +158,31 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
             index = target
         }
     }
-    Window(
-        onCloseRequest = close,
-        state = rememberWindowState(
-            position = WindowPosition(screen.x.dp, screen.y.dp),
-            size = DpSize(screen.width.dp, screen.height.dp),
-        ),
-        title = "pixelGram photo",
-        undecorated = true,
-        transparent = com.pixelgram.desktop.core.AppPaths.translucentWindows,
-        resizable = false,
-        alwaysOnTop = true,
-        onKeyEvent = { event ->
-            when {
-                event.type != KeyEventType.KeyDown -> false
-                event.key == Key.Escape -> {
-                    close()
-                    true
-                }
-                event.key == Key.DirectionLeft -> {
-                    go(-1)
-                    true
-                }
-                event.key == Key.DirectionRight -> {
-                    go(1)
-                    true
-                }
-                else -> false
-            }
-        },
-    ) {
-        PixelTheme(settings) {
-            Box(Modifier.fillMaxSize()) {
+    PixelTheme(settings) {
+        Box(
+            modifier
+                .fillMaxSize()
+                .focusRequester(focus)
+                .focusable()
+                .onPreviewKeyEvent { event ->
+                    when {
+                        event.type != KeyEventType.KeyDown -> false
+                        event.key == Key.Escape -> {
+                            close()
+                            true
+                        }
+                        event.key == Key.DirectionLeft -> {
+                            go(-1)
+                            true
+                        }
+                        event.key == Key.DirectionRight -> {
+                            go(1)
+                            true
+                        }
+                        else -> false
+                    }
+                },
+        ) {
             AnimatedVisibility(shown, enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()), exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects())) {
                 Box(
                     Modifier
@@ -291,7 +284,6 @@ fun PhotoViewerWindow(photo: ViewedPhoto, settings: AppSettings) {
                         }
                     }
                 }
-            }
             }
         }
     }
