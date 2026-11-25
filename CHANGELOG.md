@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.55.6 Slanted
+
+- The photo viewer opens and closes as an in-app overlay on Wayland without white or black flashes.
+- The composer caret leads fast typing and settles back, and typing stays smooth at speed.
+- New messages enter from their own side and fade in, and forum chats narrow the list instead of collapsing into compact mode.
+- Grouped context-menu items have no gaps, the navigation rail moves faster, and the chat list no longer shifts under the overlay menu.
+- GRAM wallet transfers render as expressive transfer cards with the amount, comment and peer address.
+- The profile manages multiple usernames: pick the main one, activate or deactivate others, and edit the editable username.
+- Draft attachments persist across chats and restarts.
+- The empty-chat shapes are larger and can slowly rotate, with a new setting.
+- Photo zoom starts from the cursor, media opens above profile dialogs, and Escape closes media first.
+- The video-note transcribe button and metadata placement are fixed, and the voice recording bar clears the send button.
+
 ## 0.55.5 Slanted
 
 - The version and About links sit at the bottom of the side menu.
