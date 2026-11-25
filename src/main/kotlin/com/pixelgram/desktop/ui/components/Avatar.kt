@@ -195,7 +195,7 @@ fun AvatarImage(
             .size(size)
             .smoothClip(shape)
             .avatarClick(onClick)
-            .background(colors.primaryContainer),
+            .background(colors.primary),
         contentAlignment = Alignment.Center,
     ) {
         val streamer = com.pixelgram.desktop.core.StreamerMode.avatars
@@ -211,11 +211,11 @@ fun AvatarImage(
                 modifier = Modifier.size(size),
             )
         } else if (title == com.pixelgram.desktop.telegram.DeletedAccountTitle) {
-            androidx.compose.material3.Icon(GhostIcon, contentDescription = title, tint = colors.onPrimaryContainer, modifier = Modifier.size(size * 0.56f))
+            androidx.compose.material3.Icon(GhostIcon, contentDescription = title, tint = colors.onPrimary, modifier = Modifier.size(size * 0.56f))
         } else {
             Text(
                 text = initials(title),
-                color = colors.onPrimaryContainer,
+                color = colors.onPrimary,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = (size.value * 0.38f).sp,
             )
