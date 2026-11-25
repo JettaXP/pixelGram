@@ -151,6 +151,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -303,7 +304,7 @@ private fun ChatViewContent(
             listState.requestScrollToItem(0)
         }
     }
-    val attachments = remember(chat.id) { mutableStateListOf<File>() }
+    val attachments = remember(chat.id) { DraftAttachments.list(chat.id) }
     var asFiles by remember(chat.id) { mutableStateOf(false) }
     var editPhoto by remember(chat.id) { mutableStateOf<File?>(null) }
     var editingPhoto by remember(chat.id) { mutableStateOf(false) }
@@ -347,6 +348,12 @@ private fun ChatViewContent(
     val slide = androidx.compose.animation.core.spring<Float>(dampingRatio = 1f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)
     val slidIn = remember(chat.id) { mutableSetOf<Long>() }
     var editing by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
+    LaunchedEffect(chat.id) {
+        snapshotFlow { Triple(attachments.toList(), editingPhoto, editing) }
+            .collect { (files, photoEdit, messageEdit) ->
+                if (!photoEdit && messageEdit == null) DraftAttachments.save(chat.id, files)
+            }
+    }
     var replyTo by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var deleting by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
     var forwarding by remember(chat.id) { mutableStateOf<UiMessage?>(null) }
@@ -881,10 +888,6 @@ private fun ChatViewContent(
                     entrance.snapTo(1f)
                 }
             }
-            val entranceLayer = Modifier.graphicsLayer {
-                alpha = entrance.value
-                translationX = -MessageEntranceShift.toPx() * (1f - entrance.value)
-            }
             androidx.compose.runtime.CompositionLocalProvider(LocalWideChat provides wide, LocalWideProgress provides wideProgress) {
             LazyColumn(
                 state = listState,
@@ -936,7 +939,10 @@ private fun ChatViewContent(
                     }
                     androidx.compose.runtime.CompositionLocalProvider(LocalBubblePulse provides { flash.value }, LocalBubbleGroup provides BubbleGroup(top = firstInRun || newDay, bottom = lastInRun || (index > 0 && !sameDay(message.date, shown[index - 1].date)))) {
                     Column(
-                        entranceLayer.then(
+                        Modifier.graphicsLayer {
+                            alpha = entrance.value
+                            translationX = (if (message.isOutgoing && !wide) 1f else -1f) * MessageEntranceShift.toPx() * (1f - entrance.value)
+                        }.then(
                             if (PowerSaving.messageAnimations) {
                                 Modifier.animateItem(fadeInSpec = if (message.fresh || jumping) null else fade, placementSpec = if (listState.isScrollInProgress || jumping) null else placement, fadeOutSpec = if (jumping) null else fade)
                             } else {
@@ -1837,7 +1843,8 @@ private fun BareMessage(
                     val loose = constraints.copy(minWidth = 0, minHeight = 0)
                     val content = measurables.first().measure(loose)
                     val meta = measurables.last().measure(loose)
-                    val overlay = content.height >= BareOverlayMin.roundToPx() && content.width >= meta.width * 2
+                    val transfer = message.content is TdApi.MessageTonWalletTransfer
+                    val overlay = !transfer && content.height >= BareOverlayMin.roundToPx() && content.width >= meta.width * 2
                     val gap = if (overlay) 0 else BareMetaGap.roundToPx()
                     val width = maxOf(content.width, meta.width)
                     val height = if (overlay) content.height else content.height + gap + meta.height
@@ -3330,7 +3337,7 @@ private fun Composer(
         } else {
             fadeOut(MaterialTheme.motionScheme.fastEffectsSpec())
         },
-        modifier = Modifier.matchParentSize().padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 12.dp + SendSlot + 8.dp),
+        modifier = Modifier.matchParentSize().padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 12.dp + SendButtonSlot + 12.dp),
     ) {
         RecordingBar(voice, Modifier.fillMaxSize())
     }

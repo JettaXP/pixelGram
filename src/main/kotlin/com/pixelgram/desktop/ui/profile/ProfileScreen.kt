@@ -3,6 +3,7 @@ package com.pixelgram.desktop.ui.profile
 import com.pixelgram.desktop.ui.components.streamerBlur
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import com.pixelgram.desktop.ui.icons.Icons
 import com.pixelgram.desktop.ui.icons.outlined.AddAPhoto
+import com.pixelgram.desktop.ui.icons.outlined.Add
+import com.pixelgram.desktop.ui.icons.outlined.Close
 import com.pixelgram.desktop.ui.icons.outlined.Sticker
 import com.pixelgram.desktop.ui.icons.outlined.AlternateEmail
 import com.pixelgram.desktop.ui.icons.outlined.Cake
@@ -30,6 +33,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.pixelgram.desktop.ui.components.expressive.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.IconButton
 import com.pixelgram.desktop.ui.components.Text
 import com.pixelgram.desktop.ui.components.expressive.TextButton
 import androidx.compose.runtime.Composable
@@ -46,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.pixelgram.desktop.core.AppSettings
+import com.pixelgram.desktop.core.tr
 import com.pixelgram.desktop.telegram.Telegram
 import com.pixelgram.desktop.telegram.fullName
 import com.pixelgram.desktop.ui.components.Avatar
@@ -62,7 +68,7 @@ import java.time.Month
 import java.time.format.TextStyle
 import java.util.Locale
 
-private enum class ProfileField { Name, Username, Bio, Birthday, StartPage }
+private enum class ProfileField { Name, Bio, Birthday, StartPage }
 
 private const val BioLimit = 70
 private val BannerHeight = 200.dp
@@ -90,6 +96,7 @@ fun ProfileContent(
     var picking by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<ProfileField?>(null) }
     var gallery by remember { mutableStateOf(false) }
+    var usernamesOpen by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(me?.id, refresh) { telegram.myFullInfo { fullInfo = it } }
@@ -143,6 +150,7 @@ fun ProfileContent(
                 ?: com.pixelgram.desktop.ui.components.SupporterBadge(me.id, name, telegram, 30.dp, label = true)
         }
         com.pixelgram.desktop.ui.main.ProfileBalance(me.id, telegram)
+        val activeUsernames = me.usernames?.activeUsernames?.toList().orEmpty()
         val rows = buildList {
             add(InfoRow(Icons.Outlined.Person, "Name", name, onEdit = { editing = ProfileField.Name }))
             me.phoneNumber?.takeIf { it.isNotEmpty() }?.let {
@@ -152,9 +160,9 @@ fun ProfileContent(
                 InfoRow(
                     Icons.Outlined.AlternateEmail,
                     "Username",
-                    me.usernames?.activeUsernames?.firstOrNull()?.let { "@$it" } ?: "Not set",
-                    onEdit = { editing = ProfileField.Username },
-                    trailing = me.usernames?.activeUsernames?.firstOrNull()?.let { username ->
+                    activeUsernames.joinToString(", ") { "@$it" }.ifEmpty { "Not set" },
+                    onEdit = { usernamesOpen = true },
+                    trailing = activeUsernames.firstOrNull()?.let { username ->
                         { UsernameQrButton(username, name, me.profilePhoto, telegram) }
                     },
                 )
@@ -208,6 +216,14 @@ fun ProfileContent(
     if (gallery && me != null) {
         ProfilePhotosDialog(telegram, me.id, onDismiss = { gallery = false }, editable = true, onChanged = { refresh++ })
     }
+    if (usernamesOpen && me != null) {
+        UsernamesDialog(
+            telegram = telegram,
+            usernames = me.usernames,
+            onDismiss = { usernamesOpen = false },
+            onChanged = { refresh++ },
+        )
+    }
     val dismiss = { editing = null }
     val saved: () -> Unit = {
         editing = null
@@ -222,14 +238,6 @@ fun ProfileContent(
             onDismiss = dismiss,
             onSaved = saved,
         ) { values, done -> telegram.setName(values[0], values[1], done) }
-        ProfileField.Username -> EditDialog(
-            title = "Username",
-            initial = listOf(me?.usernames?.activeUsernames?.firstOrNull().orEmpty()),
-            labels = listOf("Username"),
-            supporting = "a-z, 0-9 and underscores, at least 5 characters. Leave empty to remove it.",
-            onDismiss = dismiss,
-            onSaved = saved,
-        ) { values, done -> telegram.setUsername(values[0], done) }
         ProfileField.Bio -> EditDialog(
             title = "Bio",
             initial = listOf(fullInfo?.bio?.text.orEmpty()),
@@ -287,6 +295,143 @@ private fun birthdateValid(values: List<String>): Boolean {
 }
 
 private const val LeapYear = 2000
+
+@Composable
+private fun UsernamesDialog(
+    telegram: Telegram,
+    usernames: TdApi.Usernames?,
+    onDismiss: () -> Unit,
+    onChanged: () -> Unit,
+) {
+    val active = usernames?.activeUsernames?.toList().orEmpty()
+    val disabled = usernames?.disabledUsernames?.toList().orEmpty()
+    var mainUsername by remember(active) { mutableStateOf(active.firstOrNull().orEmpty()) }
+    var editable by remember(usernames?.editableUsername) { mutableStateOf(usernames?.editableUsername.orEmpty()) }
+    var busy by remember { mutableStateOf<String?>(null) }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val chooseMain: (String) -> Unit = { username ->
+        if (username != mainUsername) {
+            mainUsername = username
+            busy = username
+            error = null
+            telegram.reorderUsernames(listOf(username) + active.filter { it != username }) { failure ->
+                busy = null
+                error = failure
+                if (failure == null) onChanged() else mainUsername = active.firstOrNull().orEmpty()
+            }
+        }
+    }
+    val toggle: (String, Boolean) -> Unit = { username, on ->
+        busy = username
+        error = null
+        telegram.toggleUsername(username, on) { failure ->
+            busy = null
+            error = failure
+            if (failure == null) onChanged()
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(tr("Usernames")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(tr("Active"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                if (active.isEmpty()) {
+                    Text(tr("No active usernames"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                active.forEach { username ->
+                    UsernameToggleRow(
+                        username = username,
+                        active = true,
+                        enabled = busy == null && !saving,
+                        main = username == mainUsername,
+                        onMain = { chooseMain(username) },
+                        onToggle = { on -> toggle(username, on) },
+                    )
+                }
+                if (active.size > 1) {
+                    Text(
+                        tr("Tap the circle to choose the main username."),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (disabled.isNotEmpty()) {
+                    Text(tr("Inactive"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+                    disabled.forEach { username ->
+                        UsernameToggleRow(username, false, busy == null && !saving) { on -> toggle(username, on) }
+                    }
+                }
+                OutlinedTextField(
+                    value = editable,
+                    onValueChange = { editable = it.trim().removePrefix("@").take(32) },
+                    label = { Text(tr("Editable username")) },
+                    singleLine = true,
+                    enabled = busy == null && !saving,
+                    supportingText = { Text(tr("a-z, 0-9 and underscores, at least 5 characters. Leave empty to remove it.")) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                )
+                Text(
+                    tr("Other active usernames are switched on and off here. New collectible usernames are acquired in Fragment."),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = busy == null && !saving && editable != usernames?.editableUsername.orEmpty(),
+                onClick = {
+                    saving = true
+                    error = null
+                    telegram.setUsername(editable) { failure ->
+                        saving = false
+                        error = failure
+                        if (failure == null) onChanged()
+                    }
+                },
+            ) { Text(if (saving) tr("Saving…") else tr("Save")) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Close")) } },
+    )
+}
+
+@Composable
+private fun UsernameToggleRow(
+    username: String,
+    active: Boolean,
+    enabled: Boolean,
+    main: Boolean = false,
+    onMain: (() -> Unit)? = null,
+    onToggle: (Boolean) -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp))
+            .background(if (active) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer)
+            .padding(start = if (onMain != null) 4.dp else 16.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (onMain != null) {
+            RadioButton(selected = main, onClick = onMain, enabled = enabled)
+        }
+        Text(
+            "@$username",
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = { onToggle(!active) }, enabled = enabled, modifier = Modifier.size(40.dp)) {
+            Icon(
+                if (active) Icons.Outlined.Close else Icons.Outlined.Add,
+                contentDescription = tr(if (active) "Deactivate" else "Activate"),
+                tint = if (active) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
 
 @Composable
 private fun EditDialog(

@@ -1,6 +1,8 @@
 package com.pixelgram.desktop.ui.main
 
 import com.pixelgram.desktop.ui.icons.filled.Star
+import com.pixelgram.desktop.ui.icons.outlined.Diamond
+import androidx.compose.ui.graphics.Brush
 import com.pixelgram.desktop.core.tr
 import com.pixelgram.desktop.telegram.stopLiveLocation
 import com.pixelgram.desktop.telegram.recognizeSpeech
@@ -125,7 +127,7 @@ import org.jetbrains.skia.Image as SkiaImage
 
 fun isBareContent(content: TdApi.MessageContent?): Boolean =
     content is TdApi.MessageSticker || content is TdApi.MessageAnimatedEmoji || content is TdApi.MessageDice ||
-        content is TdApi.MessageVideoNote
+        content is TdApi.MessageVideoNote || content is TdApi.MessageTonWalletTransfer
 
 fun isGiftContent(content: TdApi.MessageContent?): Boolean =
     content is TdApi.MessageGift || content is TdApi.MessageUpgradedGift ||
@@ -692,6 +694,7 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
             busy = false,
             onClick = { if (content.receiptMessageId == 0L) com.pixelgram.desktop.ui.premium.PaymentRequest.current = telegram to TdApi.InputInvoiceMessage(message.chatId, message.id) },
         )
+        is TdApi.MessageTonWalletTransfer -> TonTransferContent(message, content)
         is TdApi.MessageRichMessage -> RichMessageContent(message, content.message, telegram)
         is TdApi.MessageContact -> {
             val contact = content.contact
@@ -731,6 +734,80 @@ fun BlockContent(message: UiMessage, telegram: Telegram, onPlugin: (String) -> U
             }
         }
         else -> Unit
+    }
+}
+
+private val GramCardWidth = 280.dp
+
+@Composable
+private fun TonTransferContent(message: UiMessage, content: TdApi.MessageTonWalletTransfer) {
+    val colors = MaterialTheme.colorScheme
+    val outgoing = message.isOutgoing
+    val amount = gramText(if (outgoing) -content.amount else content.amount, signed = true)
+    val comment = content.comment.trim()
+    val shape = RoundedCornerShape(24.dp)
+    Column(
+        Modifier
+            .width(GramCardWidth)
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(colors.primary, colors.tertiary)))
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Diamond, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(7.dp))
+            Text(
+                tr(if (outgoing) "Sent" else "Received").uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.onPrimary.copy(alpha = 0.72f),
+                letterSpacing = 1.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                tr("GRAM transfer"),
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.onPrimary.copy(alpha = 0.72f),
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                amount,
+                style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Medium),
+                color = colors.onPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "GRAM",
+                style = MaterialTheme.typography.headlineSmall,
+                color = colors.onPrimary.copy(alpha = 0.7f),
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+        }
+        if (comment.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                (if (content.isCommentEncrypted) "🔒 " else "") + comment,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onPrimary.copy(alpha = 0.9f),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (content.peerAddress.isBlank()) tr("Gram wallet") else content.peerAddress.chunked(4).joinToString(" "),
+                style = MaterialTheme.typography.labelSmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                color = colors.onPrimary.copy(alpha = 0.55f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(Icons.Outlined.Diamond, contentDescription = null, tint = colors.onPrimary.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        }
     }
 }
 
@@ -1302,6 +1379,7 @@ fun BareContent(message: UiMessage, telegram: Telegram) {
             }
             TranscriptText(message, note.speechRecognitionResult)
         }
+        is TdApi.MessageTonWalletTransfer -> TonTransferContent(message, content)
         else -> Unit
     }
 }

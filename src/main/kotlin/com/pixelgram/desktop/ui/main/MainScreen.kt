@@ -1,6 +1,7 @@
 package com.pixelgram.desktop.ui.main
 
 import com.pixelgram.desktop.ui.icons.outlined.Videocam
+import com.pixelgram.desktop.core.BatterySaver
 import androidx.compose.material3.Switch
 import com.pixelgram.desktop.ui.components.streamerBlur
 import com.pixelgram.desktop.ui.noBackSwipe
@@ -488,7 +489,7 @@ fun MainScreen(
                                     enter = fadeIn(com.pixelgram.desktop.ui.components.Motion.effects()),
                                     exit = fadeOut(com.pixelgram.desktop.ui.components.Motion.fastEffects()),
                                     modifier = Modifier.matchParentSize(),
-                                ) { EmptyShapes() }
+                                ) { EmptyShapes(spin = settings.emptyShapesMotion.value && settings.interfaceAnimations.value && !BatterySaver.saving, scale = 1.35f) }
                                 Surface(
                                     shape = CircleShape,
                                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -1086,12 +1087,12 @@ internal fun EmptyShapes(spin: Boolean = false, scale: Float = 1f) {
         null
     }
     val shapes = listOf(
-        EmptyShape(androidx.compose.material3.MaterialShapes.Cookie12Sided, scheme.primaryContainer, -0.28f, -0.22f, 120.dp, 12f),
-        EmptyShape(androidx.compose.material3.MaterialShapes.Flower, scheme.tertiaryContainer, 0.3f, -0.26f, 96.dp, -18f),
-        EmptyShape(androidx.compose.material3.MaterialShapes.Pill, scheme.secondaryContainer, 0.26f, 0.24f, 110.dp, 35f),
-        EmptyShape(androidx.compose.material3.MaterialShapes.Sunny, scheme.primaryContainer, -0.3f, 0.26f, 84.dp, 0f),
-        EmptyShape(androidx.compose.material3.MaterialShapes.Cookie4Sided, scheme.tertiaryContainer, -0.05f, -0.36f, 56.dp, 20f),
-        EmptyShape(androidx.compose.material3.MaterialShapes.SoftBurst, scheme.secondaryContainer, 0.04f, 0.36f, 64.dp, -10f),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Cookie12Sided, scheme.primaryContainer, -0.28f, -0.22f, 120.dp, 12f, 0.34f, true),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Flower, scheme.tertiaryContainer, 0.3f, -0.26f, 96.dp, -18f, 0.62f, false),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Pill, scheme.secondaryContainer, 0.26f, 0.24f, 110.dp, 35f, 0.88f, true),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Sunny, scheme.primaryContainer, -0.3f, 0.26f, 84.dp, 0f, 0.46f, false),
+        EmptyShape(androidx.compose.material3.MaterialShapes.Cookie4Sided, scheme.tertiaryContainer, -0.05f, -0.36f, 56.dp, 20f, 1.12f, true),
+        EmptyShape(androidx.compose.material3.MaterialShapes.SoftBurst, scheme.secondaryContainer, 0.04f, 0.36f, 64.dp, -10f, 0.74f, false),
     )
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
         shapes.forEachIndexed { index, item ->
@@ -1101,7 +1102,7 @@ internal fun EmptyShapes(spin: Boolean = false, scale: Float = 1f) {
                     .offset(maxWidth * item.x, maxHeight * item.y)
                     .size(item.size * scale)
                     .graphicsLayer {
-                        rotationZ = item.rotation + (turn?.value ?: 0f) * (index % 3 + 1) * if (index % 2 == 0) 1 else -1
+                        rotationZ = item.rotation + (turn?.value ?: 0f) * item.speed * if (item.clockwise) 1 else -1
                         alpha = EmptyShapeAlpha
                     }
                     .background(item.color, item.shape.toShape()),
@@ -1117,6 +1118,8 @@ private class EmptyShape(
     val y: Float,
     val size: androidx.compose.ui.unit.Dp,
     val rotation: Float,
+    val speed: Float,
+    val clockwise: Boolean,
 )
 
 private const val EmptyShapeAlpha = 0.55f

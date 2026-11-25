@@ -13,12 +13,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import com.pixelgram.desktop.ui.icons.automirrored.filled.KeyboardArrowLeft
+import com.pixelgram.desktop.ui.OnEscape
 import com.pixelgram.desktop.ui.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.TransformOrigin
+import com.pixelgram.desktop.telegram.Notifications
+import java.awt.MouseInfo
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.unit.IntOffset
 import com.pixelgram.desktop.telegram.UiMessage
@@ -114,6 +118,24 @@ object PhotoViewer {
 fun PhotoViewerOverlay(photo: ViewedPhoto, settings: AppSettings, modifier: Modifier = Modifier) {
     val shown = remember(photo) { MutableTransitionState(false).apply { targetState = true } }
     val close = { shown.targetState = false }
+    val zoomOrigin = remember(photo) {
+        val pointer = MouseInfo.getPointerInfo()?.location
+        val window = Notifications.window
+        if (pointer != null && window != null && window.width > 0 && window.height > 0 &&
+            pointer.x in window.x..(window.x + window.width) && pointer.y in window.y..(window.y + window.height)
+        ) {
+            TransformOrigin(
+                ((pointer.x - window.x).toFloat() / window.width).coerceIn(0f, 1f),
+                ((pointer.y - window.y).toFloat() / window.height).coerceIn(0f, 1f),
+            )
+        } else TransformOrigin.Center
+    }
+    OnEscape {
+        if (shown.currentState || shown.targetState) {
+            close()
+            true
+        } else false
+    }
     LaunchedEffect(shown.isIdle, shown.currentState) {
         if (shown.isIdle && !shown.currentState && PhotoViewer.current === photo) PhotoViewer.current = null
     }
@@ -226,8 +248,8 @@ fun PhotoViewerOverlay(photo: ViewedPhoto, settings: AppSettings, modifier: Modi
                                 (slideOutHorizontally(slide) { -it / SlideDivisor * direction } + fadeOut(fade))
                         },
                         modifier = Modifier.fillMaxSize().animateEnterExit(
-                            enter = scaleIn(initialScale = 0.92f),
-                            exit = scaleOut(targetScale = 0.92f),
+                            enter = scaleIn(initialScale = 0.6f, transformOrigin = zoomOrigin),
+                            exit = scaleOut(targetScale = 0.6f, transformOrigin = zoomOrigin),
                         ),
                         contentAlignment = Alignment.Center,
                     ) { viewed ->
