@@ -98,6 +98,8 @@ import androidx.compose.material3.Icon
 import com.pixelgram.desktop.ui.components.expressive.IconButton
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.material3.NavigationItemIconPosition
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.ShortNavigationBarItem
@@ -243,8 +245,14 @@ fun MainScreen(
 
     val foldersLeftPref = settings.materialFolders.value && !settings.capsuleFolders.value && tabs.size > 1
     val compactWidth = (maxOf(64, settings.listAvatarSize.value + 16) + 16).dp
-    val railSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
-    val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val motionScheme = MaterialTheme.motionScheme
+    val railSpec = motionScheme.fastSpatialSpec<IntSize>()
+    val fade = motionScheme.defaultEffectsSpec<Float>()
+    val railScheme = remember(motionScheme) {
+        object : MotionScheme by motionScheme {
+            override fun <T> defaultSpatialSpec(): FiniteAnimationSpec<T> = motionScheme.fastSpatialSpec()
+        }
+    }
     val density = LocalDensity.current
     var dragWidth by remember { mutableStateOf(settings.chatListWidth.value.toFloat()) }
     var railWidthPx by remember { androidx.compose.runtime.mutableIntStateOf(0) }
@@ -261,10 +269,11 @@ fun MainScreen(
             }
             val playerSpace = if (sideKind != null) FullPlayerWidth else 0.dp
             val pushedRail = if (settings.sideMenuStyle.value == com.pixelgram.desktop.core.SideMenuStyle.Push) with(density) { railWidthPx.toDp() } else 0.dp
-            val room = (maxWidth - MinChatWidth - RailWidth - playerSpace - pushedRail).value
-            val maxListWidth = minOf(room, maxWidth.value * MaxListShare).coerceAtLeast(compactWidth.value)
             val forum = openChatId?.let { telegram.chats[it] }?.takeIf { telegram.isForum(it) }
-            val compact = forum != null || ((dragWidth < CompactThreshold.value || room < CompactThreshold.value || com.pixelgram.desktop.core.StreamerMode.compactList) && !MessageSearch.open)
+            val forumSpace = if (forum != null) SidebarWidth + 8.dp else 0.dp
+            val room = (maxWidth - MinChatWidth - RailWidth - playerSpace - pushedRail - forumSpace).value
+            val maxListWidth = minOf(room, maxWidth.value * MaxListShare).coerceAtLeast(compactWidth.value)
+            val compact = ((dragWidth < CompactThreshold.value || room < CompactThreshold.value || com.pixelgram.desktop.core.StreamerMode.compactList) && !MessageSearch.open)
             val foldersLeft = foldersLeftPref || (compact && tabs.size > 1)
             val listWidth by androidx.compose.animation.core.animateDpAsState(
                 if (compact) compactWidth else dragWidth.coerceAtMost(maxListWidth).coerceAtLeast(if (MessageSearch.open) CompactThreshold.value else 0f).dp,
@@ -279,24 +288,26 @@ fun MainScreen(
                 exit = shrinkHorizontally(railSpec) + fadeOut(fade),
             ) {
                 Box(Modifier.fillMaxHeight()) {
-                    PixelRail(
-                        accounts = accounts,
-                        state = railState,
-                        expanded = menuOpen,
-                        showFolders = foldersLeft,
-                        showMenuButton = foldersLeft,
-                        telegram = telegram,
-                        settings = settings,
-                        tabs = tabs,
-                        selected = selectedKey,
-                        onToggleMenu = toggleMenu,
-                        onSelect = { key -> closeMenuAnd { MessageSearch.open = false; if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
-                        onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
-                        onOpenSaved = {
-                            closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
-                        },
-                        onNewChat = { channel -> closeMenuAnd { newChat = channel } },
-                    )
+                    MaterialTheme(motionScheme = railScheme) {
+                        PixelRail(
+                            accounts = accounts,
+                            state = railState,
+                            expanded = menuOpen,
+                            showFolders = foldersLeft,
+                            showMenuButton = foldersLeft,
+                            telegram = telegram,
+                            settings = settings,
+                            tabs = tabs,
+                            selected = selectedKey,
+                            onToggleMenu = toggleMenu,
+                            onSelect = { key -> closeMenuAnd { MessageSearch.open = false; if (key == selectedKey) ChatListScroll.request++ else selectedKey = key } },
+                            onNavigate = { screen -> closeMenuAnd { onNavigate(screen) } },
+                            onOpenSaved = {
+                                closeMenuAnd { telegram.openSavedMessages(onOpenChat) }
+                            },
+                            onNewChat = { channel -> closeMenuAnd { newChat = channel } },
+                        )
+                    }
                     Box(Modifier.matchParentSize().clipToBounds()) {
                         androidx.compose.animation.AnimatedVisibility(
                             menuOpen,
@@ -317,7 +328,7 @@ fun MainScreen(
                             layout(width, 0) { placeable.place(0, 0) }
                         },
                     )
-                    foldersLeft -> Spacer(Modifier.width(maxOf(RailWidth, with(density) { if (menuOpen) 0.dp else railWidthPx.toDp() })))
+                    foldersLeft -> Spacer(Modifier.width(RailWidth))
                 }
                 Column(
                     Modifier

@@ -128,7 +128,7 @@ fun MenuGroups(
 }
 
 private val GroupGap = 6.dp
-private val ItemGap = 2.dp
+private val ItemGap = 0.dp
 private val ItemHeight = 40.dp
 private val ItemPadding = 12.dp
 private val MenuShadow = 2.dp

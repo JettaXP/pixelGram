@@ -817,7 +817,7 @@ private fun VoiceContent(message: UiMessage, voice: TdApi.VoiceNote, telegram: T
                 color = LocalContentColorAlpha(),
             )
         }
-        TranscribeButton(message, voice.speechRecognitionResult, telegram)
+        TranscribeButton(message, voice.speechRecognitionResult, telegram, buttonSize = PlayerButton, iconSize = 22.dp)
     }
     TranscriptText(message, voice.speechRecognitionResult)
     }
@@ -826,7 +826,14 @@ private fun VoiceContent(message: UiMessage, voice: TdApi.VoiceNote, telegram: T
 private val transcriptsShown = androidx.compose.runtime.mutableStateMapOf<Long, Boolean>()
 
 @Composable
-private fun TranscribeButton(message: UiMessage, result: TdApi.SpeechRecognitionResult?, telegram: Telegram) {
+private fun TranscribeButton(
+    message: UiMessage,
+    result: TdApi.SpeechRecognitionResult?,
+    telegram: Telegram,
+    modifier: Modifier = Modifier,
+    buttonSize: androidx.compose.ui.unit.Dp = 40.dp,
+    iconSize: androidx.compose.ui.unit.Dp = 20.dp,
+) {
     var busy by remember(message.key) { mutableStateOf(false) }
     var error by remember(message.key) { mutableStateOf<String?>(null) }
     val shown = transcriptsShown[message.key] == true
@@ -843,9 +850,9 @@ private fun TranscribeButton(message: UiMessage, result: TdApi.SpeechRecognition
                 }
             }
         },
-        modifier = Modifier.size(32.dp).focusProperties { canFocus = false },
+        modifier = modifier.size(buttonSize).focusProperties { canFocus = false },
     ) {
-        Icon(if (shown && result != null) Icons.Outlined.ExpandLess else Icons.Outlined.Subtitles, contentDescription = "Transcribe", modifier = Modifier.size(18.dp))
+        Icon(if (shown && result != null) Icons.Outlined.ExpandLess else Icons.Outlined.Subtitles, contentDescription = "Transcribe", modifier = Modifier.size(iconSize))
     }
     error?.let { failure ->
         LaunchedEffect(failure) { TopNotice.text = failure }
@@ -1256,35 +1263,42 @@ fun BareContent(message: UiMessage, telegram: Telegram) {
                     }
                 }
             }
-            Box(
-                Modifier.size(VideoNoteSize).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest).clickable(onClick = click),
-                contentAlignment = Alignment.Center,
-            ) {
-                ThumbImage(note.thumbnail?.file, note.minithumbnail, telegram, Modifier.fillMaxSize())
-                if (engine != null) VideoFrame(engine, Modifier.fillMaxSize())
-                if (engine != null && engine.duration > 0) {
-                    val fraction = (engine.position.toFloat() / engine.duration).coerceIn(0f, 1f)
-                    val paused = !engine.playing
-                    CircularWavyProgressIndicator(
-                        progress = { fraction },
-                        modifier = Modifier.fillMaxSize().padding(4.dp),
-                        color = Color.White,
-                        trackColor = if (paused) Color.White.copy(alpha = 0.3f) else Color.Transparent,
-                        amplitude = { if (paused) 1f else 0f },
-                        waveSpeed = 0.dp,
-                    )
-                }
-                Box(Modifier.align(Alignment.BottomEnd).padding(10.dp)) { TranscribeButton(message, note.speechRecognitionResult, telegram) }
-                when {
-                    progress != null -> Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                        TransferRing(progress, Color.White, { telegram.cancelDownload(note.video) }, 44.dp)
+            Box(Modifier.size(VideoNoteSize)) {
+                Box(
+                    Modifier.fillMaxSize().clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest).clickable(onClick = click),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ThumbImage(note.thumbnail?.file, note.minithumbnail, telegram, Modifier.fillMaxSize())
+                    if (engine != null) VideoFrame(engine, Modifier.fillMaxSize())
+                    if (engine != null && engine.duration > 0) {
+                        val fraction = (engine.position.toFloat() / engine.duration).coerceIn(0f, 1f)
+                        val paused = !engine.playing
+                        CircularWavyProgressIndicator(
+                            progress = { fraction },
+                            modifier = Modifier.fillMaxSize().padding(4.dp),
+                            color = Color.White,
+                            trackColor = if (paused) Color.White.copy(alpha = 0.3f) else Color.Transparent,
+                            amplitude = { if (paused) 1f else 0f },
+                            waveSpeed = 0.dp,
+                        )
                     }
-                    path == null -> Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.ArrowDownward, contentDescription = "Download", tint = Color.White, modifier = Modifier.size(28.dp))
+                    when {
+                        progress != null -> Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                            TransferRing(progress, Color.White, { telegram.cancelDownload(note.video) }, 44.dp)
+                        }
+                        path == null -> Box(Modifier.size(52.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.ArrowDownward, contentDescription = "Download", tint = Color.White, modifier = Modifier.size(28.dp))
+                        }
+                        engine == null -> PlayBadge(false)
+                        !engine.playing -> PlayBadge(false)
                     }
-                    engine == null -> PlayBadge(false)
-                    !engine.playing -> PlayBadge(false)
                 }
+                TranscribeButton(
+                    message,
+                    note.speechRecognitionResult,
+                    telegram,
+                    Modifier.align(Alignment.BottomEnd).padding(end = 0.dp, bottom = 27.dp),
+                )
             }
             TranscriptText(message, note.speechRecognitionResult)
         }
@@ -1368,7 +1382,7 @@ fun giftServiceText(message: UiMessage, telegram: Telegram): String? = when (val
 }
 
 val StickerSize = 180.dp
-private val VideoNoteSize = 220.dp
+internal val VideoNoteSize = 220.dp
 private val GiftWidth = 240.dp
 
 @Composable

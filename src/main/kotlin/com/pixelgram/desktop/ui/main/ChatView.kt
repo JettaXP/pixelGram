@@ -106,6 +106,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -861,21 +862,34 @@ private fun ChatViewContent(
                 },
         ) {
             ChatWallpaper(chat, telegram, settings, com.pixelgram.desktop.ui.theme.isDarkTheme(settings))
-            var listWidth by remember { mutableStateOf(0) }
+            BoxWithConstraints(Modifier.fillMaxSize()) {
             val wide = when (settings.messageSides.value) {
                 com.pixelgram.desktop.core.MessageSides.OneSide -> true
                 com.pixelgram.desktop.core.MessageSides.BothSides -> false
-                com.pixelgram.desktop.core.MessageSides.Auto -> with(androidx.compose.ui.platform.LocalDensity.current) { listWidth.toDp() } >= WideChatWidth
+                com.pixelgram.desktop.core.MessageSides.Auto -> maxWidth >= WideChatWidth
             }
             val wideAnim = remember { androidx.compose.animation.core.Animatable(if (wide) 1f else 0f) }
             val wideSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
             LaunchedEffect(wide) { wideAnim.animateTo(if (wide) 1f else 0f, wideSpec) }
             val wideProgress = remember(wideAnim) { { wideAnim.value } }
+            val entrance = remember(chat.id) { Animatable(if (PowerSaving.messageAnimations) 0f else 1f) }
+            LaunchedEffect(chat.id, PowerSaving.messageAnimations) {
+                if (PowerSaving.messageAnimations) {
+                    entrance.snapTo(0f)
+                    entrance.animateTo(1f, tween(MessageEntranceMs, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                } else {
+                    entrance.snapTo(1f)
+                }
+            }
+            val entranceLayer = Modifier.graphicsLayer {
+                alpha = entrance.value
+                translationX = -MessageEntranceShift.toPx() * (1f - entrance.value)
+            }
             androidx.compose.runtime.CompositionLocalProvider(LocalWideChat provides wide, LocalWideProgress provides wideProgress) {
             LazyColumn(
                 state = listState,
                 reverseLayout = true,
-                modifier = Modifier.fillMaxSize().onSizeChanged { listWidth = it.width }.then(with(com.pixelgram.desktop.ui.components.SmoothWheelScope) { Modifier.glide(listState, reverse = true) }).then(Modifier.listScrollbar(listState, reverse = true)),
+                modifier = Modifier.fillMaxSize().then(with(com.pixelgram.desktop.ui.components.SmoothWheelScope) { Modifier.glide(listState, reverse = true) }).then(Modifier.listScrollbar(listState, reverse = true)),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(GroupInnerGap, Alignment.Bottom),
             ) {
@@ -922,11 +936,13 @@ private fun ChatViewContent(
                     }
                     androidx.compose.runtime.CompositionLocalProvider(LocalBubblePulse provides { flash.value }, LocalBubbleGroup provides BubbleGroup(top = firstInRun || newDay, bottom = lastInRun || (index > 0 && !sameDay(message.date, shown[index - 1].date)))) {
                     Column(
-                        if (PowerSaving.messageAnimations) {
-                            Modifier.animateItem(fadeInSpec = if (message.fresh || jumping) null else fade, placementSpec = if (listState.isScrollInProgress || jumping) null else placement, fadeOutSpec = if (jumping) null else fade)
-                        } else {
-                            Modifier
-                        },
+                        entranceLayer.then(
+                            if (PowerSaving.messageAnimations) {
+                                Modifier.animateItem(fadeInSpec = if (message.fresh || jumping) null else fade, placementSpec = if (listState.isScrollInProgress || jumping) null else placement, fadeOutSpec = if (jumping) null else fade)
+                            } else {
+                                Modifier
+                            },
+                        ),
                     ) {
                         if (newDay) DateDivider(message.date) { calendarAt = message.date }
                         if (message.service) {
@@ -1027,6 +1043,7 @@ private fun ChatViewContent(
                     }
                     }
                 }
+            }
             }
             }
             profileChat?.let { ChatInfoDialog(it, telegram, settings, onOpenChat) { profileChat = null } }
@@ -1825,8 +1842,12 @@ private fun BareMessage(
                     val width = maxOf(content.width, meta.width)
                     val height = if (overlay) content.height else content.height + gap + meta.height
                     layout(width, height) {
-                        content.place(if (endSide) width - content.width else 0, 0)
-                        meta.place(if (overlay || endSide) width - meta.width else 0, height - meta.height)
+                        val contentX = if (endSide) width - content.width else 0
+                        content.place(contentX, 0)
+                        val videoNote = message.content is TdApi.MessageVideoNote
+                        val metaX = if (videoNote) contentX + VideoNoteSize.roundToPx() - meta.width else if (overlay || endSide) width - meta.width else 0
+                        val metaY = if (videoNote) VideoNoteSize.roundToPx() - meta.height else height - meta.height
+                        meta.place(metaX, metaY)
                     }
                 }
             }
@@ -2415,6 +2436,8 @@ private fun Modifier.wideSlot(progress: () -> Float): Modifier = graphicsLayer {
     layout((full * progress().coerceIn(0f, 1f)).roundToInt(), placeable.height) { placeable.place(0, 0) }
 }
 private val WideChatWidth = 700.dp
+private val MessageEntranceShift = 14.dp
+private const val MessageEntranceMs = 220
 
 private suspend fun revealMessage(listState: LazyListState, index: Int) {
     fun fit(): Float? {
