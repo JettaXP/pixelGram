@@ -31,6 +31,8 @@ async function handle(message, env) {
     return reply(env, message.chat.id, [
       "/banner <caption> — send it with a JPEG to set your banner",
       "/remove — remove your banner",
+      "/badge <custom emoji id or 0> <emoji> <text> — set your custom badge, or /badge alone to reset",
+      "/support <user_id> — grant a numbered supporter badge",
       "/custom <user_id> — allow a custom badge",
       "/unsupport <user_id> — remove supporter and custom badges",
       "/commands — show this list",
