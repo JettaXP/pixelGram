@@ -27,6 +27,15 @@ export default {
 async function handle(message, env) {
   const userId = String(message.from.id);
   const command = (message.caption || message.text || "").trim().split(/\s+/)[0];
+  if (command === "/commands" || command === "/command") {
+    return reply(env, message.chat.id, [
+      "/banner <caption> — send it with a JPEG to set your banner",
+      "/remove — remove your banner",
+      "/custom <user_id> — allow a custom badge",
+      "/unsupport <user_id> — remove supporter and custom badges",
+      "/commands — show this list",
+    ].join("\n"));
+  }
   if (command === "/support" || command === "/custom" || command === "/unsupport") return grant(message, env, userId, command);
   if (command === "/badge") return badge(message, env, userId);
   if (command !== "/banner" && command !== "/remove") return;
