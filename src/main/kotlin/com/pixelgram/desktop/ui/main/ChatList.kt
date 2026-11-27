@@ -649,7 +649,7 @@ private fun ChatRow(
                                 Icon(icon, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.padding(end = 4.dp).size(16.dp))
                             }
                             EmojiText(
-                                last?.let { message -> contentText(message.content).replace('\n', ' ') } ?: "",
+                                last?.let { message -> contentText(message.content, message.isOutgoing).replace('\n', ' ') } ?: "",
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )

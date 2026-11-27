@@ -3742,7 +3742,12 @@ fun TdApi.User.fullName(): String =
 
 fun TdApi.Message.toUi(): UiMessage {
     val sender = senderId
-    val (cleanText, cleanEntities) = com.pixelgram.desktop.core.Tweaks.clean(messageText(content), messageEntities(content))
+    val senderUserId = (sender as? TdApi.MessageSenderUser)?.userId ?: 0L
+    val selfJoin = (content as? TdApi.MessageChatAddMembers)?.memberUserIds?.size == 1 && content.memberUserIds[0] == senderUserId
+    val (cleanText, cleanEntities) = com.pixelgram.desktop.core.Tweaks.clean(
+        if (selfJoin) com.pixelgram.desktop.core.tr("joined the group") else messageText(content, isOutgoing),
+        if (selfJoin) emptyList() else messageEntities(content),
+    )
     val photo = (content as? TdApi.MessagePhoto)?.let { chatPhotoSize(it.photo) }
     return UiMessage(
         id = id,
@@ -3816,7 +3821,7 @@ fun messageEntities(content: TdApi.MessageContent?): List<TdApi.TextEntity> {
     return formatted?.entities?.toList().orEmpty()
 }
 
-fun messageText(content: TdApi.MessageContent?): String = when (content) {
+fun messageText(content: TdApi.MessageContent?, outgoing: Boolean = false): String = when (content) {
     is TdApi.MessagePhoto -> content.caption?.text.orEmpty()
     is TdApi.MessagePaidMedia -> content.caption?.text.orEmpty()
     is TdApi.MessageDocument -> content.caption?.text.orEmpty()
@@ -3827,7 +3832,7 @@ fun messageText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageGift -> content.text?.text.orEmpty()
     is TdApi.MessageUpgradedGift -> content.text?.text.orEmpty()
     is TdApi.MessageGiftedPremium -> content.text?.text.orEmpty()
-    else -> if (isRich(content)) "" else contentText(content)
+    else -> if (isRich(content)) "" else contentText(content, outgoing)
 }
 
 fun isService(content: TdApi.MessageContent?): Boolean = when (content) {
@@ -3851,7 +3856,7 @@ private const val ChatPhotoMinWidth = 640
 private fun mediaPreview(emoji: String, label: String, caption: String?): String =
     if (caption.isNullOrBlank()) label else caption
 
-fun contentText(content: TdApi.MessageContent?): String = when (content) {
+fun contentText(content: TdApi.MessageContent?, outgoing: Boolean = false): String = when (content) {
     is TdApi.MessageText -> content.text?.text ?: ""
     is TdApi.MessageRichMessage -> com.pixelgram.desktop.ui.main.richPreviewText(content.message)
     is TdApi.MessagePhoto -> mediaPreview("🖼", com.pixelgram.desktop.core.tr("Photo"), content.caption?.text)
@@ -3892,7 +3897,7 @@ fun contentText(content: TdApi.MessageContent?): String = when (content) {
     is TdApi.MessageForumTopicCreated -> com.pixelgram.desktop.core.tr("Created the topic «{name}»").replace("{name}", content.name)
     is TdApi.MessageVideoChatStarted -> com.pixelgram.desktop.core.tr("Started a video chat")
     is TdApi.MessageVideoChatEnded -> com.pixelgram.desktop.core.tr("Video chat ended")
-    is TdApi.MessageCall -> if (content.isVideo) "" + com.pixelgram.desktop.core.tr("Video call") else "" + com.pixelgram.desktop.core.tr("Call")
+    is TdApi.MessageCall -> callText(content, outgoing)
     is TdApi.MessageGift -> "" + com.pixelgram.desktop.core.tr("Gift")
     is TdApi.MessageUpgradedGift -> "${content.gift.title}"
     is TdApi.MessageGiftedStars -> "${content.starCount} Stars"
@@ -3903,6 +3908,28 @@ fun contentText(content: TdApi.MessageContent?): String = when (content) {
     null -> ""
     else -> content.javaClass.simpleName.removePrefix("Message")
         .replace(Regex("(?<=[a-z])(?=[A-Z])"), " ").lowercase().replaceFirstChar { it.uppercase() }
+}
+
+private fun callText(call: TdApi.MessageCall, outgoing: Boolean): String {
+    val missed = call.discardReason is TdApi.CallDiscardReasonMissed
+    val declined = call.discardReason is TdApi.CallDiscardReasonDeclined
+    val base = when {
+        outgoing && (missed || declined) -> com.pixelgram.desktop.core.tr("Canceled call")
+        missed -> com.pixelgram.desktop.core.tr("Missed call")
+        declined -> com.pixelgram.desktop.core.tr("Declined call")
+        else -> if (call.isVideo) {
+            if (outgoing) com.pixelgram.desktop.core.tr("Video call") else com.pixelgram.desktop.core.tr("Incoming video call")
+        } else {
+            com.pixelgram.desktop.core.tr(if (outgoing) "Outgoing call" else "Incoming call")
+        }
+    }
+    val length = when {
+        call.duration >= 3600 -> "${call.duration / 3600} h ${call.duration % 3600 / 60} min"
+        call.duration >= 60 -> "${call.duration / 60} min ${call.duration % 60} s"
+        call.duration > 0 -> "${call.duration} s"
+        else -> null
+    }
+    return listOfNotNull(base, length?.let { "($it)" }).joinToString(" ")
 }
 
 private fun List<String?>.filterNotBlank(): String =

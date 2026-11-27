@@ -74,7 +74,7 @@ private val ShotPreviewMaxHeight = 400.dp
 private const val PinPreviewChars = 20
 
 fun pinPreview(message: UiMessage?): String {
-    val text = message?.text?.takeIf { it.isNotBlank() } ?: message?.let { contentText(it.content) }.orEmpty()
+    val text = message?.text?.takeIf { it.isNotBlank() } ?: message?.let { contentText(it.content, it.isOutgoing) }.orEmpty()
     val line = text.replace('\n', ' ').trim()
     return if (line.length > PinPreviewChars) line.take(PinPreviewChars) + "…" else line
 }
@@ -138,7 +138,7 @@ fun PinnedBar(pins: List<UiMessage>, index: Int, onClick: () -> Unit, modifier: 
                         )
                     } else {
                         EmojiText(
-                            contentText(current.content).replace('\n', ' '),
+                            contentText(current.content, current.isOutgoing).replace('\n', ' '),
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,

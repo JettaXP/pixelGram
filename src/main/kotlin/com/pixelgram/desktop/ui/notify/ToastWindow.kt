@@ -32,7 +32,7 @@ fun toastFor(telegram: Telegram, message: TdApi.Message): ToastData? {
         chat = chat,
         title = telegram.chatTitle(chat),
         sender = sender?.takeIf { it.isNotBlank() },
-        text = contentText(message.content).replace('\n', ' '),
+        text = contentText(message.content, message.isOutgoing).replace('\n', ' '),
     )
 }
 
