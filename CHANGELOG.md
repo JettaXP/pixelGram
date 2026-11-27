@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.55.7 Slanted
+
+- Self-joined members show "joined the group" instead of "Added new members".
+- Calls display direction and outcome: missed, declined or canceled, incoming or outgoing, plus duration for answered calls.
+
 ## 0.55.6 Slanted
 
 - The photo viewer opens and closes as an in-app overlay on Wayland without white or black flashes.
