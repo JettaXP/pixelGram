@@ -3743,7 +3743,7 @@ fun TdApi.User.fullName(): String =
 fun TdApi.Message.toUi(): UiMessage {
     val sender = senderId
     val senderUserId = (sender as? TdApi.MessageSenderUser)?.userId ?: 0L
-    val selfJoin = (content as? TdApi.MessageChatAddMembers)?.memberUserIds?.size == 1 && content.memberUserIds[0] == senderUserId
+    val selfJoin = (content as? TdApi.MessageChatAddMembers)?.let { it.memberUserIds.size == 1 && it.memberUserIds[0] == senderUserId } ?: false
     val (cleanText, cleanEntities) = com.pixelgram.desktop.core.Tweaks.clean(
         if (selfJoin) com.pixelgram.desktop.core.tr("joined the group") else messageText(content, isOutgoing),
         if (selfJoin) emptyList() else messageEntities(content),
